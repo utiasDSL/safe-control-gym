@@ -1,6 +1,6 @@
 # safe-control-gym
 
-# [COMING AUGUST 21ST]
+# [COMING AUGUST 31ST]
 
 Physics-based (using [PyBullet](https://pybullet.org/wordpress/)) CartPole and Quadrotor [Gym](https://gym.openai.com) environments with symbolic (using [CasADi](https://web.casadi.org)) *a priori* dynamics for learning-based control and model-based reinforcement learning. 
 
