@@ -18,4 +18,4 @@ Codebase for our review article on safe control and RL:
   eprint = {[arXiv link]}
 }
 ```
-For any question or to be involved with our work (e.g. workshops) contact us through [this form](https://forms.office.com/r/A4UewwYpcn)
+For any question or to be involved with our current and future work, please contact us through [this form](https://forms.office.com/r/A4UewwYpcn)
