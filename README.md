@@ -7,12 +7,15 @@ Physics-based (using [PyBullet](https://pybullet.org/wordpress/)) CartPole and Q
 Codebase for our review article on safe control and RL:
 
 ```
-@misc{brunke2021safe,
-      title={Safe Learning in Robotics: From Learning-Based Control to Safe Reinforcement Learning}, 
-      author={Lukas Brunke and Melissa Greeff and Adam W. Hall and Zhaocong Yuan and Siqi Zhou and Jacopo Panerati and Angela P. Schoellig},
-      year={2021},
-      eprint={2108.xxxxx},
-      archivePrefix={arXiv},
-      primaryClass={cs.RO}
+@article{brunke2021safe,
+  title={Safe Learning in Robotics: From Learning-Based Control to Safe Reinforcement Learning}, 
+  author={Lukas Brunke and Melissa Greeff and Adam W. Hall and Zhaocong Yuan and Siqi Zhou and Jacopo Panerati and Angela P. Schoellig},
+  year={2021},
+  journal = {Annual Review of Control, Robotics, and Autonomous Systems},
+  volume = {},
+  number = {},
+  pages = {},
+  eprint = {[arXiv link]}
 }
 ```
+For any question or to be involved with our work (e.g. workshops) contact us through [this form](https://forms.office.com/r/A4UewwYpcn)
