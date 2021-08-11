@@ -4,6 +4,8 @@
 
 Physics-based (using [PyBullet](https://pybullet.org/wordpress/)) CartPole and Quadrotor [Gym](https://gym.openai.com) environments with symbolic (using [CasADi](https://web.casadi.org)) *a priori* dynamics for learning-based control and model-based reinforcement learning. 
 
+<img src="figures/problem_illustration.jpg" alt="problem illustration" width="800">
+
 Codebase for our review article on safe control and RL:
 
 ```
@@ -19,5 +21,3 @@ Codebase for our review article on safe control and RL:
 }
 ```
 For any question or to be involved with our current and future work, please contact us through [this form](https://forms.office.com/r/A4UewwYpcn).
-
-<img src="figures/problem_illustration.pdf" alt="problem illustration" width="800">
