@@ -17,7 +17,7 @@ Codebase for our review article on safe control and RL:
   volume = {},
   number = {},
   pages = {},
-  eprint = {[arXiv link]}
+  eprint = {[arXiv ID]}
 }
 ```
 For any question or to be involved with our current and future work, please contact us through [this form](https://forms.office.com/r/A4UewwYpcn).
