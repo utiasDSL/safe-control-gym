@@ -20,4 +20,7 @@ Codebase for our review article on safe control and RL:
   eprint = {[arXiv ID]}
 }
 ```
-For any question or to be involved with our current and future work, please contact us through [this form](https://forms.office.com/r/A4UewwYpcn).
+To stay in touch, get involved or ask questions, please contact us via e-mail (`{jacopo.panerati, zhaocong.yuan, adam.hall, siqi.zhou, lukas.brunke, melissa.greeff}@robotics.utias.utoronto.ca`) or through [this form](https://forms.office.com/r/A4UewwYpcn).
+
+-----
+> University of Toronto's [Dynamic Systems Lab](https://github.com/utiasDSL) / [Vector Institute](https://github.com/VectorInstitute)
