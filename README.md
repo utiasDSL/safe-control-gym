@@ -4,6 +4,8 @@
 
 Physics-based CartPole and Quadrotor [Gym](https://gym.openai.com) environments (using [PyBullet](https://pybullet.org/wordpress/)) with symbolic *a priori* dynamics (using [CasADi](https://web.casadi.org)) for **learning-based control**, and model-free and model-based **reinforcement learning** (RL). 
 
+The environments include (and evaluate) symbolic safety constraints and implement input/parameter/dynamics disturbances to test the robustness and generalizability of control approaches.
+
 <img src="figures/problem_illustration.jpg" alt="problem illustration" width="800">
 
 Codebase for our review article on safe control and RL:
