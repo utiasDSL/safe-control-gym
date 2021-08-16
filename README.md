@@ -8,7 +8,7 @@ These environments include (and evaluate) symbolic safety constraints and implem
 
 <img src="figures/problem_illustration.jpg" alt="problem illustration" width="800">
 
-Codebase for our review article on safe control and RL:
+Codebase for our [review article on safe control and RL](https://arxiv.org/abs/2108.06266):
 
 ```
 @article{brunke2021safe,
