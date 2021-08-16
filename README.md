@@ -19,7 +19,8 @@ Codebase for our review article on safe control and RL:
   volume = {},
   number = {},
   pages = {},
-  eprint = {[arXiv ID]}
+  eprint = {2108.06266},
+  url = {https://arxiv.org/abs/2108.06266}
 }
 ```
 To stay in touch, get involved or ask questions, please contact us via e-mail (`{jacopo.panerati, zhaocong.yuan, adam.hall, siqi.zhou, lukas.brunke, melissa.greeff}@robotics.utias.utoronto.ca`) or through [this form](https://forms.office.com/r/A4UewwYpcn).
