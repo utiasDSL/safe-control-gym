@@ -1,3 +1,10 @@
+#### Temporary files
+temp/
+results/
+z_docstring.py
+benchmark/envs/gym_control/assets/cartpole.urdf
+
+
 # macOS users
 .DS_Store
 
