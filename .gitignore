@@ -1,9 +1,9 @@
 #### Temporary files
-temp/
-results/
-z_docstring.py
 benchmark/envs/gym_control/assets/cartpole.urdf
 experiments/figure6/new_trained_model
+experiments/figure7/results
+temp-data/
+z_docstring.py
 
 # macOS users
 .DS_Store
