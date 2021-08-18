@@ -3,7 +3,7 @@ temp/
 results/
 z_docstring.py
 benchmark/envs/gym_control/assets/cartpole.urdf
-
+experiments/figure6/new_trained_model
 
 # macOS users
 .DS_Store
