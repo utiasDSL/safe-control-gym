@@ -11,7 +11,6 @@ These environments include (and evaluate) symbolic safety constraints and implem
 <img src="figures/problem_illustration.jpg" alt="problem illustration" width="800">
 
 **[Branch `ar`](https://github.com/utiasDSL/safe-control-gym/tree/ar) (or [release `v0.5.0`](https://github.com/utiasDSL/safe-control-gym/releases/tag/v0.5.0)) are the codebase for our [review article on safe control and RL](https://arxiv.org/abs/2108.06266):**
-
 ```
 @article{brunke2021safe,
   title={Safe Learning in Robotics: From Learning-Based Control to Safe Reinforcement Learning}, 
