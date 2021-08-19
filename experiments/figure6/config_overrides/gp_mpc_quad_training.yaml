@@ -1,0 +1,104 @@
+output_dir: temp-data/figure6
+algo_config:
+  horizon: 10
+  r_mpc:
+    - 0.1
+    - 0.1
+  q_mpc:
+    - 10
+    - 1
+    - 10
+    - 1
+    - 1
+    - 1
+  gp_model_path: null
+  train_iterations: 800
+  optimization_iterations:
+    - 1000
+    - 1500
+    - 1000
+    - 2000
+    - 2000
+    - 2000
+  learning_rate:
+    - 0.01
+    - 0.01
+    - 0.01
+    - 0.01
+    - 0.01
+    - 0.01
+  normalize_training_data: False
+  use_gpu: False
+  inertial_prop:
+    - 0.027
+    - 0.000014
+  prior_param_coeff: 1.5
+  prob: 0.955
+  warmstart: True
+  gp_approx: 'mean_eq' # 'taylor'
+  online_learning: False
+  additional_constraints:
+    linear_constraint:
+      A:
+        - [ -1.0, 0.0, 1.0, 0.0, 0.0, 0.0 ]
+      b:
+        - 1.1
+      constraint_input_type: STATE
+  input_mask:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+  target_mask:
+    - 0
+    - 1
+    - 2
+    - 3
+  output_dir: './trained_gp_model'
+
+task_config:
+  seed: 41251
+  ctrl_freq: 10
+  info_in_reset: True
+  cost: quadratic
+  constraints:
+    quadrotor_state: {}
+    quadrotor_input:
+      high:
+        - 0.2
+        - 0.2
+  done_on_violation: True
+  disturbances:
+    observation:
+      white_noise:
+        std: 0.001
+  init_state_randomization_info:
+    init_x:
+      distrib: 'uniform'
+      low: -1.0
+      high: 1.0
+    init_x_dot:
+      distrib: 'uniform'
+      low: -0.3
+      high: 0.3
+    init_z:
+      distrib: 'uniform'
+      low: 0.1
+      high: 1.5
+    init_z_dot:
+      distrib: 'uniform'
+      low: -0.3
+      high: 0.3
+    init_theta:
+      distrib: 'uniform'
+      low: -0.2
+      high: 0.2
+    init_theta_dot:
+      distrib: 'uniform'
+      low: -0.1
+      high: 0.1
+

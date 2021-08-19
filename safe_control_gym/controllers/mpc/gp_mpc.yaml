@@ -1,0 +1,37 @@
+# Seed for LHS sampling
+seed: 1337
+
+# mpc args
+horizon: 10
+r_mpc:
+  - 1.
+q_mpc:
+  - 1.
+use_prev_start: True
+additional_constraints: null
+
+# GP training args
+train_iterations: 3
+optimization_itarations: bull
+learing_rate: null
+normalize_training_data: False
+use_gpu: False
+gp_model_path: null
+
+# GP args
+prob: 0.955
+input_mask: null
+target_mask: null
+gp_approx: mean_eq
+online_learning: False
+
+# Prior Model args
+inertial_prop:
+  - 1.0
+prior_param_coeff: 1.
+
+# runner args
+deque_size: 10
+eval_batch_size: 10
+
+output_dir: reslts/temp-data/

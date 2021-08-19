@@ -1,6 +1,4 @@
-from gym.envs.registration import register
-
-register(
-    id='env-v0',
-    entry_point='safe_control_gym.envs:EnvClassName',
-)
+"""Register all configurable objects by importing."""
+from safe_control_gym.controllers import *
+from safe_control_gym.envs import *
+from safe_control_gym.envs.env_wrappers import *

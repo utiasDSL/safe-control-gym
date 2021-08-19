@@ -1,0 +1,13 @@
+# mpc args
+horizon: 10
+r_mpc:
+  - 1.
+q_mpc:
+  - 1.
+use_prev_start: True
+
+# runner args
+deque_size: 10
+eval_batch_size: 10
+
+

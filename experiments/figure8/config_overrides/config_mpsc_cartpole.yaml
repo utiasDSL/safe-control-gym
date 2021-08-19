@@ -1,0 +1,39 @@
+algo_config:
+  horizon: 20
+  r_lin:
+    - 0.1
+  q_lin:
+    - 1
+    - 1
+    - 1
+    - 1
+  n_samples: 600
+  warmstart: False
+  tau: 0.95
+  run_length: 30
+
+task_config:
+  ctrl_freq: 10
+  pyb_freq: 1000
+  info_in_reset: True
+  cost: quadratic
+  constraints:
+    cartpole_state:
+      high:
+        - 100
+        - 100
+        - 0.2
+        - 100
+      low:
+        - -100
+        - -100
+        - -0.2
+        - -100
+    cartpole_input: {}
+  done_on_violation: True
+  init_state:
+    init_x: 0.1
+    init_x_dot: -0.4
+    init_theta: -0.19
+    init_theta_dot: -0.3
+  randomized_init: False
