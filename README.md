@@ -109,7 +109,7 @@ This will use the unsafe (pre-trained) PPO controller/agent in folder `safe-cont
 
 <img src="figures/mpsc-2.png" alt="mpsc-2" width="400"> <img src="figures/mpsc-3.png" alt="mpsc-3" width="400">
 
-To also re-train the unsafe PPO controller/agent (ca. 2' on a laptop)
+To also re-train the unsafe PPO controller/agent (ca. 2' on a laptop) 
 ```
 chmod +x create_unsafe_ppo_model.sh                              # Make the script executable, if needed
 ./create_unsafe_ppo_model.sh                                     # Run the script (ca. 2')
