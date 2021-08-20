@@ -25,7 +25,7 @@ To stay in touch, get involved or ask questions, please contact us via e-mail (`
 
 
 
-## Install
+## Install on Ubuntu/macOS
 (optional) Create and access a Python 3.7 environment using [`conda`](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
 ```
 conda create -n safe python=3.7                                  # Create environment (named 'safe' here)
