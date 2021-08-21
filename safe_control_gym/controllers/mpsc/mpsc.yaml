@@ -6,11 +6,11 @@ q_lin:
   - 1.
 warmstart: False
 
-# safe set calculation
+# Safe set calculation
 n_samples: 600
 
-# tau parameter for the calcuation of the RPI
+# Tau parameter for the calcuation of the RPI
 tau: 0.95
 
-# how long to run the mpsc for
+# How long to run the mpsc for
 run_length: 30

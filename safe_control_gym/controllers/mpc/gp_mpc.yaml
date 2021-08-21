@@ -1,7 +1,7 @@
 # Seed for LHS sampling
 seed: 1337
 
-# mpc args
+# MPC args
 horizon: 10
 r_mpc:
   - 1.
@@ -30,7 +30,7 @@ inertial_prop:
   - 1.0
 prior_param_coeff: 1.
 
-# runner args
+# Runner args
 deque_size: 10
 eval_batch_size: 10
 

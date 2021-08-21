@@ -1,4 +1,4 @@
-"""Vanilla training/plotting/testing script.
+"""Template training/plotting/testing script.
 
 """
 import os
@@ -15,27 +15,22 @@ from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.utils import mkdirs, set_dir_from_config, set_device_from_config, set_seed_from_config, save_video
 
 
-# -----------------------------------------------------------------------------------
-#                   Funcs
-# -----------------------------------------------------------------------------------
-
 def train(config):
-    """General training template.
+    """Training template.
     
     Usage:
         * to start training, use with `--func train`.
         * to restore from a previous training, additionally use `--restore {dir_path}` 
             where `dir_path` is the output folder from previous training.  
+
     """
     # Experiment setup.
     if not config.restore:
         set_dir_from_config(config)
     set_seed_from_config(config)
     set_device_from_config(config)
-
     # Define function to create task/env.
     env_func = partial(make, config.task, output_dir=config.output_dir, **config.task_config)
-
     # Create the controller/control_agent.
     control_agent = make(config.algo,
                          env_func,
@@ -48,7 +43,6 @@ def train(config):
     control_agent.reset()
     if config.restore:
         control_agent.load(os.path.join(config.restore, "model_latest.pt"))
-
     # Training.
     control_agent.learn()
     control_agent.close()
@@ -62,12 +56,12 @@ def make_plots(config):
         * use with `--func plot` and `--restore {dir_path}` where `dir_path` is 
             the experiment folder containing the logs.
         * save figures under `dir_path/plots/`.
+
     """
     # Define source and target log locations.
     log_dir = os.path.join(config.output_dir, "logs")
     plot_dir = os.path.join(config.output_dir, "plots")
     mkdirs(plot_dir)
-
     plot_from_logs(log_dir, plot_dir, window=3)
     print("Plotting done.")
 
@@ -80,13 +74,12 @@ def test_policy(config):
         * to test policy from a trained model checkpoint, additionally use 
             `--restore {dir_path}` where `dir_path` is folder to the trained model.
         * to test un-trained policy (e.g. non-learning based), use as it is.
+
     """
     # Evaluation setup.
     set_device_from_config(config)
-
     # Define function to create task/env.
     env_func = partial(make, config.task, output_dir=config.output_dir, **config.task_config)
-
     # Create the controller/control_agent.
     control_agent = make(config.algo,
                          env_func,
@@ -99,34 +92,30 @@ def test_policy(config):
     control_agent.reset()
     if config.restore:
         control_agent.load(os.path.join(config.restore, "model_latest.pt"))
-
     # Test controller.
-    results = control_agent.run(n_episodes=config.algo_config.eval_batch_size, render=config.render, verbose=config.verbose, use_adv=config.use_adv)
+    results = control_agent.run(n_episodes=config.algo_config.eval_batch_size,
+                                render=config.render,
+                                verbose=config.verbose,
+                                use_adv=config.use_adv)
     control_agent.close()
-
     # Save evalution results.
     eval_path = os.path.join(config.output_dir, "eval", config.eval_output_path)
     eval_dir = os.path.dirname(eval_path)
     mkdirs(eval_dir)
     with open(eval_path, "wb") as f:
         pickle.dump(results, f)
-
     ep_lengths = results["ep_lengths"]
     ep_returns = results["ep_returns"]
     msg = "eval_ep_length {:.2f} +/- {:.2f}\n".format(ep_lengths.mean(), ep_lengths.std())
     msg += "eval_ep_return {:.3f} +/- {:.3f}\n".format(ep_returns.mean(), ep_returns.std())
     print(msg)
-
     if "frames" in results:
         save_video(os.path.join(eval_dir, "video.gif"), results["frames"])
     print("Evaluation done.")
 
 
-# -----------------------------------------------------------------------------------
-#                   Main
-# -----------------------------------------------------------------------------------
-
 MAIN_FUNCS = {"train": train, "plot": make_plots, "test": test_policy}
+
 
 if __name__ == "__main__":
     # Make config.
@@ -138,12 +127,10 @@ if __name__ == "__main__":
     fac.add_argument("--use_adv", action="store_true", help="if to evaluate against adversary.")
     fac.add_argument("--eval_output_path", type=str, default="test_results.pkl", help="file path to save evaluation results.")
     config = fac.merge()
-
     # System settings.
     if config.thread > 0:
         # E.g. set single thread for less context switching
         torch.set_num_threads(config.thread)
-
     # Execute.
     func = MAIN_FUNCS.get(config.func, None)
     if func is None:

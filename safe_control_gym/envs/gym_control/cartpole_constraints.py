@@ -6,6 +6,7 @@ import numpy as np
 
 from safe_control_gym.envs.constraints import BoundedConstraint, ConstraintInputType, Constraint
 
+
 class CartPoleStateConstraint(BoundedConstraint):
     """Constrain the cart's state to the observation space bounds.
 
@@ -20,25 +21,22 @@ class CartPoleStateConstraint(BoundedConstraint):
 
         Args:
             env (BenchmarkEnv): The environment to constrain.
-            low (list): to overwrite the environment minimums
-            high (list): To overwrite the environment maximums
+            low (list): to overwrite the environment minimums.
+            high (list): To overwrite the environment maximums.
 
         """
         if high is None:
             self.high = np.array([env.x_threshold * 2,  # Limit set to 2x: i.e. a failing observation is still within bounds.
                                   np.finfo(np.float32).max,
-                                  env.theta_threshold_radians * 2,  # Limit set to 2x: i.e. a failing observation is
-                                  # still within bounds.
+                                  env.theta_threshold_radians * 2,  # Limit set to 2x: i.e. a failing observation is still within bounds.
                                   np.finfo(np.float32).max])
         else:
             assert len(high) == env.observation_space.shape[0]
             self.high = high
-
         if low is None:
             self.low = -1 * np.array([env.x_threshold * 2,  # Limit set to 2x: i.e. a failing observation is still within bounds.
                                       np.finfo(np.float32).max,
-                                      env.theta_threshold_radians * 2,  # Limit set to 2x: i.e. a failing
-                                      # observation is still within bounds.
+                                      env.theta_threshold_radians * 2,  # Limit set to 2x: i.e. a failing observation is still within bounds.
                                       np.finfo(np.float32).max])
         else:
             assert len(low) == env.observation_space.shape[0]
@@ -96,7 +94,6 @@ class CartPoleInputConstraint(BoundedConstraint):
         else:
             assert isinstance(high, float)
             self.high = high
-
         if low is None:
             self.low = -1 * env.action_threshold
         else:
@@ -130,13 +127,11 @@ class CartPoleInputConstraint(BoundedConstraint):
         flag = np.any(np.greater(c_value, 0.))
         return flag
 
-# TODO: Can this be formulated as a BoundedConstraint type?
+
 class CartPoleSymmetricStateConstraint(BoundedConstraint):
     """Symmetric state bound constraint.
 
-    Note: This only counts as a single constraint?
-    # todo: A bounded constraint is technically 2 cosntraints, but is considered a single constraints in se_ppo...how to handle?
-    """
+     """
 
     def __init__(self,
                  env,
@@ -144,7 +139,8 @@ class CartPoleSymmetricStateConstraint(BoundedConstraint):
                  constraint_input_type,
                  active_dims=None,
                  tolerance=None,
-                 **kwrags):
+                 **kwrags
+                 ):
         assert bound is not None
         self.bound = np.array(bound, ndmin=1)
         super().__init__(env,
@@ -154,14 +150,13 @@ class CartPoleSymmetricStateConstraint(BoundedConstraint):
                          active_dims=active_dims,
                          tolerance=tolerance,
                          **kwrags)
-        self.num_constraints = self.bound.shape[0] # todo: how to fix this?
+        self.num_constraints = self.bound.shape[0]
 
     def get_value(self, env):
         c_value = np.abs(self.constraint_filter @ env.state) - self.bound
         return c_value
 
 
-# TODO: Can this be formulated as a bounded constraint type?
 class CartPoleBoundConstraint(Constraint):
     """Implements bound constraint for state or input as c(x, u) <= 0.
 
@@ -181,35 +176,28 @@ class CartPoleBoundConstraint(Constraint):
                  slack=None
                  ):
         super().__init__()
-        assert var_name == "state" or var_name == "input", (
-            "Must specify state or input to constrain.")
-        assert low is not None or high is not None, (
-            "Must specify either lower or upper bound.")
-
-        # which variable (state, input) to constrain
+        assert var_name == "state" or var_name == "input", ("Must specify state or input to constrain.")
+        assert low is not None or high is not None, ("Must specify either lower or upper bound.")
+        # Which variable (state, input) to constrain.
         self.var_name = var_name
         if var_name == "state":
             var_dim = env.observation_space.shape[0]
         else:
             var_dim = env.action_space.shape[0]
-        # which fields of the variable to bound
+        # Which fields of the variable to bound.
         self.index = index
-
-        # construct A matrix
+        # Construct A matrix.
         weight = np.eye(var_dim)
         if isinstance(index, int):
             weight = weight[[index]]
         elif isinstance(index, list):
             weight = weight[index]
-
         self.low = np.array(low, ndmin=1)
         self.high = np.array(high, ndmin=1)
-
-        # construct A', b'
+        # Construct A', b'.
         dim = 0
         full_weight = []
         full_threshold = []
-
         if self.low is not None:
             dim += len(self.low)
             full_weight.append(-1 * weight)
@@ -218,13 +206,15 @@ class CartPoleBoundConstraint(Constraint):
             dim += len(self.high)
             full_weight.append(weight)
             full_threshold.append(-1 * self.high)
-
         self.dim = dim
         self.full_weight = np.concatenate(full_weight)
         self.full_threshold = np.concatenate(full_threshold)
         self.slack = np.array(slack, ndmin=1)
 
     def get_symbolic_model(self, env):
+        """
+
+        """
         X = env.symbolic.x_sym
         U = env.symbolic.u_sym
         if self.var_name == "state":
@@ -238,7 +228,9 @@ class CartPoleBoundConstraint(Constraint):
         return sym_func
 
     def get_value(self, env):
+        """
 
+        """
         if self.var_name == "state":
             var = env.state
         else:

@@ -1,15 +1,15 @@
 """Probability distributions for PyTorch. 
 
-Adapted from  https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail/blob/master/a2c_ppo_acktr/distributions.py
+Based on https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail/blob/master/a2c_ppo_acktr/distributions.py
 
-Todo:
-    * missing SoftCategorical (differentiable Categorical).
 """
 import torch
 
 
 class Normal(torch.distributions.Normal):
-    """Multivariate Gaussian distribution given mean and std tensors."""
+    """Multivariate Gaussian distribution given mean and std tensors.
+
+    """
 
     def log_prob(self, actions):
         """Log probability of actions given current distribution.
@@ -33,12 +33,16 @@ class Normal(torch.distributions.Normal):
         return super().entropy().sum(-1)
 
     def mode(self):
-        """Mode (max probability point) of current distribution."""
+        """Mode (max probability point) of current distribution.
+
+        """
         return self.mean
 
 
 class Categorical(torch.distributions.Categorical):
-    """Categorical distribution given class probabilities or logits, not differentiable."""
+    """Categorical distribution given class probabilities or logits, not differentiable.
+
+    """
 
     def sample(self):
         """Sample from the current distribution.
@@ -59,9 +63,10 @@ class Categorical(torch.distributions.Categorical):
             (torch.FloatTensor): shape (batch, 1).
 
         """
-        return (super().log_prob(actions.squeeze(-1)).view(
-            actions.size(0), -1).sum(-1).unsqueeze(-1))
+        return (super().log_prob(actions.squeeze(-1)).view(actions.size(0), -1).sum(-1).unsqueeze(-1))
 
     def mode(self):
-        """Mode (max probability point) of current distribution."""
+        """Mode (max probability point) of current distribution.
+
+        """
         return self.probs.argmax(dim=-1, keepdim=True)

@@ -2,7 +2,6 @@ algo_config:
   pretraining: False 
   pretrained: null
   constraint_slack: 0.05
-
   log_interval: 1000
   save_interval: 1000
   num_checkpoints: 10

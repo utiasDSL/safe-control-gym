@@ -21,8 +21,8 @@ class QuadrotorStateConstraint(BoundedConstraint):
 
        Args:
             env (BenchmarkEnv): The environment to constrain.
-            low (list): to overwrite the environment minimums
-            high (list): To overwrite the environment maximums
+            low (list): to overwrite the environment minimums.
+            high (list): To overwrite the environment maximums.
 
         """
         if env.QUAD_TYPE == QuadType.ONE_D:
@@ -45,7 +45,6 @@ class QuadrotorStateConstraint(BoundedConstraint):
                                   np.finfo(np.float32).max,
                                   env.theta_threshold_radians * 2,
                                   np.finfo(np.float32).max])
-
         # Overwrite with provided high and low
         if high is not None:
             assert len(high) == env.observation_space.shape[0]
@@ -53,7 +52,6 @@ class QuadrotorStateConstraint(BoundedConstraint):
         if low is not None:
             assert len(low) == env.observation_space.shape[0]
             self.low = low
-
         super().__init__(env, self.low, self.high, ConstraintInputType.STATE,  **kwargs)
 
     def get_value(self, env):
@@ -66,9 +64,7 @@ class QuadrotorStateConstraint(BoundedConstraint):
             ndarray: The evaluation of the constraint.
 
         """
-
         return np.squeeze(self.sym_func(env.state))
-
 
 
 class QuadrotorDiagConstraint(Constraint):
@@ -91,7 +87,6 @@ class QuadrotorDiagConstraint(Constraint):
             self.b = 1.1
         else:
             raise NotImplementedError
-
         self.sym_func = lambda x: self.h @ x - self.b
 
     def get_symbolic_model(self, env):
@@ -132,6 +127,7 @@ class QuadrotorDiagConstraint(Constraint):
         flag = np.any(np.greater(c_value, 0.))
         return flag
 
+
 class QuadrotorInputConstraint(BoundedConstraint):
     """Constrain the quadrotor's commanded input to the action space bounds.
 
@@ -146,8 +142,8 @@ class QuadrotorInputConstraint(BoundedConstraint):
 
        Args:
             env (BenchmarkEnv): The environment to constrain.
-            low (list): to overwrite the environment minimums
-            high (list): To overwrite the environment maximums
+            low (list): to overwrite the environment minimums.
+            high (list): To overwrite the environment maximums.
 
         """
         if high is None:
@@ -155,14 +151,11 @@ class QuadrotorInputConstraint(BoundedConstraint):
         else:
             assert len(high) == env.action_space.shape[0]
             self.high = high
-
         if low is None:
             self.low = np.zeros(int(env.QUAD_TYPE))
         else:
-
             assert len(low) == env.action_space.shape[0]
             self.low = low
-
         super().__init__(env, self.low, self.high, ConstraintInputType.INPUT, **kwargs)
 
     def get_value(self, env):

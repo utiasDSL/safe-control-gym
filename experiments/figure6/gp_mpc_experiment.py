@@ -15,7 +15,14 @@ from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.configuration import ConfigFactory
 
 
-def plot_xz_comparison_diag_constraint(prior_run, run, init_ind, dir=None):
+def plot_xz_comparison_diag_constraint(prior_run,
+                                       run,
+                                       init_ind,
+                                       dir=None
+                                       ):
+    """
+
+    """
     state_inds = [0,2]
     goal = [0, 1]
     ax = plot_2D_comparison_with_prior(state_inds, prior_run, run, goal, init_ind, dir=dir)
@@ -34,7 +41,15 @@ def plot_xz_comparison_diag_constraint(prior_run, run, init_ind, dir=None):
     plt.tight_layout()
 
 
-def plot_2D_comparison_with_prior(state_inds, prior_run, run, goal, init_ind, dir=None):
+def plot_2D_comparison_with_prior(state_inds,
+                                  prior_run,
+                                  run, goal,
+                                  init_ind,
+                                  dir=None
+                                  ):
+    """
+
+    """
     horizon_cov = run.state_horizon_cov[init_ind]
     horizon_states = run.horizon_states[init_ind]
     prior_horizon_states = prior_run.horizon_states[init_ind]
@@ -94,7 +109,14 @@ def plot_2D_comparison_with_prior(state_inds, prior_run, run, goal, init_ind, di
     return ax
 
 
-def add_2d_cov_ellipse(position, cov, ax, legend=False):
+def add_2d_cov_ellipse(position,
+                       cov,
+                       ax,
+                       legend=False
+                       ):
+    """
+
+    """
     evals, evecs = np.linalg.eig(cov)
     major_axis_ind = np.argmax(evals)
     minor_axis_ind = 0 if major_axis_ind == 1 else 1
@@ -127,7 +149,6 @@ if __name__ == "__main__":
     fac = ConfigFactory()
     fac.add_argument("--train_only", type=bool, default=False, help="True if only training is performed.")
     config = fac.merge()
-
     # Create environment.
     env_func = partial(make,
                        config.task,

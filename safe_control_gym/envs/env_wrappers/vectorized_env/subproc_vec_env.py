@@ -1,3 +1,10 @@
+"""Subprocess vectorized environments.
+
+See also:
+    * https://github.com/openai/baselines/blob/master/baselines/common/vec_env/subproc_vec_env.py
+    * https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/common/vec_env/subproc_vec_env.py
+
+"""
 import copy
 import numpy as np
 import multiprocessing as mp
@@ -8,24 +15,18 @@ from safe_control_gym.envs.env_wrappers.vectorized_env.vec_env_utils import _fla
 
 
 class SubprocVecEnv(VecEnv):
-    """ Multiprocess envs  
-    
-    references
-    - https://github.com/openai/baselines/blob/master/baselines/common/vec_env/subproc_vec_env.py
-    - https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/common/vec_env/subproc_vec_env.py
+    """Multiprocess envs.
+
     """
 
     def __init__(self, env_fns, spaces=None, context="spawn", n_workers=1):
         self.waiting = False
         self.closed = False
-
         nenvs = len(env_fns)
         self.n_workers = n_workers
         assert nenvs % n_workers == 0, "Number of envs must be divisible by number of workers to run in series"
         env_fns = np.array_split(env_fns, self.n_workers)
-
-        # context is necessary for multiprocessing with cuda
-        # see https://pytorch.org/docs/stable/notes/multiprocessing.html
+        # Context is necessary for multiprocessing with CUDA, see pytorch.org/docs/stable/notes/multiprocessing.html
         ctx = mp.get_context(context)
         self.remotes, self.work_remotes = zip(
             *[ctx.Pipe() for _ in range(self.n_workers)])
@@ -36,16 +37,14 @@ class SubprocVecEnv(VecEnv):
                  env_fn) in zip(self.work_remotes, self.remotes, env_fns)
         ]
         for p in self.ps:
-            p.daemon = True  # if the main process crashes, we should not cause things to hang
+            p.daemon = True  # If the main process crashes, we should not cause things to hang.
             with clear_mpi_env_vars():
                 p.start()
         for remote in self.work_remotes:
             remote.close()
-
         self.remotes[0].send(('get_spaces_spec', None))
         observation_space, action_space = self.remotes[0].recv().x
         self.viewer = None
-
         VecEnv.__init__(self, nenvs, observation_space, action_space)
 
     def step_async(self, actions):
@@ -73,7 +72,9 @@ class SubprocVecEnv(VecEnv):
         return _flatten_obs(obs), {"n": infos}
 
     def get_images(self):
-        """Called by parent `render` to support tiling images"""
+        """Called by parent `render` to support tiling images.
+
+        """
         self._assert_not_closed()
         for pipe in self.remotes:
             pipe.send(('render', None))
@@ -110,14 +111,18 @@ class SubprocVecEnv(VecEnv):
         res = [remote.recv() for remote in self.remotes]
 
     def get_attr(self, attr_name, indices=None):
-        """Return attribute from vectorized environment (see base class)."""
+        """Return attribute from vectorized environment (see base class).
+
+        """
         target_remotes, remote_env_indices = self._get_target_envs(indices)
         for remote, env_indices in zip(target_remotes, remote_env_indices):
             remote.send(("get_attr", (env_indices, attr_name)))
         return _flatten_list([remote.recv() for remote in target_remotes])
 
     def set_attr(self, attr_name, values, indices=None):
-        """Set attribute inside vectorized environments (see base class)."""
+        """Set attribute inside vectorized environments (see base class).
+
+        """
         target_remotes, remote_env_indices, splits = self._get_target_envs(
             indices)
         value_splits = []
@@ -137,9 +142,10 @@ class SubprocVecEnv(VecEnv):
                    method_args=None,
                    method_kwargs=None,
                    indices=None):
-        """Call instance methods of vectorized environments."""
-        target_remotes, remote_env_indices, splits = self._get_target_envs(
-            indices)
+        """Call instance methods of vectorized environments.
+
+        """
+        target_remotes, remote_env_indices, splits = self._get_target_envs(indices)
         method_arg_splits, method_kwarg_splits = [], []
         for i in range(len(splits) - 1):
             start, end = splits[i], splits[i + 1]
@@ -161,6 +167,7 @@ class SubprocVecEnv(VecEnv):
 
     def _get_target_envs(self, indices):
         """
+
         Example:
             n_workers: 3
             current envs: [0,1,2,3,4,5]
@@ -169,28 +176,26 @@ class SubprocVecEnv(VecEnv):
 
             remote_indices: [0,0,1,1] -> [0,1]
             splits: [0,2] -> [0,2,4]
-            remote_env_indices: [1,1,0,1] -> [1,1], [0,1] 
+            remote_env_indices: [1,1,0,1] -> [1,1], [0,1]
+
         """
         assert indices is None or sorted(
             indices) == indices, "Indices must be ordered"
         indices = self._get_indices(indices)
-
         remote_indices = [idx // self.n_workers for idx in indices]
         remote_env_indices = [idx % self.n_workers for idx in indices]
-
-        remote_indices, splits = np.unique(np.array(remote_indices),
-                                           return_index=True)
+        remote_indices, splits = np.unique(np.array(remote_indices), return_index=True)
         target_remotes = [self.remotes[idx] for idx in remote_indices]
         remote_env_indices = np.split(np.array(remote_env_indices), splits[1:])
         remote_env_indices = remote_env_indices.tolist()
-
         splits = np.append(splits, [len(indices)])
         return target_remotes, remote_env_indices, splits
 
 
 def worker(remote, parent_remote, env_fn_wrappers):
-    """worker func to execute vec_env commands"""
+    """Worker func to execute vec_env commands.
 
+    """
     def step_env(env, action):
         ob, reward, done, info = env.step(action)
         if done:
@@ -200,13 +205,12 @@ def worker(remote, parent_remote, env_fn_wrappers):
             info["terminal_observation"] = end_obs
             info["terminal_info"] = end_info
         return ob, reward, done, info
-
     parent_remote.close()
     envs = [env_fn_wrapper() for env_fn_wrapper in env_fn_wrappers.x]
     try:
         while True:
             cmd, data = remote.recv()
-            # branch out for requests
+            # Branch out for requests.
             if cmd == 'step':
                 remote.send(
                     [step_env(env, action) for env, action in zip(envs, data)])
@@ -225,7 +229,7 @@ def worker(remote, parent_remote, env_fn_wrappers):
                 remote.send(CloudpickleWrapper(get_random_state()))
             elif cmd == "set_random_state":
                 set_random_state(data)
-                # just a placeholder to return something
+                # Placeholder for the return.
                 remote.send(True)
             elif cmd == "get_attr":
                 env_indices, attr_name = data

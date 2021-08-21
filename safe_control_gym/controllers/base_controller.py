@@ -1,8 +1,12 @@
-"""Base classes."""
+"""Base classes.
+
+"""
 
 
 class BaseController:
-    """Template for controller/agent, implement the following methods as needed."""
+    """Template for controller/agent, implement the following methods as needed.
+
+    """
 
     def __init__(self,
                  env_func,
@@ -11,7 +15,8 @@ class BaseController:
                  output_dir="temp",
                  device="cpu",
                  seed=0,
-                 **kwargs):
+                 **kwargs
+                 ):
         """Initializes controller agent.
 
         Args:
@@ -21,37 +26,54 @@ class BaseController:
             output_dir (str): folder to write outputs.
             device (str): cpu or cuda.
             seed (int): random seed.
+
         """
-        # base args
+        # Base args.
         self.env_func = env_func
         self.training = training
         self.checkpoint_path = checkpoint_path
         self.output_dir = output_dir
         self.device = device
         self.seed = seed
-
-        # algo specific args
+        # Algorithm specific args.
         for k, v in kwargs.items():
             self.__dict__[k] = v
 
     def reset(self):
-        """Do initializations for training or evaluation."""
+        """Do initializations for training or evaluation.
+
+        """
         pass
 
     def close(self):
-        """Shuts down and cleans up lingering resources."""
+        """Shuts down and cleans up lingering resources.
+
+        """
         pass
 
-    def save(self, path):
-        """Saves model params and experiment state to checkpoint path."""
+    def save(self,
+             path
+             ):
+        """Saves model params and experiment state to checkpoint path.
+
+        """
         pass
 
-    def load(self, path):
-        """Restores model and experiment given checkpoint path."""
+    def load(self,
+             path
+             ):
+        """Restores model and experiment given checkpoint path.
+
+        """
         pass
 
-    def learn(self, env=None, **kwargs):
-        """Performs learning (pre-training, training, fine-tuning, etc)."""
+    def learn(self,
+              env=None,
+              **kwargs
+              ):
+        """Performs learning (pre-training, training, fine-tuning, etc).
+
+        """
         pass
 
     def run(self,
@@ -59,6 +81,9 @@ class BaseController:
             render=False,
             n_episodes=10,
             verbose=False,
-            **kwargs):
-        """Runs evaluation with current policy."""
+            **kwargs
+            ):
+        """Runs evaluation with current policy.
+
+        """
         pass

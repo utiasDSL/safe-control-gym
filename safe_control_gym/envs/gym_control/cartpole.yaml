@@ -3,26 +3,26 @@ ctrl_freq: 50
 pyb_freq: 50
 gui: False
 normalized_rl_action_space: False
-# state initialization
+# State initialization
 init_state: null
 randomized_init: True
 init_state_randomization_info: null
-# randomization
+# Randomization
 inertial_prop: null
 randomized_inertial_prop: False
 inertial_prop_randomization_info: null
-# task 
+# Task 
 task: stabilization
 task_info: null
 cost: rl_reward
-# disturbance
+# Disturbance
 disturbances: null
 adversary_disturbance: null 
 adversary_disturbance_scale: 0.01
-# constraints
+# Constraints
 constraints: null
 done_on_violation: False
 use_constraint_penalty: False 
 constraint_penalty: -1 
-# misc 
+# Misc 
 verbose: False

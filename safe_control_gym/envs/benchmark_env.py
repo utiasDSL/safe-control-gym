@@ -1,7 +1,6 @@
 """Base environment class module.
 
-This module also contains enumerations for cost functions, tasks,
-disturbances, and quadrotor types.
+This module also contains enumerations for cost functions, tasks, disturbances, and quadrotor types.
 
 """
 import os
@@ -14,14 +13,18 @@ import copy
 
 
 class Cost(str, Enum):
-    """Reward/cost functions enumeration class."""
+    """Reward/cost functions enumeration class.
+
+    """
 
     RL_REWARD = "rl_reward"  # Default RL reward function.
     QUADRATIC = "quadratic"  # Quadratic cost.
 
 
 class Task(str, Enum):
-    """Environment tasks enumeration class."""
+    """Environment tasks enumeration class.
+
+    """
 
     STABILIZATION = "stabilization"  # Stabilization task.
     TRAJ_TRACKING = "traj_tracking"  # Trajectory tracking task.
@@ -32,16 +35,17 @@ class BenchmarkEnv(gym.Env):
     
     Attributes:
         id (int): unique identifier of the current env instance (among other instances). 
+
     """
-    # class variable, count env instance in current process
-    _count = 0
+    _count = 0  # Class variable, count env instance in current process.
 
     def __init__(self,
                  output_dir=None,
                  seed: int = 0,
                  info_in_reset: bool = False,
                  episode_len_sec: int = 5,
-                 cost: Cost = Cost.RL_REWARD):
+                 cost: Cost = Cost.RL_REWARD
+                 ):
         """Initialization method for BenchmarkEnv.
 
         Args:
@@ -50,32 +54,28 @@ class BenchmarkEnv(gym.Env):
                                             environment's symbolic model.
             episode_len_sec (int, optional): Maximum episode duration in seconds.
             cost (Cost, optional): Cost function choice used to compute the reward in .step().
+
         """
-        # assign unique ID based on env instance count
+        # Assign unique ID based on env instance count.
         self.id = self.__class__._count
         self.__class__._count += 1
-
-        # directory to save any env output
+        # Directory to save any env output.
         if output_dir is None:
             output_dir = os.getcwd()
         self.output_dir = output_dir
-
-        # default seed None means pure randomness/no seeding
+        # Default seed None means pure randomness/no seeding.
         self.seed(seed)
         self.INFO_IN_RESET = info_in_reset
         self.initial_reset = False
-
-        # maximum episode length in seconds
+        # Maximum episode length in seconds.
         self.EPISODE_LEN_SEC = episode_len_sec
-
-        # define cost-related quantities
+        # Define cost-related quantities.
         self.COST = Cost(cost)
         # Default Q and R matrices for quadratic cost.
         if self.COST == Cost.QUADRATIC:
             self.Q = np.eye(self.observation_space.shape[0])
             self.R = np.eye(self.action_space.shape[0])
-
-        # custom setups
+        # Custom setups.
         self._setup_symbolic()
         self._setup_disturbances()
         self._setup_constraints()
@@ -87,7 +87,10 @@ class BenchmarkEnv(gym.Env):
                 "[ERROR] You must call env.reset() at least once before using env.step()."
             )
 
-    def _randomize_values_by_info(self, original_values, randomization_info):
+    def _randomize_values_by_info(self,
+                                  original_values,
+                                  randomization_info
+                                  ):
         """Randomizes a list of values according to desired distributions.
 
         Args:
@@ -97,30 +100,33 @@ class BenchmarkEnv(gym.Env):
 
         Returns:
             dict: A dict of randomized values.
+
         """
-        randomized_values = copy.deepcopy(
-            original_values)  # Start from a copy of the original values
-        rand_info_copy = copy.deepcopy(
-            randomization_info)  # Copy the info dict to parse it with "pop"
-        # Randomized and replace values for which randomization info are given
+        # Start from a copy of the original values.
+        randomized_values = copy.deepcopy(original_values)
+        # Copy the info dict to parse it with "pop".
+        rand_info_copy = copy.deepcopy(randomization_info)
+        # Randomized and replace values for which randomization info are given.
         for key in original_values:
             if key in rand_info_copy:
-                # Get distribution removing it from info dict
+                # Get distribution removing it from info dict.
                 distrib = getattr(self.np_random,
                                   rand_info_copy[key].pop("distrib"))
-                # Pop positional args
+                # Pop positional args.
                 d_args = rand_info_copy[key].pop("args", [])
-                # Keyword args are just anything left
+                # Keyword args are just anything left.
                 d_kwargs = rand_info_copy[key]
-                # Randomize
+                # Randomize.
                 randomized_values[key] = distrib(*d_args, **d_kwargs)
         return randomized_values
 
-    def seed(self, seed=None):
+    def seed(self,
+             seed=None
+             ):
         """Sets up a random number generator for a given seed.
         
-        Current repo convention: non-positive seed same as None 
-        (might not be the best, subject to discussion). 
+        Current convention: non-positive seed same as None 
+
         """
         if seed is not None:
             seed = seed if seed > 0 else None
@@ -167,8 +173,7 @@ class BenchmarkEnv(gym.Env):
         # Get trajectory type.
         valid_traj_type = ["circle", "square", "figure8"]
         if traj_type not in valid_traj_type:
-            raise ValueError(
-                "Trajectory type should be one of [circle, square, figure8].")
+            raise ValueError("Trajectory type should be one of [circle, square, figure8].")
         traj_period = traj_length / num_cycles
         direction_list = ["x", "y", "z"]
         # Get coordinates indexes.
@@ -177,9 +182,7 @@ class BenchmarkEnv(gym.Env):
             coord_index_a = direction_list.index(traj_plane[0])
             coord_index_b = direction_list.index(traj_plane[1])
         else:
-            raise ValueError("Trajectory plane should be in form of "
-                             "ab"
-                             ", where a and b can be {x, y, z}.")
+            raise ValueError("Trajectory plane should be in form of ab, where a and b can be {x, y, z}.")
         # Generate time stamps.
         times = np.arange(0, traj_length, sample_time)
         pos_ref_traj = np.zeros((len(times), 3))
@@ -187,15 +190,27 @@ class BenchmarkEnv(gym.Env):
         speed_traj = np.zeros((len(times), 1))
         # Compute trajectory points.
         for t in enumerate(times):
-            pos_ref_traj[t[0]], vel_ref_traj[t[0]] = self._get_coordinates(
-                t[1], traj_type, traj_period, coord_index_a, coord_index_b,
-                position_offset[0], position_offset[1], scaling)
+            pos_ref_traj[t[0]], vel_ref_traj[t[0]] = self._get_coordinates(t[1],
+                                                                           traj_type,
+                                                                           traj_period,
+                                                                           coord_index_a,
+                                                                           coord_index_b,
+                                                                           position_offset[0],
+                                                                           position_offset[1],
+                                                                           scaling)
             speed_traj[t[0]] = np.linalg.norm(vel_ref_traj[t[0]])
         return pos_ref_traj, vel_ref_traj, speed_traj
 
-    def _get_coordinates(self, t, traj_type, traj_period, coord_index_a,
-                         coord_index_b, position_offset_a, position_offset_b,
-                         scaling):
+    def _get_coordinates(self,
+                         t,
+                         traj_type,
+                         traj_period,
+                         coord_index_a,
+                         coord_index_b,
+                         position_offset_a,
+                         position_offset_b,
+                         scaling
+                         ):
         """Computes the coordinates of a specified trajectory at time t.
 
         Args:
@@ -233,7 +248,11 @@ class BenchmarkEnv(gym.Env):
         vel_ref[coord_index_b] = coords_b_dot
         return pos_ref, vel_ref
 
-    def _figure8(self, t, traj_period, scaling):
+    def _figure8(self,
+                 t,
+                 traj_period,
+                 scaling
+                 ):
         """Computes the coordinates of a figure8 trajectory at time t.
 
         Args:
@@ -252,11 +271,14 @@ class BenchmarkEnv(gym.Env):
         coords_a = scaling * np.sin(traj_freq * t)
         coords_b = scaling * np.sin(traj_freq * t) * np.cos(traj_freq * t)
         coords_a_dot = scaling * traj_freq * np.cos(traj_freq * t)
-        coords_b_dot = scaling * traj_freq * (np.cos(traj_freq * t)**2
-                                              - np.sin(traj_freq * t)**2)
+        coords_b_dot = scaling * traj_freq * (np.cos(traj_freq * t)**2 - np.sin(traj_freq * t)**2)
         return coords_a, coords_b, coords_a_dot, coords_b_dot
 
-    def _circle(self, t, traj_period, scaling):
+    def _circle(self,
+                t,
+                traj_period,
+                scaling
+                ):
         """Computes the coordinates of a circle trajectory at time t.
 
         Args:
@@ -278,7 +300,11 @@ class BenchmarkEnv(gym.Env):
         coords_b_dot = scaling * traj_freq * np.cos(traj_freq * t)
         return coords_a, coords_b, coords_a_dot, coords_b_dot
 
-    def _square(self, t, traj_period, scaling):
+    def _square(self,
+                t,
+                traj_period,
+                scaling
+                ):
         """Computes the coordinates of a square trajectory at time t.
 
         Args:
@@ -330,8 +356,15 @@ class BenchmarkEnv(gym.Env):
             coords_b_dot = 0.0
         return coords_a, coords_b, coords_a_dot, coords_b_dot
 
-    def _plot_trajectory(self, traj_type, traj_plane, traj_length, num_cycles,
-                         pos_ref_traj, vel_ref_traj, speed_traj):
+    def _plot_trajectory(self,
+                         traj_type,
+                         traj_plane,
+                         traj_length,
+                         num_cycles,
+                         pos_ref_traj,
+                         vel_ref_traj,
+                         speed_traj
+                         ):
         """Plots a trajectory along x, y, z, and in a 3D projection.
 
         Args:
@@ -350,8 +383,7 @@ class BenchmarkEnv(gym.Env):
         print("Trajectory length: %s sec" % traj_length)
         print("Number of cycles: %d" % num_cycles)
         print("Trajectory period: %.2f sec" % (traj_length / num_cycles))
-        print("Angular speed: %.2f rad/sec" % (2.0 * np.pi /
-                                               (traj_length / num_cycles)))
+        print("Angular speed: %.2f rad/sec" % (2.0 * np.pi / (traj_length / num_cycles)))
         print(
             "Position bounds: x [%.2f, %.2f] m, y [%.2f, %.2f] m, z [%.2f, %.2f] m"
             % (min(pos_ref_traj[:, 0]), max(pos_ref_traj[:, 0]),
@@ -382,7 +414,7 @@ class BenchmarkEnv(gym.Env):
         axs[2, 1].set_ylabel('vel z (m)')
         axs[2, 1].set_xlabel('time (s)')
         plt.show()
-        # Plot in 3D
+        # Plot in 3D.
         fig = plt.figure()
         ax = fig.gca(projection='3d')
         ax.plot(pos_ref_traj[:, 0], pos_ref_traj[:, 1], pos_ref_traj[:, 2])

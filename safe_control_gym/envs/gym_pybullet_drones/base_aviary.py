@@ -37,7 +37,7 @@ class Physics(Enum):
 
     """
 
-    PYB = "pyb"  # Base PyBullet physics update
+    PYB = "pyb"  # Base PyBullet physics update.
     DYN = "dyn"  # Update with an explicit model of the dynamics.
     PYB_GND = "pyb_gnd"  # PyBullet physics update with ground effect.
     PYB_DRAG = "pyb_drag"  # PyBullet physics update with drag.

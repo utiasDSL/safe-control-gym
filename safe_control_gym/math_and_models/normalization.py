@@ -1,28 +1,21 @@
 """Perform normalization on inputs or rewards.
 
-References:
-    * github.com/ShangtongZhang/DeepRL/blob/932ea88082e0194126b87742bd4a28c4599aa1b8/deep_rl/utils/normalizer.py#L69
-    * github.com/DLR-RM/stable-baselines3/blob/d7c6aff2523122aebf1e70210b2c56642e0b2735/stable_baselines3/common/vec_env/vec_normalize.py#L138
-    * github.com/openai/large-scale-curiosity/blob/e0a698676d19307a095cd4ac1991c4e4e70e56fb/cppo_agent.py#L226
-
-Todo:
-    * 
-    
 """
 import numpy as np
 import torch
+
 from gym.spaces import Box
 
 
 def normalize_angle(x):
-    """Wraps input angle to [-pi, pi]."""
+    """Wraps input angle to [-pi, pi].
+
+    """
     return ((x + np.pi) % (2 * np.pi)) - np.pi
 
 
 class RunningMeanStd():
     """Calulates the running mean and std of a data stream.
-    
-    Reference: https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Parallel_algorithm
     
     Attributes:
         mean (np.array): mean of data stream.
@@ -56,15 +49,15 @@ class RunningMeanStd():
         self.update_from_moments(batch_mean, batch_var, batch_count)
 
     def update_from_moments(self, batch_mean, batch_var, batch_count):
-        """Util function for `update` method."""
+        """Util function for `update` method.
+
+        """
         delta = batch_mean - self.mean
         tot_count = self.count + batch_count
-
         new_mean = self.mean + delta * batch_count / tot_count
         m_a = self.var * self.count
         m_b = batch_var * batch_count
-        m_2 = m_a + m_b + np.square(delta) * self.count * batch_count / (
-            self.count + batch_count)
+        m_2 = m_a + m_b + np.square(delta) * self.count * batch_count / (self.count + batch_count)
         new_var = m_2 / (self.count + batch_count)
         new_count = batch_count + self.count
         self.mean = new_mean
@@ -73,7 +66,7 @@ class RunningMeanStd():
 
 
 class BaseNormalizer(object):
-    """Template for normalizers, also default.
+    """Template/default normalizer.
 
     Attributes:
         read_only (bool): if to freeze the current stats being tracked.
@@ -90,20 +83,28 @@ class BaseNormalizer(object):
         self.read_only = False
 
     def __call__(self, x, *args, **kwargs):
-        """Invokes normalization on the given input."""
+        """Invokes normalization on the given input.
+
+        """
         return x
 
     def state_dict(self):
-        """Returns snapshot of current stats."""
+        """Returns snapshot of current stats.
+
+        """
         return {}
 
     def load_state_dict(self, _):
-        """Restores the stats from a snapshot."""
+        """Restores the stats from a snapshot.
+
+        """
         pass
 
 
 class MeanStdNormalizer(BaseNormalizer):
-    """Normalize by the running average."""
+    """Normalize by the running average.
+
+    """
 
     def __init__(self, shape=(), read_only=False, clip=10.0, epsilon=1e-8):
         """Initializes the data stream tracker. 
@@ -122,7 +123,9 @@ class MeanStdNormalizer(BaseNormalizer):
         self.epsilon = epsilon
 
     def __call__(self, x):
-        """Update tracker given data, optionally normalize the data."""
+        """Update tracker given data, optionally normalize the data.
+
+        """
         x = np.asarray(x)
         if not self.read_only:
             self.rms.update(x)
@@ -144,10 +147,9 @@ class RewardStdNormalizer(MeanStdNormalizer):
     Papers:
         * arxiv.org/pdf/1808.04355.pdf 
         * arxiv.org/pdf/1810.12894.pdf 
-    Implementations:
-        * github.com/openai/baselines/blob/ea25b9e8b234e6ee1bca43083f8f3cf974143998/baselines/common/vec_env/vec_normalize.py
-        * github.com/openai/large-scale-curiosity/blob/e0a698676d19307a095cd4ac1991c4e4e70e56fb/cppo_agent.py#L226
-    See github.com/openai/baselines/issues/538 for a dicussion on its necessity
+
+    Also see:
+        * github.com/openai/baselines/issues/538
 
     """
 
@@ -167,25 +169,25 @@ class RewardStdNormalizer(MeanStdNormalizer):
         self.ret = None
 
     def __call__(self, x, dones):
-        """Update tracker given reward, optionally normalize the reward (only scaling)."""
-        x = np.asarray(x)
+        """Update tracker given reward, optionally normalize the reward (only scaling).
 
+        """
+        x = np.asarray(x)
         if not self.read_only:
             # Track running average of forward discounted returns.
             if self.ret is None:
                 self.ret = np.zeros(x.shape[0])
-
             self.ret = self.ret * self.gamma + x
             self.rms.update(self.ret)
             # Prevent information leak from previous episodes.
             self.ret[dones.astype(np.long)] = 0
-
-        return np.clip(x / np.sqrt(self.rms.var + self.epsilon), -self.clip,
-                       self.clip)
+        return np.clip(x / np.sqrt(self.rms.var + self.epsilon), -self.clip, self.clip)
 
 
 class RescaleNormalizer(BaseNormalizer):
-    """Apply constant scaling."""
+    """Apply constant scaling.
+
+    """
 
     def __init__(self, coef=1.0):
         """Initializes with fixed scaling constant.
@@ -198,32 +200,41 @@ class RescaleNormalizer(BaseNormalizer):
         self.coef = coef
 
     def __call__(self, x):
-        """Scale the input."""
+        """Scale the input.
+
+        """
         if not isinstance(x, torch.Tensor):
             x = np.asarray(x)
         return self.coef * x
 
 
 class ImageNormalizer(RescaleNormalizer):
-    """Scale image pixles from [0,255] to [0,1]"""
+    """Scale image pixles from [0,255] to [0,1].
+
+    """
 
     def __init__(self):
         super().__init__(self, 1.0 / 255)
 
 
 class ActionUnnormalizer(BaseNormalizer):
-    """Assumes policy output action is in [-1,1], unnormalize it for gym env."""
+    """Assumes policy output action is in [-1,1], unnormalize it for gym env.
+
+    """
 
     def __init__(self, action_space):
-        """Defines the mean and std for the bounded action space."""
+        """Defines the mean and std for the bounded action space.
+
+        """
         super().__init__()
-        assert isinstance(action_space,
-                          Box), "action space must be gym.spaces.Box"
+        assert isinstance(action_space, Box), "action space must be gym.spaces.Box"
         low, high = action_space.low, action_space.high
         self.mean = (low + high) / 2.0
         self.std = (high - low) / 2.0
 
     def __call__(self, action):
-        """Unnormalizes given input action."""
+        """Unnormalizes given input action.
+
+        """
         x = np.asarray(action)
         return self.mean + x * self.std

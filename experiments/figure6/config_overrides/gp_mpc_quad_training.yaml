@@ -101,4 +101,3 @@ task_config:
       distrib: 'uniform'
       low: -0.1
       high: 0.1
-

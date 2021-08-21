@@ -3,6 +3,7 @@ safe_control_gym/envs/gym_control/assets/cartpole.urdf
 experiments/figure6/trained_gp_model/bak_best_model_*.pth
 experiments/figure7/safe_exp_results/
 experiments/figure8/unsafe_ppo_temp_data/
+experiments/figure8/unsafe_ppo_model/bak_unsafe_ppo_model_30000.pt
 temp-data/
 z_docstring.py
 TODOs.md

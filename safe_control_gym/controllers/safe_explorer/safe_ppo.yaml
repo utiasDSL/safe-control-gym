@@ -1,11 +1,11 @@
-# model args
+# Model args
 hidden_dim: 64
 norm_obs: False
 norm_reward: False
 clip_obs: 10.
 clip_reward: 10.
 
-# safety layer args
+# Safety layer args
 pretraining: True 
 pretrained: null
 constraint_hidden_dim: 10
@@ -18,7 +18,7 @@ constraint_eval_interval: 5
 constraint_buffer_size: 1000000
 constraint_slack: null
 
-# loss args
+# Loss args
 gamma:  0.99
 use_gae:  False
 gae_lambda: 0.95
@@ -27,14 +27,14 @@ clip_param: 0.2
 target_kl: 0.01
 entropy_coef: 0.01
 
-# optim args
+# Optim args
 opt_epochs: 10
 mini_batch_size: 64
 actor_lr: 0.0003
 critic_lr: 0.001
 max_grad_norm: 0.5
 
-# runner args
+# Runner args
 max_env_steps: 1000000
 num_workers: 1
 rollout_batch_size: 4
@@ -42,7 +42,7 @@ rollout_steps: 100
 deque_size: 10
 eval_batch_size: 10
 
-# misc
+# Misc
 log_interval: 0
 save_interval: 0
 num_checkpoints: 0

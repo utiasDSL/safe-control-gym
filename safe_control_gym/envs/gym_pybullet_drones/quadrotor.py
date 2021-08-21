@@ -26,14 +26,12 @@ class Quadrotor(BaseAviary):
     Including symbolic model, constraints, randomization, adversarial disturbances,
     multiple cost functions, stabilization and trajectory tracking references.
 
-    TODO:
-        * Handling prior model param still out of sync with cartpole.
     """
 
     AVAILABLE_CONSTRAINTS = {
         "quadrotor_state": QuadrotorStateConstraint,
         "quadrotor_input": QuadrotorInputConstraint,
-        "quadrotor_diag": QuadrotorDiagConstraint  # Todo: Delete this.
+        "quadrotor_diag": QuadrotorDiagConstraint
     }
     AVAILABLE_CONSTRAINTS.update(deepcopy(GENERAL_CONSTRAINTS))
 
@@ -50,12 +48,12 @@ class Quadrotor(BaseAviary):
     }
 
     INERTIAL_PROP_RAND_INFO = {
-        "M": { # 0.27
+        "M": { # Nominal: 0.27
             'distrib': "uniform",
             'low': 0.22,
             'high': 0.32
         },
-        "Iyy": { # 1.4e-5
+        "Iyy": { # Nominal: 1.4e-5
             'distrib': "uniform",
             'low': 1.3e-5,
             'high': 1.5e-5
@@ -181,14 +179,11 @@ class Quadrotor(BaseAviary):
             )
         self.CTRL_TIMESTEP = 1. / self.CTRL_FREQ
         self.PYB_TIMESTEP = 1. / self.PYB_FREQ
-
         # Store initial state info.
         if init_state is None:
-            self.INIT_X, self.INIT_X_DOT, self.INIT_Z, self.INIT_Z_DOT, self.INIT_THETA, self.INIT_THETA_DOT = np.zeros(
-                6)
+            self.INIT_X, self.INIT_X_DOT, self.INIT_Z, self.INIT_Z_DOT, self.INIT_THETA, self.INIT_THETA_DOT = np.zeros(6)
         elif self.QUAD_TYPE == QuadType.ONE_D:
-            self.INIT_X, self.INIT_X_DOT, self.INIT_THETA, self.INIT_THETA_DOT = np.zeros(
-                4)
+            self.INIT_X, self.INIT_X_DOT, self.INIT_THETA, self.INIT_THETA_DOT = np.zeros(4)
             if isinstance(init_state, np.ndarray):
                 self.INIT_Z, self.INIT_Z_DOT = init_state
             elif isinstance(init_state, dict):
@@ -218,11 +213,8 @@ class Quadrotor(BaseAviary):
             self.INIT_STATE_RAND_INFO = init_state_randomization_info
         # Do NOT randomize x, x_dot, theta, theta_dot for the 1D quadrotor.
         if self.QUAD_TYPE == QuadType.ONE_D:
-            for init_name in [
-                    "init_x", "init_x_dot", "init_theta", "init_theta_dot"
-            ]:
+            for init_name in ["init_x", "init_x_dot", "init_theta", "init_theta_dot"]:
                 self.INIT_STATE_RAND_INFO.pop(init_name, None)
-
         # Decide whether to randomize the inertial properties and how (see info dictionary).
         self.RANDOMIZED_INERTIAL_PROP = randomized_inertial_prop
         if inertial_prop_randomization_info is not None:
@@ -230,7 +222,6 @@ class Quadrotor(BaseAviary):
         # Do NOT randomize J for the 1D quadrotor.
         if self.QUAD_TYPE == QuadType.ONE_D:
             self.INERTIAL_PROP_RAND_INFO.pop("Iyy", None)
-
         # Store disturbance info.
         self.DISTURBANCES = disturbances
         self.adversary_disturbance = adversary_disturbance
@@ -240,11 +231,9 @@ class Quadrotor(BaseAviary):
             self.DISTURBANCE_MODES["observation"]["dim"] = 2
             self.DISTURBANCE_MODES["action"]["dim"] = 1
             self.DISTURBANCE_MODES["dynamics"]["dim"] = 1
-
         # Store constraint info
         self.CONSTRAINTS = constraints
         self.DONE_ON_VIOLATION = done_on_violation
-
         self.VERBOSE = verbose
         # Call BaseAviary constructor.
         super().__init__(seed=seed,
@@ -253,10 +242,8 @@ class Quadrotor(BaseAviary):
                          cost=Cost(cost),
                          gui=gui,
                          freq=self.PYB_FREQ,
-                         aggregate_phy_steps=int(self.PYB_FREQ
-                                                 / self.CTRL_FREQ),
+                         aggregate_phy_steps=int(self.PYB_FREQ / self.CTRL_FREQ),
                          physics=Physics(physics))
-
         # Override inertial properties of passed as arguments.
         if inertial_prop is None:
             pass
@@ -308,14 +295,14 @@ class Quadrotor(BaseAviary):
             #
             if self.QUAD_TYPE == QuadType.ONE_D:
                 self.X_GOAL = np.vstack([
-                    POS_REF[:, 2],  # TODO Add offset?
+                    POS_REF[:, 2],  # TODO Add offset
                     VEL_REF[:, 2]
                 ]).transpose()
             elif self.QUAD_TYPE == QuadType.TWO_D:
                 self.X_GOAL = np.vstack([
-                    POS_REF[:, 0],  # TODO Add offset?
+                    POS_REF[:, 0],  # TODO Add offset
                     VEL_REF[:, 0],
-                    POS_REF[:, 2],  # TODO Add offset?
+                    POS_REF[:, 2],  # TODO Add offset
                     VEL_REF[:, 2],
                     np.zeros(POS_REF.shape[0]),
                     np.zeros(VEL_REF.shape[0])
@@ -362,7 +349,6 @@ class Quadrotor(BaseAviary):
         self.current_preprocessed_action = None
         if self.adversary_disturbance is not None:
             self.adv_force = None
-
         # Choose randomized or deterministic inertial properties.
         prop_values = {
             "M": self.MASS,
@@ -373,11 +359,8 @@ class Quadrotor(BaseAviary):
                 prop_values, self.INERTIAL_PROP_RAND_INFO)
             if any(phy_quantity < 0 for phy_quantity in prop_values.values()):
                 raise ValueError("[ERROR] in CartPole.reset(), negative randomized inertial properties.")
-
         self.OVERRIDDEN_QUAD_MASS = prop_values["M"]
-        self.OVERRIDDEN_QUAD_INERTIA = [
-            self.J[0, 0], prop_values["Iyy"], self.J[2, 2]
-        ]
+        self.OVERRIDDEN_QUAD_INERTIA = [self.J[0, 0], prop_values["Iyy"], self.J[2, 2]]
         # Override inertial properties.
         p.changeDynamics(
             self.DRONE_IDS[0],
@@ -385,7 +368,6 @@ class Quadrotor(BaseAviary):
             mass=self.OVERRIDDEN_QUAD_MASS,
             localInertiaDiagonal=self.OVERRIDDEN_QUAD_INERTIA,
             physicsClientId=self.PYB_CLIENT)
-
         # Randomize initial state.
         init_values = {
             "init_x": self.INIT_X,
@@ -396,28 +378,22 @@ class Quadrotor(BaseAviary):
             "init_theta_dot": self.INIT_THETA_DOT,
         }
         if self.RANDOMIZED_INIT:
-            init_values = self._randomize_values_by_info(
-                init_values, self.INIT_STATE_RAND_INFO)
-
+            init_values = self._randomize_values_by_info(init_values, self.INIT_STATE_RAND_INFO)
         OVERRIDDEN_INIT_X = init_values["init_x"]
         OVERRIDDEN_INIT_X_DOT = init_values["init_x_dot"]
         OVERRIDDEN_INIT_Z = init_values["init_z"]
         OVERRIDDEN_INIT_Z_DOT = init_values["init_z_dot"]
         OVERRIDDEN_INIT_THETA = init_values["init_theta"]
         OVERRIDDEN_INIT_THETA_DOT = init_values["init_theta_dot"]
-
-        p.resetBasePositionAndOrientation(
-            self.DRONE_IDS[0], [OVERRIDDEN_INIT_X, 0, OVERRIDDEN_INIT_Z],
-            p.getQuaternionFromEuler([0, OVERRIDDEN_INIT_THETA, 0]),
-            physicsClientId=self.PYB_CLIENT)
+        p.resetBasePositionAndOrientation(self.DRONE_IDS[0], [OVERRIDDEN_INIT_X, 0, OVERRIDDEN_INIT_Z],
+                                          p.getQuaternionFromEuler([0, OVERRIDDEN_INIT_THETA, 0]),
+                                          physicsClientId=self.PYB_CLIENT)
         p.resetBaseVelocity(self.DRONE_IDS[0],
                             [OVERRIDDEN_INIT_X_DOT, 0, OVERRIDDEN_INIT_Z_DOT],
                             [0, OVERRIDDEN_INIT_THETA_DOT, 0],
                             physicsClientId=self.PYB_CLIENT)
-
         # Update BaseAviary internal variables before calling self._get_observation().
         self._update_and_store_kinematic_information()
-
         # Return either an observation and dictionary or just the observation.
         if self.INFO_IN_RESET:
             return self._get_observation(), self._get_reset_info()
@@ -433,15 +409,14 @@ class Quadrotor(BaseAviary):
             ndarray: A multidimensional array with the RGB frame captured by PyBullet's camera.
 
         """
-        [w, h, rgb, dep, seg
-        ] = p.getCameraImage(width=self.RENDER_WIDTH,
-                             height=self.RENDER_HEIGHT,
-                             shadow=1,
-                             viewMatrix=self.CAM_VIEW,
-                             projectionMatrix=self.CAM_PRO,
-                             renderer=p.ER_TINY_RENDERER,
-                             flags=p.ER_SEGMENTATION_MASK_OBJECT_AND_LINKINDEX,
-                             physicsClientId=self.PYB_CLIENT)
+        [w, h, rgb, dep, seg] = p.getCameraImage(width=self.RENDER_WIDTH,
+                                                 height=self.RENDER_HEIGHT,
+                                                 shadow=1,
+                                                 viewMatrix=self.CAM_VIEW,
+                                                 projectionMatrix=self.CAM_PRO,
+                                                 renderer=p.ER_TINY_RENDERER,
+                                                 flags=p.ER_SEGMENTATION_MASK_OBJECT_AND_LINKINDEX,
+                                                 physicsClientId=self.PYB_CLIENT)
         # Image.fromarray(np.reshape(rgb, (h, w, 4)), 'RGBA').show()
         return np.reshape(rgb, (h, w, 4))
 
@@ -467,48 +442,42 @@ class Quadrotor(BaseAviary):
             self.adv_action = clipped_adv_action * self.adversary_disturbance_scale
 
     def _setup_disturbances(self):
-        """Sets up scaling and actions space for an adversarial disturbance."""
-        # default no passive disturbance
+        """Sets up scaling and actions space for an adversarial disturbance.
+
+        """
+        # Default: no passive disturbances.
         self.disturbances = {}
 
         if self.DISTURBANCES is not None:
             for mode, disturbs in self.DISTURBANCES.items():
-                assert mode in self.DISTURBANCE_MODES, "[ERROR] in Quadrotor._setup_disturbances(), disturbance mode " \
-                                                       "not available."
+                assert mode in self.DISTURBANCE_MODES, "[ERROR] in Quadrotor._setup_disturbances(), disturbance mode not available."
                 disturb_list = []
                 shared_args = self.DISTURBANCE_MODES[mode]
-
-                # each disturbance for this mode
+                # Each disturbance for this mode.
                 for name, cfg in disturbs.items():
-                    assert name in DISTURBANCE_TYPES, "[ERROR] in Quadrotor._setup_disturbances(), disturbance " \
-                                                           "type not available."
+                    assert name in DISTURBANCE_TYPES, "[ERROR] in Quadrotor._setup_disturbances(), disturbance type not available."
                     disturb_cls = DISTURBANCE_TYPES[name]
                     disturb = disturb_cls(self, **shared_args, **cfg)
                     disturb_list.append(disturb)
-
-                # combine as one for this mode
+                # Combine as one for this mode.
                 self.disturbances[mode] = DisturbanceList(disturb_list)
-
-        # adversary disturbance (set from outside of env, non-passive)
+        # Adversary disturbance (set from outside of env, active/non-passive).
         if self.adversary_disturbance is not None:
             assert self.adversary_disturbance in self.DISTURBANCE_MODES, "[ERROR] in Cartpole._setup_disturbances()"
-
             shared_args = self.DISTURBANCE_MODES[self.adversary_disturbance]
             dim = shared_args["dim"]
-            # TODO: symmetric space can be problematic for obs ?
             self.adversary_action_space = spaces.Box(low=-1,
                                                      high=1,
                                                      shape=(dim,))
-            # adversary obs same as protagonist
+            # Adversary obs are the same as those of the protagonist.
             self.adversary_observation_space = self.observation_space
 
     def _setup_constraints(self):
         """Sets up a list (ConstraintList) of constraints.
-        # todo: Can we put this in BenchmarkEnv?
+
         """
         self.constraints = None
         self.num_constraints = 0
-
         if self.CONSTRAINTS is not None:
             self.constraints = create_ConstraintList_from_dict(
                 self.CONSTRAINTS, self.AVAILABLE_CONSTRAINTS, self)
@@ -536,7 +505,7 @@ class Quadrotor(BaseAviary):
             U = cs.vertcat(T)
             # Define dynamics equations.
             X_dot = cs.vertcat(z_dot, T / m - g)
-            # Define observation equation
+            # Define observation equation.
             Y = cs.vertcat(z, z_dot)
         elif self.QUAD_TYPE == QuadType.TWO_D:
             nx, nu = 6, 2
@@ -562,8 +531,7 @@ class Quadrotor(BaseAviary):
         R = cs.MX.sym('R', nu, nu)
         Xr = cs.MX.sym('Xr', nx, 1)
         Ur = cs.MX.sym('Ur', nu, 1)
-        cost_func = 0.5 * (X - Xr).T @ Q @ (X - Xr) + 0.5 * (U - Ur).T @ R @ (
-            U - Ur)
+        cost_func = 0.5 * (X - Xr).T @ Q @ (X - Xr) + 0.5 * (U - Ur).T @ R @ (U - Ur)
         # Define dynamics and cost dictionaries.
         dynamics = {"dyn_eqn": X_dot, "obs_eqn": Y, "vars": {"X": X, "U": U}}
         cost = {
@@ -577,8 +545,6 @@ class Quadrotor(BaseAviary):
                 "R": R
             }
         }
-        # todo: Add bound constraint attribute here from ConstraintList?
-
         # Setup symbolic model.
         self.symbolic = SymbolicModel(dynamics=dynamics, cost=cost, dt=dt)
 
@@ -586,8 +552,7 @@ class Quadrotor(BaseAviary):
         """Returns the action space of the environment.
 
         Returns:
-            gym.spaces: The quadrotor environment's action space,
-                        of size 1 or 2 depending on QUAD_TYPE.
+            gym.spaces: The quadrotor environment's action space, of size 1 or 2 depending on QUAD_TYPE.
 
         """
         if self.NORMALIZED_RL_ACTION_SPACE:
@@ -604,8 +569,7 @@ class Quadrotor(BaseAviary):
         """Returns the observation space of the environment.
 
         Returns:
-            gym.spaces: The bounded observation (state) space,
-                        of size 2 or 6 depending on QUAD_TYPE.
+            gym.spaces: The bounded observation (state) space, of size 2 or 6 depending on QUAD_TYPE.
 
         """
         self.x_threshold = 2
@@ -641,23 +605,19 @@ class Quadrotor(BaseAviary):
 
         """
         if self.NORMALIZED_RL_ACTION_SPACE:
-            action = (1 + (0.1 * action)) * (
-                (self.GRAVITY_ACC * self.MASS) / int(self.QUAD_TYPE))
+            action = (1 + (0.1 * action)) * ((self.GRAVITY_ACC * self.MASS) / int(self.QUAD_TYPE))
         thrust = np.clip(action, self.action_space.low, self.action_space.high)
         if not np.array_equal(thrust, np.array(action)) and self.VERBOSE:
             print(
                 "[WARNING]: action was clipped in Quadrotor._preprocess_control()."
             )
         self.current_preprocessed_action = thrust
-
-        # apply disturbances
+        # Apply disturbances.
         if "action" in self.disturbances:
             thrust = self.disturbances["action"].apply(thrust, self)
         if self.adversary_disturbance == "action":
             thrust = thrust + self.adv_force
-
-        pwm = cmd2pwm(thrust, self.PWM2RPM_SCALE, self.PWM2RPM_CONST, self.KF,
-                      self.MIN_PWM, self.MAX_PWM)
+        pwm = cmd2pwm(thrust, self.PWM2RPM_SCALE, self.PWM2RPM_CONST, self.KF, self.MIN_PWM, self.MAX_PWM)
         rpm = pwm2rpm(pwm, self.PWM2RPM_SCALE, self.PWM2RPM_CONST)
         return rpm
 
@@ -677,8 +637,7 @@ class Quadrotor(BaseAviary):
 
         """
         disturb_force = None
-
-        # determine disturbance force
+        # Determine disturbance force.
         passive_disturb = "dynamics" in self.disturbances
         adv_disturb = self.adversary_disturbance == "dynamics"
         if passive_disturb or adv_disturb:
@@ -688,16 +647,15 @@ class Quadrotor(BaseAviary):
                 disturb_force, self)
         if adv_disturb and self.adv_action is not None:
             disturb_force = disturb_force + self.adv_action
-            # clear adversary action, wait for next one
+            # Clear the adversary action, wait for the next one.
             self.adv_action = None
-
-        # construct full disturbance force (3D)
+        # Construct full (3D) disturbance force.
         if disturb_force:
             if self.QUAD_TYPE == QuadType.ONE_D:
-                # only disturb on z direction
+                # Only disturb on z direction.
                 disturb_force = [0, 0, float(disturb_force)]
             elif self.QUAD_TYPE == QuadType.TWO_D:
-                # only disturb on x-z plane
+                # Only disturb on x-z plane.
                 disturb_force = [
                     float(disturb_force[0]), 0,
                     float(disturb_force[1])
@@ -713,8 +671,7 @@ class Quadrotor(BaseAviary):
         """Returns the current observation (state) of the environment.
 
         Returns:
-            ndarray: The state of the quadrotor, 
-                     of size 2 or 6 depending on QUAD_TYPE.
+            ndarray: The state of the quadrotor, of size 2 or 6 depending on QUAD_TYPE.
 
         """
         full_state = self._get_drone_state_vector(0)
@@ -727,16 +684,13 @@ class Quadrotor(BaseAviary):
             self.state = np.hstack(
                 [pos[0], vel[0], pos[2], vel[2], rpy[1], ang_v[1]]).reshape(
                     (6,))
-        if not np.array_equal(
-                self.state,
-                np.clip(self.state, self.observation_space.low,
-                        self.observation_space.high)):
+        if not np.array_equal(self.state,
+                              np.clip(self.state, self.observation_space.low, self.observation_space.high)):
             if self.GUI and self.VERBOSE:
                 print(
                     "[WARNING]: observation was clipped in Quadrotor._get_observation()."
                 )
-
-        # apply observation disturbance
+        # Apply observation disturbance.
         obs = deepcopy(self.state)
         if "observation" in self.disturbances:
             obs = self.disturbances["observation"].apply(obs, self)
@@ -751,29 +705,23 @@ class Quadrotor(BaseAviary):
         """
         if self.COST == Cost.RL_REWARD:
             full_state = self._get_drone_state_vector(0)
-            pos, _, rpy, vel, ang_v, _ = np.split(full_state,
-                                                  [3, 7, 10, 13, 16])
+            pos, _, rpy, vel, ang_v, _ = np.split(full_state, [3, 7, 10, 13, 16])
             if self.QUAD_TYPE == QuadType.ONE_D:
-                dist = np.linalg.norm(
-                    np.array([0, 0, self.TASK_INFO["stabilization_goal"][1]])
-                    - pos)**2
+                dist = np.linalg.norm(np.array([0, 0, self.TASK_INFO["stabilization_goal"][1]]) - pos)**2
             elif self.QUAD_TYPE == QuadType.TWO_D:
                 dist = np.linalg.norm(
-                    np.array([
-                        self.TASK_INFO["stabilization_goal"][0], 0,
-                        self.TASK_INFO["stabilization_goal"][1]
-                    ]) - pos)**2
+                    np.array([self.TASK_INFO["stabilization_goal"][0], 0,
+                              self.TASK_INFO["stabilization_goal"][1]]) - pos)**2
             return -1 * dist
         if self.COST == Cost.QUADRATIC:
             state = self._get_observation()
             if self.TASK == Task.STABILIZATION:
-                return float(
-                    -1 * self.symbolic.loss(x=state,
-                                            Xr=self.X_GOAL,
-                                            u=self.current_preprocessed_action,
-                                            Ur=self.U_GOAL,
-                                            Q=self.Q,
-                                            R=self.R)["l"])
+                return float(-1 * self.symbolic.loss(x=state,
+                                                     Xr=self.X_GOAL,
+                                                     u=self.current_preprocessed_action,
+                                                     Ur=self.U_GOAL,
+                                                     Q=self.Q,
+                                                     R=self.R)["l"])
             if self.TASK == Task.TRAJ_TRACKING:
                 return -1
 
@@ -834,12 +782,9 @@ class Quadrotor(BaseAviary):
         info["x_reference"] = self.X_GOAL
         info["u_reference"] = self.U_GOAL
         if self.constraints is not None:
-            info[
-                "symbolic_constraints"] = self.constraints.get_all_symbolic_models(
-                )
+            info["symbolic_constraints"] = self.constraints.get_all_symbolic_models()
             #info["constraint_values"] = self.constraints.get_values(self)
             #info["constraint_violations"] = self.constraints.get_violations(self)
-
         return info
 
     def _parse_urdf_parameters(self, file_name: str = "cf2x.urdf"):
