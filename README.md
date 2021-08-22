@@ -78,7 +78,7 @@ This will use the data in `safe-control-gym/experiments/figure7/safe_exp_results
 
 <img src="figures/safe-exp.png" alt="safe-exp" width="800">
 
-To also re-train all the controllers/agents (**warning:** >24hrs on a laptop)
+To also re-train all the controllers/agents (**warning:** >24hrs on a laptop, suggest to run each section separately if necessary)
 ```
 chmod +x create_safe_exp_results.sh                              # Make the script executable, if needed
 ./create_safe_exp_results.sh                                     # Run the script (>24hrs)
