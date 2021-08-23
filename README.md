@@ -28,14 +28,14 @@ To stay in touch, get involved or ask questions, please contact us via e-mail (`
 ## Install on Ubuntu/macOS
 (optional) Create and access a Python 3.7 environment using [`conda`](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
 ```
-conda create -n safe python=3.7                                  # Create environment (named 'safe' here)
-conda activate safe                                              # Activate environment 'safe'
+$ conda create -n safe python=3.7                                  # Create environment (named 'safe' here)
+$ conda activate safe                                              # Activate environment 'safe'
 ```
 Clone and install the `safe-control-gym` repository 
 ```
-git clone -b ar https://github.com/utiasDSL/safe-control-gym.git # Clone repository (the 'ar' branch specifically)
-cd safe-control-gym                                              # Enter the repository
-pip install -e .                                                 # Install the repository
+$ git clone -b ar https://github.com/utiasDSL/safe-control-gym.git # Clone repository (the 'ar' branch specifically)
+$ cd safe-control-gym                                              # Enter the repository
+$ pip install -e .                                                 # Install the repository
 ```
 
 
@@ -49,9 +49,9 @@ pip install -e .                                                 # Install the r
 ### Figure 6—Robust GP-MPC [[1]](https://ieeexplore.ieee.org/document/8909368)
 
 ```
-cd ./experiments/figure6/                                        # Navigate to the experiment folder
-chmod +x create_fig6.sh                                          # Make the script executable, if needed
-./create_fig6.sh                                                 # Run the script (ca. 2')
+$ cd ./experiments/figure6/                                        # Navigate to the experiment folder
+$ chmod +x create_fig6.sh                                          # Make the script executable, if needed
+$ ./create_fig6.sh                                                 # Run the script (ca. 2')
 ```
 This will use the models in `safe-control-gym/experiments/figure6/trained_gp_model/` to generate
 
@@ -59,8 +59,8 @@ This will use the models in `safe-control-gym/experiments/figure6/trained_gp_mod
 
 To also re-train the GP models from scratch (ca. 30' on a laptop)
 ```
-chmod +x create_trained_gp_model.sh                              # Make the script executable, if needed
-./create_trained_gp_model.sh                                     # Run the script (ca. 30')
+$ chmod +x create_trained_gp_model.sh                              # Make the script executable, if needed
+$ ./create_trained_gp_model.sh                                     # Run the script (ca. 30')
 ```
 > **Note:** this will backup and overwrite `safe-control-gym/experiments/figure6/trained_gp_model/`
 
@@ -70,9 +70,9 @@ chmod +x create_trained_gp_model.sh                              # Make the scri
 ### Figure 7—Safe RL Exploration [[2]](https://arxiv.org/abs/1801.08757)
 
 ```
-cd ../figure7/                                                   # Navigate to the experiment folder
-chmod +x create_fig7.sh                                          # Make the script executable, if needed
-./create_fig7.sh                                                 # Run the script (ca. 5'')
+$ cd ../figure7/                                                   # Navigate to the experiment folder
+$ chmod +x create_fig7.sh                                          # Make the script executable, if needed
+$ ./create_fig7.sh                                                 # Run the script (ca. 5'')
 ```
 This will use the data in `safe-control-gym/experiments/figure7/safe_exp_results.zip/` to generate
 
@@ -80,8 +80,8 @@ This will use the data in `safe-control-gym/experiments/figure7/safe_exp_results
 
 To also re-train all the controllers/agents (**warning:** >24hrs on a laptop, if necessary, run each one of the loops in the Bash script—PPO, PPO with reward shaping, and the Safe Explorer—separately)
 ```
-chmod +x create_safe_exp_results.sh                              # Make the script executable, if needed
-./create_safe_exp_results.sh                                     # Run the script (>24hrs)
+$ chmod +x create_safe_exp_results.sh                              # Make the script executable, if needed
+$ ./create_safe_exp_results.sh                                     # Run the script (>24hrs)
 ```
 > **Note:** this script will (over)write the results in `safe-control-gym/experiments/figure7/safe_exp_results/`; if you do not run the re-training to completion, delete the partial results `rm -r -f ./safe_exp_results/` before running `./create_fig7.sh` again.
 
@@ -93,14 +93,14 @@ chmod +x create_safe_exp_results.sh                              # Make the scri
 (required) Obtain [MOSEK's license](https://www.mosek.com/products/academic-licenses/) (free for academia).
 Once you have received (via e-mail) and downloaded the license to your own `~/Downloads` folder, install it by executing
 ```
-mkdir ~/mosek                                                    # Create MOSEK license folder in your home '~'
-mv ~/Downloads/mosek.lic ~/mosek/                                # Copy the downloaded MOSEK license to '~/mosek/'
+$ mkdir ~/mosek                                                    # Create MOSEK license folder in your home '~'
+$ mv ~/Downloads/mosek.lic ~/mosek/                                # Copy the downloaded MOSEK license to '~/mosek/'
 ```
 Then run
 ```
-cd ../figure8/                                                   # Navigate to the experiment folder
-chmod +x create_fig8.sh                                          # Make the script executable, if needed
-./create_fig8.sh                                                 # Run the script (ca. 1')
+$ cd ../figure8/                                                   # Navigate to the experiment folder
+$ chmod +x create_fig8.sh                                          # Make the script executable, if needed
+$ ./create_fig8.sh                                                 # Run the script (ca. 1')
 ```
 This will use the unsafe (pre-trained) PPO controller/agent in folder `safe-control-gym/experiments/figure8/unsafe_ppo_model/` to generate
 
@@ -110,8 +110,8 @@ This will use the unsafe (pre-trained) PPO controller/agent in folder `safe-cont
 
 To also re-train the unsafe PPO controller/agent (ca. 2' on a laptop) 
 ```
-chmod +x create_unsafe_ppo_model.sh                              # Make the script executable, if needed
-./create_unsafe_ppo_model.sh                                     # Run the script (ca. 2')
+$ chmod +x create_unsafe_ppo_model.sh                              # Make the script executable, if needed
+$ ./create_unsafe_ppo_model.sh                                     # Run the script (ca. 2')
 ```
 > **Note:** this script will (over)write the model in `safe-control-gym/experiments/figure8/unsafe_ppo_model/`
 
