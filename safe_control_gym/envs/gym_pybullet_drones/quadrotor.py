@@ -104,6 +104,7 @@ class Quadrotor(BaseAviary):
 
     def __init__(self,
                  seed: int = 1337,
+                 output_dir=None,
                  info_in_reset: bool = False,
                  ctrl_freq: int = 60,
                  pyb_freq: int = 240,
