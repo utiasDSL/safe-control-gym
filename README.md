@@ -1,4 +1,4 @@
-# safe-control-gym :)
+# safe-control-gym
 
 
 
