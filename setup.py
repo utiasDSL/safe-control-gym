@@ -4,18 +4,21 @@ setup(name='safe_control_gym',
     version='0.5.0',
     install_requires=[
         'matplotlib', 
-        'scikit-optimize', 
         'munch', 
         'pyyaml', 
         'imageio', 
-        'dict-deep', 
+        'dict-deep',
+        'scikit-optimize', 
+        'pandas', 
         'gym', 
         'torch', 
+        'gpytorch', 
+        'ray',
         'tensorboard', 
         'casadi', 
-        'pybullet', 
-        'gpytorch', 
+        'pybullet',
         'cvxpy', 
         'pytope', 
-        'Mosek']
+        'Mosek'
+        ]
 )

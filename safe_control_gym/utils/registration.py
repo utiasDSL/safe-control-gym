@@ -55,7 +55,7 @@ class Spec():
                 # Specified as file path.
                 mod_name, config_name = self.config_entry_point.split(":")
                 with pkg_resources.open_text(mod_name, config_name) as f:
-                    config = yaml.load(f)
+                    config = yaml.load(f, Loader=yaml.FullLoader)
             else:
                 # Specified as "module_path:config_dict_name".
                 config = load(self.config_entry_point)
