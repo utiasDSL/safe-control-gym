@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+preferred-citation:
+  type: article
+  authors:
+  - family-names: "Bunke"
+    given-names: "Lukas"
+  - family-names: "Greeff"
+    given-names: "Melissa"
+  - family-names: "Hall"
+    given-names: "Adam W."
+  - family-names: "Yuan"
+    given-names: "Zhaocong"
+  - family-names: "Zhou"
+    given-names: "SiQi"
+  - family-names: "Panerati"
+    given-names: "Jacopo"
+    orcid: "https://orcid.org/0000-0003-2994-5422"
+  - family-names: "Schoellig"
+    given-names: "Angela P."
+    orcid: "https://orcid.org/0000-0003-4012-4668"
+  doi: "10.0000/00000"
+  journal: "Annual Review of Control, Robotics, and Autonomous Systems"
+  month: 1
+  start: 1 # First page number
+  end: 35 # Last page number
+  title: "Safe Learning in Robotics: From Learning-Based Control to Safe Reinforcement Learning"
+  issue: 1
+  volume: 1
+  year: 2021
