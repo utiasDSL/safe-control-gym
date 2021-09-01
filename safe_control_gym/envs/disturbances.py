@@ -98,7 +98,7 @@ class ImpulseDisturbance(Disturbance):
         self.step_offset = step_offset
         self.max_step = int(env.EPISODE_LEN_SEC / env.CTRL_TIMESTEP)
         # Specify shape of the impulse.
-        assert duration > 1
+        assert duration >= 1
         assert decay_rate > 0 and decay_rate <= 1
         self.duration = duration
         self.decay_rate = decay_rate
@@ -117,8 +117,8 @@ class ImpulseDisturbance(Disturbance):
               env
               ):
         noise = 0
-        if env.control_step_counter > self.step_offset:
-            peak_offset = np.abs(env.control_step_counter - self.current_peak_step)
+        if env.ctrl_step_counter >= self.current_step_offset:
+            peak_offset = np.abs(env.ctrl_step_counter - self.current_peak_step)
             if peak_offset < self.duration / 2:
                 decay = self.decay_rate**peak_offset
             else:
@@ -163,8 +163,36 @@ class StepDisturbance(Disturbance):
               env
               ):
         noise = 0
-        if env.control_step_counter > self.step_offset:
+        if env.ctrl_step_counter >= self.current_step_offset:
             noise = self.magnitude
+        if self.mask is not None:
+            noise *= self.mask
+        disturbed = target + noise
+        return disturbed
+
+class UniformNoise(Disturbance):
+    """i.i.d uniform noise ~ U(low, high) per time step."""
+
+    def __init__(self, env, dim, mask=None, low=0.0, high=1.0, **kwargs):
+        super().__init__(env, dim, mask)
+
+        # uniform distribution bounds
+        if isinstance(low, float):
+            self.low = np.asarray([low] * self.dim)
+        elif isinstance(low, list):
+            self.low = np.asarray(low)
+        else:
+            raise ValueError("[ERROR] UniformNoise.__init__(): low must be specified as a float or list.")
+
+        if isinstance(high, float):
+            self.high = np.asarray([high] * self.dim)
+        elif isinstance(low, list):
+            self.high = np.asarray(high)
+        else:
+            raise ValueError("[ERROR] UniformNoise.__init__(): high must be specified as a float or list.")
+
+    def apply(self, target, env):
+        noise = self.np_random.uniform(self.low, self.high, size=self.dim)
         if self.mask is not None:
             noise *= self.mask
         disturbed = target + noise
@@ -236,8 +264,8 @@ class PeriodicNoise(Disturbance):
               env
               ):
         phase = self.np_random.uniform(low=-np.pi, high=np.pi, size=self.dim)
-        t = env.step_counter
-        noise = self.scale * self.np.sin(self.frequency * t + phase)
+        t = env.pyb_step_counter * env.PYB_TIMESTEP
+        noise = self.scale * np.sin(2 * np.pi * self.frequency * t + phase)
         if self.mask is not None:
             noise *= self.mask
         disturbed = target + noise
@@ -260,4 +288,9 @@ class StateDependentDisturbance(Disturbance):
         super().__init__()
 
 
-DISTURBANCE_TYPES = {"impulse": ImpulseDisturbance, "step": StepDisturbance, "white_noise": WhiteNoise, "periodic": PeriodicNoise}
+DISTURBANCE_TYPES = {"impulse": ImpulseDisturbance,
+                     "step": StepDisturbance,
+                     "uniform": UniformNoise,
+                     "white_noise": WhiteNoise,
+                     "periodic": PeriodicNoise,
+                     }

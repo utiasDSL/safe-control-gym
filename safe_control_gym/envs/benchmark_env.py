@@ -8,8 +8,11 @@ from enum import Enum
 from matplotlib import pyplot as plt
 import numpy as np
 import gym
+from gym import spaces
 from gym.utils import seeding
 import copy
+
+from safe_control_gym.envs.disturbances import DisturbanceList, DISTURBANCE_TYPES
 
 
 class Cost(str, Enum):
@@ -80,8 +83,29 @@ class BenchmarkEnv(gym.Env):
         self._setup_disturbances()
         self._setup_constraints()
 
+    def set_cost_function_param(self,
+                                Q,
+                                R
+                                ):
+        """Set the cost function parameters.
+
+        Args:
+            Q (np.array): State weight matrix (nx by nx).
+            R (np.array): Input weight matrix (nu by nu).
+
+        """
+        if not self.initial_reset:
+            self.Q = Q
+            self.R = R
+        else:
+            raise RuntimeError(
+                '[ERROR] env.set_cost_function_param() cannot be called after the first reset of the environment.'
+            )
+
     def _check_initial_reset(self):
-        """Makes sure that .reset() is called at least once before .step()."""
+        """Makes sure that .reset() is called at least once before .step().
+
+        """
         if not self.initial_reset:
             raise RuntimeError(
                 "[ERROR] You must call env.reset() at least once before using env.step()."
@@ -116,8 +140,8 @@ class BenchmarkEnv(gym.Env):
                 d_args = rand_info_copy[key].pop("args", [])
                 # Keyword args are just anything left.
                 d_kwargs = rand_info_copy[key]
-                # Randomize.
-                randomized_values[key] = distrib(*d_args, **d_kwargs)
+                # Randomize (adding to the original values).
+                randomized_values[key] += distrib(*d_args, **d_kwargs)
         return randomized_values
 
     def seed(self,
@@ -139,7 +163,32 @@ class BenchmarkEnv(gym.Env):
 
     def _setup_disturbances(self):
         """Creates attributes and action spaces for the disturbances."""
-        raise NotImplementedError
+        # Default: no passive disturbances.
+        self.disturbances = {}
+        if self.DISTURBANCES is not None:
+            for mode, disturbs in self.DISTURBANCES.items():
+                assert mode in self.DISTURBANCE_MODES, "[ERROR] in BenchmarkEnv._setup_disturbances(), disturbance mode not available."
+                disturb_list = []
+                shared_args = self.DISTURBANCE_MODES[mode]
+                # Each disturbance for the mode.
+                for disturb in disturbs:
+                    assert "disturbance_func" in disturb.keys(), "[ERROR]: Every distrubance must specify a disturbance_func."
+                    disturb_func = disturb.disturbance_func
+                    assert disturb_func in DISTURBANCE_TYPES, "[ERROR] in BenchmarkEnv._setup_disturbances(), disturbance type not available."
+                    disturb_cls = DISTURBANCE_TYPES[disturb_func]
+                    cfg = {key: disturb[key] for key in disturb if key != "disturbance_func"}
+                    disturb = disturb_cls(self, **shared_args, **cfg)
+                    disturb_list.append(disturb)
+                # Combine as one for the mode.
+                self.disturbances[mode] = DisturbanceList(disturb_list)
+        # Adversary disturbance (set from outside of env, active/non-passive).
+        if self.adversary_disturbance is not None:
+            assert self.adversary_disturbance in self.DISTURBANCE_MODES, "[ERROR] in Cartpole._setup_disturbances()"
+            shared_args = self.DISTURBANCE_MODES[self.adversary_disturbance]
+            dim = shared_args["dim"]
+            self.adversary_action_space = spaces.Box(low=-1, high=1, shape=(dim,))
+            # Adversary obs are the same as those of the protagonist.
+            self.adversary_observation_space = self.observation_space
 
     def _setup_constraints(self):
         """Creates a list of constraints as an attribute."""

@@ -41,7 +41,8 @@ def main():
                 rl_controller=ppo_ctrl,
                 **config.algo_config)
     ctrl.reset()
-    ctrl.learn()
+    train_env = env_func(init_state=None)
+    ctrl.learn(env=train_env)
     test_env = env_func()
     uncertified_env = env_func()
     results = ctrl.run(env=test_env,

@@ -263,7 +263,7 @@ class BaseAviary(BenchmarkEnv):
         # Start video recording.
         self._start_video_recording()
         # Return the initial observation.
-        return self._get_observation()
+        # return self._get_observation()  # Unused by child class Quadrotor.
 
     def step(self, action, disturbance_force=None):
         """Advances the environment by one simulation step.
@@ -342,7 +342,8 @@ class BaseAviary(BenchmarkEnv):
         done = self._get_done()
         info = self._get_info()
         # Advance the step counter.
-        self.step_counter = self.step_counter + (1 * self.AGGR_PHY_STEPS)
+        self.pyb_step_counter = self.pyb_step_counter + (1 * self.AGGR_PHY_STEPS)
+        self.ctrl_step_counter = self.ctrl_step_counter + 1
         return obs, reward, done, info
 
     def render(self, mode='human', close=False):
@@ -361,12 +362,12 @@ class BaseAviary(BenchmarkEnv):
         if self.VERBOSE:
             print(
                 "\n[INFO] BaseAviary.render() ——— it {:04d}".format(
-                    self.step_counter),
+                    self.pyb_step_counter),
                 "——— wall-clock time {:.1f}s,".format(time.time()
                                                       - self.RESET_TIME),
                 "simulation time {:.1f}s@{:d}Hz ({:.2f}x)".format(
-                    self.step_counter * self.TIMESTEP, self.SIM_FREQ,
-                    (self.step_counter * self.TIMESTEP) /
+                    self.pyb_step_counter * self.TIMESTEP, self.SIM_FREQ,
+                    (self.pyb_step_counter * self.TIMESTEP) /
                     (time.time() - self.RESET_TIME)))
             for i in range(self.NUM_DRONES):
                 print(
@@ -402,7 +403,8 @@ class BaseAviary(BenchmarkEnv):
         """
         # Initialize/reset counters and zero-valued variables.
         self.RESET_TIME = time.time()
-        self.step_counter = 0
+        self.pyb_step_counter = 0
+        self.ctrl_step_counter = 0
         self.first_render_call = True
         self.X_AX = -1 * np.ones(self.NUM_DRONES)
         self.Y_AX = -1 * np.ones(self.NUM_DRONES)

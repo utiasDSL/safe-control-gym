@@ -20,7 +20,7 @@ from scipy.linalg import solve_discrete_are
 from safe_control_gym.controllers.base_controller import BaseController
 from safe_control_gym.controllers.mpc.mpc_utils import get_cost_weight_matrix, discretize_linear_system
 from safe_control_gym.controllers.mpsc.mpsc_utils import compute_RPI_set, pontryagin_difference_AABB, ellipse_bounding_box
-from safe_control_gym.envs.constraints import QuadraticContstraint, ConstraintList, ConstraintInputType
+from safe_control_gym.envs.constraints import QuadraticContstraint, ConstraintList, ConstrainedVariableType
 from safe_control_gym.envs.benchmark_env import Task
 
 
@@ -172,7 +172,7 @@ class MPSC(BaseController):
         self.omega_constraint = QuadraticContstraint(self.env,
                                                      P,
                                                      1.0,
-                                                     constraint_input_type=ConstraintInputType.STATE)
+                                                     constrained_variable=ConstrainedVariableType.STATE)
         # Now that constraints are defined, setup the optimizer.
         self.setup_optimizer()
 
@@ -189,24 +189,25 @@ class MPSC(BaseController):
             if len(input_constraint) > 1:
                 raise NotImplementedError("MPSC currently can't handle more than 1 constraint")
             input_constraint = input_constraint[0]
-            self.U_vertices = np.array([[input_constraint.high, input_constraint.low]]).T
+            #self.U_vertices = np.array([np.atleast_1d(input_constraint.upper_bounds), np.atleast_1d(input_constraint.lower_bounds)]).T
+            self.U_vertices = np.array([np.atleast_1d(input_constraint.upper_bounds), np.atleast_1d(input_constraint.lower_bounds)])
             self.tightened_input_constraint_verts, tightened_input_constr_func\
                 = pontryagin_difference_AABB(
                 self.U_vertices,
                 self.K_omega_AABB_verts)
             self.tightened_input_constraint = tightened_input_constr_func(env=self.env,
-                                                                          constraint_input_type=ConstraintInputType.INPUT)
+                                                                          constrained_variable=ConstrainedVariableType.INPUT)
             # Get the state constraint vertices.
             state_constraints = self.constraints.state_constraints
             if len(state_constraints) > 1:
                 raise NotImplementedError("MPSC currently can't handle more than 1 constraint")
             state_constraints = state_constraints[0]
-            X_vertices_raw = [(state_constraints.high[i],state_constraints.low[i]) for i in range(self.model.nx)]
+            X_vertices_raw = [(state_constraints.upper_bounds[i],state_constraints.lower_bounds[i]) for i in range(self.model.nx)]
             self.X_vertices = np.clip(np.vstack(list(product(*X_vertices_raw))), -100, 100)
             self.tightened_state_constraint_verts, tightened_state_constraint_func = pontryagin_difference_AABB(self.X_vertices,
                                                                                                                 self.omega_AABB_verts)
             self.tightened_state_constraint = tightened_state_constraint_func(env=self.env,
-                                                                              constraint_input_type=ConstraintInputType.STATE)
+                                                                              constrained_variable=ConstrainedVariableType.STATE)
         else:
             raise ValueError("")
 

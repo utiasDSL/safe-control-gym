@@ -38,12 +38,12 @@ algo_config:
   gp_approx: 'mean_eq' # 'taylor'
   online_learning: False
   additional_constraints:
-    linear_constraint:
+    - constraint_form: linear_constraint
       A:
         - [ -1.0, 0.0, 1.0, 0.0, 0.0, 0.0 ]
       b:
         - 1.1
-      constraint_input_type: STATE
+      constrained_variable: STATE
   input_mask:
     - 0
     - 1
@@ -66,15 +66,17 @@ task_config:
   info_in_reset: True
   cost: quadratic
   constraints:
-    quadrotor_state: {}
-    quadrotor_input:
-      high:
+    - constraint_form: default_constraint
+      constrained_variable: STATE
+    - constraint_form: default_constraint
+      constrained_variable: INPUT
+      upper_bounds:
         - 0.2
         - 0.2
   done_on_violation: True
   disturbances:
     observation:
-      white_noise:
+      - disturbance_func: white_noise
         std: 0.0001
   init_state_randomization_info:
     init_x:

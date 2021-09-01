@@ -9,7 +9,7 @@ from copy import deepcopy
 from safe_control_gym.controllers.base_controller import BaseController
 from safe_control_gym.controllers.mpc.mpc_utils import get_cost_weight_matrix
 from safe_control_gym.envs.benchmark_env import Task
-from safe_control_gym.envs.constraints import ConstraintList, GENERAL_CONSTRAINTS, create_ConstraintList_from_dict
+from safe_control_gym.envs.constraints import ConstraintList, GENERAL_CONSTRAINTS, create_ConstraintList_from_list
 
 
 class MPC(BaseController):
@@ -46,7 +46,7 @@ class MPC(BaseController):
         # Task.
         self.env = env_func()
         if additional_constraints is not None:
-            additional_ConstraintsList = create_ConstraintList_from_dict(additional_constraints,
+            additional_ConstraintsList = create_ConstraintList_from_list(additional_constraints,
                                                                          GENERAL_CONSTRAINTS,
                                                                          self.env)
             self.additional_constraints = additional_ConstraintsList.constraints

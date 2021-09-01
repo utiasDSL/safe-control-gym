@@ -10,9 +10,9 @@ task_config:
   info_in_reset: True
   normalized_rl_action_space: False
   constraints:
-    abs_bound:
+    - constraint_form: abs_bound
       bound: 0.4
-      constraint_input_type: STATE
+      constrained_variable: STATE
       active_dims: 0
       tolerance: 0.2
   done_on_violation: True

@@ -18,9 +18,7 @@ import pybullet as p
 from gym import spaces
 
 from safe_control_gym.envs.benchmark_env import BenchmarkEnv, Cost, Task
-from safe_control_gym.envs.disturbances import DisturbanceList, DISTURBANCE_TYPES
-from safe_control_gym.envs.constraints import create_ConstraintList_from_dict, GENERAL_CONSTRAINTS
-from safe_control_gym.envs.gym_control.cartpole_constraints import CartPoleStateConstraint, CartPoleInputConstraint, CartPoleSymmetricStateConstraint, CartPoleBoundConstraint
+from safe_control_gym.envs.constraints import create_ConstraintList_from_list, SymmetricStateConstraint, GENERAL_CONSTRAINTS
 from safe_control_gym.math_and_models.symbolic_systems import SymbolicModel
 
 
@@ -64,10 +62,7 @@ class CartPole(BenchmarkEnv):
     URDF_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "cartpole_template.urdf")
 
     AVAILABLE_CONSTRAINTS = {
-        "cartpole_state": CartPoleStateConstraint,
-        "cartpole_input": CartPoleInputConstraint,
-        "abs_bound": CartPoleSymmetricStateConstraint,
-        "cartpole_bound": CartPoleBoundConstraint,
+        "abs_bound": SymmetricStateConstraint
     }
     AVAILABLE_CONSTRAINTS.update(deepcopy(GENERAL_CONSTRAINTS))
 
@@ -115,6 +110,7 @@ class CartPole(BenchmarkEnv):
 
     TASK_INFO = {
         "stabilization_goal": [0],
+        "stabilization_goal_tolerance": 0.05,
         "trajectory_type": "circle",
         "num_cycles": 1,
         "trajectory_plane": "zx",
@@ -186,6 +182,7 @@ class CartPole(BenchmarkEnv):
             verbose (bool, optional): If to suppress environment print statetments.
 
         """
+        self.NAME = 'cartpole'
         # Set timing constants.
         self.NORMALIZED_RL_ACTION_SPACE = normalized_rl_action_space
         self.CTRL_FREQ = ctrl_freq
@@ -256,6 +253,9 @@ class CartPole(BenchmarkEnv):
         # Set up action and observation space.
         self._set_action_space()
         self._set_observation_space()
+        # Store action (input) and observation (state) spaces dimensions.
+        self.INPUT_DIM = self.action_space.shape[0]
+        self.STATE_DIM = self.observation_space.shape[0]
         # Create PyBullet client connection.
         self.PYB_CLIENT = -1
         if self.GUI:
@@ -280,24 +280,17 @@ class CartPole(BenchmarkEnv):
                                               traj_length=self.EPISODE_LEN_SEC,
                                               num_cycles=self.TASK_INFO["num_cycles"],
                                               traj_plane=self.TASK_INFO["trajectory_plane"],
-                                              position_offset=np.array(self.TASK_INFO["trajectory_position_offset"]) + np.array([0, self.INIT_X]),
+                                              position_offset=np.array(self.TASK_INFO["trajectory_position_offset"]),
                                               scaling=self.TASK_INFO["trajectory_scale"],
                                               sample_time=self.CTRL_TIMESTEP
                                               )
 
             self.X_GOAL = np.vstack([
-                POS_REF[:, 0],  # TODO Add offset.
+                POS_REF[:, 0],  # Possible feature: add initial position.
                 VEL_REF[:, 0],
                 np.zeros(POS_REF.shape[0]),
                 np.zeros(VEL_REF.shape[0])
             ]).transpose()
-
-    @property
-    def control_step_counter(self):
-        """Smiliar to `step_counter` but on control frequency.
-
-        """
-        return self.step_counter // (self.PYB_FREQ // self.CTRL_FREQ)
 
     def step(self, action):
         """Advances the environment by one control step.
@@ -331,6 +324,8 @@ class CartPole(BenchmarkEnv):
         rew = self._get_reward()
         done = self._get_done()
         info = self._get_info()
+        self.pyb_step_counter = self.pyb_step_counter + int(self.PYB_FREQ / self.CTRL_FREQ)
+        self.ctrl_step_counter = self.ctrl_step_counter + 1
         return obs, rew, done, info
 
     def reset(self):
@@ -345,11 +340,15 @@ class CartPole(BenchmarkEnv):
         """
         # Housekeeping variables.
         self.initial_reset = True
-        self.step_counter = 0
+        self.pyb_step_counter = 0
+        self.ctrl_step_counter = 0
         self.current_raw_input_action = None
         self.current_preprocessed_action = None
         if self.adversary_disturbance is not None:
             self.adv_action = None
+        # Reset the disturbances.
+        for mode in self.disturbances.keys():
+            self.disturbances[mode].reset(self)
         # PyBullet simulation reset.
         p.resetSimulation(physicsClientId=self.PYB_CLIENT)
         p.setGravity(0, 0, -self.GRAVITY_ACC, physicsClientId=self.PYB_CLIENT)
@@ -472,35 +471,6 @@ class CartPole(BenchmarkEnv):
             clipped_adv_action = np.clip(action, self.adversary_action_space.low, self.adversary_action_space.high)
             self.adv_action = clipped_adv_action * self.adversary_disturbance_scale
 
-    def _setup_disturbances(self):
-        """Sets up scaling and actions space for an adversarial disturbance.
-
-        """
-        # Default: no passive disturbances.
-        self.disturbances = {}
-
-        if self.DISTURBANCES is not None:
-            for mode, disturbs in self.DISTURBANCES.items():
-                assert mode in self.DISTURBANCE_MODES, "[ERROR] in Cartpole._setup_disturbances(), disturbance mode not available."
-                disturb_list = []
-                shared_args = self.DISTURBANCE_MODES[mode]
-                # Each disturbance for the mode.
-                for name, cfg in disturbs.items():
-                    assert name in DISTURBANCE_TYPES, "[ERROR] in Cartpole._setup_disturbances(), disturbance type not available."
-                    disturb_cls = DISTURBANCE_TYPES[name]
-                    disturb = disturb_cls(self, **shared_args, **cfg)
-                    disturb_list.append(disturb)
-                # Combine as one for the mode.
-                self.disturbances[mode] = DisturbanceList(disturb_list)
-        # Adversary disturbance (set from outside of env, active/non-passive).
-        if self.adversary_disturbance is not None:
-            assert self.adversary_disturbance in self.DISTURBANCE_MODES, "[ERROR] in Cartpole._setup_disturbances()"
-            shared_args = self.DISTURBANCE_MODES[self.adversary_disturbance]
-            dim = shared_args["dim"]
-            self.adversary_action_space = spaces.Box(low=-1, high=1, shape=(dim,))
-            # Adversary obs are the same as those of the protagonist.
-            self.adversary_observation_space = self.observation_space
-
     def _setup_constraints(self):
         """Sets up a list (ConstraintList) of constraints.
 
@@ -508,7 +478,7 @@ class CartPole(BenchmarkEnv):
         self.constraints = None
         self.num_constraints = 0
         if self.CONSTRAINTS is not None:
-            self.constraints = create_ConstraintList_from_dict(self.CONSTRAINTS, self.AVAILABLE_CONSTRAINTS, self)
+            self.constraints = create_ConstraintList_from_list(self.CONSTRAINTS, self.AVAILABLE_CONSTRAINTS, self)
             self.num_constraints = self.constraints.num_constraints
 
     def _setup_symbolic(self):
@@ -553,6 +523,10 @@ class CartPole(BenchmarkEnv):
         self.action_scale = 10
         self.action_threshold = 1 if self.NORMALIZED_RL_ACTION_SPACE else self.action_scale
         self.action_space = spaces.Box(low=-self.action_threshold, high=self.action_threshold, shape=(1,))
+        # Define action/input labels and units.
+        self.ACTION_LABELS = ['U']
+        self.ACTION_UNITS = ['N'] if not self.NORMALIZED_RL_ACTION_SPACE else ['-']
+        
 
     def _set_observation_space(self):
         """Returns the observation space of the environment.
@@ -565,6 +539,9 @@ class CartPole(BenchmarkEnv):
         # Limit set to 2x: i.e. a failing observation is still within bounds.
         OBS_BOUND = np.array([self.x_threshold * 2, np.finfo(np.float32).max, self.theta_threshold_radians * 2, np.finfo(np.float32).max])
         self.observation_space = spaces.Box(-OBS_BOUND, OBS_BOUND, dtype=np.float32)
+        # Define obs/state labels and units.
+        self.STATE_LABELS = ['x', 'x_dot', 'theta', 'theta_dot']
+        self.STATE_UNITS = ['m', 'm/s', 'rad', 'rad/s']
 
     def _preprocess_control(self, action):
         """Converts the raw action input into the one used by .step().
@@ -643,7 +620,6 @@ class CartPole(BenchmarkEnv):
                 physicsClientId=self.PYB_CLIENT)
             # Step simulation and counter.
             p.stepSimulation(physicsClientId=self.PYB_CLIENT)
-            self.step_counter += 1
 
     def _get_observation(self):
         """Returns the current observation (state) of the environment.
@@ -683,9 +659,21 @@ class CartPole(BenchmarkEnv):
             # return reward
         if self.COST == Cost.QUADRATIC:
             if self.TASK == Task.STABILIZATION:
-                return float(-1 * self.symbolic.loss(x=self.state, Xr=self.X_GOAL, u=self.current_preprocessed_action, Ur=self.U_GOAL, Q=self.Q, R=self.R)["l"])
+                return float(
+                    -1 * self.symbolic.loss(x=self.state,
+                                            Xr=self.X_GOAL,
+                                            u=self.current_preprocessed_action,
+                                            Ur=self.U_GOAL,
+                                            Q=self.Q,
+                                            R=self.R)["l"])
             if self.TASK == Task.TRAJ_TRACKING:
-                return -1
+                return float(
+                    -1 * self.symbolic.loss(x=self.state,
+                                            Xr=self.X_GOAL[self.ctrl_step_counter,:],
+                                            u=self.current_preprocessed_action,
+                                            Ur=self.U_GOAL,
+                                            Q=self.Q,
+                                            R=self.R)["l"])
 
     def _get_done(self):
         """Computes the conditions for termination of an episode.
@@ -694,8 +682,13 @@ class CartPole(BenchmarkEnv):
             bool: Whether an episode is over.
 
         """
+        # Done if goal reached for stabilization task with quadratic cost.
+        if self.TASK == Task.STABILIZATION and self.COST == Cost.QUADRATIC:
+            self.goal_reached = bool(np.linalg.norm(self.state - self.X_GOAL) < self.TASK_INFO["stabilization_goal_tolerance"])
+            if self.goal_reached:
+                return True
         # Done if the episode length is exceeded.
-        if self.step_counter / self.PYB_FREQ >= self.EPISODE_LEN_SEC:
+        if (self.ctrl_step_counter + 1) / self.CTRL_FREQ >= self.EPISODE_LEN_SEC:
             return True
         # Done if a constraint is violated.
         if self.constraints is not None:
@@ -713,11 +706,13 @@ class CartPole(BenchmarkEnv):
 
         """
         info = {}
+        if self.TASK == Task.STABILIZATION and self.COST == Cost.QUADRATIC:
+            info["goal_reached"] = self.goal_reached  # Add boolean flag for the goal being reached.
         if self.constraints is not None:
             info["constraint_values"] = self.constraints.get_values(self)
             violation = np.any(np.greater(info["constraint_values"], 0.))
             info["constraint_violation"] = int(violation)
-        if self.step_counter / self.PYB_FREQ >= self.EPISODE_LEN_SEC:
+        if self.pyb_step_counter / self.PYB_FREQ >= self.EPISODE_LEN_SEC:
             x, _, theta, _ = self.state
             done = bool(x < -self.x_threshold or x > self.x_threshold or theta < -self.theta_threshold_radians or theta > self.theta_threshold_radians)
             if self.constraints is not None:
@@ -735,9 +730,15 @@ class CartPole(BenchmarkEnv):
         """
         info = {}
         info["symbolic_model"] = self.symbolic
+        info["physical_parameters"] = {
+            "pole_effective_length": self.PRIOR_EFFECTIVE_POLE_LENGTH,
+            "pole_mass": self.PRIOR_POLE_MASS,
+            "cart_mass": self.PRIOR_CART_MASS
+        }
         info["x_reference"] = self.X_GOAL
         info["u_reference"] = self.U_GOAL
         if self.constraints is not None:
+            info["symbolic_constraints"] = self.constraints.get_all_symbolic_models()
             # NOTE: Cannot evaluate constraints on reset/without inputs.
             info["constraint_values"] = self.constraints.get_values(self, only_state=True)
         return info
