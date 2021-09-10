@@ -42,10 +42,10 @@ class Quadrotor(BaseAviary):
     }
 
     INERTIAL_PROP_RAND_INFO = {
-        "M": { # Nominal: 0.27
+        "M": { # Nominal: 0.027
             'distrib': "uniform",
-            'low': 0.22,
-            'high': 0.32
+            'low': 0.022,
+            'high': 0.032
         },
         "Iyy": { # Nominal: 1.4e-5
             'distrib': "uniform",

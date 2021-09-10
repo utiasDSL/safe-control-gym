@@ -1,5 +1,4 @@
 #### Temporary files
-safe_control_gym/envs/gym_control/assets/cartpole.urdf
 experiments/debug.*
 experiments/figure6/trained_gp_model/bak_best_model_*.pth
 experiments/figure7/safe_exp_results/
