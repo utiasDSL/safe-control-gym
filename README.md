@@ -24,6 +24,12 @@ To stay in touch, get involved or ask questions, please contact us via e-mail (`
 
 
 
+## Architecture
+
+Overview of `safe-control-gym`'s API:
+
+<img src="figures/block.png" alt="block diagram" width="800">
+
 
 ## Install on Ubuntu/macOS
 (optional) Create and access a Python 3.7 environment using [`conda`](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
@@ -39,6 +45,10 @@ $ pip install -e .                                                 # Install the
 ```
 
 
+
+## 2D Quadrotor Lemniscate Trajectory Tracking
+
+<img src="figures/figure8.gif" alt="trajectory" width="800">
 
 
 ## Re-create the Results in "Safe Learning in Robotics" [[arXiv link]](https://arxiv.org/pdf/2108.06266.pdf)
