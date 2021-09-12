@@ -86,11 +86,11 @@ def main():
         print(out)
 
         print_str_with_style('Open AI gym API:', 2)
-        out = '\tObservations: ' + str(obs)
+        out = '\tObservation: ' + str(obs)
         print_str_with_style(out, 2)
-        out = '\tObservations: ' + str(reward)
+        out = '\tReward: ' + str(reward)
         print_str_with_style(out, 2)
-        out = '\tObservations: ' + str(done)
+        out = '\tDone: ' + str(done)
         print_str_with_style(out, 2)
 
         print_str_with_style('safe-control-gym API:', 0)
