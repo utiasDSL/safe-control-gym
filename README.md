@@ -59,9 +59,13 @@ $ python3 verbose_api.py --system cartpole --overrides verbose_api.yams  #  Prin
 
 ## Systems Variables and 2D Quadrotor Lemniscate Trajectory Tracking
 
-<img src="figures/systems.png" alt="systems" width="460"> <img src="figures/figure8.gif" alt="trajectory" width="370">
+<img src="figures/systems.png" alt="systems" width="450"> <img src="figures/figure8.gif" alt="trajectory" width="350">
 
 
+
+## Verbose API Example
+
+<img src="figures/prints.png" al="prints" width="800">
 
 
 ## Re-create the Results in "Safe Learning in Robotics" [[arXiv link]](https://arxiv.org/pdf/2108.06266.pdf)
