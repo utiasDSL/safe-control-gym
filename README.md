@@ -5,30 +5,20 @@
 
 Physics-based CartPole and Quadrotor [Gym](https://gym.openai.com) environments (using [PyBullet](https://pybullet.org/wordpress/)) with symbolic *a priori* dynamics (using [CasADi](https://web.casadi.org)) for **learning-based control**, and model-free and model-based **reinforcement learning** (RL). 
 
-These environments include (and evaluate) symbolic safety constraints and implement input, parameter, and dynamics disturbances to test the robustness and generalizability of control approaches.
+These environments include (and evaluate) symbolic safety constraints and implement input, parameter, and dynamics disturbances to test the robustness and generalizability of control approaches. ([[PDF] Safe control and RL review](https://arxiv.org/pdf/2108.06266.pdf))
 
 <img src="figures/problem_illustration.jpg" alt="problem illustration" width="800">
 
-**[Branch `ar`](https://github.com/utiasDSL/safe-control-gym/tree/ar) (or [release `v0.5.0`](https://github.com/utiasDSL/safe-control-gym/releases/tag/v0.5.0)) are the codebase for our [review article on safe control and RL](https://arxiv.org/abs/2108.06266):**
 ```
 @article{brunke2021safe,
   title={Safe Learning in Robotics: From Learning-Based Control to Safe Reinforcement Learning}, 
   author={Lukas Brunke and Melissa Greeff and Adam W. Hall and Zhaocong Yuan and Siqi Zhou and Jacopo Panerati and Angela P. Schoellig},
-  year={2021},
   journal = {Annual Review of Control, Robotics, and Autonomous Systems},
-  eprint = {2108.06266},
-  url = {https://arxiv.org/abs/2108.06266}
-}
+  year={2021},
+  url = {https://arxiv.org/abs/2108.06266}}
 ```
-To stay in touch, get involved or ask questions, please contact us via e-mail (`{jacopo.panerati, zhaocong.yuan, adam.hall, siqi.zhou, lukas.brunke, melissa.greeff}@robotics.utias.utoronto.ca`) or through [this form](https://forms.office.com/r/A4UewwYpcn).
 
 
-
-## Architecture
-
-Overview of `safe-control-gym`'s API:
-
-<img src="figures/block.png" alt="block diagram" width="800">
 
 
 ## Install on Ubuntu/macOS
@@ -46,9 +36,14 @@ $ pip install -e .                                                 # Install the
 
 
 
-## Systems Variables and 2D Quadrotor Lemniscate Trajectory Tracking
 
-<img src="figures/systems.png" alt="systems" width="460"> <img src="figures/figure8.gif" alt="trajectory" width="370">
+## Architecture
+
+Overview of `safe-control-gym`'s API:
+
+<img src="figures/block.png" alt="block diagram" width="800">
+
+
 
 
 ## Getting Started
@@ -60,9 +55,20 @@ $ python3 verbose_api.py --system cartpole --overrides verbose_api.yams  #  Prin
 ```
 
 
+
+
+## Systems Variables and 2D Quadrotor Lemniscate Trajectory Tracking
+
+<img src="figures/systems.png" alt="systems" width="460"> <img src="figures/figure8.gif" alt="trajectory" width="370">
+
+
+
+
 ## Re-create the Results in "Safe Learning in Robotics" [[arXiv link]](https://arxiv.org/pdf/2108.06266.pdf)
 
+**[Branch `ar`](https://github.com/utiasDSL/safe-control-gym/tree/ar) (or [release `v0.5.0`](https://github.com/utiasDSL/safe-control-gym/releases/tag/v0.5.0)) are the codebase for our [review article on safe control and RL](https://arxiv.org/abs/2108.06266):**
 
+To stay in touch, get involved or ask questions, please contact us via e-mail (`{jacopo.panerati, zhaocong.yuan, adam.hall, siqi.zhou, lukas.brunke, melissa.greeff}@robotics.utias.utoronto.ca`) or through [this form](https://forms.office.com/r/A4UewwYpcn).
 
 
 ### Figure 6—Robust GP-MPC [[1]](https://ieeexplore.ieee.org/document/8909368)
@@ -141,6 +147,7 @@ $ ./create_unsafe_ppo_model.sh                                     # Run the scr
 - [1] Hewing L, Kabzan J, Zeilinger MN. 2020. [Cautious model predictive control using Gaussian process regression](https://ieeexplore.ieee.org/document/8909368). IEEE Transactions on Control Systems Technology 28:2736–2743
 - [2] Dalal G, Dvijotham K, Vecerik M, Hester T, Paduraru C, Tassa Y. 2018. [Safe exploration in continuous action spaces](https://arxiv.org/abs/1801.08757). arXiv:1801.08757 [cs.AI]
 - [3] Wabersich KP, Zeilinger MN. 2018. [Linear Model Predictive Safety Certification for Learning-Based Control](https://ieeexplore.ieee.org/document/8619829). In 2018 IEEE Conference on Decision and Control (CDC), pp. 7130–7135
+
 
 
 
