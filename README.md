@@ -46,9 +46,18 @@ $ pip install -e .                                                 # Install the
 
 
 
-## Systems and 2D Quadrotor Lemniscate Trajectory Tracking
+## Systems Variables and 2D Quadrotor Lemniscate Trajectory Tracking
 
 <img src="figures/systems.png" alt="systems" width="460"> <img src="figures/figure8.gif" alt="trajectory" width="370">
+
+
+## Getting Started
+Familiarize with APIs and environments with the scripts in [`examples/`](https://github.com/utiasDSL/safe-control-gym/tree/main/examples)
+```
+$ cd ./examples/                                                   # Navigate to the examples folder
+$ python3 tracking.py  --overrides tracking.yaml                   # PID trajectory tracking with the 2D quadcopter
+$ python3 verbose_api.py --system cartpole --overrides verbose_api.yams  #  Printout of the extened safe-control-gym APIs
+```
 
 
 ## Re-create the Results in "Safe Learning in Robotics" [[arXiv link]](https://arxiv.org/pdf/2108.06266.pdf)
@@ -59,7 +68,7 @@ $ pip install -e .                                                 # Install the
 ### Figure 6—Robust GP-MPC [[1]](https://ieeexplore.ieee.org/document/8909368)
 
 ```
-$ cd ./experiments/figure6/                                        # Navigate to the experiment folder
+$ cd ../experiments/figure6/                                       # Navigate to the experiment folder
 $ chmod +x create_fig6.sh                                          # Make the script executable, if needed
 $ ./create_fig6.sh                                                 # Run the script (ca. 2')
 ```
