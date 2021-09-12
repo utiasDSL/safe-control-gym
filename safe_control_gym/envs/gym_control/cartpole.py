@@ -15,6 +15,7 @@ from copy import deepcopy
 import casadi as cs
 import numpy as np
 import pybullet as p
+import pybullet_data
 from gym import spaces
 
 from safe_control_gym.envs.benchmark_env import BenchmarkEnv, Cost, Task
@@ -354,6 +355,8 @@ class CartPole(BenchmarkEnv):
         p.setGravity(0, 0, -self.GRAVITY_ACC, physicsClientId=self.PYB_CLIENT)
         p.setTimeStep(self.PYB_TIMESTEP, physicsClientId=self.PYB_CLIENT)
         p.setRealTimeSimulation(0, physicsClientId=self.PYB_CLIENT)
+        p.setAdditionalSearchPath(pybullet_data.getDataPath(), physicsClientId=self.PYB_CLIENT)
+        p.loadURDF("plane.urdf", [0, 0, -0.25], physicsClientId=self.PYB_CLIENT)
         # Choose randomized or deterministic inertial properties.
         prop_values = {"pole_length": self.EFFECTIVE_POLE_LENGTH, "cart_mass": self.CART_MASS, "pole_mass": self.POLE_MASS}
         if self.RANDOMIZED_INERTIAL_PROP:

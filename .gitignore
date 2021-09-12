@@ -1,5 +1,5 @@
 #### Temporary files
-experiments/debug.*
+examples/debug.*
 experiments/figure6/trained_gp_model/bak_best_model_*.pth
 experiments/figure7/safe_exp_results/
 experiments/figure8/unsafe_ppo_temp_data/

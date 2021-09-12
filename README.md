@@ -46,9 +46,9 @@ $ pip install -e .                                                 # Install the
 
 
 
-## 2D Quadrotor Lemniscate Trajectory Tracking
+## Systems and 2D Quadrotor Lemniscate Trajectory Tracking
 
-<img src="figures/figure8.gif" alt="trajectory" width="800">
+<img src="figures/systems.png" alt="systems" width="460"> <img src="figures/figure8.gif" alt="trajectory" width="370">
 
 
 ## Re-create the Results in "Safe Learning in Robotics" [[arXiv link]](https://arxiv.org/pdf/2108.06266.pdf)

@@ -293,7 +293,7 @@ class Quadrotor(BaseAviary):
             #                       vel_ref_traj=VEL_REF,
             #                       speed_traj=SPEED
             #                       )
-            #
+
             if self.QUAD_TYPE == QuadType.ONE_D:
                 self.X_GOAL = np.vstack([
                     POS_REF[:, 2], # + self.INIT_Z,  # Possible feature: add initial position.
@@ -767,8 +767,8 @@ class Quadrotor(BaseAviary):
         state = self._get_observation()
         if self.constraints is not None:
             pass
-            # info["constraint_values"] = self.constraints.get_values(self)
-            # info["constraint_violations"] = self.constraints.get_violations(self)
+            info["constraint_values"] = self.constraints.get_values(self)
+            info["constraint_violations"] = self.constraints.get_violations(self)
         return info
 
     def _get_reset_info(self):
