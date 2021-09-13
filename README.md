@@ -68,6 +68,21 @@ $ python3 verbose_api.py --system cartpole --overrides verbose_api.yams  #  Prin
 <img src="figures/prints.png" al="prints" width="800">
 
 
+## List of Implemented Controllers
+
+- LQR [coming soon]
+- iLQR [coming soon]
+- Linear MPC
+- GP-MPC
+- SAC
+- PPO
+- Safety Layer
+- RARL
+- RAP
+- MPSC
+- CBF [coming soon]
+
+
 ## Re-create the Results in "Safe Learning in Robotics" [[arXiv link]](https://arxiv.org/pdf/2108.06266.pdf)
 
 **[Branch `ar`](https://github.com/utiasDSL/safe-control-gym/tree/ar) (or [release `v0.5.0`](https://github.com/utiasDSL/safe-control-gym/releases/tag/v0.5.0)) are the codebase for our [review article on safe control and RL](https://arxiv.org/abs/2108.06266):**
