@@ -77,8 +77,8 @@ $ python3 verbose_api.py --system cartpole --overrides verbose_api.yams  #  Prin
 - SAC
 - PPO
 - Safety Layer
-- RARL
-- RAP
+- RARL [coming soon]
+- RAP [coming soon]
 - MPSC
 - CBF [coming soon]
 
