@@ -72,14 +72,14 @@ $ python3 verbose_api.py --system cartpole --overrides verbose_api.yams  #  Prin
 
 - LQR [coming soon]
 - iLQR [coming soon]
-- Linear MPC
-- GP-MPC
-- SAC
-- PPO
-- Safety Layer
+- [Linear MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/linear_mpc.py)
+- [GP-MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/gp_mpc.py)
+- SAC [coming soon]
+- [PPO](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/ppo/ppo.py)
+- [Safety Layer](https://github.com/utiasDSL/safe-control-gym/tree/main/safe_control_gym/controllers/safe_explorer)
 - RARL [coming soon]
 - RAP [coming soon]
-- MPSC
+- [MPSC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpsc/mpsc.py)
 - CBF [coming soon]
 
 
