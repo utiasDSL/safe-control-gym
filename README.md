@@ -170,5 +170,13 @@ $ ./create_unsafe_ppo_model.sh                                     # Run the scr
 
 
 
+# Related Open-source Projects
+- [`gym-pybullet-drones`](https://github.com/utiasDSL/gym-pybullet-drones): single and multi-quadrotor environments
+- [`gym-marl-reconnaissance`](https://github.com/JacopoPan/gym-marl-reconnaissance): multi-agent heterogeneous (UAV/UGV) environments
+- [`stable-baselines3`](https://github.com/DLR-RM/stable-baselines3): PyTorch reinforcement learning algorithms
+- [`bullet3`](https://github.com/bulletphysics/bullet3): multi-physics simulation engine
+- [`gym`](https://github.com/openai/gym): OpenAI reinforcement learning toolkit
+- [`casadi`](https://github.com/casadi/casadi): symbolic framework for numeric optimization
+
 -----
 > University of Toronto's [Dynamic Systems Lab](https://github.com/utiasDSL) / [Vector Institute for Artificial Intelligence](https://github.com/VectorInstitute)
