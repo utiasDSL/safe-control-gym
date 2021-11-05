@@ -51,7 +51,7 @@ def read_file(file_path, sep=","):
     if "json" in file_path:
         data = json.load(f)
     elif "yaml" in file_path:
-        data = yaml.load(f)
+        data = yaml.load(f, Loader=yaml.FullLoader)
     else:
         sep = sep if "csv" in file_path else " "
         data = []
