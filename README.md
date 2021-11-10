@@ -176,6 +176,8 @@ $ ./create_unsafe_ppo_model.sh                                     # Run the scr
 - [`stable-baselines3`](https://github.com/DLR-RM/stable-baselines3): PyTorch reinforcement learning algorithms
 - [`bullet3`](https://github.com/bulletphysics/bullet3): multi-physics simulation engine
 - [`gym`](https://github.com/openai/gym): OpenAI reinforcement learning toolkit
+- [`safety-gym`](https://github.com/openai/safety-gym): environments for safe exploration in RL
+- [`realworldrl_suite`](https://github.com/google-research/realworldrl_suite): real-world RL challenge framework
 - [`casadi`](https://github.com/casadi/casadi): symbolic framework for numeric optimization
 
 -----
