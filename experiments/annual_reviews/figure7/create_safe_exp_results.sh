@@ -23,7 +23,7 @@ TAG="ppo"
 CONFIG_PATH="${CONFIG_PATH_ROOT}/ppo_cartpole.yaml"
 for seed in "${seeds[@]}"
 do
-    python3 ../main.py --algo ppo --task cartpole --overrides $CONFIG_PATH --output_dir ${OUTPUT_DIR} --tag $TAG_ROOT/$TAG --thread $thread --seed $seed
+    python3 ../../main.py --algo ppo --task cartpole --overrides $CONFIG_PATH --output_dir ${OUTPUT_DIR} --tag $TAG_ROOT/$TAG --thread $thread --seed $seed
 done 
 
 # PPO with reward shaping.
@@ -34,7 +34,7 @@ for tolerance in "${tolerances[@]}"
 do
     for seed in "${seeds[@]}"
     do
-        python3 ../main.py --algo ppo --task cartpole --overrides $CONFIG_PATH --output_dir ${OUTPUT_DIR} --tag $TAG_ROOT/${TAG}_${tolerance} --kv_overrides task_config.constraints.abs_bound.tolerance=$tolerance --thread $thread --seed $seed
+        python3 ../../main.py --algo ppo --task cartpole --overrides $CONFIG_PATH --output_dir ${OUTPUT_DIR} --tag $TAG_ROOT/${TAG}_${tolerance} --kv_overrides task_config.constraints.abs_bound.tolerance=$tolerance --thread $thread --seed $seed
     done 
 done
 
@@ -53,6 +53,6 @@ for slack in "${slacks[@]}"
 do
     for seed in "${seeds[@]}"
     do
-        python3 ../main.py --algo safe_explorer_ppo --task cartpole --overrides $CONFIG_PATH --output_dir ${OUTPUT_DIR} --tag $TAG_ROOT/${TAG}slack${slack} --kv_overrides algo_config.pretrained=$PRETRAINED_PATH algo_config.constraint_slack=$slack --thread $thread --seed $seed
+        python3 ../../main.py --algo safe_explorer_ppo --task cartpole --overrides $CONFIG_PATH --output_dir ${OUTPUT_DIR} --tag $TAG_ROOT/${TAG}slack${slack} --kv_overrides algo_config.pretrained=$PRETRAINED_PATH algo_config.constraint_slack=$slack --thread $thread --seed $seed
     done 
 done

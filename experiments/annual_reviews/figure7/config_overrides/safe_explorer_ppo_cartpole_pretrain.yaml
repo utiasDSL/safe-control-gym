@@ -23,6 +23,6 @@ task_config:
   constraints:
     - constraint_form: abs_bound
       bound: 0.4
-      constrained_variable: STATE
+      constrained_variable: state
       active_dims: 0
   done_on_violation: True

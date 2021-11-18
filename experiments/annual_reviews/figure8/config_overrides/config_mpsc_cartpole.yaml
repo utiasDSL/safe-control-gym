@@ -19,7 +19,7 @@ task_config:
   cost: quadratic
   constraints:
     - constraint_form: default_constraint
-      constrained_variable: STATE
+      constrained_variable: state
       upper_bounds:
         - 10
         - 10
@@ -31,7 +31,7 @@ task_config:
         - -0.2
         - -10
     - constraint_form: default_constraint
-      constrained_variable: INPUT
+      constrained_variable: input
   done_on_violation: True
   init_state:
     init_x: 0.1

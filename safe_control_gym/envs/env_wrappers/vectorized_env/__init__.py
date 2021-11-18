@@ -25,14 +25,12 @@ def make_env_fn(env_func,
 
     def _thunk():
         # Do not set seed i if 0 (e.g. for evaluation).
-        if seed > 0:
+        if seed is not None:
             e_seed = seed + rank
             random.seed(e_seed)
             np.random.seed(e_seed)
             torch.manual_seed(e_seed)
-            env = env_func(**env_config)
-            env.seed(e_seed)
-            env.action_space.seed(e_seed)
+            env = env_func(seed=e_seed, **env_config)
         else:
             env = env_func(**env_config)
         return env
@@ -43,7 +41,7 @@ def make_vec_envs(env_func,
                   env_configs=None,
                   batch_size=1,
                   n_processes=1,
-                  seed=0):
+                  seed=None):
     """Produce envs with parallel rollout abilities. 
 
     Args:

@@ -5,7 +5,6 @@ import os
 import time
 import numpy as np
 import torch
-
 from collections import defaultdict
 
 from safe_control_gym.utils.logging import ExperimentLogger
@@ -14,6 +13,7 @@ from safe_control_gym.envs.env_wrappers.vectorized_env import make_vec_envs
 from safe_control_gym.envs.env_wrappers.vectorized_env.vec_env_utils import _flatten_obs
 from safe_control_gym.envs.env_wrappers.record_episode_statistics import RecordEpisodeStatistics, VecRecordEpisodeStatistics
 from safe_control_gym.math_and_models.normalization import BaseNormalizer, MeanStdNormalizer, RewardStdNormalizer
+
 from safe_control_gym.controllers.base_controller import BaseController
 from safe_control_gym.controllers.ppo.ppo_utils import compute_returns_and_advantages
 from safe_control_gym.controllers.safe_explorer.safe_explorer_utils import SafetyLayer, ConstraintBuffer
@@ -40,7 +40,7 @@ class SafeExplorerPPO(BaseController):
             # Training and testing.
             self.env = make_vec_envs(env_func, None, self.rollout_batch_size, self.num_workers, seed)
             self.env = VecRecordEpisodeStatistics(self.env, self.deque_size)
-            self.eval_env = env_func()
+            self.eval_env = env_func(seed=seed * 111)
             self.eval_env = RecordEpisodeStatistics(self.eval_env, self.deque_size)
             self.num_constraints = self.env.envs[0].num_constraints
         else:
@@ -105,10 +105,18 @@ class SafeExplorerPPO(BaseController):
                 self.safety_layer.load_state_dict(state["safety_layer"])
                 # Set up stats tracking.
                 self.env.add_tracker("constraint_violation", 0)
+                self.env.add_tracker("constraint_violation", 0, mode="queue")
+                self.eval_env.add_tracker("constraint_violation", 0, mode="queue")
+                self.eval_env.add_tracker("mse", 0, mode="queue")
             self.total_steps = 0
             obs, info = self.env.reset()
             self.obs = self.obs_normalizer(obs)
             self.c = np.array([inf["constraint_values"] for inf in info["n"]])
+        else:
+            # Add episodic stats to be tracked.
+            self.env.add_tracker("constraint_violation", 0, mode="queue")
+            self.env.add_tracker("constraint_values", 0, mode="queue")
+            self.env.add_tracker("mse", 0, mode="queue")
 
     def close(self):
         """Shuts down and cleans up lingering resources.
@@ -231,7 +239,10 @@ class SafeExplorerPPO(BaseController):
             env = self.env
         else:
             if not is_wrapped(env, RecordEpisodeStatistics):
-                env = RecordEpisodeStatistics(env)
+                env = RecordEpisodeStatistics(env, n_episodes)
+                env.add_tracker("constraint_violation", 0, mode="queue")
+                env.add_tracker("constraint_values", 0, mode="queue")
+                env.add_tracker("mse", 0, mode="queue")
         obs, info = env.reset()
         obs = self.obs_normalizer(obs)
         c = info["constraint_values"]
@@ -261,6 +272,10 @@ class SafeExplorerPPO(BaseController):
         eval_results = {"ep_returns": ep_returns, "ep_lengths": ep_lengths}
         if len(frames) > 0:
             eval_results["frames"] = frames
+        # Other episodic stats from evaluation env.
+        if len(env.queued_stats) > 0:
+            queued_stats = {k: np.asarray(v) for k, v in env.queued_stats.items()}
+            eval_results.update(queued_stats)
         return eval_results
 
     def pretrain_step(self):
@@ -357,15 +372,16 @@ class SafeExplorerPPO(BaseController):
         step = results["step"]
         final_step = self.constraint_epochs if self.pretraining else self.max_env_steps
         # Runner stats.
-        self.logger.add_scalars({
-                                    "step": step,
-                                    "time": results["elapsed_time"],
-                                    "progress": step / final_step
-                                },
-                                step,
-                                prefix="time",
-                                write=False,
-                                write_tb=False)
+        self.logger.add_scalars(
+            {
+                "step": step,
+                "time": results["elapsed_time"],
+                "progress": step / final_step
+            },
+            step,
+            prefix="time",
+            write=False,
+            write_tb=False)
         if self.pretraining:
             # Constraint learning stats.
             for i in range(self.safety_layer.num_constraints):
@@ -375,31 +391,44 @@ class SafeExplorerPPO(BaseController):
                     self.logger.add_scalars({name: results["eval"][name]}, step, prefix="constraint_loss_eval")
         else:
             # Learning stats.
-            self.logger.add_scalars({k: results[k] for k in ["policy_loss", "value_loss", "entropy_loss", "approx_kl"]}, step, prefix="loss")
+            self.logger.add_scalars(
+                {
+                    k: results[k] 
+                    for k in ["policy_loss", "value_loss", "entropy_loss", "approx_kl"]
+                }, 
+                step, 
+                prefix="loss")
             # Performance stats.
             ep_lengths = np.asarray(self.env.length_queue)
             ep_returns = np.asarray(self.env.return_queue)
-            self.logger.add_scalars({
-                                        "ep_length": ep_lengths.mean(),
-                                        "ep_return": ep_returns.mean(),
-                                        "ep_reward": (ep_returns / ep_lengths).mean()
-                                    },
-                                    step,
-                                    prefix="stat")
+            ep_constraint_violation = np.asarray(self.env.queued_stats["constraint_violation"])
+            self.logger.add_scalars(
+                {
+                    "ep_length": ep_lengths.mean(),
+                    "ep_return": ep_returns.mean(),
+                    "ep_reward": (ep_returns / ep_lengths).mean(),
+                    "ep_constraint_violation": ep_constraint_violation.mean()
+                },
+                step,
+                prefix="stat")
             # Total constraint violation during learning.
             total_violations = self.env.accumulated_stats["constraint_violation"]
             self.logger.add_scalars({"constraint_violation": total_violations}, step, prefix="stat")
             if "eval" in results:
                 eval_ep_lengths = results["eval"]["ep_lengths"]
                 eval_ep_returns = results["eval"]["ep_returns"]
-                self.logger.add_scalars({
-                                            "ep_length": eval_ep_lengths.mean(),
-                                            "ep_return": eval_ep_returns.mean(),
-                                            "ep_reward": (eval_ep_returns / eval_ep_lengths).mean()
-                                        },
-                                        step,
-                                        prefix="stat_eval")
-
+                eval_constraint_violation = results["eval"]["constraint_violation"]
+                eval_mse = results["eval"]["mse"]
+                self.logger.add_scalars(
+                    {
+                        "ep_length": eval_ep_lengths.mean(),
+                        "ep_return": eval_ep_returns.mean(),
+                        "ep_reward": (eval_ep_returns / eval_ep_lengths).mean(),
+                        "constraint_violation": eval_constraint_violation.mean(),
+                        "mse": eval_mse.mean()
+                    },
+                    step,
+                    prefix="stat_eval")
         # Print summary table.
         self.logger.dump_scalars()
 

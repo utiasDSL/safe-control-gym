@@ -54,10 +54,10 @@ cartpole_config:
 #
   constraints:
     - constraint_form: default_constraint
-      constrained_variable: INPUT
+      constrained_variable: input
       strict: False
     - constraint_form: default_constraint
-      constrained_variable: STATE
+      constrained_variable: state
 #
   task: traj_tracking
   task_info:
@@ -152,9 +152,9 @@ quadrotor_config:
 #
   constraints:
     - constraint_form: default_constraint
-      constrained_variable: INPUT
+      constrained_variable: input
     - constraint_form: default_constraint
-      constrained_variable: STATE
+      constrained_variable: state
 #
   task: traj_tracking
   task_info:

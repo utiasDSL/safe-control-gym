@@ -78,8 +78,14 @@ def test_policy(config):
     """
     # Evaluation setup.
     set_device_from_config(config)
+    if config.set_test_seed:
+        # seed the evaluation (both controller and env) if given
+        set_seed_from_config(config)
+        env_seed = config.seed
+    else:
+        env_seed = None
     # Define function to create task/env.
-    env_func = partial(make, config.task, output_dir=config.output_dir, **config.task_config)
+    env_func = partial(make, config.task, seed=env_seed, output_dir=config.output_dir, **config.task_config)
     # Create the controller/control_agent.
     control_agent = make(config.algo,
                          env_func,
@@ -97,20 +103,27 @@ def test_policy(config):
                                 render=config.render,
                                 verbose=config.verbose,
                                 use_adv=config.use_adv)
-    control_agent.close()
     # Save evalution results.
-    eval_path = os.path.join(config.output_dir, "eval", config.eval_output_path)
-    eval_dir = os.path.dirname(eval_path)
-    mkdirs(eval_dir)
+    if config.eval_output_dir is not None:
+        eval_output_dir = config.eval_output_dir
+    else:
+        eval_output_dir = os.path.join(config.output_dir, "eval")
+    os.makedirs(eval_output_dir, exist_ok=True)
+    # test trajs and statistics 
+    eval_path = os.path.join(eval_output_dir, config.eval_output_path)
+    os.makedirs(os.path.dirname(eval_path), exist_ok=True)
     with open(eval_path, "wb") as f:
         pickle.dump(results, f)
     ep_lengths = results["ep_lengths"]
     ep_returns = results["ep_returns"]
+    mse = results["mse"]
     msg = "eval_ep_length {:.2f} +/- {:.2f}\n".format(ep_lengths.mean(), ep_lengths.std())
     msg += "eval_ep_return {:.3f} +/- {:.3f}\n".format(ep_returns.mean(), ep_returns.std())
+    msg += "eval_mse {:.3f} +/- {:.3f}\n".format(mse.mean(), mse.std())
     print(msg)
     if "frames" in results:
-        save_video(os.path.join(eval_dir, "video.gif"), results["frames"])
+        save_video(os.path.join(eval_output_dir, "video.gif"), results["frames"])
+    control_agent.close()
     print("Evaluation done.")
 
 
@@ -125,6 +138,8 @@ if __name__ == "__main__":
     fac.add_argument("--render", action="store_true", help="if to render in policy test.")
     fac.add_argument("--verbose", action="store_true", help="if to print states & actions in policy test.")
     fac.add_argument("--use_adv", action="store_true", help="if to evaluate against adversary.")
+    fac.add_argument("--set_test_seed", action="store_true", help="if to set seed when testing policy.")
+    fac.add_argument("--eval_output_dir", type=str, help="folder path to save evaluation results.")
     fac.add_argument("--eval_output_path", type=str, default="test_results.pkl", help="file path to save evaluation results.")
     config = fac.merge()
     # System settings.
@@ -136,3 +151,5 @@ if __name__ == "__main__":
     if func is None:
         raise Exception("Main function {} not supported.".format(config.func))
     func(config)
+
+

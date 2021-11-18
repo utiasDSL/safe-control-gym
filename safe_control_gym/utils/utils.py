@@ -111,6 +111,7 @@ def set_seed(seed, cuda=False):
     """General seeding function for reproducibility.
 
     """
+    assert seed is not None, "Error in set_seed(...), provided seed not valid"
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -125,14 +126,18 @@ def set_dir_from_config(config):
     Naming format: {root (e.g. results)}/{tag (exp id)}/{seed}_{timestamp}_{git commit id}
 
     """
+    # Make run folder (of a seed run for an experiment)
+    seed = str(config.seed) if config.seed is not None else "-"
+    timestamp = str(datetime.datetime.now().strftime("%b-%d-%H-%M-%S"))
+    try:
+        commit_id = subprocess.check_output(
+            ["git", "describe", "--tags", "--always"]
+        ).decode("utf-8").strip()
+        commit_id = str(commit_id)
+    except:
+        commit_id = "-"
+    run_dir = "seed{}_{}_{}".format(seed, timestamp, commit_id)
     # Make output folder.
-    timestamp = datetime.datetime.now().strftime("%b-%d-%H-%M")
-    commit_id = subprocess.check_output(
-        ["git", "describe", "--tags", "--always"]).decode("utf-8").strip()
-    run_dir = "seed{}_{}_{}".format(str(config.seed),
-                                    str(timestamp),
-                                    str(commit_id)
-                                    )
     config.output_dir = os.path.join(config.output_dir, config.tag, run_dir)
     mkdirs(config.output_dir)
     # Save config.
@@ -144,12 +149,12 @@ def set_dir_from_config(config):
 
 
 def set_seed_from_config(config):
-    """Sets seed, only set if nonzero, 0 seed default to no seeding.
+    """Sets seed, only set if seed is provided.
 
     """
     seed = config.seed
     use_cuda = True if "cuda" in config.device else False
-    if seed > 0:
+    if seed is not None:
         set_seed(seed, cuda=use_cuda)
 
 

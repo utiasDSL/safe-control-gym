@@ -1,8 +1,8 @@
 """Disturbances.
 
 """
-import numpy as np
 from enum import Enum
+import numpy as np
 
 
 class Disturbance:
@@ -16,7 +16,6 @@ class Disturbance:
                  mask=None,
                  **kwargs
                  ):
-        self.np_random = env.np_random
         self.dim = dim
         self.mask = mask
         if mask is not None:
@@ -36,6 +35,13 @@ class Disturbance:
 
         """
         return target
+    
+    def seed(self, env):
+        """Reset seed from env.
+        
+        """
+        self.np_random = env.np_random
+        
 
 
 class DisturbanceList:
@@ -71,6 +77,13 @@ class DisturbanceList:
         for disturb in self.disturbances:
             disturbed = disturb.apply(disturbed, env)
         return disturbed
+    
+    def seed(self, env):
+        """Reset seed from env.
+        
+        """
+        for disturb in self.disturbances:
+            disturb.seed(env)
 
 
 class ImpulseDisturbance(Disturbance):
@@ -226,6 +239,9 @@ class WhiteNoise(Disturbance):
               env
               ):
         noise = self.np_random.normal(0, self.std, size=self.dim)
+        # # TODO: hack for debug 
+        # noise = np.clip(noise, -self.std, self.std)
+
         if self.mask is not None:
             noise *= self.mask
         disturbed = target + noise
@@ -294,3 +310,26 @@ DISTURBANCE_TYPES = {"impulse": ImpulseDisturbance,
                      "white_noise": WhiteNoise,
                      "periodic": PeriodicNoise,
                      }
+
+
+def create_disturbance_list(disturbance_specs, shared_args, env):
+    """Creates a DisturbanceList from yaml disturbance specification.
+
+    Args:
+        disturbance_specs (list): List of dicts defining the disturbances info.
+        shared_args (dict): args shared across the disturbances in the list.
+        env (BenchmarkEnv): Env for which the constraints will be applied
+    """
+    disturb_list = []
+    # Each disturbance for the mode.
+    for disturb in disturbance_specs:
+        assert "disturbance_func" in disturb.keys(), "[ERROR]: Every distrubance must specify a disturbance_func."
+        disturb_func = disturb["disturbance_func"]
+        assert disturb_func in DISTURBANCE_TYPES, "[ERROR] in BenchmarkEnv._setup_disturbances(), disturbance type not available."
+        disturb_cls = DISTURBANCE_TYPES[disturb_func]
+        cfg = {key: disturb[key] for key in disturb if key != "disturbance_func"}
+        disturb = disturb_cls(env, **shared_args, **cfg)
+        disturb_list.append(disturb)
+    return DisturbanceList(disturb_list)
+            
+

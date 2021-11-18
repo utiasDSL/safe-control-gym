@@ -12,7 +12,8 @@ from gym import spaces
 from gym.utils import seeding
 import copy
 
-from safe_control_gym.envs.disturbances import DisturbanceList, DISTURBANCE_TYPES
+from safe_control_gym.envs.constraints import create_constraint_list
+from safe_control_gym.envs.disturbances import create_disturbance_list
 
 
 class Cost(str, Enum):
@@ -41,22 +42,87 @@ class BenchmarkEnv(gym.Env):
 
     """
     _count = 0  # Class variable, count env instance in current process.
+    NAME = "base"  # Environment name.
+    URDF_PATH = None  # Path to urdf file that defines base parameters of the robot.
+    AVAILABLE_CONSTRAINTS = None  # Dict of constraint names & classes.
+    DISTURBANCE_MODES = None  # Dict of disturbance mode names & shared args, e.g. dim of the affected variable.
+    INERTIAL_PROP_RAND_INFO = None  # Dict of parameters & distributions for domain randomization.
+    INIT_STATE_RAND_INFO = None  # Dict of state name & distribution info to randomize at episode reset
+    TASK_INFO = None  # Dict of task related info, e.g. goal state or trajectory args.
 
     def __init__(self,
                  output_dir=None,
-                 seed: int = 0,
+                 seed=None,
                  info_in_reset: bool = False,
+                 gui: bool = False,
+                 verbose: bool = False,
+                 normalized_rl_action_space: bool = False,
+                 # Task.
+                 task: Task = Task.STABILIZATION,
+                 task_info=None,
+                 cost: Cost = Cost.RL_REWARD,
+                 pyb_freq: int = 50,
+                 ctrl_freq: int = 50,
                  episode_len_sec: int = 5,
-                 cost: Cost = Cost.RL_REWARD
+                 # Initialization.
+                 init_state=None,
+                 randomized_init: bool = True,
+                 init_state_randomization_info=None,
+                 # Domain randomization.
+                 prior_prop=None,
+                 inertial_prop=None,
+                 randomized_inertial_prop: bool = False,
+                 inertial_prop_randomization_info=None,
+                 # Constraint.
+                 constraints=None,
+                 done_on_violation: bool = False,
+                 use_constraint_penalty=False,
+                 constraint_penalty=-1,
+                 # Disturbance.
+                 disturbances=None,
+                 adversary_disturbance=None,
+                 adversary_disturbance_offset=0.0,
+                 adversary_disturbance_scale=0.01,
+                 **kwargs
                  ):
         """Initialization method for BenchmarkEnv.
 
         Args:
+            output_dir (str, optional): path to directory to save any env outputs.
             seed (int, optional): Seed for the random number generator.
             info_in_reset (bool, optional): Whether .reset() returns a dictionary with the
                                             environment's symbolic model.
-            episode_len_sec (int, optional): Maximum episode duration in seconds.
+            gui (bool, optional): Whether to show PyBullet's GUI.
+            verbose (bool, optional): If to suppress environment print statetments.
+            normalized_rl_action_space (bool, optional): Whether to normalize the action space.
+            task: (Task, optional): The environment's task (stabilization or traj. tracking).
+            task_info (dict, optional): A dictionary with the information used to generate the 
+                task X and U references.
             cost (Cost, optional): Cost function choice used to compute the reward in .step().
+            pyb_freq (int, optional): The frequency at which PyBullet steps (a multiple of ctrl_freq).
+            ctrl_freq (int, optional): The frequency at which the environment steps.
+            episode_len_sec (int, optional): Maximum episode duration in seconds.
+            init_state  (ndarray/dict, optional): The initial state of the environment 
+            randomized_init (bool, optional): Whether to randomize the initial state.
+            init_state_randomization_info (dict, optional): A dictionary with information used to 
+                randomize the initial state.
+            prior_prop (dict, optional): The prior inertial properties of the environment.
+            inertial_prop (dict, optional): The ground truth inertial properties of the environment.
+            randomized_inertial_prop (bool, optional): Whether to randomize the inertial properties.
+            inertial_prop_randomization_info (dict, optional): A dictionary with information used 
+                to randomize the inert. properties.
+            constraints (Dict, optional): Dictionary to specify the constraints being used.
+            done_on_violation (bool, optional): Whether to return done==True on a constraint violation.
+            use_constraint_penalty (bool, optional): if to use shaped reward to penalize potential 
+                constraint violation.
+            constraint_penalty (float, optional): constraint penalty cost for reward shaping. 
+            disturbances (dict, optional): Dictionary to specify disturbances being used. 
+            adversary_disturbance (str, optional): if to use adversary/external disturbance.
+            adversary_disturbance_offset (float, optional): parameterizes the offset of the adversary disturbance.
+            adversary_disturbance_scale (float, optional): parameterizes magnitude of adversary disturbance.
+
+        Attributes:
+            id (int): unique identifier of the current env instance (among other instances).
 
         """
         # Assign unique ID based on env instance count.
@@ -66,22 +132,87 @@ class BenchmarkEnv(gym.Env):
         if output_dir is None:
             output_dir = os.getcwd()
         self.output_dir = output_dir
-        # Default seed None means pure randomness/no seeding.
-        self.seed(seed)
-        self.INFO_IN_RESET = info_in_reset
-        self.initial_reset = False
+        self.GUI = gui
+        self.VERBOSE = verbose
+        # Task.
+        self.TASK = Task(task)
+        if task_info is not None:
+            self.TASK_INFO = task_info
+        # Set timing constants.
+        self.CTRL_FREQ = ctrl_freq
+        self.PYB_FREQ = pyb_freq
+        if self.PYB_FREQ % self.CTRL_FREQ != 0:
+            raise ValueError("[ERROR] in BenchmarkEnv.__init__(), pyb_freq is not divisible by env_freq.")
+        self.PYB_STEPS_PER_CTRL = int(self.PYB_FREQ / self.CTRL_FREQ)
+        self.CTRL_TIMESTEP = 1. / self.CTRL_FREQ
+        self.PYB_TIMESTEP = 1. / self.PYB_FREQ
         # Maximum episode length in seconds.
         self.EPISODE_LEN_SEC = episode_len_sec
+        self.CTRL_STEPS = self.EPISODE_LEN_SEC * self.CTRL_FREQ
+        # Initialization of state.
+        self.INIT_STATE = init_state
+        self.RANDOMIZED_INIT = randomized_init
+        if init_state_randomization_info is not None:
+            self.INIT_STATE_RAND_INFO = init_state_randomization_info
+        # Domain randomization on parameters.
+        self.PRIOR_PROP = prior_prop
+        self.INERTIAL_PROP = inertial_prop
+        self.RANDOMIZED_INERTIAL_PROP = randomized_inertial_prop
+        if inertial_prop_randomization_info is not None:
+            self.INERTIAL_PROP_RAND_INFO = inertial_prop_randomization_info
+        # Set up action and observation space.
+        self.NORMALIZED_RL_ACTION_SPACE = normalized_rl_action_space
         # Define cost-related quantities.
         self.COST = Cost(cost)
+        # Create action and observation spaces.
+        self._set_action_space()
+        self._set_observation_space()
+        # Store action (input) and observation spaces dimensions.
+        # if observation is not the same as state, env should also have a `state_space`
+        # and `state_dim` is queried from it.
+        self.action_dim = self.action_space.shape[0]
+        self.obs_dim = self.observation_space.shape[0]
+        if hasattr(self, "state_space"):
+            self.state_dim = self.state_space.shape[0]
+        else:
+            self.state_dim = self.obs_dim
         # Default Q and R matrices for quadratic cost.
         if self.COST == Cost.QUADRATIC:
             self.Q = np.eye(self.observation_space.shape[0])
             self.R = np.eye(self.action_space.shape[0])
-        # Custom setups.
-        self._setup_symbolic()
-        self._setup_disturbances()
+        # Set constraint info.
+        self.CONSTRAINTS = constraints
+        self.DONE_ON_VIOLATION = done_on_violation
+        self.use_constraint_penalty = use_constraint_penalty
+        self.constraint_penalty = constraint_penalty
         self._setup_constraints()
+        # Set disturbance info.
+        self.DISTURBANCES = disturbances
+        self.adversary_disturbance = adversary_disturbance
+        self.adversary_disturbance_offset = adversary_disturbance_offset
+        self.adversary_disturbance_scale = adversary_disturbance_scale
+        self._setup_disturbances()
+        # Default seed None means pure randomness/no seeding.
+        self.seed(seed)
+        self.initial_reset = False
+        self.INFO_IN_RESET = info_in_reset
+
+    def seed(self,
+             seed=None
+             ):
+        """Sets up a random number generator for a given seed.
+        
+        Remember to seed all random generators, currently in
+        - env
+        - action_space
+        - disturbances 
+        
+        """
+        self.np_random, seed = seeding.np_random(seed)
+        self.action_space.seed(seed)
+        for _, disturbs in self.disturbances.items():
+            disturbs.seed(self)
+        return [seed]
 
     def set_cost_function_param(self,
                                 Q,
@@ -100,6 +231,18 @@ class BenchmarkEnv(gym.Env):
         else:
             raise RuntimeError(
                 '[ERROR] env.set_cost_function_param() cannot be called after the first reset of the environment.'
+            )
+
+    def set_adversary_control(self, action):
+        """Sets disturbance by an adversary controller, called before (each) step().
+
+        """
+        if self.adversary_disturbance is not None:
+            clipped_adv_action = np.clip(action, self.adversary_action_space.low, self.adversary_action_space.high)
+            self.adv_action = clipped_adv_action * self.adversary_disturbance_scale + self.adversary_disturbance_offset
+        else:
+            raise RuntimeError(
+                "[ERROR] adversary_disturbance does not exist, env.set_adversary_control() cannot be called."
             )
 
     def _check_initial_reset(self):
@@ -144,19 +287,6 @@ class BenchmarkEnv(gym.Env):
                 randomized_values[key] += distrib(*d_args, **d_kwargs)
         return randomized_values
 
-    def seed(self,
-             seed=None
-             ):
-        """Sets up a random number generator for a given seed.
-        
-        Current convention: non-positive seed same as None 
-
-        """
-        if seed is not None:
-            seed = seed if seed > 0 else None
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
-
     def _setup_symbolic(self):
         """Creates a symbolic (CasADi) model for dynamics and cost."""
         raise NotImplementedError
@@ -166,21 +296,10 @@ class BenchmarkEnv(gym.Env):
         # Default: no passive disturbances.
         self.disturbances = {}
         if self.DISTURBANCES is not None:
-            for mode, disturbs in self.DISTURBANCES.items():
+            for mode, disturb_specs in self.DISTURBANCES.items():
                 assert mode in self.DISTURBANCE_MODES, "[ERROR] in BenchmarkEnv._setup_disturbances(), disturbance mode not available."
-                disturb_list = []
-                shared_args = self.DISTURBANCE_MODES[mode]
-                # Each disturbance for the mode.
-                for disturb in disturbs:
-                    assert "disturbance_func" in disturb.keys(), "[ERROR]: Every distrubance must specify a disturbance_func."
-                    disturb_func = disturb.disturbance_func
-                    assert disturb_func in DISTURBANCE_TYPES, "[ERROR] in BenchmarkEnv._setup_disturbances(), disturbance type not available."
-                    disturb_cls = DISTURBANCE_TYPES[disturb_func]
-                    cfg = {key: disturb[key] for key in disturb if key != "disturbance_func"}
-                    disturb = disturb_cls(self, **shared_args, **cfg)
-                    disturb_list.append(disturb)
-                # Combine as one for the mode.
-                self.disturbances[mode] = DisturbanceList(disturb_list)
+                mode_shared_args = self.DISTURBANCE_MODES[mode]
+                self.disturbances[mode] = create_disturbance_list(disturb_specs, mode_shared_args, self)
         # Adversary disturbance (set from outside of env, active/non-passive).
         if self.adversary_disturbance is not None:
             assert self.adversary_disturbance in self.DISTURBANCE_MODES, "[ERROR] in Cartpole._setup_disturbances()"
@@ -192,7 +311,106 @@ class BenchmarkEnv(gym.Env):
 
     def _setup_constraints(self):
         """Creates a list of constraints as an attribute."""
+        self.constraints = None
+        self.num_constraints = 0
+        if self.CONSTRAINTS is not None:
+            self.constraints = create_constraint_list(self.CONSTRAINTS, self.AVAILABLE_CONSTRAINTS, self)
+            self.num_constraints = self.constraints.num_constraints
+
+    def _set_action_space(self):
+        """Defines the action space of the environment.
+        
+        """
         raise NotImplementedError
+        
+    def _set_observation_space(self):
+        """Defines the observation space of the environment.
+
+        Sets `self.observation_space`, if observation is not identical to state,
+        e.g. in RL where obs is [state, goal] or angle is converted to sine & cosine,
+        additionally sets a `self.state_space`.
+        
+        """
+        raise NotImplementedError
+    
+    def before_reset(self):
+        """Pre-processing before calling `.reset()`.
+        
+        """
+        # Housekeeping variables.
+        self.initial_reset = True
+        self.pyb_step_counter = 0
+        self.ctrl_step_counter = 0
+        self.current_raw_input_action = None
+        self.current_preprocessed_action = None
+        # Reset the disturbances.
+        for mode in self.disturbances.keys():
+            self.disturbances[mode].reset(self) 
+        if self.adversary_disturbance is not None:
+            self.adv_action = None
+            
+    def after_reset(self, obs, info):
+        """Post-processing after calling `.reset()`.
+
+        """
+        # Add initial constraint info (no action/input yet, so only state-based constraints)
+        if self.constraints is not None:
+            info["constraint_values"] = self.constraints.get_values(self, only_state=True)
+        return obs, info
+        
+    def _preprocess_control(self, action):
+        """Pre-processes the action passed to `.step()`, default is identity.
+
+        It's suggested that you set `self.current_preprocessed_action` here,
+        if you ever need to use it later on (e.g. to compute reward/cost).
+        
+        """
+        return action
+    
+    def before_step(self, action):
+        """Pre-processing before calling `.step()`.
+
+        """
+        # Sanity check (reset at least once).
+        self._check_initial_reset()
+        # Save the raw input action.
+        self.current_raw_input_action = action
+        # Pre-process/clip the action
+        processed_action = self._preprocess_control(action)
+        return processed_action
+    
+    def after_step(self, obs, rew, done, info):
+        """Post-processing after calling `.step()`.
+
+        """
+        # Increment counters 
+        self.pyb_step_counter += self.PYB_STEPS_PER_CTRL
+        self.ctrl_step_counter += 1
+                
+        # Terminate when (any) constraint is violated.
+        # here we cache the constraint values `c_value`, so we only evaluate the constraints once,
+        # but use it in 1) info dict; 2) check constraint violation; 3) check near constraint violation/almost active.
+        # it also allows stateful constraint, where evaluation/update should only be done once per time step.
+        c_value = None 
+        if self.constraints is not None:
+            c_value = self.constraints.get_values(self)
+            info["constraint_values"] = c_value
+            info["constraint_violation"] = 0
+            if self.DONE_ON_VIOLATION and self.constraints.is_violated(self, c_value=c_value):
+                done = True 
+                info["constraint_violation"] = 1                
+
+        # Apply penalized reward when close to constraint violation
+        if self.COST == Cost.RL_REWARD:
+            if self.constraints is not None and self.use_constraint_penalty and self.constraints.is_almost_active(self, c_value=c_value):
+                rew += self.constraint_penalty
+
+        # Terminate when reaching time limit,
+        # but distinguish between done due to true termination or time limit reached 
+        if self.ctrl_step_counter >= self.CTRL_STEPS:
+            info["TimeLimit.truncated"] = not done
+            done = True 
+        return obs, rew, done, info
 
     def _generate_trajectory(self,
                              traj_type="figure8",

@@ -29,7 +29,7 @@ $ conda activate safe                                              # Activate en
 ```
 Clone and install the `safe-control-gym` repository 
 ```
-$ git clone -b ar https://github.com/utiasDSL/safe-control-gym.git # Clone repository (the 'ar' branch specifically)
+$ git clone https://github.com/utiasDSL/safe-control-gym.git       # Clone repository
 $ cd safe-control-gym                                              # Enter the repository
 $ pip install -e .                                                 # Install the repository
 ```
@@ -74,18 +74,16 @@ $ python3 verbose_api.py --system cartpole --overrides verbose_api.yaml  #  Prin
 - iLQR [coming soon]
 - [Linear MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/linear_mpc.py)
 - [GP-MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/gp_mpc.py)
-- SAC [coming soon]
+- [SAC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/sac/sac.py)
 - [PPO](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/ppo/ppo.py)
 - [Safety Layer](https://github.com/utiasDSL/safe-control-gym/tree/main/safe_control_gym/controllers/safe_explorer)
-- RARL [coming soon]
-- RAP [coming soon]
+- [RARL](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/rarl/rarl.py)
+- [RAP](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/rarl/rap.py)
 - [MPSC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpsc/mpsc.py)
 - CBF [coming soon]
 
 
 ## Re-create the Results in "Safe Learning in Robotics" [[arXiv link]](https://arxiv.org/pdf/2108.06266.pdf)
-
-**[Branch `ar`](https://github.com/utiasDSL/safe-control-gym/tree/ar) (or [release `v0.5.0`](https://github.com/utiasDSL/safe-control-gym/releases/tag/v0.5.0)) are the codebase for our [review article on safe control and RL](https://arxiv.org/abs/2108.06266):**
 
 To stay in touch, get involved or ask questions, please contact us via e-mail (`{jacopo.panerati, zhaocong.yuan, adam.hall, siqi.zhou, lukas.brunke, melissa.greeff}@robotics.utias.utoronto.ca`) or through [this form](https://forms.office.com/r/A4UewwYpcn).
 
@@ -93,7 +91,7 @@ To stay in touch, get involved or ask questions, please contact us via e-mail (`
 ### Figure 6—Robust GP-MPC [[1]](https://ieeexplore.ieee.org/document/8909368)
 
 ```
-$ cd ../experiments/figure6/                                       # Navigate to the experiment folder
+$ cd ../experiments/annual_reviews/figure6/                        # Navigate to the experiment folder
 $ chmod +x create_fig6.sh                                          # Make the script executable, if needed
 $ ./create_fig6.sh                                                 # Run the script (ca. 2')
 ```

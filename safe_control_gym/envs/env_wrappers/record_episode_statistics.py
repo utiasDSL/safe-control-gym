@@ -83,7 +83,7 @@ class RecordEpisodeStatistics(gym.Wrapper):
                 info['episode'][key] = deepcopy(self.episode_stats[key])
                 if key in self.accumulated_stats:
                     self.accumulated_stats[key] += deepcopy(self.episode_stats[key])
-                elif key in self.queued_stats:
+                if key in self.queued_stats:
                     self.queued_stats[key].append(deepcopy(self.episode_stats[key]))
                 self.episode_stats[key] *= 0
         return observation, reward, done, info
@@ -163,7 +163,7 @@ class VecRecordEpisodeStatistics(VecEnvWrapper):
                     info["n"][i]['episode'][key] = deepcopy(self.episode_stats[key][i])
                     if key in self.accumulated_stats:
                         self.accumulated_stats[key] += deepcopy(self.episode_stats[key][i])
-                    elif key in self.queued_stats:
+                    if key in self.queued_stats:
                         self.queued_stats[key].append(deepcopy(self.episode_stats[key][i]))
                     self.episode_stats[key][i] *= 0
         return obs, reward, done, info

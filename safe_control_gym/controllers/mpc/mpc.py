@@ -9,7 +9,7 @@ from copy import deepcopy
 from safe_control_gym.controllers.base_controller import BaseController
 from safe_control_gym.controllers.mpc.mpc_utils import get_cost_weight_matrix
 from safe_control_gym.envs.benchmark_env import Task
-from safe_control_gym.envs.constraints import ConstraintList, GENERAL_CONSTRAINTS, create_ConstraintList_from_list
+from safe_control_gym.envs.constraints import ConstraintList, GENERAL_CONSTRAINTS, create_constraint_list
 
 
 class MPC(BaseController):
@@ -46,9 +46,9 @@ class MPC(BaseController):
         # Task.
         self.env = env_func()
         if additional_constraints is not None:
-            additional_ConstraintsList = create_ConstraintList_from_list(additional_constraints,
-                                                                         GENERAL_CONSTRAINTS,
-                                                                         self.env)
+            additional_ConstraintsList = create_constraint_list(additional_constraints,
+                                                                GENERAL_CONSTRAINTS,
+                                                                self.env)
             self.additional_constraints = additional_ConstraintsList.constraints
             self.reset_constraints(self.env.constraints.constraints + self.additional_constraints)
         else:
@@ -323,9 +323,7 @@ class MPC(BaseController):
         else:
             raise("Undefined Task")
         self.terminate_loop = False
-        while np.linalg.norm(obs - env.X_GOAL) > 1e-3 and\
-                i < MAX_STEPS and\
-                not(self.terminate_loop):
+        while np.linalg.norm(obs - env.X_GOAL) > 1e-3 and i < MAX_STEPS and not(self.terminate_loop):
             action = self.select_action(obs)
             if self.terminate_loop:
                 print("Infeasible MPC Problem")
@@ -357,6 +355,10 @@ class MPC(BaseController):
                 ep_lengths.mean(), ep_lengths.std(), ep_returns.mean(),
                 ep_returns.std())
         self.results_dict['obs'] = np.vstack(self.results_dict['obs'])
-        self.results_dict['reward'] = np.vstack(self.results_dict['reward'])
-        self.results_dict['action'] = np.vstack(self.results_dict['action'])
+        try:
+            self.results_dict['reward'] = np.vstack(self.results_dict['reward'])
+            self.results_dict['action'] = np.vstack(self.results_dict['action'])
+        except ValueError:
+            raise Exception("[ERROR] mpc.run().py: MPC could not find a solution for the first step given the initial conditions. "
+                  "Check to make sure initial conditions are feasible.")
         return deepcopy(self.results_dict)

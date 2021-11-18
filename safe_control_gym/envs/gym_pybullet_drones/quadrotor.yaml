@@ -1,4 +1,4 @@
-# seed: 51087
+# Simulation options
 info_in_reset: False
 ctrl_freq: 60
 pyb_freq: 240
@@ -6,9 +6,10 @@ physics: pyb
 gui: False
 quad_type: 2
 normalized_rl_action_space: False
+episode_len_sec: 5
 # State initialization
 init_state: null
-randomized_init: True
+randomized_init: False
 init_state_randomization_info: null
 # Randomization
 inertial_prop: null
@@ -18,10 +19,22 @@ inertial_prop_randomization_info: null
 task: stabilization
 task_info: null
 cost: rl_reward
-# Disturbance
+# Disturbances
 disturbances: null
+adversary_disturbance: null 
+adversary_disturbance_offset: 0.0
+adversary_disturbance_scale: 0.01
 # Constraints
 constraints: null
 done_on_violation: False
+use_constraint_penalty: False
+constraint_penalty: -1 
 # Misc 
 verbose: False
+# RL Hyper-parameters
+norm_act_scale: 0.1
+obs_goal_horizon: 1
+rew_state_weight: 1.0
+rew_act_weight: 0.0001
+rew_exponential: True
+done_on_out_of_bound: True

@@ -34,8 +34,17 @@ class SafetyLayer:
         # Seperate model per constraint.
         input_dim = obs_space.shape[0]
         output_dim = act_space.shape[0]
+        
+        # default 1 layer 
+        if isinstance(hidden_dim, int):
+            hidden_dims=[hidden_dim]
+        elif isinstance(hidden_dim, list):
+            hidden_dims = hidden_dim
+        else:
+            raise ValueError("hidden_dim can only be int or list.")
         self.constraint_models = nn.ModuleList([
-            MLP(input_dim, output_dim, hidden_dims=[hidden_dim])
+            # MLP(input_dim, output_dim, hidden_dims=[hidden_dim])
+            MLP(input_dim, output_dim, hidden_dims=hidden_dims)
             for _ in range(self.num_constraints)
         ])
         # Constraint slack variables/values.
@@ -279,9 +288,9 @@ class ConstraintBuffer(object):
                 remain_n = self.pos + n - self.max_size
                 self.__dict__[k][self.pos:self.max_size] = v_[:-remain_n]
                 self.__dict__[k][:remain_n] = v_[-remain_n:]
-        self.pos = (self.pos + n) % self.max_size
         if self.buffer_size < self.max_size:
             self.buffer_size = min(self.max_size, self.pos + n)
+        self.pos = (self.pos + n) % self.max_size
 
     def sample(self,
                indices

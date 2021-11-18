@@ -96,10 +96,7 @@ def main():
         print_str_with_style('safe-control-gym API:', 0)
         out = '\tConstraints evaluations: ' + str(info['constraint_values'])
         print_str_with_style(out, 0)
-        if config.system == 'cartpole':
-            out = '\tConstraints violations: ' + str(info['constraint_violation'])
-        elif config.system == 'quadrotor':
-            out = '\tConstraints violations: ' + str(info['constraint_violations'])
+        out = '\tConstraints violation: ' + str(bool(info['constraint_violation']))
         print_str_with_style(out, 0)
 
         print('\n\n')

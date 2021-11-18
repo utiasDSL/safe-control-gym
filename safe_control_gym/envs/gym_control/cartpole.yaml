@@ -1,8 +1,10 @@
+# Simulation options
 info_in_reset: False
 ctrl_freq: 50
 pyb_freq: 50
 gui: False
 normalized_rl_action_space: False
+episode_len_sec: 5
 # State initialization
 init_state: null
 randomized_init: True
@@ -15,9 +17,10 @@ inertial_prop_randomization_info: null
 task: stabilization
 task_info: null
 cost: rl_reward
-# Disturbance
+# Disturbances
 disturbances: null
 adversary_disturbance: null 
+adversary_disturbance_offset: 0.0
 adversary_disturbance_scale: 0.01
 # Constraints
 constraints: null
@@ -26,3 +29,9 @@ use_constraint_penalty: False
 constraint_penalty: -1 
 # Misc 
 verbose: False
+# RL Hyper-parameters
+obs_wrap_angle: False
+rew_state_weight: 1.0
+rew_act_weight: 0.0001
+rew_exponential: True
+done_on_out_of_bound: True
