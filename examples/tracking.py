@@ -35,9 +35,9 @@ def main():
         # Start a timer.
         START = time.time()
         if i == 1:
-            config.quadrotor_config['task_info']['trajectory_type'] = 'square'
-        elif i == 2:
             config.quadrotor_config['task_info']['trajectory_type'] = 'circle'
+        elif i == 2:
+            config.quadrotor_config['task_info']['trajectory_type'] = 'square'
         env = make('quadrotor', **config.quadrotor_config)
         # Create controller.
         action = np.zeros(2)
