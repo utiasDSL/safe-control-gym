@@ -526,7 +526,7 @@ class Quadrotor(BaseAviary):
         # Define obs space exposed to the controller 
         # Note obs space is often different to state space for RL (with additional task info)
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
-    
+
     def _preprocess_control(self, action):
         """Converts the action passed to .step() into motors' RPMs (ndarray of shape (4,)).
 

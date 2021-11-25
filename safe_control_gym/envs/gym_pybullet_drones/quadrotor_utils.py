@@ -36,6 +36,7 @@ def cmd2pwm(thrust, pwm2rpm_scale, pwm2rpm_const, ct, pwm_min, pwm_max):
 
     """
     n_motor = 4 // int(thrust.size)
+    thrust = np.clip(thrust, np.zeros_like(thrust), None)  # Make sure thrust is not negative.
     motor_pwm = (np.sqrt(thrust / n_motor / ct) - pwm2rpm_const) / pwm2rpm_scale
     if thrust.size == 1:  # 1D case.
         motor_pwm = np.repeat(motor_pwm, 4)
