@@ -24,6 +24,6 @@ quadrotor_config:
     trajectory_plane: "xz"
     trajectory_position_offset: [0, 1]
     trajectory_scale: 1
-  episode_len_sec: 8
+  episode_len_sec: 6
   cost: quadratic
   done_on_out_of_bound: False
