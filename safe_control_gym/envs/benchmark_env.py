@@ -395,10 +395,12 @@ class BenchmarkEnv(gym.Env):
         if self.constraints is not None:
             c_value = self.constraints.get_values(self)
             info["constraint_values"] = c_value
-            info["constraint_violation"] = 0
-            if self.DONE_ON_VIOLATION and self.constraints.is_violated(self, c_value=c_value):
-                done = True 
-                info["constraint_violation"] = 1                
+            if self.constraints.is_violated(self, c_value=c_value):
+                info["constraint_violation"] = 1
+                if self.DONE_ON_VIOLATION:
+                    done = True
+            else:
+                info["constraint_violation"] = 0
 
         # Apply penalized reward when close to constraint violation
         if self.COST == Cost.RL_REWARD:
