@@ -7,8 +7,8 @@ import gpytorch
 import torch
 import matplotlib.pyplot as plt
 import casadi as ca
-
 from copy import deepcopy
+from sklearn import preprocessing
 
 from safe_control_gym.utils.utils import mkdirs
 
@@ -190,19 +190,24 @@ class GaussianProcessCollection:
         self._init_properties(train_inputs, train_targets)
         target_dimension = train_targets.shape[1]
         gp_K_plus_noise_list = []
+        gp_K_plus_noise_inv_list = []
         for gp_ind, gp in enumerate(self.gp_list):
-            path = os.path.join(path_to_statedicts, 'best_model_%s.pth'  % gp_ind)
+            path = os.path.join(path_to_statedicts, 'best_model_%s.pth'  % self.target_mask[gp_ind])
             print("#########################################")
-            print("#       Loading GP dimension %s         #" % gp_ind)
+            print("#       Loading GP dimension %s         #" % self.target_mask[gp_ind])
             print("#########################################")
             print('Path: %s' % path)
             gp.init_with_hyperparam(train_inputs,
-                                    train_targets[:,gp_ind],
+                                    train_targets[:,self.target_mask[gp_ind]],
                                     path)
             gp_K_plus_noise_list.append(gp.model.K_plus_noise.detach())
+            gp_K_plus_noise_inv_list.append(gp.model.K_plus_noise_inv.detach())
             print('Loaded!')
         gp_K_plus_noise = torch.stack(gp_K_plus_noise_list)
+        gp_K_plus_noise_inv = torch.stack(gp_K_plus_noise_inv_list)
         self.K_plus_noise = gp_K_plus_noise
+        self.K_plus_noise_inv = gp_K_plus_noise_inv
+        self.casadi_predict = self.make_casadi_predict_func()
 
     def get_hyperparameters(self,
                             as_numpy=False
@@ -228,6 +233,8 @@ class GaussianProcessCollection:
     def train(self,
               train_x_raw,
               train_y_raw,
+              test_x_raw,
+              test_y_raw,
               n_train=[500],
               learning_rate=[0.01],
               gpu=False,
@@ -247,21 +254,25 @@ class GaussianProcessCollection:
             lr = learning_rate[self.target_mask[gp_ind]]
             n_t = n_train[self.target_mask[gp_ind]]
             print("#########################################")
-            print("#      Training GP dimension %s         #" % gp_ind)
+            print("#      Training GP dimension %s         #" % self.target_mask[gp_ind])
             print("#########################################")
             print("Train iterations: %s" % n_t)
             print("Learning Rate:: %s" % lr)
             gp_K_plus_noise_list = []
             gp.train(train_x_raw,
-                     train_y_raw[:,gp_ind],
+                     train_y_raw[:,self.target_mask[gp_ind]],
+                     test_x_raw,
+                     test_y_raw[:, self.target_mask[gp_ind]],
                      n_train=n_t,
                      learning_rate=lr,
                      gpu=gpu,
-                     fname=os.path.join(dir, 'best_model_%s.pth' % gp_ind))
+                     fname=os.path.join(dir, 'best_model_%s.pth' % self.target_mask[gp_ind]))
             self.model_paths.append(dir)
             gp_K_plus_noise_list.append(gp.model.K_plus_noise)
         gp_K_plus_noise = torch.stack(gp_K_plus_noise_list)
         self.K_plus_noise = gp_K_plus_noise
+        self.casadi_predict = self.make_casadi_predict_func()
+
 
     def predict(self,
                 x,
@@ -298,6 +309,27 @@ class GaussianProcessCollection:
         else:
             return means, cov
 
+    def make_casadi_predict_func(self):
+        """
+        Assume train_inputs and train_tergets are already
+        """
+
+        means_list = []
+        Nz = len(self.input_mask)
+        Ny = len(self.target_mask)
+        z = ca.SX.sym('z1', Nz)
+        y = ca.SX.zeros(Ny)
+        for gp_ind, gp in enumerate(self.gp_list):
+            y[gp_ind] = gp.casadi_predict(z=z)['mean']
+        casadi_predict = ca.Function('pred',
+                                     [z],
+                                     [y],
+                                     ['z'],
+                                     ['mean'])
+        return casadi_predict
+
+
+
     def prediction_jacobian(self,
                             query
                             ):
@@ -315,7 +347,10 @@ class GaussianProcessCollection:
 
         """
         for gp_ind, gp in enumerate(self.gp_list):
-            fig_count = gp.plot_trained_gp(inputs, targets[:,gp_ind,None], fig_count)
+            fig_count = gp.plot_trained_gp(inputs,
+                                           targets[:,self.target_mask[gp_ind],None],
+                                           self.target_mask[gp_ind],
+                                           fig_count=fig_count)
             fig_count += 1
 
     def _kernel_list(self,
@@ -334,6 +369,10 @@ class GaussianProcessCollection:
         """
         if x2 is None:
             x2 = x1
+        # todo: Make normalization at the GPCollection level?
+        #if self.NORMALIZE:
+        #    x1 = torch.from_numpy(self.gp_list[0].scaler.transform(x1.numpy()))
+        #    x2 = torch.from_numpy(self.gp_list[0].scaler.transform(x2.numpy()))
         k_list = []
         for gp in self.gp_list:
             k_list.append(gp.model.covar_module(x1, x2))
@@ -421,6 +460,12 @@ class GaussianProcess:
             target_dimension = train_targets.shape[1]
         else:
             target_dimension = 1
+
+        # Define normalization scaler.
+        self.scaler = preprocessing.StandardScaler().fit(train_inputs.numpy())
+        if self.NORMALIZE:
+            train_inputs = torch.from_numpy(self.scaler.transform(train_inputs.numpy()))
+
         if self.model is None:
             self.model = self.model_type(train_inputs,
                                          train_targets,
@@ -429,6 +474,7 @@ class GaussianProcess:
         self.input_dimension = train_inputs.shape[1]
         self.output_dimension = target_dimension
         self.n_training_samples = train_inputs.shape[0]
+
 
     def _compute_GP_covariances(self,
                                 train_x
@@ -458,17 +504,22 @@ class GaussianProcess:
         device = torch.device('cpu')
         state_dict = torch.load(path_to_statedict, map_location=device)
         self._init_model(train_inputs, train_targets)
+        if self.NORMALIZE:
+            train_inputs = torch.from_numpy(self.scaler.transform(train_inputs.numpy()))
         self.model.load_state_dict(state_dict)
         self.model.double() # needed otherwise loads state_dict as float32
         self._compute_GP_covariances(train_inputs)
+        self.casadi_predict = self.make_casadi_prediction_func(train_inputs, train_targets)
 
     def train(self,
-              train_x_raw,
-              train_y_raw,
+              train_input_data,
+              train_target_data,
+              test_input_data,
+              test_target_data,
               n_train=500,
               learning_rate=0.01,
               gpu=False,
-              fname='best_model.pth'
+              fname='best_model.pth',
               ):
         """Train the GP using Train_x and Train_y.
 
@@ -477,23 +528,32 @@ class GaussianProcess:
             train_y: Torch tensor (N samples [rows] by target dim [cols])
 
         """
+        train_x_raw = train_input_data
+        train_y_raw = train_target_data
+        test_x_raw = test_input_data
+        test_y_raw = test_target_data
         if self.input_mask is not None:
             train_x_raw = train_x_raw[:, self.input_mask]
+            test_x_raw = test_x_raw[:, self.input_mask]
         if self.target_mask is not None:
             train_y_raw = train_y_raw[:, self.target_mask]
+            test_y_raw = test_y_raw[:, self.target_mask]
+        self._init_model(train_x_raw, train_y_raw)
         if self.NORMALIZE:
-            self.scale_normalization = 2/(train_x_raw.max(0)[0] - train_x_raw.min(0)[0])
-            self.scale_shift = (-train_x_raw.max(0)[0] - train_x_raw.min(0)[0])/(train_x_raw.max(0)[0] -
-                                                                                 train_x_raw.min(0)[0])
-            train_x = self.normalize(train_x_raw)
+            train_x = torch.from_numpy(self.scaler.transform(train_x_raw))
+            test_x = torch.from_numpy(self.scaler.transform(test_x_raw))
             train_y = train_y_raw
+            test_y = test_y_raw
         else:
             train_x = train_x_raw
             train_y = train_y_raw
-        self._init_model(train_x, train_y)
+            test_x = test_x_raw
+            test_y = test_y_raw
         if gpu:
             train_x = train_x.cuda()
             train_y = train_y.cuda()
+            test_x = test_x.cuda()
+            test_y = test_y.cuda()
             self.model = self.model.cuda()
             self.likelihood = self.likelihood.cuda()
         self.model.double()
@@ -507,11 +567,18 @@ class GaussianProcess:
         loss = torch.tensor(0)
         i = 0
         while i < n_train and torch.abs(loss - last_loss) > 1e-2:
+            self.model.eval()
+            self.likelihood.eval()
+            test_output = self.model(test_x)
+            test_loss = -mll(test_output, test_y)
+            self.model.train()
+            self.likelihood.train()
             self.optimizer.zero_grad()
             output = self.model(train_x)
             loss = -mll(output, train_y)
             loss.backward()
-            print('Iter %d/%d - Loss: %.3f' % (i + 1, n_train, loss.item()))
+            if i % 100 == 0:
+                print('Iter %d/%d - Train Loss: %.3f, Posterior loss on test data: %0.3f' % (i + 1, n_train, loss.item(), test_loss.item()))
             self.optimizer.step()
             if loss < best_loss:
                 best_loss = loss
@@ -529,6 +596,7 @@ class GaussianProcess:
         train_y = train_y.cpu()
         self.model.load_state_dict(torch.load(fname))
         self._compute_GP_covariances(train_x)
+        self.casadi_predict = self.make_casadi_prediction_func(train_x, train_y)
 
     def predict(self,
                 x,
@@ -554,7 +622,7 @@ class GaussianProcess:
         if self.input_mask is not None:
             x = x[:,self.input_mask]
         if self.NORMALIZE:
-            x = self.normalize(x)
+            x = torch.from_numpy(self.scaler.transform(x))
         if requires_grad:
             predictions = self.likelihood(self.model(x))
             mean = predictions.mean
@@ -569,6 +637,7 @@ class GaussianProcess:
         else:
             return mean, cov
 
+
     def prediction_jacobian(self,
                             query
                             ):
@@ -577,9 +646,32 @@ class GaussianProcess:
                                 query.double())
         return mean_der.detach().squeeze()
 
+    def make_casadi_prediction_func(self, train_inputs, train_targets):
+        """
+        Assumes train_inputs and train_targets are already masked.
+        """
+        train_inputs = train_inputs.numpy()
+        train_targets = train_targets.numpy()
+        lengthscale = self.model.covar_module.base_kernel.lengthscale.detach().numpy()
+        output_scale = self.model.covar_module.outputscale.detach().numpy()
+        Nx = len(self.input_mask)
+        z = ca.SX.sym('z', Nx)
+        K_z_ztrain = ca.Function('k_z_ztrain',
+                                 [z],
+                                 [covSEard(z, train_inputs.T, lengthscale.T, output_scale)],
+                                 ['z'],
+                                 ['K'])
+        predict = ca.Function('pred',
+                              [z],
+                              [K_z_ztrain(z=z)['K'] @ self.model.K_plus_noise_inv.detach().numpy() @ train_targets],
+                              ['z'],
+                              ['mean'])
+        return predict
+
     def plot_trained_gp(self,
                         inputs,
                         targets,
+                        output_label,
                         fig_count=0
                         ):
         if self.target_mask is not None:
@@ -599,38 +691,8 @@ class GaussianProcess:
                 plt.plot(t, means, 'r', label='GP Mean')
                 plt.plot(t, targets, '*k', label='Data')
             plt.legend()
-            plt.title('Fitted GP x%s' % i)
+            plt.title('Fitted GP x%s' % output_label)
             plt.xlabel('Time (s)')
             plt.ylabel('v')
             plt.show()
         return fig_count
-
-    def normalize(self,
-                  vector
-                  ):
-        dim = vector.shape[1]
-        return normalize(vector,
-                         self.scale_normalization[:dim],
-                         self.scale_shift[:dim])
-
-    def unnormalize(self,
-                    vector
-                    ):
-        dim = vector.shape[1]
-        return unnormalize(vector,
-                           self.scale_normalization[:dim],
-                           self.scale_shift[:dim])
-
-
-def normalize(vector,
-              a,
-              b
-              ):
-    return vector*a + b
-
-
-def unnormalize(vector,
-                a,
-                b
-                ):
-    return (vector - b)/a

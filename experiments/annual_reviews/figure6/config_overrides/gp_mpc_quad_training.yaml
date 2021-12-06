@@ -1,5 +1,7 @@
 output_dir: temp-data/figure6
+seed: 1234
 algo_config:
+  seed: 1234
   horizon: 10
   r_mpc:
     - 0.1
@@ -13,6 +15,7 @@ algo_config:
     - 1
   gp_model_path: null
   train_iterations: 800
+  validation_iterations: 200
   optimization_iterations:
     - 1000
     - 1500
@@ -28,14 +31,16 @@ algo_config:
     - 0.01
     - 0.01
   normalize_training_data: False
-  use_gpu: False
+  use_gpu: false
   inertial_prop:
     - 0.027
     - 0.000014
   prior_param_coeff: 1.5
   prob: 0.955
+  initial_rollout_std: 0.005
   warmstart: True
-  gp_approx: 'mean_eq' # 'taylor'
+  gp_approx: 'mean_eq'
+  sparse_gp: false
   online_learning: False
   additional_constraints:
     - constraint_form: linear_constraint
@@ -58,11 +63,13 @@ algo_config:
     - 1
     - 2
     - 3
+    - 4
+    - 5
   output_dir: './trained_gp_model'
 
 task_config:
-  seed: 41251
   ctrl_freq: 10
+  pyb_freq: 240
   info_in_reset: True
   cost: quadratic
   constraints:
@@ -74,10 +81,7 @@ task_config:
         - 0.2
         - 0.2
   done_on_violation: True
-  disturbances:
-    observation:
-      - disturbance_func: white_noise
-        std: 0.001
+  disturbances: null
   init_state_randomization_info:
     init_x:
       distrib: 'uniform'

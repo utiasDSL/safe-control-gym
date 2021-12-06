@@ -4,7 +4,6 @@ See Figure 6 in https://arxiv.org/pdf/2108.06266.pdf.
 
 """
 import os
-import sys
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 import munch
@@ -152,6 +151,7 @@ if __name__ == "__main__":
     # Create environment.
     env_func = partial(make,
                        config.task,
+                       seed=config.seed,
                        **config.task_config
                        )
     # Create GP controller.
@@ -169,17 +169,18 @@ if __name__ == "__main__":
                   'init_theta_dot': 0.0
                   }
     # Run the prior controller.
-    prior_results = ctrl.prior_ctrl.run(env=env_func(init_state=init_state,
-                                                     randomized_init=False),
+    test_env = env_func(init_state=init_state,
+                        randomized_init=False)
+    prior_results = ctrl.prior_ctrl.run(env=test_env,
                                         max_steps=30)
+
     # Learn the gp by collecting training points.
     ctrl.learn()
-
     if not config.train_only:
         # Run with the learned gp model.
-        run_results = ctrl.run(env=env_func(init_state=init_state,
-                                            randomized_init=False),
-                               max_steps=30)
+
+        run_results = ctrl.run(env=test_env,
+                               max_steps=50)
         ctrl.close()
         # Plot the results.
         prior_run = munch.munchify(prior_results)
