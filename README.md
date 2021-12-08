@@ -11,11 +11,11 @@ These environments include (and evaluate) symbolic safety constraints and implem
 
 ```
 @article{brunke2021safe,
-  title={Safe Learning in Robotics: From Learning-Based Control to Safe Reinforcement Learning}, 
-  author={Lukas Brunke and Melissa Greeff and Adam W. Hall and Zhaocong Yuan and Siqi Zhou and Jacopo Panerati and Angela P. Schoellig},
-  journal = {Annual Review of Control, Robotics, and Autonomous Systems},
-  year={2021},
-  url = {https://arxiv.org/abs/2108.06266}}
+         title={Safe Learning in Robotics: From Learning-Based Control to Safe Reinforcement Learning}, 
+         author={Lukas Brunke and Melissa Greeff and Adam W. Hall and Zhaocong Yuan and Siqi Zhou and Jacopo Panerati and Angela P. Schoellig},
+         journal = {Annual Review of Control, Robotics, and Autonomous Systems},
+         year={2021},
+         url = {https://arxiv.org/abs/2108.06266}}
 ```
 
 
@@ -39,9 +39,19 @@ $ pip install -e .                                                 # Install the
 
 ## Architecture
 
-Overview of `safe-control-gym`'s API:
+Overview of [`safe-control-gym`](https://arxiv.org/abs/2109.06325)'s API:
 
 <img src="figures/block.png" alt="block diagram" width="800">
+
+```
+@misc{yuan2021safecontrolgym,
+      title={safe-control-gym: a Unified Benchmark Suite for Safe Learning-based Control and Reinforcement Learning}, 
+      author={Zhaocong Yuan and Adam W. Hall and Siqi Zhou and Lukas Brunke and Melissa Greeff and Jacopo Panerati and Angela P. Schoellig},
+      year={2021},
+      eprint={2109.06325},
+      archivePrefix={arXiv},
+      primaryClass={cs.RO}}
+```
 
 
 
@@ -85,7 +95,7 @@ $ python3 verbose_api.py --system cartpole --overrides verbose_api.yaml  #  Prin
 
 ## Re-create the Results in "Safe Learning in Robotics" [[arXiv link]](https://arxiv.org/pdf/2108.06266.pdf)
 
-To stay in touch, get involved or ask questions, please contact us via e-mail (`{jacopo.panerati, zhaocong.yuan, adam.hall, siqi.zhou, lukas.brunke, melissa.greeff}@robotics.utias.utoronto.ca`) or through [this form](https://forms.office.com/r/A4UewwYpcn).
+To stay in touch, get involved or ask questions, please open an [issue on GitHub](https://github.com/utiasDSL/safe-control-gym/issues) or contact us via e-mail (`{jacopo.panerati, zhaocong.yuan, adam.hall, siqi.zhou, lukas.brunke, melissa.greeff}@robotics.utias.utoronto.ca`).
 
 
 ### Figure 6—Robust GP-MPC [[1]](https://ieeexplore.ieee.org/document/8909368)
