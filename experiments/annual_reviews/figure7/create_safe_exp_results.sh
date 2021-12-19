@@ -34,7 +34,7 @@ for tolerance in "${tolerances[@]}"
 do
     for seed in "${seeds[@]}"
     do
-        python3 ../../main.py --algo ppo --task cartpole --overrides $CONFIG_PATH --output_dir ${OUTPUT_DIR} --tag $TAG_ROOT/${TAG}_${tolerance} --kv_overrides task_config.constraints.abs_bound.tolerance=$tolerance --thread $thread --seed $seed
+        python3 ../../main.py --algo ppo --task cartpole --overrides $CONFIG_PATH --output_dir ${OUTPUT_DIR} --tag $TAG_ROOT/${TAG}_${tolerance} --kv_overrides task_config.constraints="[{'constraint_form':'abs_bound','bound':0.4,'constrained_variable':'state','active_dims':0,'tolerance':$tolerance}]" --thread $thread --seed $seed
     done 
 done
 
@@ -42,7 +42,7 @@ done
 TAG="safe_exp_pretrain"
 CONFIG_PATH="${CONFIG_PATH_ROOT}/safe_explorer_ppo_cartpole_pretrain.yaml"
 train_seed=88890
-python3 ../main.py --algo safe_explorer_ppo --task cartpole --overrides $CONFIG_PATH --output_dir ${OUTPUT_DIR} --tag $TAG_ROOT/$TAG --thread $thread --seed $train_seed
+python3 ../../main.py --algo safe_explorer_ppo --task cartpole --overrides $CONFIG_PATH --output_dir ${OUTPUT_DIR} --tag $TAG_ROOT/$TAG --thread $thread --seed $train_seed
 
 # Safe Explorer.
 PRETRAINED_PATH=(${OUTPUT_DIR}/$TAG_ROOT/$TAG/seed${train_seed}*)
