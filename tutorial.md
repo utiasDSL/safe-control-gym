@@ -1,8 +1,10 @@
  # Safe Control Gym - How to Get Started 
 
+ <!-- there should be an explicit mention of the paper here-->
+
 To run an experiment in safe-control-gym, there are elements required: 
 
-1. A control approach - implementations of control approaches are included in repo (see the Control Approaches section for a list and description) or implement your own controller
+1. A control approach or algorithm - choose an existing implementation of a control approaches (see the Control Approaches section for a list and description) or implement your own controller
 2. A robotic model - choose a robotic model or implement your own
     - cartpole
     - 1D quadrotor
@@ -80,7 +82,7 @@ results = control_agent.run(n_episodes=config.algo_config.eval_batch_size,
 
 After testing, the results can be extracted in different ways. 
 
-Configuring training, testing, and controller parameters will be discussed in the next section. 
+Configuring will be discussed in the next section. 
 
 ### Using overrides/configuration files 
 
@@ -90,35 +92,36 @@ Here is a condensed list of the options to set in the configuration file. For co
 
 ##### A note on configuration management using `Registry()`:
 
-The `Registry()` class is a singleton that manages all the default configurations in safe-control-gym. The registry uses an id to fetch the required configuration file. The assignments of the ids to their respective yaml files can be found in __init__.py for controllers and __init__.py for envs (or tasks)
-
+The `Registry()` class is a singleton that manages all the default configurations in safe-control-gym. The registry uses an id to fetch the required configuration file. The assignments of the ids to their respective yaml files can be found in <!-- include path --> __init__.py for controllers and <!-- include path --> __init__.py for envs (or tasks)
 
 #### Command Line Options
 
-The configuration used by the experiment is specified in three ways via the command line 
+The configuration used by the experiment is specified in three ways via the command line:
+
 1. --algo : this loads the default configuration for controller/algorithm used in the experiment
 2. --task : this loads the default configuration associated with the agent model used in the experiment 
 3. --overrides : this loads an overrides file that makes an desired modifications to the default configuration files you are using 
 
+#### Experiment Configurations
 
-#### Experiment Configurations 
+For a specific experiment, you are need to specify the parameters you want to use using the default configurations as a starting point. To do this, we specify the algo and task configurations in the override file specified by the commandline. This file combines the overrides for the algorithm and the task. 
 
-- task_config: specifies the kind of 
+- task_config: 
     - used in override to signal start of the task configuration parameters
+    - can be used to specify disturbances and constraints to apply to the experiment as well 
+    - specific options for the task_config can be found in the Task Configuration section
 - algo_config: 
     - used in override to signal start of the controller configuration parameters 
     - defined in __init__.py in XX (controllers)
-- env_config:
-    - Specify the cost/reward function, constraints, disturbances
-- kinds of tasks - stabilization and traj tracking 
-- algo and task load the basic configs - use overrides to modify the parameters
 
-### Other command line options 
+Note: algo and task commandline options load the basic configs, use overrides to modify and add parameters.
+
+##### Other command line options 
 --tag
---seed
---device
---output_dir
---restore
+--seed - randomization seed 
+--device - where to perform training (cpu or gpu(?))
+--output_dir - where to store any outputed models 
+--restore - path to a pretrained model to use in the experiment
 
 #### Control Approaches 
 1. Control and Safe Control Baselines:
@@ -139,6 +142,65 @@ The configuration used by the experiment is specified in three ways via the comm
     - CBF 
 6. Safe Exploration 
     - Safe PPO
+
+#### Environment Configurations (Cost, Disturbance, Constraints)
+Cost: 
+- quadratic
+- rl_reward
+
+Disturbance Types:
+- `action`
+    - white_noise
+    - impulse
+    - step  
+- observation 
+    - white_noise
+    - impulse
+    - step
+- dynamics
+    - white_noise
+    - impulse
+    - step 
+    - deterministic adversary forces
+Example:
+```
+disturbances:
+    observation:
+        - disturbance_func: white_noise
+          std: 0.05
+```
+Randomization:
+- Randomize initial state 
+    - `init_state_randomization_info`
+    - distributions:
+        - uniform 
+        - choice
+        
+Constraint Types:
+- `constraint_form`
+    - bounded_constraint 
+    - linear 
+    - quadratic
+    - default_constraint
+- `constrained_variable`:
+    - state 
+    - input 
+
+
+
+#### Task Configurations
+The tasks are designed to be used in benchmarking experiments:
+1. Stabilization - `stabilization`
+2. Trajectory tracking - `traj_tracking` 
+
+To configure the task, use `task_info`:
+
+####
+
+
+
+
+
 
 
 
