@@ -1,8 +1,10 @@
  # Safe Control Gym - How to Get Started 
 
- <!-- there should be an explicit mention of the paper here-->
+ Refer to [this paper](https://arxiv.org/abs/2109.06325) for information on the motivation behind this gym as well as details on the implementation.
 
-To run an experiment in safe-control-gym, there are elements required: 
+## Running a basic experiment
+
+To run an experiment in safe-control-gym, the elements required are: 
 
 1. A control approach or algorithm - choose an existing implementation of a control approaches (see the Control Approaches section for a list and description) or implement your own controller
 2. A robotic model - choose a robotic model or implement your own
@@ -11,32 +13,48 @@ To run an experiment in safe-control-gym, there are elements required:
     - 2D quadrotor
 3. A configuration file - this provides all the relevant information for what is actually happening in your experiement (more on this later)
 
-Execute the following command to run a basic training loop with a PPO controller on the cartpole system. 
+Execute the following command to run a basic training loop with a PPO controller on the cartpole system. This same code is implemented in the annual_reviews folder under experiments
 
 ```
-cd experiments
-python3 ../../main.py --algo ppo --task cartpole --overrides $CONFIG_PATH --output_dir ${OUTPUT_DIR} --tag $TAG_ROOT/$TAG --thread $thread --seed $seed
+cd safe_control_gym/walkthroughs
+python3 tutorial.py --algo ppo --task cartpole --overrides $CONFIG_PATH --output_dir ${OUTPUT_DIR} --tag $TAG_ROOT/$TAG --thread $thread --seed $seed
 ```
-<!-- Note: need to change this to actual values  -->
-
-Let's go through an example in code to understand how these parts come together. This example is pulled from main.py in XXX. 
+ 
+Open up tutorial.py and let's look at how this example runs.
 
 ### Step 1 - Load in your configuration
 
-The configuration file is handled through the class `ConfigFactory()`. To add additional configuration parameters through the command line use the `add_argument()` method
+```
+if __name__ == "__main__":
+    # Make config.
+    fac = ConfigFactory()
+    fac.add_argument("--func", type=str, default="train", help="main function to run.")
+    fac.add_argument("--thread", type=int, default=0, help="number of threads to use (set by torch).")
+    fac.add_argument("--render", action="store_true", help="if to render in policy test.")
+    fac.add_argument("--verbose", action="store_true", help="if to print states & actions in policy test.")
+    fac.add_argument("--use_adv", action="store_true", help="if to evaluate against adversary.")
+    fac.add_argument("--set_test_seed", action="store_true", help="if to set seed when testing policy.")
+    fac.add_argument("--eval_output_dir", type=str, help="folder path to save evaluation results.")
+    fac.add_argument("--eval_output_path", type=str, default="test_results.pkl", help="file path to save evaluation results.")
+    config = fac.merge()
+```
 
-```
-config = ConfigFactory()
-config.add_argument("--func", type=str, default="train", help="main function to run.")
-```
+The configuration file is handled through the class `ConfigFactory()`. To add additional configuration parameters through the command line use the `add_argument()` method. 
+
 ### Step 2 - Execute experiment
 
-For general cases, this can be done through calling any function that executes the desired task. For this example, we will show a training loop but note that main.py has the option to select the function to execute through a commandline argument. 
+For general cases, this can be done through calling any function that executes the desired task. For this basic script, we have the options to execute a training, a testing, or a plotting function using a command line argument through a dictionary. 
+```
+MAIN_FUNCS = {"train": train, "plot": make_plots, "test": test_policy}
+```
+Each of the functions perform a different part of the experiment. How this porition of the experiment is setup is completely up to how you have decided to use the gym.
 
 ```
-train(config)
+func(config)
 ```
+
 #### Initializing an environment and controller 
+
 If we consider the function for training as an example, first we define the function to create the environment 
 ```
  env_func = partial(make, config.task, output_dir=config.output_dir, **config.task_config)
@@ -65,7 +83,7 @@ control_agent.close()
 
 #### Testing an agent
 
-To test a trained model, load the model as follows 
+To test a trained model, load the model:
 
 ```
 control_agent.load(os.path.join(config.restore, "model_latest.pt"))
@@ -81,6 +99,20 @@ results = control_agent.run(n_episodes=config.algo_config.eval_batch_size,
 ```
 
 After testing, the results can be extracted in different ways. 
+
+#### Plotting results 
+
+The `safe-control-gym` has plotting capabilities imported as `safe_control_gym.utils.plotting` that use the data saved to the output directory to use for visualization after running an experiment. To run plotting with this example, specify `--func plot` in the command line
+```
+python3 tutorial.py --func plot --tag $TAG_ROOT/$TAG --thread
+```
+This will execute `make_plots` in the example which does as follows
+```
+log_dir = os.path.join(config.output_dir, "logs")
+plot_dir = os.path.join(config.output_dir, "plots")
+mkdirs(plot_dir)
+plot_from_logs(log_dir, plot_dir, window=3)
+```
 
 Configuring will be discussed in the next section. 
 
@@ -175,7 +207,7 @@ Randomization:
     - distributions:
         - uniform 
         - choice
-        
+
 Constraint Types:
 - `constraint_form`
     - bounded_constraint 
@@ -185,8 +217,6 @@ Constraint Types:
 - `constrained_variable`:
     - state 
     - input 
-
-
 
 #### Task Configurations
 The tasks are designed to be used in benchmarking experiments:
