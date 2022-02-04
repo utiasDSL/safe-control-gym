@@ -170,8 +170,8 @@ For more information on some common utilities in this repo, refer to `safe-contr
 
 | Approach | id | Location | 
 | -------- | --- | ----------- |
-|  LQR     | 'lqr' |   coming soon   |
-|  iLQR    | 'ilqr' |   coming soon  |
+|  Linear Quadratic Regulator    | 'lqr' |   coming soon   |
+|  Iterative Linear Quadratic Regulator   | 'ilqr' |   coming soon  |
 
 #### Reinforcement Learning Baselines 
 
@@ -196,7 +196,7 @@ For more information on some common utilities in this repo, refer to `safe-contr
 | Approach | id | Location | 
 | -------- | --- | ----------- |
 |  Model Predictive Safety Certification | 'mpsc' | [MPSC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpsc/mpsc.py) |
-|  Control Barrier Function  | 'cbf'  |  coming soon |
+|  Control Barrier Functions  | 'cbf'  |  coming soon |
 
 #### Safe Exploration 
 | Approach | id | Location | 
