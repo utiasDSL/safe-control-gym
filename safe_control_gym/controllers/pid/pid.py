@@ -276,6 +276,4 @@ class PID(BaseController):
                         'done': [],
                         'info': [],
                         'action': [],
-                        'horizon_inputs': [],
-                        'horizon_states': []
                         }
