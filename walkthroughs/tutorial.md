@@ -75,7 +75,7 @@ The make function takes an id (here config.algo), a set of arguments (here env_f
 
 #### Training an agent 
 
-Training can be executed in one line given the format the `BaseController()` class uses for guidance as follows. To see more about how the base controller class is implemented or if you plan on creating your own controller, see `controllers/base_controller.py`
+Training can be executed in one line given the format of the `BaseController()` class as follows. To see more about how the base controller class is implemented or if you plan on creating your own controller, see `controllers/base_controller.py`
 
 ```
 control_agent.learn()
@@ -84,7 +84,7 @@ control_agent.close()
 
 #### Testing an agent
 
-For controller's implemented using the `BaseController()` class, use the `.run()` method to test the performance of the controller
+For existing controller's implemented using the `BaseController()` class, use the `.run()` method to test the performance of the controller
 
 ```
 results = control_agent.run(n_episodes=config.algo_config.eval_batch_size,
@@ -104,7 +104,7 @@ After testing, the results can be extracted in different ways.
 
 The `safe-control-gym` has plotting capabilities imported as `safe_control_gym.utils.plotting` that use the data saved to the output directory to use for visualization after running an experiment. To run plotting with this example, specify `--func plot` in the command line
 ```
-python3 tutorial.py --func plot --tag $TAG_ROOT/$TAG --thread
+python3 tutorial.py --func plot --tag tutorial_results/ppo --thread
 ```
 This will execute `make_plots` in the example which does as follows
 ```
@@ -130,7 +130,7 @@ The configuration used by the experiment is specified in four ways via the comma
 1. --algo : this specifies the default configuration for controller/algorithm used in the experiment
 2. --task : this specifies the default configuration associated with the agent model used in the experiment 
 3. --overrides : this specifies an overrides file that makes an desired modifications to the default configuration files you are using 
-4. --<your option> : using the `.add_argument()` method from `ConfigFactory()` in code and commandline arguments
+4. --your_arg : using the `.add_argument()` method from `ConfigFactory()` in code and commandline arguments
 
 ### Override Configurations
 
@@ -149,18 +149,20 @@ Here is one way of setting up your overrides file. Open up `safe-control-gym/wal
 
 ## Configurations and Options 
 
-### Other common command line options 
+### Other common arguments
 
-These are some examples of common options you'd want to set in your experiment. Different control approaches may have different options you'd want to specify. For example, in the above code, `use_adv` can be specified for PPO to evaluate against an adversary. 
+These are some examples of common options you'd want to set in your experiment. Different control approaches may have different options you'd want to specify. For example, in the above code, `use_adv` can be specified for PPO to evaluate against an adversary. These can be specified via the command line or directly in your overrides file. 
 
-| Command Line Option | Purpose | Use |
+| Arguments | Purpose | Use |
 |-------------------------------|
-| tag | id of the experiment | N/A
+| tag | id of the experiment | N/A |
 | seed | Randomization seed | `set_seed_from_config(config)` and input as arg at `make()`: `seed=config.seed` |
-| device | Where to perform training (cpu or cuda) | `set device_from_config(config)` and input as arg at `make()`: `device=config.device`| 
+| device | Where to perform training ("cpu" or "cuda") | `set device_from_config(config)` and input as arg at `make()`: `device=config.device`| 
 | output_dir | Where to stored output models | `set_dir_from_config(config)` and input as arg at `make()`: `output_dir=config.output_dir` |
 | restore | Path to a previously trained model to load in |  `control_agent.load(os.path.join(config.restore, "model_latest.pt"))` | 
-| thread | How many threads to use | `torch.set_num_threads(config.thread)` | 
+| thread | How many threads to use |`torch.set_num_threads(config.thread)`| 
+
+For more information on some common utilities in this repo, refer to `safe-control-gym/safe_control_gym/utils`
 
 #### Existing Control Approaches 
 1. Control and Safe Control Baselines:
