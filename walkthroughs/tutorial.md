@@ -166,13 +166,12 @@ For more information on some common utilities in this repo, refer to `safe-contr
 
 ### Existing Control Approaches 
 
-#### Control and Safe Control Baselines
+<!-- #### Control and Safe Control Baselines -->
 
-<!-- | Approach | id | Location | 
+| Approach | id | Location | 
 | -------- | --- | ----------- |
-|  LQR     | 'lqr' |          |
-|  iLQR    | 'ilqr' |          | -->
-<!-- - LQR: "lqr"- iLQR: "ilqr"- LMPC: "lmpc" - NMPC: "nmpc" -->
+|  LQR     | 'lqr' |   coming soon   |
+|  iLQR    | 'ilqr' |   coming soon  |
 
 #### Reinforcement Learning Baselines 
 
@@ -197,7 +196,7 @@ For more information on some common utilities in this repo, refer to `safe-contr
 | Approach | id | Location | 
 | -------- | --- | ----------- |
 |  Model Predictive Safety Certification | 'mpsc' | [MPSC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpsc/mpsc.py) |
-<!-- |  CBF  | 'cbf'  |  Control Barrier Function - | -->
+|  Control Barrier Function  | 'cbf'  |  coming soon |
 
 #### Safe Exploration 
 | Approach | id | Location | 
@@ -207,7 +206,7 @@ For more information on some common utilities in this repo, refer to `safe-contr
 #### Environment Configuration (Cost, Disturbance, Constraints)
 ### Cost Types
 1. Quadratic
-2. rl_reward
+2. rl_reward <!-- need to specify this maybe?-->
 
 The implementations for the rewards depend on the agent you are using (cartpole or quadrotor). Please refer to `safe-control-gym/safe_control_gym/envs` for the classes that implement these tasks. 
 
@@ -243,7 +242,8 @@ These tasks are designed to be used in benchmarking experiments:
 1. Stabilization - `stabilization`
 2. Trajectory tracking - `traj_tracking`
 
-The tasks have been implemented at the controller level.
+The tasks have been implemented at the controller level. See each controllers source code for details 
+
 
 
 
