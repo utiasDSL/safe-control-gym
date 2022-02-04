@@ -9,7 +9,7 @@ import numpy as np
 import math
 import pybullet as p
 from scipy.spatial.transform import Rotation
-from copy import deepcopy
+from munch import munchify
 
 from safe_control_gym.controllers.base_controller import BaseController
 
@@ -150,7 +150,9 @@ class PID(BaseController):
             self.results_dict['info'].append(info)
             self.results_dict['action'].append(action)
 
-        return deepcopy(self.results_dict)
+        self.close_results_dict()
+
+        return self.results_dict
     
     def _dslPIDPositionControl(self,
                                control_timestep,
@@ -253,6 +255,18 @@ class PID(BaseController):
 
         """
         self.env.close()
+
+    def close_results_dict(self):
+        """Cleanup the rtesults dict and munchify it.
+
+        """
+        self.results_dict['obs'] = np.vstack(self.results_dict['obs'])
+        self.results_dict['reward'] = np.vstack(self.results_dict['reward'])
+        self.results_dict['done'] = np.vstack(self.results_dict['done'])
+        self.results_dict['info'] = np.vstack(self.results_dict['info'])
+        self.results_dict['action'] = np.vstack(self.results_dict['action'])
+
+        self.results_dict = munchify(self.results_dict)
 
     def reset(self):
         """Resets the control classes.
