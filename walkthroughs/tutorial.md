@@ -158,30 +158,48 @@ These are some examples of common options you'd want to set in your experiment. 
 | seed | Randomization seed | `set_seed_from_config(config)` and input as arg at `make()`: `seed=config.seed` |
 | device | Where to perform training ("cpu" or "cuda") | `set device_from_config(config)` and input as arg at `make()`: `device=config.device` | 
 | output_dir | Where to stored output models | `set_dir_from_config(config)` and input as arg at `make()`: `output_dir=config.output_dir` |
-| restore | Path to a previously trained model to load in |  `control_agent.load(os.path.join(config.restore, "model_latest.pt"))` | 
 | thread | How many threads to use | `torch.set_num_threads(config.thread)` | 
 
 For more information on some common utilities in this repo, refer to `safe-control-gym/safe_control_gym/utils`
 
-#### Existing Control Approaches 
-1. Control and Safe Control Baselines:
-    - LQR: "lqr"
-    - iLQR: "ilqr"
-    - LMPC: "lmpc" 
-    - NMPC: "nmpc"
-2. Reinforcement Learning Baselines:
-    - PPO (Proximal Policy Optimization) : 
-    - SAC (Soft-Actor Critic)
-3. Safe Learning-based Control 
-    - GP-MPC
-4. Safe and Robust Reinforcement Learning 
-    - RARL 
-    - RAP
-5. Safety Ceritification of Learned Controllers 
-    - MPSC 
-    - CBF 
-6. Safe Exploration 
-    - Safe PPO
+### Existing Control Approaches 
+
+#### Control and Safe Control Baselines
+
+| Approach | id | Description | 
+| -------- | --- | ----------- |
+|  LQR     | 'lqr' |           |
+|  iLQR    | 'ilqr' |          |
+
+<!-- - LQR: "lqr"- iLQR: "ilqr"- LMPC: "lmpc" - NMPC: "nmpc" -->
+#### Reinforcement Learning Baselines 
+
+| Approach | id | Description | 
+| -------- | --- | ----------- |
+|  PPO    | 'ppo' | Proximal Policy Optimization -   |
+|  SAC   | 'sac' |  Soft-Actor Critic -         |
+
+#### Safe Learning-based Control
+| Approach | id | Description | 
+| -------- | --- | ----------- |
+|  GP-MPC  | 'gp_mpc' | Model Predictive Control w/ a Gaussian Process Model -   |
+
+#### Safe and Robust Reinforcement Learning
+| Approach | id | Description | 
+| -------- | --- | ----------- |
+|  RARL | 'rarl' |  Robust Adversarial Reinforcement Learning -   |
+|  RAP  | 'rap'  |  Robust Adversarial Reinforcement Learning using Adversarial Populations - |
+
+#### Safety Ceritification of Learned Controllers
+| Approach | id | Description | 
+| -------- | --- | ----------- |
+|  MPSC | 'mpsc' |  Model Predictive Safety Certification -   |
+|  CBF  | 'cbf'  |  Control Barrier Function - |
+
+#### Safe Exploration 
+| Approach | id | Description | 
+| -------- | --- | ----------- |
+|  Safe PPO | 'safe_explorer_ppo' |  Safe Proximal Policy Optimization -   |
 
 #### Environment Configuration (Cost, Disturbance, Constraints)
 Cost: 
