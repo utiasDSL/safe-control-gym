@@ -1,0 +1,189 @@
+2022-02-04 10:34:22,462 : Checkpoint | ./tutorial_models/tutorial_results/ppo/seed222_Feb-04-10-34-20_v0.5.0-54-g5fb9629/model_latest.pt
+2022-02-04 10:34:22,747 : Eval | ep_lengths 57.80 +/- 6.66 | ep_return 29.389 +/- 6.340
+2022-02-04 10:34:22,764 : 
+--------------------------------------
+| loss/                   |          |
+|    approx_kl            | 0.000942 |
+|    entropy_loss         | -0.915   |
+|    policy_loss          | -0.00586 |
+|    value_loss           | 7.13     |
+| stat/                   |          |
+|    constraint_violation | 0        |
+|    ep_constraint_vio... | 0        |
+|    ep_length            | 56.1     |
+|    ep_return            | 27.6     |
+|    ep_reward            | 0.485    |
+| stat_eval/              |          |
+|    constraint_violation | 0        |
+|    ep_length            | 57.8     |
+|    ep_return            | 29.4     |
+|    ep_reward            | 0.503    |
+|    mse                  | 275      |
+| time/                   |          |
+|    progress             | 0.002    |
+|    step                 | 2e+03    |
+|    step_time            | 0.34     |
+--------------------------------------
+
+2022-02-04 10:34:24,394 : Checkpoint | ./tutorial_models/tutorial_results/ppo/seed222_Feb-04-10-34-20_v0.5.0-54-g5fb9629/model_latest.pt
+2022-02-04 10:34:24,755 : Eval | ep_lengths 63.10 +/- 10.13 | ep_return 33.993 +/- 9.304
+2022-02-04 10:34:24,765 : 
+---------------------------------------
+| loss/                   |           |
+|    approx_kl            | 0.00679   |
+|    entropy_loss         | -0.899    |
+|    policy_loss          | -0.000952 |
+|    value_loss           | 4.63      |
+| stat/                   |           |
+|    constraint_violation | 1         |
+|    ep_constraint_vio... | 0         |
+|    ep_length            | 63        |
+|    ep_return            | 34.5      |
+|    ep_reward            | 0.538     |
+| stat_eval/              |           |
+|    constraint_violation | 0         |
+|    ep_length            | 63.1      |
+|    ep_return            | 34        |
+|    ep_reward            | 0.529     |
+|    mse                  | 269       |
+| time/                   |           |
+|    progress             | 0.004     |
+|    step                 | 4e+03     |
+|    step_time            | 0.286     |
+---------------------------------------
+
+2022-02-04 10:34:26,488 : Checkpoint | ./tutorial_models/tutorial_results/ppo/seed222_Feb-04-10-34-20_v0.5.0-54-g5fb9629/model_latest.pt
+2022-02-04 10:34:26,928 : Eval | ep_lengths 59.60 +/- 7.98 | ep_return 30.669 +/- 7.561
+2022-02-04 10:34:26,935 : 
+---------------------------------------
+| loss/                   |           |
+|    approx_kl            | -0.0104   |
+|    entropy_loss         | -0.88     |
+|    policy_loss          | -0.000269 |
+|    value_loss           | 1.85      |
+| stat/                   |           |
+|    constraint_violation | 3         |
+|    ep_constraint_vio... | 0         |
+|    ep_length            | 70.5      |
+|    ep_return            | 41.1      |
+|    ep_reward            | 0.567     |
+| stat_eval/              |           |
+|    constraint_violation | 0         |
+|    ep_length            | 59.6      |
+|    ep_return            | 30.7      |
+|    ep_reward            | 0.507     |
+|    mse                  | 263       |
+| time/                   |           |
+|    progress             | 0.006     |
+|    step                 | 6e+03     |
+|    step_time            | 0.41      |
+---------------------------------------
+
+2022-02-04 10:34:28,523 : Checkpoint | ./tutorial_models/tutorial_results/ppo/seed222_Feb-04-10-34-20_v0.5.0-54-g5fb9629/model_latest.pt
+2022-02-04 10:34:28,939 : Eval | ep_lengths 69.90 +/- 8.42 | ep_return 40.932 +/- 8.393
+2022-02-04 10:34:28,948 : 
+--------------------------------------
+| loss/                   |          |
+|    approx_kl            | 0.0224   |
+|    entropy_loss         | -0.868   |
+|    policy_loss          | -0.0074  |
+|    value_loss           | 0.618    |
+| stat/                   |          |
+|    constraint_violation | 3        |
+|    ep_constraint_vio... | 0        |
+|    ep_length            | 67.1     |
+|    ep_return            | 37.8     |
+|    ep_reward            | 0.548    |
+| stat_eval/              |          |
+|    constraint_violation | 0        |
+|    ep_length            | 69.9     |
+|    ep_return            | 40.9     |
+|    ep_reward            | 0.58     |
+|    mse                  | 251      |
+| time/                   |          |
+|    progress             | 0.008    |
+|    step                 | 8e+03    |
+|    step_time            | 0.281    |
+--------------------------------------
+
+2022-02-04 10:34:30,599 : Checkpoint | ./tutorial_models/tutorial_results/ppo/seed222_Feb-04-10-34-20_v0.5.0-54-g5fb9629/model_latest.pt
+2022-02-04 10:34:31,158 : Eval | ep_lengths 72.00 +/- 11.98 | ep_return 42.419 +/- 11.730
+2022-02-04 10:34:31,171 : 
+--------------------------------------
+| loss/                   |          |
+|    approx_kl            | 0.0024   |
+|    entropy_loss         | -0.843   |
+|    policy_loss          | -0.0096  |
+|    value_loss           | 0.91     |
+| stat/                   |          |
+|    constraint_violation | 3        |
+|    ep_constraint_vio... | 0        |
+|    ep_length            | 68.3     |
+|    ep_return            | 39       |
+|    ep_reward            | 0.568    |
+| stat_eval/              |          |
+|    constraint_violation | 0        |
+|    ep_length            | 72       |
+|    ep_return            | 42.4     |
+|    ep_reward            | 0.578    |
+|    mse                  | 251      |
+| time/                   |          |
+|    progress             | 0.01     |
+|    step                 | 1e+04    |
+|    step_time            | 0.285    |
+--------------------------------------
+
+2022-02-04 10:34:32,980 : Checkpoint | ./tutorial_models/tutorial_results/ppo/seed222_Feb-04-10-34-20_v0.5.0-54-g5fb9629/model_latest.pt
+2022-02-04 10:34:33,370 : Eval | ep_lengths 76.30 +/- 14.36 | ep_return 46.737 +/- 15.284
+2022-02-04 10:34:33,378 : 
+--------------------------------------
+| loss/                   |          |
+|    approx_kl            | 0.011    |
+|    entropy_loss         | -0.824   |
+|    policy_loss          | -0.00489 |
+|    value_loss           | 4.13     |
+| stat/                   |          |
+|    constraint_violation | 3        |
+|    ep_constraint_vio... | 0        |
+|    ep_length            | 71.9     |
+|    ep_return            | 42.2     |
+|    ep_reward            | 0.574    |
+| stat_eval/              |          |
+|    constraint_violation | 0.2      |
+|    ep_length            | 76.3     |
+|    ep_return            | 46.7     |
+|    ep_reward            | 0.598    |
+|    mse                  | 232      |
+| time/                   |          |
+|    progress             | 0.012    |
+|    step                 | 1.2e+04  |
+|    step_time            | 0.345    |
+--------------------------------------
+
+2022-02-04 10:34:34,837 : Checkpoint | ./tutorial_models/tutorial_results/ppo/seed222_Feb-04-10-34-20_v0.5.0-54-g5fb9629/model_latest.pt
+2022-02-04 10:34:35,218 : Eval | ep_lengths 81.80 +/- 17.20 | ep_return 51.459 +/- 17.320
+2022-02-04 10:34:35,225 : 
+--------------------------------------
+| loss/                   |          |
+|    approx_kl            | 0.0408   |
+|    entropy_loss         | -0.816   |
+|    policy_loss          | -0.00791 |
+|    value_loss           | 1.41     |
+| stat/                   |          |
+|    constraint_violation | 4        |
+|    ep_constraint_vio... | 0.1      |
+|    ep_length            | 79.5     |
+|    ep_return            | 49.7     |
+|    ep_reward            | 0.607    |
+| stat_eval/              |          |
+|    constraint_violation | 0.3      |
+|    ep_length            | 81.8     |
+|    ep_return            | 51.5     |
+|    ep_reward            | 0.615    |
+|    mse                  | 239      |
+| time/                   |          |
+|    progress             | 0.014    |
+|    step                 | 1.4e+04  |
+|    step_time            | 0.264    |
+--------------------------------------
+
