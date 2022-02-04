@@ -7,10 +7,7 @@ Refer to [this paper](https://arxiv.org/abs/2109.06325) for information on the m
 To run an experiment in safe-control-gym, the elements required are: 
 
 1. A control approach or algorithm - choose an existing implementation of a control approaches (see the Control Approaches section for a list and description) or implement your own controller
-2. A robotic model - choose a robotic model or implement your own
-    - cartpole
-    - 1D quadrotor
-    - 2D quadrotor
+2. A robotic model - choose a robotic model (cartpole, 2D or 1D quadrotor) or implement your own
 3. A configuration file - this provides all the relevant information for what is actually happening in your experiment (more on this later)
 
 Execute the following command to run a basic training loop with a PPO controller on the cartpole system.
@@ -166,92 +163,82 @@ For more information on some common utilities in this repo, refer to `safe-contr
 
 #### Control and Safe Control Baselines
 
-| Approach | id | Description | 
+<!-- | Approach | id | Location | 
 | -------- | --- | ----------- |
-|  LQR     | 'lqr' |           |
-|  iLQR    | 'ilqr' |          |
-
+|  LQR     | 'lqr' |          |
+|  iLQR    | 'ilqr' |          | -->
 <!-- - LQR: "lqr"- iLQR: "ilqr"- LMPC: "lmpc" - NMPC: "nmpc" -->
+
 #### Reinforcement Learning Baselines 
 
-| Approach | id | Description | 
+| Approach | id | Location | 
 | -------- | --- | ----------- |
-|  PPO    | 'ppo' | Proximal Policy Optimization -   |
-|  SAC   | 'sac' |  Soft-Actor Critic -         |
+|  Proximal Policy Optimization | 'ppo' | [PPO](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/ppo/ppo.py) |
+|  Soft-Actor Critic  | 'sac' | [SAC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/sac/sac.py) |
 
 #### Safe Learning-based Control
-| Approach | id | Description | 
+| Approach | id | Location | 
 | -------- | --- | ----------- |
-|  GP-MPC  | 'gp_mpc' | Model Predictive Control w/ a Gaussian Process Model -   |
+|  Model Predictive Control w/ a Gaussian Process Model | 'gp_mpc' | [GP-MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/gp_mpc.py)  |
+|  Linear Model Predictive Control | 'gp_mpc' | [Linear MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/linear_mpc.py) |
 
 #### Safe and Robust Reinforcement Learning
-| Approach | id | Description | 
+| Approach | id | Location | 
 | -------- | --- | ----------- |
-|  RARL | 'rarl' |  Robust Adversarial Reinforcement Learning -   |
-|  RAP  | 'rap'  |  Robust Adversarial Reinforcement Learning using Adversarial Populations - |
+|  Robust Adversarial Reinforcement Learning | 'rarl' | [RARL](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/rarl/rarl.py) |
+|  Robust Adversarial Reinforcement Learning using Adversarial Populations | 'rap'  | [RAP](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/rarl/rap.py) |
 
 #### Safety Ceritification of Learned Controllers
-| Approach | id | Description | 
+| Approach | id | Location | 
 | -------- | --- | ----------- |
-|  MPSC | 'mpsc' |  Model Predictive Safety Certification -   |
-|  CBF  | 'cbf'  |  Control Barrier Function - |
+|  Model Predictive Safety Certification | 'mpsc' | [MPSC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpsc/mpsc.py) |
+<!-- |  CBF  | 'cbf'  |  Control Barrier Function - | -->
 
 #### Safe Exploration 
-| Approach | id | Description | 
+| Approach | id | Location | 
 | -------- | --- | ----------- |
-|  Safe PPO | 'safe_explorer_ppo' |  Safe Proximal Policy Optimization -   |
+|  Safety Layer | 'safe_explorer_ppo' |  [Safety Layer](https://github.com/utiasDSL/safe-control-gym/tree/main/safe_control_gym/controllers/safe_explorer)  |
 
 #### Environment Configuration (Cost, Disturbance, Constraints)
-Cost: 
-- quadratic
-- rl_reward
+### Cost Types
+1. Quadratic
+2. rl_reward
 
-Disturbance Types:
-- `action`
-    - white_noise
-    - impulse
-    - step  
-- observation 
-    - white_noise
-    - impulse
-    - step
-- dynamics
-    - white_noise
-    - impulse
-    - step 
-    - deterministic adversary forces
-Example:
+The implementations for the rewards depend on the agent you are using (cartpole or quadrotor). Please refer to `safe-control-gym/safe_control_gym/envs` for the classes that implement these tasks. 
+
+#### Disturbance Types:
+| Applied to | Types |
+| ---- | ---- |
+| action | white noise, impulse, step |
+| observation | white noise, impulse, step |
+| dynamics | white noise, impulse, step, adversary forces (deterministic) | 
+
+Example: 
 ```
 disturbances:
     observation:
         - disturbance_func: white_noise
           std: 0.05
 ```
-Randomization:
+<!-- #### Randomization
+
 - Randomize initial state 
-    - `init_state_randomization_info`
-    - distributions:
+    distributions:
         - uniform 
-        - choice
+        - choice -->
 
 Constraint Types:
-- `constraint_form`
-    - bounded_constraint 
-    - linear 
-    - quadratic
-    - default_constraint
-- `constrained_variable`:
-    - state 
-    - input 
+| Applied to | Types |
+| ---- | ----- | 
+| state | bounded_constraint, linear, quadratic, default_contraint | 
+| input | bounded_constraint, linear, quadratic, default_contraint |
 
-#### Task Configurations
-The tasks are designed to be used in benchmarking experiments:
+#### Benchmarking tasks 
+These tasks are designed to be used in benchmarking experiments:
 1. Stabilization - `stabilization`
-2. Trajectory tracking - `traj_tracking` 
+2. Trajectory tracking - `traj_tracking`
 
-To configure the task, use `task_info`:
-
-####
+The tasks have been implemented at the controller level.
 
 
 
