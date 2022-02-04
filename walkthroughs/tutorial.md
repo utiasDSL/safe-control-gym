@@ -153,7 +153,7 @@ Here is one way of setting up your overrides file. Open up `safe-control-gym/wal
 These are some examples of common options you'd want to set in your experiment. Different control approaches may have different options you'd want to specify. For example, in the above code, `use_adv` can be specified for PPO to evaluate against an adversary. These can be specified via the command line or directly in your overrides file. 
 
 | Arguments | Purpose | Use |
-| ------------------------------- |
+| ---- | ------ | ------ |
 | tag | id of the experiment | N/A |
 | seed | Randomization seed | `set_seed_from_config(config)` and input as arg at `make()`: `seed=config.seed` |
 | device | Where to perform training ("cpu" or "cuda") | `set device_from_config(config)` and input as arg at `make()`: `device=config.device` | 
