@@ -1,0 +1,39 @@
+name: Static code analysis
+
+on:
+  push:
+    paths:
+      - .github/workflows/static_code_analysis.yml
+      - '**.py'
+  pull_request:
+    paths:
+      - .github/workflows/static_code_analysis.yml
+      - '**.py'
+
+jobs:
+  mypy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install mypy
+        run: python3 -m pip install mypy types-cachetools types-requests
+      - uses: actions/checkout@v2
+      - name: Run mypy
+        run: python3 -m mypy . --ignore-missing-imports
+
+  black:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install black
+        run: python3 -m pip install black
+      - uses: actions/checkout@v2
+      - name: Run black
+        run: python3 -m black . --check
+
+  flake8:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install flake8
+        run: python3 -m pip install flake8
+      - uses: actions/checkout@v2
+      - name: Run flake8
+        run: python3 -m flake8 --config .flake8 .
