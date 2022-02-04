@@ -141,11 +141,10 @@ Here is one way of setting up your overrides file. Open up `safe-control-gym/wal
 - task_config: 
     - Contains all task override configurations including: 
         - control frequency, constraints, disturbances, cost, initial state etc. 
-    - More specifics on task configuration can be found in the "Task Configuration" section
+    - More specifics on task and environment configuration can be found in the "Environment Configuration" and "Task Configuration" sections
 - algo_config: 
     - Contains all algorithm configurations including:
         - seed, initial model parameters, number of iterations, learning rate etc. 
-    - More specifics on algorithm configurations can be found in the "Algorithm Configuration" section
 
 ## Configurations and Options 
 
@@ -154,13 +153,13 @@ Here is one way of setting up your overrides file. Open up `safe-control-gym/wal
 These are some examples of common options you'd want to set in your experiment. Different control approaches may have different options you'd want to specify. For example, in the above code, `use_adv` can be specified for PPO to evaluate against an adversary. These can be specified via the command line or directly in your overrides file. 
 
 | Arguments | Purpose | Use |
-|-------------------------------|
+| ------------------------------- |
 | tag | id of the experiment | N/A |
 | seed | Randomization seed | `set_seed_from_config(config)` and input as arg at `make()`: `seed=config.seed` |
-| device | Where to perform training ("cpu" or "cuda") | `set device_from_config(config)` and input as arg at `make()`: `device=config.device`| 
+| device | Where to perform training ("cpu" or "cuda") | `set device_from_config(config)` and input as arg at `make()`: `device=config.device` | 
 | output_dir | Where to stored output models | `set_dir_from_config(config)` and input as arg at `make()`: `output_dir=config.output_dir` |
 | restore | Path to a previously trained model to load in |  `control_agent.load(os.path.join(config.restore, "model_latest.pt"))` | 
-| thread | How many threads to use |`torch.set_num_threads(config.thread)`| 
+| thread | How many threads to use | `torch.set_num_threads(config.thread)` | 
 
 For more information on some common utilities in this repo, refer to `safe-control-gym/safe_control_gym/utils`
 
@@ -184,7 +183,7 @@ For more information on some common utilities in this repo, refer to `safe-contr
 6. Safe Exploration 
     - Safe PPO
 
-#### Environment Configuration Options (Cost, Disturbance, Constraints)
+#### Environment Configuration (Cost, Disturbance, Constraints)
 Cost: 
 - quadratic
 - rl_reward
