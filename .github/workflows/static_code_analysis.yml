@@ -18,7 +18,7 @@ jobs:
         run: python3 -m pip install mypy types-cachetools types-requests
       - uses: actions/checkout@v2
       - name: Run mypy
-        run: python3 -m mypy . --ignore-missing-imports
+        run: python3 -m mypy . --ignore-missing-imports --install-types --pretty --non-interactive
 
   black:
     runs-on: ubuntu-latest
