@@ -166,7 +166,7 @@ For more information on some common utilities in this repo, refer to `safe-contr
 
 ### Existing Control Approaches 
 
-<!-- #### Control and Safe Control Baselines -->
+#### Control and Safe Control Baselines
 
 | Approach | id | Location | 
 | -------- | --- | ----------- |
