@@ -6,18 +6,23 @@ Refer to [this paper](https://arxiv.org/abs/2109.06325) for information on the m
 
 To run an experiment in safe-control-gym, the elements required are: 
 
-1. A control approach or algorithm - choose an existing implementation of a control approaches (see the Control Approaches section for a list and description) or implement your own controller
+1. A control approach or algorithm - choose an existing implementation of a control approaches (see the Control Approaches section for a list) or implement your own controller
 2. A robotic model - choose a robotic model (cartpole, 2D or 1D quadrotor) or implement your own
 3. A configuration file - this provides all the relevant information for what is actually happening in your experiment (more on this later)
 
-Execute the following command to run a basic training loop with a PPO controller on the cartpole system.
+The following command runs a basic training loop with a PPO controller on the cartpole system. This will take several minutes.
 
 ```
 cd safe_control_gym/walkthroughs
 python3 tutorial.py --algo ppo --task cartpole --overrides ./tutorial_configs/tutorial_ppo_cartpole.yaml --output_dir ./tutorial_models --tag tutorial_results/ppo --thread 1 --seed 222
 ```
- 
-Now, open up tutorial.py and let's look at how this example runs.
+If you have a GPU available, run the example with cuda:
+
+```
+python3 tutorial.py --algo ppo --task cartpole --overrides ./tutorial_configs/tutorial_ppo_cartpole.yaml --output_dir ./tutorial_models --tag tutorial_results/ppo --thread 1 --seed 222 --device cuda
+```
+
+Open up tutorial.py and let's look at how this example runs.
 
 ### Step 1 - Load in your configuration
 
@@ -163,11 +168,10 @@ For more information on some common utilities in this repo, refer to `safe-contr
 
 #### Control and Safe Control Baselines
 
-<!-- | Approach | id | Location | 
+| Approach | id | Location | 
 | -------- | --- | ----------- |
-|  LQR     | 'lqr' |          |
-|  iLQR    | 'ilqr' |          | -->
-<!-- - LQR: "lqr"- iLQR: "ilqr"- LMPC: "lmpc" - NMPC: "nmpc" -->
+|  Linear Quadratic Regulator    | 'lqr' |   coming soon   |
+|  Iterative Linear Quadratic Regulator   | 'ilqr' |   coming soon  |
 
 #### Reinforcement Learning Baselines 
 
@@ -192,7 +196,7 @@ For more information on some common utilities in this repo, refer to `safe-contr
 | Approach | id | Location | 
 | -------- | --- | ----------- |
 |  Model Predictive Safety Certification | 'mpsc' | [MPSC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpsc/mpsc.py) |
-<!-- |  CBF  | 'cbf'  |  Control Barrier Function - | -->
+|  Control Barrier Functions  | 'cbf'  |  coming soon |
 
 #### Safe Exploration 
 | Approach | id | Location | 
@@ -202,7 +206,7 @@ For more information on some common utilities in this repo, refer to `safe-contr
 #### Environment Configuration (Cost, Disturbance, Constraints)
 ### Cost Types
 1. Quadratic
-2. rl_reward
+2. rl_reward <!-- need to specify this maybe?-->
 
 The implementations for the rewards depend on the agent you are using (cartpole or quadrotor). Please refer to `safe-control-gym/safe_control_gym/envs` for the classes that implement these tasks. 
 
@@ -238,7 +242,8 @@ These tasks are designed to be used in benchmarking experiments:
 1. Stabilization - `stabilization`
 2. Trajectory tracking - `traj_tracking`
 
-The tasks have been implemented at the controller level.
+The tasks have been implemented at the controller level. See each controllers source code for details 
+
 
 
 
