@@ -28,9 +28,11 @@ class SafetyLayer:
                  num_constraints=1,
                  lr=0.001,
                  slack=None,
+                 device='cpu',
                  **kwargs):
         # Parameters.
         self.num_constraints = num_constraints
+        self.device = device
         # Seperate model per constraint.
         input_dim = obs_space.shape[0]
         output_dim = act_space.shape[0]
@@ -103,10 +105,15 @@ class SafetyLayer:
         """Gets constraint value L2 loss for each constraint.
 
         """
-        obs, act = batch["obs"], batch["act"]
-        c, c_next = batch["c"], batch["c_next"]
+        obs, act = batch["obs"].to(self.device), batch["act"].to(self.device)
+        c, c_next = batch["c"].to(self.device), batch["c_next"].to(self.device)
+
+        # for key in batch:
+        #     tnsr = batch[key]
+        #     print(tnsr.get_device())
 
         gs = [model(obs) for model in self.constraint_models]
+
         # Each is (N,1,A) x (N,A,1) -> (N,), so [(N,)]_{n_constriants}
         c_next_pred = [
             c[:, i] + torch.bmm(g.view(g.shape[0], 1, -1),
@@ -114,7 +121,7 @@ class SafetyLayer:
             for i, g in enumerate(gs)
         ]
         losses = [
-            torch.mean((c_next[:, i] - c_next_pred[i])**2)
+            torch.mean((c_next[:, i] - c_next_pred[i])**2).cpu()
             for i in range(self.num_constraints)
         ]
         return losses
@@ -124,6 +131,7 @@ class SafetyLayer:
 
         """
         losses = self.compute_loss(batch)
+
         for loss, opt in zip(losses, self.optimizers):
             opt.zero_grad()
             loss.backward()

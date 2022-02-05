@@ -54,7 +54,8 @@ class SafeExplorerPPO(BaseController):
                                         hidden_dim=self.constraint_hidden_dim,
                                         num_constraints=self.num_constraints,
                                         lr=self.constraint_lr,
-                                        slack=self.constraint_slack)
+                                        slack=self.constraint_slack, 
+                                        device=device)
         self.safety_layer.to(device)
         # Agent.
         self.agent = SafePPOAgent(
