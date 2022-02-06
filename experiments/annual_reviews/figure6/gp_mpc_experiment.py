@@ -147,7 +147,6 @@ def add_2d_cov_ellipse(position,
 if __name__ == "__main__":
     fac = ConfigFactory()
     fac.add_argument("--train_only", type=bool, default=False, help="True if only training is performed.")
-    fac.add_argument("--use_gpu", action="store_true", help="if using gpu for training")
     config = fac.merge()
 
     if config.use_gpu:
