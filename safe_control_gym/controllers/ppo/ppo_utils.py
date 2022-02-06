@@ -266,7 +266,7 @@ class MLPActorCritic(nn.Module):
         a = dist.sample()
         logp_a = dist.log_prob(a)
         v = self.critic(obs)
-        return a.cpu().numpy(), v.cpu().numpy(), logp_a.cpu().numpy()
+        return a.numpy(), v.numpy(), logp_a.numpy()
 
     def act(self,
             obs

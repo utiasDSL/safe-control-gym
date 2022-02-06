@@ -149,8 +149,6 @@ if __name__ == "__main__":
     fac.add_argument("--train_only", type=bool, default=False, help="True if only training is performed.")
     config = fac.merge()
 
-    if config.use_gpu:
-        config.device = 'cuda'
     # Create environment.
     env_func = partial(make,
                        config.task,

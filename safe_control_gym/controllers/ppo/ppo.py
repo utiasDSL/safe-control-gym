@@ -269,14 +269,14 @@ class PPO(BaseController):
                 if "TimeLimit.truncated" in inff and inff["TimeLimit.truncated"]:
                     terminal_obs = inf["terminal_observation"]
                     terminal_obs_tensor = torch.FloatTensor(terminal_obs).unsqueeze(0).to(self.device)
-                    terminal_val = self.agent.ac.critic(terminal_obs_tensor).squeeze().detach().cpu().numpy()
+                    terminal_val = self.agent.ac.critic(terminal_obs_tensor).squeeze().detach().numpy()
                     terminal_v[idx] = terminal_val
             rollouts.push({"obs": obs, "act": act, "rew": rew, "mask": mask, "v": v, "logp": logp, "terminal_v": terminal_v})
             obs = next_obs
         self.obs = obs
         self.total_steps += self.rollout_batch_size * self.rollout_steps
         # Learn from rollout batch.
-        last_val = self.agent.ac.critic(torch.FloatTensor(obs).to(self.device)).detach().cpu().numpy()
+        last_val = self.agent.ac.critic(torch.FloatTensor(obs).to(self.device)).detach().numpy()
         ret, adv = compute_returns_and_advantages(rollouts.rew,
                                                   rollouts.v,
                                                   rollouts.mask,
