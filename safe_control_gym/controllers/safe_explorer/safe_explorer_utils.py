@@ -108,10 +108,6 @@ class SafetyLayer:
         obs, act = batch["obs"].to(self.device), batch["act"].to(self.device)
         c, c_next = batch["c"].to(self.device), batch["c_next"].to(self.device)
 
-        # for key in batch:
-        #     tnsr = batch[key]
-        #     print(tnsr.get_device())
-
         gs = [model(obs) for model in self.constraint_models]
 
         # Each is (N,1,A) x (N,A,1) -> (N,), so [(N,)]_{n_constriants}
