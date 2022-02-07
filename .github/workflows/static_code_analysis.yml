@@ -36,4 +36,4 @@ jobs:
         run: python3 -m pip install flake8
       - uses: actions/checkout@v2
       - name: Run flake8
-        run: python3 -m flake8 --config .flake8 .
+        run: python3 -m flake8 --max-line-length 88 .
