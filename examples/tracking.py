@@ -47,18 +47,19 @@ def main():
                     
         ctrl.reset()
 
-        initial_info = ctrl.initial_info
+        reference_traj = ctrl.reference
 
         # Plot trajectory.
-        for i in range(0, initial_info['x_reference'].shape[0], 10):
-            p.addUserDebugLine(lineFromXYZ=[initial_info['x_reference'][i-10,0], 0, initial_info['x_reference'][i-10,2]],
-                               lineToXYZ=[initial_info['x_reference'][i,0], 0, initial_info['x_reference'][i,2]],
-                               lineColorRGB=[1, 0, 0],
-                               # lifeTime=2 * env._CTRL_TIMESTEP,
-                               physicsClientId=ctrl.env.PYB_CLIENT)
+        for i in range(0, reference_traj.shape[0], 10):
+            p.addUserDebugLine(lineFromXYZ=[reference_traj[i-10,0], 0, reference_traj[i-10,2]],
+                                lineToXYZ=[reference_traj[i,0], 0, reference_traj[i,2]],
+                                lineColorRGB=[1, 0, 0],
+                                physicsClientId=ctrl.env.PYB_CLIENT)
 
         # Run the experiment.
         results = ctrl.run( iterations=ITERATIONS)
+        ctrl.close()
+        ctrl.reset()
                 
         # Plot the experiment.
         for i in range(ITERATIONS):
@@ -67,11 +68,7 @@ def main():
             
             # Print the last action and the information returned at each step.
             print(i, '-th step.')
-            print(action, '\n', obs, '\n', reward, '\n', done, '\n', info, '\n')
-            
-            if done:
-                ctrl.close()
-                ctrl.reset()
+            print(action, '\n', obs, '\n', reward, '\n', done, '\n', info, '\n')                
 
         elapsed_sec = time.time() - START
         print("\n{:d} iterations (@{:d}Hz) and {:d} episodes in {:.2f} seconds, i.e. {:.2f} steps/sec for a {:.2f}x speedup.\n"
