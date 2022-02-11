@@ -41,14 +41,15 @@ def main():
                 
     ctrl.reset()
 
-    initial_info = ctrl.initial_info
+    if config.quadrotor_config.task == 'traj_tracking':
+        reference_traj = ctrl.reference
 
-    # Plot trajectory.
-    for i in range(0, initial_info['x_reference'].shape[0], 10):
-        p.addUserDebugLine(lineFromXYZ=[initial_info['x_reference'][i-10,0], 0, initial_info['x_reference'][i-10,2]],
-                            lineToXYZ=[initial_info['x_reference'][i,0], 0, initial_info['x_reference'][i,2]],
-                            lineColorRGB=[1, 0, 0],
-                            physicsClientId=ctrl.env.PYB_CLIENT)
+        # Plot trajectory.
+        for i in range(0, reference_traj.shape[0], 10):
+            p.addUserDebugLine(lineFromXYZ=[reference_traj[i-10,0], 0, reference_traj[i-10,2]],
+                                lineToXYZ=[reference_traj[i,0], 0, reference_traj[i,2]],
+                                lineColorRGB=[1, 0, 0],
+                                physicsClientId=ctrl.env.PYB_CLIENT)
 
     # Run the experiment.
     results = ctrl.run( iterations=ITERATIONS)

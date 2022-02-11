@@ -12,6 +12,8 @@ from scipy.spatial.transform import Rotation
 from munch import munchify
 
 from safe_control_gym.controllers.base_controller import BaseController
+from safe_control_gym.envs.benchmark_env import Task
+
 
 class PID(BaseController):
     """ PID Class.
@@ -46,7 +48,7 @@ class PID(BaseController):
         self.env = env_func()
         initial_obs, initial_info = self.env.reset()
         self.control_timestep = self.env.CTRL_TIMESTEP
-        self.initial_info = initial_info
+        self.reference = initial_info['x_reference']
 
         self.GRAVITY = float(g) * 0.027
         self.KF = float(KF)
@@ -108,16 +110,23 @@ class PID(BaseController):
             cur_quat=np.array(p.getQuaternionFromEuler([0, obs[4], 0]))
             cur_vel=np.array([obs[1], 0, obs[3]])
             cur_ang_vel=np.array([0, obs[4], 0])
-            target_pos=np.array([
-                                    self.initial_info['x_reference'][i-1,0],
-                                    0,
-                                    self.initial_info['x_reference'][i-1,2]
-                                ])
-            target_vel=np.array([
-                                    self.initial_info['x_reference'][i-1,1],
-                                    0,
-                                    self.initial_info['x_reference'][i-1,3]
-                                ])
+
+            if self.env.TASK == Task.TRAJ_TRACKING:
+                target_pos=np.array([
+                                        self.reference[i-1,0],
+                                        0,
+                                        self.reference[i-1,2]
+                                    ])
+                target_vel=np.array([
+                                        self.reference[i-1,1],
+                                        0,
+                                        self.reference[i-1,3]
+                                    ])
+            elif self.env.TASK == Task.STABILIZATION:
+                target_pos=np.array([self.reference[0], 0, self.reference[2] ])
+                target_vel=np.array([0, 0, 0 ])
+            else:
+                raise NotImplementedError
             
             target_rpy = np.zeros(3)
             target_rpy_rates = np.zeros(3)
