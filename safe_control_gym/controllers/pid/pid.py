@@ -45,10 +45,7 @@ class PID(BaseController):
 
         """
 
-        self.env = env_func()
-        initial_obs, initial_info = self.env.reset()
-        self.control_timestep = self.env.CTRL_TIMESTEP
-        self.reference = initial_info['x_reference']
+        super().__init__(env_func, **kwargs)
 
         self.GRAVITY = float(g) * 0.027
         self.KF = float(KF)
@@ -64,13 +61,6 @@ class PID(BaseController):
         self.MIN_PWM = float(MIN_PWM)
         self.MAX_PWM = float(MAX_PWM)
         self.MIXER_MATRIX = np.array(MIXER_MATRIX)
-
-        self.results_dict = {   'obs': [],
-                                'reward': [],
-                                'done': [],
-                                'info': [],
-                                'action': [],
-        }
 
         self.reset()
 
@@ -283,6 +273,11 @@ class PID(BaseController):
         The previous step's and integral errors for both position and attitude are set to zero.
 
         """
+        self.env = self.env_func()
+        initial_obs, initial_info = self.env.reset()
+        self.control_timestep = self.env.CTRL_TIMESTEP
+        self.reference = initial_info['x_reference']
+
         self.control_counter = 0
         
         # Clear the last roll, pitch, and yaw.

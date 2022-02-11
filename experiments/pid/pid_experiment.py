@@ -39,8 +39,6 @@ def main():
                 env_func,
                 )
                 
-    ctrl.reset()
-
     if config.quadrotor_config.task == 'traj_tracking':
         reference_traj = ctrl.reference
 

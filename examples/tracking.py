@@ -45,8 +45,6 @@ def main():
                     env_func,
                     )
                     
-        ctrl.reset()
-
         reference_traj = ctrl.reference
 
         # Plot trajectory.
@@ -58,8 +56,6 @@ def main():
 
         # Run the experiment.
         results = ctrl.run( iterations=ITERATIONS)
-        ctrl.close()
-        ctrl.reset()
                 
         # Plot the experiment.
         for i in range(ITERATIONS):
@@ -68,7 +64,9 @@ def main():
             
             # Print the last action and the information returned at each step.
             print(i, '-th step.')
-            print(action, '\n', obs, '\n', reward, '\n', done, '\n', info, '\n')                
+            print(action, '\n', obs, '\n', reward, '\n', done, '\n', info, '\n')    
+
+        ctrl.close()            
 
         elapsed_sec = time.time() - START
         print("\n{:d} iterations (@{:d}Hz) and {:d} episodes in {:.2f} seconds, i.e. {:.2f} steps/sec for a {:.2f}x speedup.\n"
