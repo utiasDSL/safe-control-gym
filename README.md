@@ -80,8 +80,8 @@ $ python3 verbose_api.py --system cartpole --overrides verbose_api.yaml  #  Prin
 
 ## List of Implemented Controllers
 
-- LQR [coming soon]
-- iLQR [coming soon]
+- [LQR](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/lqr/lqr.py)
+- [iLQR](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/lqr/ilqr.py)
 - [Linear MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/linear_mpc.py)
 - [GP-MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/gp_mpc.py)
 - [SAC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/sac/sac.py)
@@ -90,7 +90,7 @@ $ python3 verbose_api.py --system cartpole --overrides verbose_api.yaml  #  Prin
 - [RARL](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/rarl/rarl.py)
 - [RAP](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/rarl/rap.py)
 - [MPSC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpsc/mpsc.py)
-- CBF [coming soon]
+- [CBF](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/cbf/cbf_qp.py)
 
 
 ## Re-create the Results in "Safe Learning in Robotics" [[arXiv link]](https://arxiv.org/pdf/2108.06266.pdf)
