@@ -146,7 +146,6 @@ if __name__ == "__main__":
     if config.thread > 0:
         # E.g. set single thread for less context switching
         torch.set_num_threads(config.thread)
-
     # Execute.
     func = MAIN_FUNCS.get(config.func, None)
     if func is None:
