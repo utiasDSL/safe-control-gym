@@ -141,7 +141,6 @@ if __name__ == "__main__":
     fac.add_argument("--set_test_seed", action="store_true", help="if to set seed when testing policy.")
     fac.add_argument("--eval_output_dir", type=str, help="folder path to save evaluation results.")
     fac.add_argument("--eval_output_path", type=str, default="test_results.pkl", help="file path to save evaluation results.")
-
     config = fac.merge()
     # System settings.
     if config.thread > 0:
