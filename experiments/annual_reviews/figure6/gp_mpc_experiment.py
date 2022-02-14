@@ -148,7 +148,6 @@ if __name__ == "__main__":
     fac = ConfigFactory()
     fac.add_argument("--train_only", type=bool, default=False, help="True if only training is performed.")
     config = fac.merge()
-
     # Create environment.
     env_func = partial(make,
                        config.task,
