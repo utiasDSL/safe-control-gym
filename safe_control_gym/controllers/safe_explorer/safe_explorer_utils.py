@@ -127,7 +127,6 @@ class SafetyLayer:
 
         """
         losses = self.compute_loss(batch)
-
         for loss, opt in zip(losses, self.optimizers):
             opt.zero_grad()
             loss.backward()
