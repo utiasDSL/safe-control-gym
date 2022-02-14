@@ -22,18 +22,47 @@ These environments include (and evaluate) symbolic safety constraints and implem
 
 
 ## Install on Ubuntu/macOS
-(optional) Create and access a Python 3.7 environment using [`conda`](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
-```
-$ conda create -n safe python=3.7                                  # Create environment (named 'safe' here)
-$ conda activate safe                                              # Activate environment 'safe'
-```
-Clone and install the `safe-control-gym` repository 
-```
-$ git clone https://github.com/utiasDSL/safe-control-gym.git       # Clone repository
-$ cd safe-control-gym                                              # Enter the repository
-$ pip install -e .                                                 # Install the repository
+
+### Clone repo
+
+```bash
+git clone https://github.com/utiasDSL/safe-control-gym.git
+cd safe-control-gym
 ```
 
+### Using conda
+
+Create and access a Python 3.8 environment using
+[`conda`](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
+
+```bash
+conda create -n safe python=3.8.10
+conda activate safe
+```
+
+Install the `safe-control-gym` repository 
+
+```
+pip install --upgrade pip
+pip install -e .
+```
+
+
+### Using venv and poetry
+
+Create and access a Python 3.8 virtual environment using
+[`pyenv`](https://github.com/pyenv/pyenv) and
+[`venv`](https://docs.python.org/3/library/venv.html)
+
+```bash
+pyenv install 3.8.10
+pyenv local 3.8.10
+python3 -m venv safe
+source safe/bin/activate
+pip install --upgrade pip
+pip install poetry
+poetry install
+```
 
 
 
