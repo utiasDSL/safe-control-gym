@@ -4,10 +4,15 @@ experiments/annual_reviews/figure7/safe_exp_results/
 experiments/annual_reviews/figure8/unsafe_ppo_temp_data/
 experiments/annual_reviews/figure8/unsafe_ppo_model/bak_unsafe_ppo_model_30000.pt
 experiments/arxiv/cartpole_constraint/data/
+experiments/arxiv/cartpole_constraint/temp_data/
 experiments/arxiv/cartpole_performance/data/
+experiments/arxiv/cartpole_performance/temp_data/
 experiments/arxiv/cartpole_robustness/data/
+experiments/arxiv/cartpole_robustness/temp_data/
 experiments/arxiv/quadrotor_constraint/data/
+experiments/arxiv/quadrotor_constraint/temp_data/
 experiments/arxiv/quadrotor_performance/data/
+experiments/arxiv/quadrotor_performance/temp_data/
 temp-data/
 z_docstring.py
 TODOs.md
