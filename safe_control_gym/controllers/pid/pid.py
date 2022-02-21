@@ -124,19 +124,19 @@ class PID(BaseController):
             # Compute the next action.
             self.control_counter += 1
             thrust, computed_target_rpy, pos_e = self._dslPIDPositionControl(self.control_timestep,
-                                                                            cur_pos,
-                                                                            cur_quat,
-                                                                            cur_vel,
-                                                                            target_pos,
-                                                                            target_rpy,
-                                                                            target_vel
-                                                                            )
+                                                                             cur_pos,
+                                                                             cur_quat,
+                                                                             cur_vel,
+                                                                             target_pos,
+                                                                             target_rpy,
+                                                                             target_vel
+                                                                             )
             rpm = self._dslPIDAttitudeControl(self.control_timestep,
-                                            thrust,
-                                            cur_quat,
-                                            computed_target_rpy,
-                                            target_rpy_rates
-                                            )
+                                             thrust,
+                                             cur_quat,
+                                             computed_target_rpy,
+                                             target_rpy_rates
+                                             )
             cur_rpy = p.getEulerFromQuaternion(cur_quat)
             
             action = rpm

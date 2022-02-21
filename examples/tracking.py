@@ -38,9 +38,9 @@ def main():
                 
         # Create controller.
         env_func = partial(make,
-                       config.task,
-                       **config.quadrotor_config
-                       )
+                           config.task,
+                           **config.quadrotor_config
+                           )
         ctrl = make(config.algo,
                     env_func,
                     )
@@ -50,12 +50,12 @@ def main():
         # Plot trajectory.
         for i in range(0, reference_traj.shape[0], 10):
             p.addUserDebugLine(lineFromXYZ=[reference_traj[i-10,0], 0, reference_traj[i-10,2]],
-                                lineToXYZ=[reference_traj[i,0], 0, reference_traj[i,2]],
-                                lineColorRGB=[1, 0, 0],
-                                physicsClientId=ctrl.env.PYB_CLIENT)
+                               lineToXYZ=[reference_traj[i,0], 0, reference_traj[i,2]],
+                               lineColorRGB=[1, 0, 0],
+                               physicsClientId=ctrl.env.PYB_CLIENT)
 
         # Run the experiment.
-        results = ctrl.run( iterations=ITERATIONS)
+        results = ctrl.run(iterations=ITERATIONS)
                 
         # Plot the experiment.
         for i in range(ITERATIONS):
