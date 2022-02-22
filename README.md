@@ -89,7 +89,7 @@ Overview of [`safe-control-gym`](https://arxiv.org/abs/2109.06325)'s API:
 Familiarize with APIs and environments with the scripts in [`examples/`](https://github.com/utiasDSL/safe-control-gym/tree/main/examples)
 ```
 $ cd ./examples/                                                                    # Navigate to the examples folder
-$ python3 tracking.py --task quadrotor --algo pid --overrides ./tracking.yaml       # PID trajectory tracking with the 2D quadcopter
+$ python3 tracking.py --overrides ./tracking.yaml                                   # PID trajectory tracking with the 2D quadcopter
 $ python3 verbose_api.py --system cartpole --overrides verbose_api.yaml             #  Printout of the extended safe-control-gym APIs
 ```
 

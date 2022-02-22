@@ -5,7 +5,7 @@ Notes:
 
 Run as:
 
-    $ python3 tracking.py --task quadrotor --algo pid --overrides ./tracking.yaml
+    $ python3 tracking.py --overrides ./tracking.yaml
 
 """
 import time
@@ -38,10 +38,10 @@ def main():
                 
         # Create controller.
         env_func = partial(make,
-                           config.task,
+                           'quadrotor',
                            **config.quadrotor_config
                            )
-        ctrl = make(config.algo,
+        ctrl = make('pid',
                     env_func,
                     )
                     
