@@ -100,7 +100,7 @@ class GPMPC(MPC):
                                         inertial_prop=None)
         elif isinstance(inertial_prop, dict):
                     self.prior_env_func = partial(env_func,
-                                        inertial_prop=np.array(inertial_prop.values())*prior_param_coeff)
+                                        inertial_prop=np.array(list(inertial_prop.values()))*prior_param_coeff)
         elif np.array(inertial_prop).shape == (3,):
             self.prior_env_func = partial(env_func,
                                         inertial_prop=np.array(inertial_prop)*prior_param_coeff)
