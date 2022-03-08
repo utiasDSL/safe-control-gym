@@ -15,7 +15,6 @@ train_iterations: 3
 optimization_itarations: bull
 learing_rate: null
 normalize_training_data: False
-use_gpu: False
 gp_model_path: null
 
 # GP args

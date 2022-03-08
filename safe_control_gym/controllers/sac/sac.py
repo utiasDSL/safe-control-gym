@@ -41,10 +41,10 @@ class SAC(BaseController):
                  training=True, 
                  checkpoint_path="model_latest.pt", 
                  output_dir="temp", 
-                 device="cpu", 
+                 use_gpu=False, 
                  seed=0, 
                  **kwargs):
-        super().__init__(env_func, training, checkpoint_path, output_dir, device, seed, **kwargs)
+        super().__init__(env_func, training, checkpoint_path, output_dir, use_gpu, seed, **kwargs)
 
         # task
         if self.training:
@@ -70,7 +70,7 @@ class SAC(BaseController):
                               actor_lr=self.actor_lr,
                               critic_lr=self.critic_lr,
                               entropy_lr=self.entropy_lr)
-        self.agent.to(device)
+        self.agent.to(self.device)
 
         # pre-/post-processing
         self.obs_normalizer = BaseNormalizer()
