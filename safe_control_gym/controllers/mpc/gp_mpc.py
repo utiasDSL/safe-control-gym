@@ -66,6 +66,7 @@ class GPMPC(MPC):
             inertial_prop: list = [1.0],
             prior_param_coeff: float = 1.0,
             output_dir: str = "results/temp",
+            plot: bool = False,
             **kwargs
             ):
         """Initialize GP-MPC.
@@ -95,6 +96,9 @@ class GPMPC(MPC):
             additional_constraints (list): list of Constraint objects defining additional constraints to be used.
 
         """
+        self.plot = plot
+        print(self.plot)
+        breakpoint()
         self.prior_env_func = partial(env_func,
                                       inertial_prop=np.array(inertial_prop)*prior_param_coeff)
         self.prior_param_coeff = prior_param_coeff
@@ -511,14 +515,12 @@ class GPMPC(MPC):
               input_data=None,
               target_data=None,
               gp_model=None,
-              plot=False
               ):
         """Performs GP training.
 
         Args:
             input_data, target_data (optiona, np.array): data to use for training
             gp_model (str): if not None, this is the path to pretrained models to use instead of training new ones.
-            plot (bool): to plot validation trajectories or not.
 
         Returns:
             training_results (dict): Dictionary of the training results.
@@ -605,8 +607,15 @@ class GPMPC(MPC):
         test_inputs_tensor = torch.Tensor(test_inputs).double()
         test_targets_tensor = torch.Tensor(test_targets).double()
 
-        if plot:
-            init_state = np.array([-1.0, 0.0, 0.0, 0.0, 0.0, 0.0]) # TO DO
+        if self.plot:
+            print(train_inputs.shape[1])
+            breakpoint()
+            if self.model.nx == 6:
+                init_state = np.array([-1.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+            elif self.model.nx == 4: 
+                init_state = np.array([-0.01, 0.0, 0.0, 0.0])
+            else: 
+                raise ValueError("This shape of init_state is not supported")
             breakpoint()
             valid_env = self.env_func(init_state=init_state,
                                       randomized_init=False)
@@ -643,7 +652,7 @@ class GPMPC(MPC):
                                         gpu=self.use_gpu,
                                         dir=self.output_dir)
         # Plot validation.
-        if plot:
+        if self.plot:
             validation_inputs, validation_targets = self.preprocess_training_data(x_seq, u_seq, x_next_seq)
             fig_count = 0
             fig_count = self.gaussian_process.plot_trained_gp(torch.Tensor(validation_inputs).double(),

@@ -32,6 +32,7 @@ algo_config:
     - 0.01
   normalize_training_data: False
   use_gpu: false
+  plot: True
   inertial_prop:
     - 0.027
     - 0.000014
