@@ -607,6 +607,7 @@ class GPMPC(MPC):
 
         if plot:
             init_state = np.array([-1.0, 0.0, 0.0, 0.0, 0.0, 0.0]) # TO DO
+            breakpoint()
             valid_env = self.env_func(init_state=init_state,
                                       randomized_init=False)
             validation_results = self.prior_ctrl.run(env=valid_env,
