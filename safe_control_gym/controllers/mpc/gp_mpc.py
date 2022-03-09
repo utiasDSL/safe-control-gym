@@ -608,7 +608,6 @@ class GPMPC(MPC):
         test_targets_tensor = torch.Tensor(test_targets).double()
 
         if self.plot:
-            print(train_inputs.shape[1])
             breakpoint()
             if self.model.nx == 6:
                 init_state = np.array([-1.0, 0.0, 0.0, 0.0, 0.0, 0.0])
