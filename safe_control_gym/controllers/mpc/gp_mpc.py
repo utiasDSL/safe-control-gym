@@ -606,7 +606,7 @@ class GPMPC(MPC):
         test_targets_tensor = torch.Tensor(test_targets).double()
 
         if plot:
-            init_state = np.array([-1.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+            init_state = np.array([-1.0, 0.0, 0.0, 0.0, 0.0, 0.0]) # TO DO
             valid_env = self.env_func(init_state=init_state,
                                       randomized_init=False)
             validation_results = self.prior_ctrl.run(env=valid_env,
