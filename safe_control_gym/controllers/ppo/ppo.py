@@ -43,7 +43,6 @@ class PPO(BaseController):
                  **kwargs):
         super().__init__(env_func, training, checkpoint_path, output_dir, use_gpu, seed, **kwargs)
         # Task.
-        self.use_gpu = use_gpu
         if self.training:
             # Training and testing.
             self.env = make_vec_envs(env_func, None, self.rollout_batch_size, self.num_workers, seed)

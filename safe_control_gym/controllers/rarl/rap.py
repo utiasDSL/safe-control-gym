@@ -47,7 +47,6 @@ class RAP(BaseController):
                  seed=0, 
                  **kwargs):
         super().__init__(env_func, training, checkpoint_path, output_dir, use_gpu, seed, **kwargs)
-        self.use_gpu = use_gpu
         # task
         if self.training:
             # training (+ evaluation)

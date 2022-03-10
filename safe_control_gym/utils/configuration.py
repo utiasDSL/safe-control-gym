@@ -71,6 +71,8 @@ class ConfigFactory:
             config_dict["task_config"] = get_config(args.task)
         else:
             warnings.warn("No agent/task config given.")
+        if args.use_gpu:
+            config_dict["use_gpu"] = args.use_gpu
         # Experiment-specific overrides, e.g. training hyperparameters.
         if args.overrides:
             for f in args.overrides:
