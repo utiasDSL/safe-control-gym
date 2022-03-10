@@ -20,6 +20,7 @@ setup(name='safe_control_gym',
         'pybullet',
         'cvxpy', 
         'pytope', 
-        'Mosek'
+        'Mosek',
+        'termcolor',
         ]
 )
