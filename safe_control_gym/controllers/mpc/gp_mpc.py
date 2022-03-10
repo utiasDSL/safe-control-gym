@@ -97,8 +97,6 @@ class GPMPC(MPC):
 
         """
         self.plot = plot
-        print(self.plot)
-        breakpoint()
         self.prior_env_func = partial(env_func,
                                       inertial_prop=np.array(inertial_prop)*prior_param_coeff)
         self.prior_param_coeff = prior_param_coeff
@@ -608,14 +606,12 @@ class GPMPC(MPC):
         test_targets_tensor = torch.Tensor(test_targets).double()
 
         if self.plot:
-            breakpoint()
             if self.model.nx == 6:
                 init_state = np.array([-1.0, 0.0, 0.0, 0.0, 0.0, 0.0])
             elif self.model.nx == 4: 
-                init_state = np.array([-0.01, 0.0, 0.0, 0.0])
+                init_state = np.array([-0.5, 0.0, 0.5, 0.0])
             else: 
                 raise ValueError("This shape of init_state is not supported")
-            breakpoint()
             valid_env = self.env_func(init_state=init_state,
                                       randomized_init=False)
             validation_results = self.prior_ctrl.run(env=valid_env,
