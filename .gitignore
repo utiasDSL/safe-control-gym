@@ -14,6 +14,7 @@ experiments/arxiv/quadrotor_constraint/temp_data/
 experiments/arxiv/quadrotor_performance/data/
 experiments/arxiv/quadrotor_performance/temp_data/
 temp-data/
+results/
 z_docstring.py
 TODOs.md
 

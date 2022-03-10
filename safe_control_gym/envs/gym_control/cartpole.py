@@ -668,7 +668,7 @@ class CartPole(BenchmarkEnv):
         if self.constraints is not None:
             info["symbolic_constraints"] = self.constraints.get_all_symbolic_models()
             # NOTE: Cannot evaluate constraints on reset/without inputs.
-            info["constraint_values"] = self.constraints.get_values(self, only_state=True)
+            info["constraint_values"] = self.constraints.get_values(self, only_state=True) # Fix for input constraints only
         return info
 
     def _parse_urdf_parameters(self, file_name):
