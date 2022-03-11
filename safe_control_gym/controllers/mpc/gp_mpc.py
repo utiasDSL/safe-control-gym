@@ -609,7 +609,7 @@ class GPMPC(MPC):
             if self.model.nx == 6:
                 init_state = np.array([-1.0, 0.0, 0.0, 0.0, 0.0, 0.0])
             elif self.model.nx == 4: 
-                init_state = np.array([-0.5, 0.0, 0.5, 0.0])
+                init_state = np.array([-0.05, 0.0, -0.05, 0.0])
             else: 
                 raise ValueError("This shape of init_state is not supported")
             valid_env = self.env_func(init_state=init_state,
