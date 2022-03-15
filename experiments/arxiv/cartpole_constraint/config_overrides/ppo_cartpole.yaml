@@ -1,0 +1,7 @@
+algo_config:
+  log_interval: 1000
+  save_interval: 1000
+  num_checkpoints: 100
+  eval_interval: 1000
+  eval_save_best: True 
+  tensorboard: True

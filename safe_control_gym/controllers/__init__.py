@@ -3,17 +3,17 @@
 """
 from safe_control_gym.utils.registration import register
 
-# register(id="cbf",
-#          entry_point="safe_control_gym.controllers.cbf.cbf_qp:CBF_QP",
-#          config_entry_point="safe_control_gym.controllers.cbf:cbf_qp.yaml")
+register(id="lqr",
+         entry_point="safe_control_gym.controllers.lqr.lqr:LQR",
+         config_entry_point="safe_control_gym.controllers.lqr:lqr.yaml")
 
-# register(id="lqr",
-#          entry_point="safe_control_gym.controllers.lqr.lqr:LQR",
-#          config_entry_point="safe_control_gym.controllers.lqr:lqr.yaml")
+register(id="ilqr",
+         entry_point="safe_control_gym.controllers.lqr.ilqr:iLQR",
+         config_entry_point="safe_control_gym.controllers.lqr:ilqr.yaml")
 
-# register(id="ilqr",
-#          entry_point="safe_control_gym.controllers.lqr.ilqr:iLQR",
-#          config_entry_point="safe_control_gym.controllers.lqr:ilqr.yaml")
+register(id="cbf",
+         entry_point="safe_control_gym.controllers.cbf.cbf_qp:CBF_QP",
+         config_entry_point="safe_control_gym.controllers.cbf:cbf_qp.yaml")
 
 register(id="mpc",
          entry_point="safe_control_gym.controllers.mpc.mpc:MPC",
@@ -30,6 +30,10 @@ register(id="gp_mpc",
 register(id="mpsc",
          entry_point="safe_control_gym.controllers.mpsc.mpsc:MPSC",
          config_entry_point="safe_control_gym.controllers.mpsc:mpsc.yaml")
+
+register(id="pid",
+         entry_point="safe_control_gym.controllers.pid.pid:PID",
+         config_entry_point="safe_control_gym.controllers.pid:pid.yaml")
 
 register(id="ppo",
          entry_point="safe_control_gym.controllers.ppo.ppo:PPO",

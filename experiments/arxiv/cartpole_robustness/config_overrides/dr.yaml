@@ -1,0 +1,9 @@
+# domain randomizaiton  config 
+task_config:
+  randomized_inertial_prop: True 
+  inertial_prop_randomization_info:
+    pole_length:
+      distrib: uniform
+      low: 0.1
+      high: 1.0
+

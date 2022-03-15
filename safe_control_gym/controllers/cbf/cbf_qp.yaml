@@ -1,0 +1,44 @@
+# cbf qp args
+
+#prior_prop: None
+#prior_prop:
+#  pole_length: 0.4
+#  pole_mass: 0.12
+#  cart_mass: 0.8
+
+#initial_state:
+#  init_x: -1.0
+#  init_x_dot: 0.0
+#  init_theta: 0.1
+#  init_theta_dot: 0.0
+
+randomized_init: True
+
+# unsafe controller
+unsafe_controller: "lqr"
+
+# linear function parameters
+#slope: 10.0
+#slope: 1.0
+slope: 0.1
+#slope: 0.01
+
+# CBF ellipsoid parameters
+#x_pos_max: 1.0
+#x_vel_max: 1.0
+#theta_max: 0.1
+#theta_dot_max: 0.1
+
+x_pos_max: 0.4
+x_vel_max: 0.5
+theta_max: 0.1
+theta_dot_max: 0.1
+
+# runner args
+deque_size: 10
+eval_batch_size: 1
+
+# Plot
+plot_traj: False
+save_plot: True
+plot_dir: "./results/temp/"
