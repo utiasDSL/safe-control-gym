@@ -95,8 +95,20 @@ class GPMPC(MPC):
             additional_constraints (list): list of Constraint objects defining additional constraints to be used.
 
         """
-        self.prior_env_func = partial(env_func,
-                                      inertial_prop=np.array(inertial_prop)*prior_param_coeff)
+        if inertial_prop is None:
+            self.prior_env_func = partial(env_func,
+                                        inertial_prop=None)
+        elif isinstance(inertial_prop, dict):
+                    self.prior_env_func = partial(env_func,
+                                        inertial_prop=np.array(list(inertial_prop.values()))*prior_param_coeff)
+        elif np.array(inertial_prop).shape == (3,):
+            self.prior_env_func = partial(env_func,
+                                        inertial_prop=np.array(inertial_prop)*prior_param_coeff)
+        elif np.array(inertial_prop).shape == (2,):
+            self.prior_env_func = partial(env_func,
+                                        inertial_prop=np.array(inertial_prop)*prior_param_coeff)
+        else: 
+            raise ValueError("[ERROR] in GPMPC.__init__(), inertial_prop is not of shape (3,) for cartpole or shape (2,) for quadrotor")
         self.prior_param_coeff = prior_param_coeff
         # Initialize the method using linear MPC.
         self.prior_ctrl = LinearMPC(

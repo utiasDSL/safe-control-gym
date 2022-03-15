@@ -35,11 +35,11 @@ class PPO(BaseController):
 
     def __init__(self,
                  env_func,
-                 training=True,
-                 checkpoint_path="model_latest.pt",
-                 output_dir="temp",
-                 use_gpu=False,
-                 seed=0,
+                 training: bool = True,
+                 checkpoint_path: str = "results/temp/model_latest.pt",
+                 output_dir: str = "results/temp",
+                 device: str = "cpu",
+                 seed: int = 0,
                  **kwargs):
         super().__init__(env_func, training, checkpoint_path, output_dir, use_gpu, seed, **kwargs)
         # Task.
