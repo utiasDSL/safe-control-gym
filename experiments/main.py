@@ -37,7 +37,7 @@ def train(config):
                          training=True,
                          checkpoint_path=os.path.join(config.output_dir, "model_latest.pt"),
                          output_dir=config.output_dir,
-                         device=config.device,
+                         use_gpu=config.use_gpu,
                          seed=config.seed,
                          **config.algo_config)
     control_agent.reset()
@@ -92,7 +92,7 @@ def test_policy(config):
                          training=False,
                          checkpoint_path=os.path.join(config.output_dir, "model_latest.pt"),
                          output_dir=config.output_dir,
-                         device=config.device,
+                         use_gpu=config.use_gpu,
                          seed=config.seed,
                          **config.algo_config)
     control_agent.reset()
