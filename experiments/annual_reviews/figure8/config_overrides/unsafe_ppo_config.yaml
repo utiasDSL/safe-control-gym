@@ -29,7 +29,6 @@ algo_config:
   tensorboard: false
   use_clipped_value: false
   use_gae: true
-device: cpu
 func: train
 kv_overrides:
 - task_config.ctrl_freq=10

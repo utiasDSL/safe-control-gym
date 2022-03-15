@@ -190,12 +190,14 @@ class CartPole(BenchmarkEnv):
             self.EFFECTIVE_POLE_LENGTH = EFFECTIVE_POLE_LENGTH
             self.POLE_MASS = POLE_MASS
             self.CART_MASS = CART_MASS
-        elif isinstance(inertial_prop, dict):
+        elif np.array(inertial_prop).shape == (3,):
+            self.EFFECTIVE_POLE_LENGTH, self.POLE_MASS, self.CART_MASS = inertial_prop
+        elif isinstance(inertial_prop, dict): 
             self.EFFECTIVE_POLE_LENGTH = inertial_prop.get("pole_length", EFFECTIVE_POLE_LENGTH)
             self.POLE_MASS = inertial_prop.get("pole_mass", POLE_MASS)
             self.CART_MASS = inertial_prop.get("cart_mass", CART_MASS)
         else:
-            raise ValueError("[ERROR] in CartPole.__init__(), inertial_prop incorrect format.")
+            raise ValueError("[ERROR] in CartPole.__init__(), inertial_prop is not of shape (3, )")
         
         # Store prior parameters.
         if prior_prop is None:
