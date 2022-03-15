@@ -24,7 +24,7 @@ class BaseController:
             training (bool): training flag.
             checkpoint_path (str): file to save trained model & experiment state.
             output_dir (str): folder to write outputs.
-            use_gpu (str): False (use cpu) True (use cuda).
+            use_gpu (bool): False (use cpu) True (use cuda).
             seed (int): random seed.
 
         """
