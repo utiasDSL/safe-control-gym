@@ -102,6 +102,32 @@ control_agent.load(os.path.join(config.restore, "model_latest.pt"))
 
 After testing, the results can be extracted in different ways. 
 
+#### Logging results 
+
+To enable logging for plotting purposes or otherwise during training, the trainable approaches require that training is set to True when the environment is made. This is includes ppo, rap, rarl, and sac: 
+```
+control_agent = make(config.algo,
+                        env_func,
+                        training=True,
+                        checkpoint_path=os.path.join(config.output_dir, "model_latest.pt"),
+                        output_dir=config.output_dir,
+                        device=config.device,
+                        seed=config.seed,
+                        **config.algo_config)
+```
+This will log the statistics for the training using the `ExperimentLogger()` and dump the results into the output_dir location under "logs". 
+
+Results from running can be immediately collected: 
+
+```
+results = control_agent.run(n_episodes=config.algo_config.eval_batch_size,
+                            render=config.render,
+                            verbose=config.verbose,
+                            use_adv=config.use_adv)
+```
+
+To enable logging for the MPC based control approaches (gp_mpc, linear_mpc), logging cannot be done during training as there is no training step (with the exception of training the gaussian process for gp_mpc). Therefore, results can be immediately collected by running linear_mpc and by first training the gaussian process and running the agent for gp_mpc. 
+
 #### Plotting results 
 
 The `safe-control-gym` has plotting capabilities imported as `safe_control_gym.utils.plotting` that use the data saved to the output directory to use for visualization after running an experiment. To run plotting with this example, specify `--func plot` in the command line
@@ -116,6 +142,10 @@ mkdirs(plot_dir)
 plot_from_logs(log_dir, plot_dir, window=3)
 ```
 Here, log_dir is the location of the stored logs which is automatically the logs directory of your output directory when you train. The plot_dir is where you want to plots stored. `plot_from_logs` will generate a plot for each stat in the logs. If you only want to plot certain stats, you can specify a fourth argument, keys. 
+
+##### GP MPC Plotting
+
+The GP MPC approach has plotting capabilities to visualize the gaussian process in each dimension. To enable plotting for gp_mpc,  
 
 ## Using configuration/override files 
 
@@ -224,12 +254,6 @@ disturbances:
         - disturbance_func: white_noise
           std: 0.05
 ```
-<!-- #### Randomization
-
-- Randomize initial state 
-    distributions:
-        - uniform 
-        - choice -->
 
 Constraint Types:
 | Applied to | Types |
@@ -242,7 +266,9 @@ These tasks are designed to be used in benchmarking experiments:
 1. Stabilization - `stabilization`
 2. Trajectory tracking - `traj_tracking`
 
-The tasks have been implemented at the controller level. See each controllers source code for details 
+The tasks have been implemented at the controller level. See each controllers source code for details. 
+
+
 
 
 
