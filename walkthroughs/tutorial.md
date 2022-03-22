@@ -141,8 +141,8 @@ Here is a short guide to the results that can be used for parsing results as you
 | RARL             | | 
 | RAP              | | 
 | MPSC             | | 
-| GP MPC           | <ul><li>obs(the states/observations over the run)</li><li>reward(the reward at each step)</li><li>done(whether or not the run is complete)</li><li>info(includes goal_reached boolean, mse, constraint values and constraint violation)</li><li>action(which action was taken at each step)</li><li>horizon_inputs</li><li>horizon_states</li></ul> | 
-| Linear MPC       | | 
+| GP MPC           | <ul><li>obs (the states/observations over the run)</li><li>reward (the reward at each step)</li><li>done (whether or not the run is complete)</li><li>info (includes goal_reached (bool), mse, constraint values, and constraint violation count)</li><li>action (which action was taken at each step)</li><li>horizon_inputs(the previous input at each step)</li><li>horizon_states(the previous state at each step)</li><li>horizon_states(the previous state at each step)</li><li>input_constraint_set</li><li>state_constraint_set</li><li>state_horizon_cov(covariance of each state)</li><li>input_horizon_cov(covariance of each input)</li><li>gp_mean_eq_pred()</li><li>gp_pred()</li><li>linear_pred()</li></ul> | 
+| Linear MPC       | <ul><li>obs (the states/observations over the run)</li><li>reward (the reward at each step)</li><li>done (whether or not the run is complete)</li><li>info (includes goal_reached (bool), mse, constraint values, and constraint violation count)</li><li>action (which action was taken at each step)</li><li>horizon_inputs(the previous input at each step)</li><li>horizon_states(the previous state at each step)</li><li>horizon_states(the previous state at each step)</li>| 
 | Safe Explorer PPO| | 
 
 #### Plotting results 
