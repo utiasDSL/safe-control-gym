@@ -354,7 +354,8 @@ class MPC(BaseController):
             msg += "eval_ep_length {:.2f} +/- {:.2f} | eval_ep_return {:.3f} +/- {:.3f}\n".format(
                 ep_lengths.mean(), ep_lengths.std(), ep_returns.mean(),
                 ep_returns.std())
-        self.results_dict['obs'] = np.vstack(self.results_dict['obs'])
+            print(msg)
+        self.results_dict['obs'] = np.vstack(self.results_dict['obs'], )
         try:
             self.results_dict['reward'] = np.vstack(self.results_dict['reward'])
             self.results_dict['action'] = np.vstack(self.results_dict['action'])
