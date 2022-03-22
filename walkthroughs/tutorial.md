@@ -141,7 +141,7 @@ Here is a short guide to the results that can be used for parsing results as you
 | Linear MPC       | <ul><li>obs (the states/observations over the run)</li><li>reward (the reward at each step)</li><li>done (whether or not the run is complete)</li><li>info (includes goal_reached (bool), mse, constraint values, and constraint violation count)</li><li>action (which action was taken at each step)</li><li>horizon_inputs(the previous input at each step)</li><li>horizon_states(the previous state at each step)</li><li>horizon_states(the previous state at each step)</li>| 
 | GP MPC           | <ul><li>obs (the states/observations over the run)</li><li>reward (the reward at each step)</li><li>done (whether or not the run is complete)</li><li>info (includes goal_reached (bool), mse, constraint values, and constraint violation count)</li><li>action (which action was taken at each step)</li><li>horizon_inputs(the previous input at each step)</li><li>horizon_states(the previous state at each step)</li><li>horizon_states(the previous state at each step)</li><li>input_constraint_set</li><li>state_constraint_set</li><li>state_horizon_cov(covariance of each state)</li><li>input_horizon_cov(covariance of each input)</li><li>gp_mean_eq_pred()</li><li>gp_pred()</li><li>linear_pred()</li></ul> | 
  
-
+ 
 #### Plotting results 
 
 The `safe-control-gym` has plotting capabilities imported as `safe_control_gym.utils.plotting` that use the data saved to the output directory to use for visualization after running an experiment. To run plotting with this example, specify `--func plot` in the command line
@@ -161,10 +161,9 @@ Here, log_dir is the location of the stored logs which is automatically the logs
 plot_from_logs(log_dir, plot_dir, window=3, keys)
 ```
 
-Here is short guide to the other plotting functions available. Note that plotting from logs is only available for the trainable approaches in the repo (ppo, sac, rarl, rap): 
-<!-- TODO ADD PLOT FUNCTIONS OVERVIEW -->
+<!-- Here is short guide to the other plotting functions available. Note that plotting from logs is only available for the trainable approaches in the repo (ppo, sac, rarl, rap): 
+TODO ADD PLOT FUNCTIONS OVERVIEW -->
 
-<<<<<<< HEAD
 
 ##### GP MPC Plotting
 
@@ -187,8 +186,6 @@ fac = ConfigFactory()
 fac.add_argument("--plot", type=str, default="False", help="Whether or not to plot for gp_mpc controller")
 config = fac.merge()
 ```
-=======
->>>>>>> 114a3e3 ( adding results parsing section to guide)
 
 ##### GP MPC Plotting
 
