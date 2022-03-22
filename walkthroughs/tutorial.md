@@ -141,10 +141,8 @@ Here is a short guide to the results that can be used for parsing results as you
 | RARL             | | 
 | RAP              | | 
 | MPSC             | | 
-| GP MPC           | 
-- obs 
-- reward 
-- done 
+| GP MPC           | <ul><li>obs</li><li>reward</li><li>done</li><li>info</li><li>action</li><li>horizon_inputs</li><li>horizon_states</li></ul> | 
+ 
 - info 
 - action
 - horizon_inputs
