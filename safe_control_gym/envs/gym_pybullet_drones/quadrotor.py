@@ -108,7 +108,7 @@ class Quadrotor(BaseAviary):
                  rew_act_weight=0.0001,
                  rew_exponential=True,
                  done_on_out_of_bound=True,
-                 info_mse_metric_state_weight=[1,0,1,0,0,0],
+                 info_mse_metric_state_weight=None,
                  **kwargs
                  ):
         """Initialize a quadrotor environment.
@@ -134,7 +134,19 @@ class Quadrotor(BaseAviary):
         self.rew_act_weight = np.array(rew_act_weight, ndmin=1, dtype=float)
         self.rew_exponential = rew_exponential
         self.done_on_out_of_bound = done_on_out_of_bound
-        self.info_mse_metric_state_weight = np.array(info_mse_metric_state_weight, ndmin=1, dtype=float)
+        if info_mse_metric_state_weight is None:
+            if self.QUAD_TYPE == QuadType.ONE_D:
+                self.info_mse_metric_state_weight = np.array([1,0], ndmin=1, dtype=float)
+            elif self.QUAD_TYPE == QuadType.TWO_D:
+                self.info_mse_metric_state_weight = np.array([1,0,1,0,0,0], ndmin=1, dtype=float)
+            else:
+                raise ValueError("[ERROR] in Quadrotor.__init__(), not implemented quad type.")
+        else:
+            if (self.QUAD_TYPE == QuadType.ONE_D and len(info_mse_metric_state_weight)==2) or \
+                    (self.QUAD_TYPE == QuadType.TWO_D and len(info_mse_metric_state_weight)==6):
+                self.info_mse_metric_state_weight = np.array(info_mse_metric_state_weight, ndmin=1, dtype=float)
+            else:
+                raise ValueError("[ERROR] in Quadrotor.__init__(), wrong info_mse_metric_state_weight argument size.")
         # BaseAviary constructor, called after defining the custom args, 
         # since some BenchmarkEnv init setup can be task(custom args)-dependent. 
         super().__init__(init_state=init_state, inertial_prop=inertial_prop, **kwargs)
