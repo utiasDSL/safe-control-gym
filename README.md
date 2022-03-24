@@ -47,6 +47,11 @@ pip install --upgrade pip
 pip install -e .
 ```
 
+Note: You may need to install gmp, a dependency of pycddlib, separately
+
+```
+sudo apt-get install libgmp-dev
+```
 
 ### Using venv and poetry
 
