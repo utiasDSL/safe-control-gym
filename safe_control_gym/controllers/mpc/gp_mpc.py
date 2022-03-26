@@ -539,8 +539,18 @@ class GPMPC(MPC):
             ############
             # Use Latin Hypercube Sampling to generate states withing environment bounds.
             lhs_sampler = Lhs(lhs_type='classic', criterion='maximin')
-            limits = [(self.env.INIT_STATE_RAND_INFO[key].low, self.env.INIT_STATE_RAND_INFO[key].high) for key in
-                      self.env.INIT_STATE_RAND_INFO]
+            if self.model.nx == 4:
+                limits = [(self.env.INIT_STATE_RAND_INFO['init_x'].low, self.env.INIT_STATE_RAND_INFO['init_x'].high), 
+                          (self.env.INIT_STATE_RAND_INFO['init_x_dot'].low, self.env.INIT_STATE_RAND_INFO['init_x_dot'].high),
+                          (self.env.INIT_STATE_RAND_INFO['init_theta'].low, self.env.INIT_STATE_RAND_INFO['init_theta'].high),
+                          (self.env.INIT_STATE_RAND_INFO['init_theta_dot'].low, self.env.INIT_STATE_RAND_INFO['init_theta_dot'].high)] 
+            if self.model.nx == 6:
+                limits = [(self.env.INIT_STATE_RAND_INFO['init_x'].low, self.env.INIT_STATE_RAND_INFO['init_x'].high), 
+                          (self.env.INIT_STATE_RAND_INFO['init_x_dot'].low, self.env.INIT_STATE_RAND_INFO['init_x_dot'].high),
+                          (self.env.INIT_STATE_RAND_INFO['init_z'].low, self.env.INIT_STATE_RAND_INFO['init_z'].high), 
+                          (self.env.INIT_STATE_RAND_INFO['init_z_dot'].low, self.env.INIT_STATE_RAND_INFO['init_z_dot'].high),
+                          (self.env.INIT_STATE_RAND_INFO['init_theta'].low, self.env.INIT_STATE_RAND_INFO['init_theta'].high),
+                          (self.env.INIT_STATE_RAND_INFO['init_theta_dot'].low, self.env.INIT_STATE_RAND_INFO['init_theta_dot'].high)]  
             # todo: parameterize this if we actually want it.
             num_eq_samples = 0
             samples = lhs_sampler.generate(limits,
@@ -551,7 +561,6 @@ class GPMPC(MPC):
             eq_limits = [(self.prior_ctrl.X_LIN[eq]-delta, self.prior_ctrl.X_LIN[eq]+delta) for eq in range(self.model.nx)]
             if num_eq_samples > 0:
                 eq_samples = lhs_sampler.generate(eq_limits, num_eq_samples, random_state=self.seed)
-                #samples = samples.append(eq_samples)
                 init_state_samples = np.array(samples + eq_samples)
             else:
                 init_state_samples = np.array(samples)
