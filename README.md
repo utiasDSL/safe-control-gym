@@ -22,18 +22,47 @@ These environments include (and evaluate) symbolic safety constraints and implem
 
 
 ## Install on Ubuntu/macOS
-(optional) Create and access a Python 3.7 environment using [`conda`](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
-```
-$ conda create -n safe python=3.7                                  # Create environment (named 'safe' here)
-$ conda activate safe                                              # Activate environment 'safe'
-```
-Clone and install the `safe-control-gym` repository 
-```
-$ git clone https://github.com/utiasDSL/safe-control-gym.git       # Clone repository
-$ cd safe-control-gym                                              # Enter the repository
-$ pip install -e .                                                 # Install the repository
+
+### Clone repo
+
+```bash
+git clone https://github.com/utiasDSL/safe-control-gym.git
+cd safe-control-gym
 ```
 
+### Using conda
+
+Create and access a Python 3.8 environment using
+[`conda`](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
+
+```bash
+conda create -n safe python=3.8.10
+conda activate safe
+```
+
+Install the `safe-control-gym` repository 
+
+```
+pip install --upgrade pip
+pip install -e .
+```
+
+
+### Using venv and poetry
+
+Create and access a Python 3.8 virtual environment using
+[`pyenv`](https://github.com/pyenv/pyenv) and
+[`venv`](https://docs.python.org/3/library/venv.html)
+
+```bash
+pyenv install 3.8.10
+pyenv local 3.8.10
+python3 -m venv safe
+source safe/bin/activate
+pip install --upgrade pip
+pip install poetry
+poetry install
+```
 
 
 
@@ -59,9 +88,9 @@ Overview of [`safe-control-gym`](https://arxiv.org/abs/2109.06325)'s API:
 ## Getting Started
 Familiarize with APIs and environments with the scripts in [`examples/`](https://github.com/utiasDSL/safe-control-gym/tree/main/examples)
 ```
-$ cd ./examples/                                                   # Navigate to the examples folder
-$ python3 tracking.py  --overrides tracking.yaml                   # PID trajectory tracking with the 2D quadcopter
-$ python3 verbose_api.py --system cartpole --overrides verbose_api.yaml  #  Printout of the extened safe-control-gym APIs
+$ cd ./examples/                                                                    # Navigate to the examples folder
+$ python3 tracking.py --overrides ./tracking.yaml                                   # PID trajectory tracking with the 2D quadcopter
+$ python3 verbose_api.py --system cartpole --overrides verbose_api.yaml             #  Printout of the extended safe-control-gym APIs
 ```
 
 
@@ -80,8 +109,8 @@ $ python3 verbose_api.py --system cartpole --overrides verbose_api.yaml  #  Prin
 
 ## List of Implemented Controllers
 
-- LQR [coming soon]
-- iLQR [coming soon]
+- [LQR](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/lqr/lqr.py)
+- [iLQR](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/lqr/ilqr.py)
 - [Linear MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/linear_mpc.py)
 - [GP-MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/gp_mpc.py)
 - [SAC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/sac/sac.py)
@@ -90,7 +119,7 @@ $ python3 verbose_api.py --system cartpole --overrides verbose_api.yaml  #  Prin
 - [RARL](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/rarl/rarl.py)
 - [RAP](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/rarl/rap.py)
 - [MPSC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpsc/mpsc.py)
-- CBF [coming soon]
+- [CBF](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/cbf/cbf_qp.py)
 
 
 ## Re-create the Results in "Safe Learning in Robotics" [[arXiv link]](https://arxiv.org/pdf/2108.06266.pdf)

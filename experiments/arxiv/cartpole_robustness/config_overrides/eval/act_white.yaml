@@ -1,0 +1,7 @@
+# disturbance config 
+task_config:
+  disturbances:
+    action:
+    - disturbance_func: white_noise
+      std: 4.0
+
