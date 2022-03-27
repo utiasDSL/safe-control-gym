@@ -510,8 +510,8 @@ class GPMPC(MPC):
     def learn(self,
               input_data=None,
               target_data=None,
-              plot=False,
-              gp_model=None
+              gp_model=None,
+              plot=False
               ):
         """Performs GP training.
 
