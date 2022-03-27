@@ -190,6 +190,10 @@ fac.add_argument("--plot", type=str, default="False", help="Whether or not to pl
 config = fac.merge()
 ```
 
+##### GP MPC Plotting
+
+The GP MPC approach has plotting capabilities to visualize the gaussian process in each dimension. To enable plotting for gp_mpc,  
+
 ## Using configuration/override files 
 
 Each controller has a default configuration file with the bare-bones parameters initialized. These are stored in `safe-control-gym/safe_control_gym/controllers` with the implementations of the controllers. Here is a good place to start if you want to know more about how to start working with a controller. To add to and modify the existing configuration, an override file is used. These configurations are merged together using the `.merge()` method in your code, as shown in "Step 1 - Load in your configuration". 
