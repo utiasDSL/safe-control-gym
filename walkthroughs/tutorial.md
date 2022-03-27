@@ -187,28 +187,6 @@ fac.add_argument("--plot", type=str, default="False", help="Whether or not to pl
 config = fac.merge()
 ```
 
-##### GP MPC Plotting
-
-The GP MPC approach has plotting capabilities to visualize the gaussian process in each dimension. To enable plotting for gp_mpc, add `plot: true` to your configuration file, in your experiment script add it directly to where the control agent is made, or add it as a commandline argument, based on your preference: 
-
-Option 2: 
-```
-control_agent = make(config.algo,
-                        env_func,
-                        checkpoint_path=os.path.join(config.output_dir, "model_latest.pt"),
-                        output_dir=config.output_dir,
-                        device=config.device,
-                        seed=config.seed,
-                        plot=True,
-                        **config.algo_config)
-```
-Option 3: 
-```
-fac = ConfigFactory()
-fac.add_argument("--plot", type=str, default="False", help="Whether or not to plot for gp_mpc controller")
-config = fac.merge()
-```
-
 ## Using configuration/override files 
 
 Each controller has a default configuration file with the bare-bones parameters initialized. These are stored in `safe-control-gym/safe_control_gym/controllers` with the implementations of the controllers. Here is a good place to start if you want to know more about how to start working with a controller. To add to and modify the existing configuration, an override file is used. These configurations are merged together using the `.merge()` method in your code, as shown in "Step 1 - Load in your configuration". 

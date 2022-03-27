@@ -66,7 +66,6 @@ class GPMPC(MPC):
             inertial_prop: list = [1.0],
             prior_param_coeff: float = 1.0,
             output_dir: str = "results/temp",
-            plot: bool = False,
             **kwargs
             ):
         """Initialize GP-MPC.
@@ -119,7 +118,6 @@ class GPMPC(MPC):
             output_dir=output_dir,
             additional_constraints=additional_constraints,
             **kwargs)
-        self.plot = plot
         # Setup environments.
         self.env_func = env_func
         self.env = env_func(randomized_init=False)
@@ -512,6 +510,7 @@ class GPMPC(MPC):
     def learn(self,
               input_data=None,
               target_data=None,
+              plot=False,
               gp_model=None
               ):
         """Performs GP training.
@@ -519,6 +518,7 @@ class GPMPC(MPC):
         Args:
             input_data, target_data (optiona, np.array): data to use for training
             gp_model (str): if not None, this is the path to pretrained models to use instead of training new ones.
+            plot (bool): to plot validation trajectories or not.
 
         Returns:
             training_results (dict): Dictionary of the training results.
@@ -605,7 +605,7 @@ class GPMPC(MPC):
         test_inputs_tensor = torch.Tensor(test_inputs).double()
         test_targets_tensor = torch.Tensor(test_targets).double()
 
-        if self.plot:
+        if plot:
             init_state = np.array([-1.0, 0.0, 0.0, 0.0, 0.0, 0.0])
             valid_env = self.env_func(init_state=init_state,
                                       randomized_init=False)
@@ -642,7 +642,7 @@ class GPMPC(MPC):
                                         gpu=self.use_gpu,
                                         dir=self.output_dir)
         # Plot validation.
-        if self.plot:
+        if plot:
             validation_inputs, validation_targets = self.preprocess_training_data(x_seq, u_seq, x_next_seq)
             fig_count = 0
             fig_count = self.gaussian_process.plot_trained_gp(torch.Tensor(validation_inputs).double(),
