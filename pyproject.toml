@@ -6,7 +6,7 @@ authors = ["Your Name <you@example.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.8.10"
+python = "3.8.x"
 matplotlib = "^3.5.1"
 Pillow = "^9.0.0"
 munch = "^2.5.0"
@@ -20,13 +20,14 @@ torch = "^1.10.2"
 gpytorch = "^1.6.0"
 ray = "^1.9.2"
 tensorboard = "^2.8.0"
-casadi = "^3.5.5"
-pybullet = "^3.2.0"
+casadi = "3.5.5"
+pybullet = "3.2.0"
 cvxpy = "^1.1.18"
 numpy = "^1.22.1"
 pytope = "^0.0.4"
 Mosek = "^9.3.14"
 termcolor = "^1.1.0"
+pycddlib = "2.1.4"
 
 [tool.poetry.dev-dependencies]
 
