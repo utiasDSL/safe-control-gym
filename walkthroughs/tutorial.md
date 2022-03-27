@@ -167,6 +167,7 @@ plot_from_logs(log_dir, plot_dir, window=3, keys)
 Here is short guide to the other plotting functions available. Note that plotting from logs is only available for the trainable approaches in the repo (ppo, sac, rarl, rap): 
 <!-- TODO ADD PLOT FUNCTIONS OVERVIEW -->
 
+<<<<<<< HEAD
 
 ##### GP MPC Plotting
 
@@ -189,10 +190,30 @@ fac = ConfigFactory()
 fac.add_argument("--plot", type=str, default="False", help="Whether or not to plot for gp_mpc controller")
 config = fac.merge()
 ```
+=======
+>>>>>>> 114a3e3 ( adding results parsing section to guide)
 
 ##### GP MPC Plotting
 
-The GP MPC approach has plotting capabilities to visualize the gaussian process in each dimension. To enable plotting for gp_mpc,  
+The GP MPC approach has plotting capabilities to visualize the gaussian process in each dimension. To enable plotting for gp_mpc, add `plot: true` to your configuration file, in your experiment script add it directly to where the control agent is made, or add it as a commandline argument, based on your preference: 
+
+Option 2: 
+```
+control_agent = make(config.algo,
+                        env_func,
+                        checkpoint_path=os.path.join(config.output_dir, "model_latest.pt"),
+                        output_dir=config.output_dir,
+                        device=config.device,
+                        seed=config.seed,
+                        plot=True,
+                        **config.algo_config)
+```
+Option 3: 
+```
+fac = ConfigFactory()
+fac.add_argument("--plot", type=str, default="False", help="Whether or not to plot for gp_mpc controller")
+config = fac.merge()
+```
 
 ## Using configuration/override files 
 
