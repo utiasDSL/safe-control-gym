@@ -52,7 +52,7 @@ class SafetyLayer:
         # Constraint slack variables/values.
         assert slack is not None and isinstance(slack, (int, float, list))
         if isinstance(slack, (int, float)):
-            slack = [slack]
+            slack = [slack]*obs_space.shape[0]
         self.slack = np.array(slack)
         # Optimizers.
         self.optimizers = [
