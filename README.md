@@ -30,7 +30,7 @@ git clone https://github.com/utiasDSL/safe-control-gym.git
 cd safe-control-gym
 ```
 
-### Using conda
+### Option A (recommended): using conda 
 
 Create and access a Python 3.8 environment using
 [`conda`](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
@@ -48,7 +48,7 @@ pip install -e .
 ```
 
 
-### Using venv and poetry
+### Option B: using venv and poetry
 
 Create and access a Python 3.8 virtual environment using
 [`pyenv`](https://github.com/pyenv/pyenv) and
