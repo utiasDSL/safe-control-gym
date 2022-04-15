@@ -53,7 +53,9 @@ class MPC(BaseController):
         """Prepares for training or evaluation.
 
         """
-        self.init_obs = self.env.reset()
+        self.init_obs, init_info = self.env.reset()
+        self.reference = init_info['x_reference']
+
         # Setup reference input.
         if self.env.TASK == Task.STABILIZATION:
             self.mode = "stabilization"
@@ -74,9 +76,15 @@ class MPC(BaseController):
                                                                 GENERAL_CONSTRAINTS,
                                                                 self.env)
             self.additional_constraints = additional_ConstraintsList.constraints
-            self.reset_constraints(self.env.constraints.constraints + self.additional_constraints)
+            if self.env.constraints is None:
+                self.reset_constraints(self.additional_constraints)
+            else:
+                self.reset_constraints(self.env.constraints.constraints + self.additional_constraints)
         else:
-            self.reset_constraints(self.env.constraints.constraints)
+            if self.env.constraints is not None:
+                self.reset_constraints(self.env.constraints.constraints)
+            else:
+                self.reset_constraints([])
             self.additional_constraints = []
         # Dynamics model.
         self.set_dynamics_func()

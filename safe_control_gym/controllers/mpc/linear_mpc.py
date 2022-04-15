@@ -57,8 +57,11 @@ class LinearMPC(MPC):
             additional_constraints=additional_constraints,
             **kwargs
         )
+
+    def reset(self):
         self.X_LIN = np.atleast_2d(self.env.X_GOAL)[0,:].T
         self.U_LIN = np.atleast_2d(self.env.U_GOAL)[0,:]
+        super().reset()
 
     def set_dynamics_func(self):
         """Updates symbolic dynamics with actual control frequency.

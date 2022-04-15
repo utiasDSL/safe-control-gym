@@ -41,8 +41,8 @@ def main():
                            'quadrotor',
                            **config.quadrotor_config
                            )
-        ctrl = make('pid',
-                    env=env_func,
+        ctrl = make(config.controller,
+                    env_func=env_func,
                     )
                     
         reference_traj = ctrl.reference

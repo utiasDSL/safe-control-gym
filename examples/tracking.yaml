@@ -1,3 +1,4 @@
+controller: 'pid'
 quadrotor_config:
   seed: 1337
   info_in_reset: True
