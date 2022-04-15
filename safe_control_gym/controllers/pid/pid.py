@@ -65,7 +65,7 @@ class PID(BaseController):
         self.reset()
 
     def run(self,
-            iterations,
+            max_steps=100,
             **kwargs
             ):
         """Computes the PID control action (as RPMs) for a single drone.
@@ -92,7 +92,7 @@ class PID(BaseController):
         """
         action = np.zeros(2)
 
-        for i in range(iterations):
+        for i in range(max_steps):
             # Step the environment and print all returned information.
             obs, reward, done, info = self.env.step(action)
 

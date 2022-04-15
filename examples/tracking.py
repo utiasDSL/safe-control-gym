@@ -24,8 +24,8 @@ def main():
     CONFIG_FACTORY = ConfigFactory()               
     config = CONFIG_FACTORY.merge()
     
-    # Set iterations and episode counter.
-    ITERATIONS = int(config.quadrotor_config['episode_len_sec']*config.quadrotor_config['ctrl_freq'])
+    # Set max_steps and episode counter.
+    max_steps = int(config.quadrotor_config['episode_len_sec']*config.quadrotor_config['ctrl_freq'])
     
     for i in range(3):
         # Start a timer.
@@ -42,7 +42,7 @@ def main():
                            **config.quadrotor_config
                            )
         ctrl = make('pid',
-                    env_func,
+                    env=env_func,
                     )
                     
         reference_traj = ctrl.reference
@@ -55,10 +55,10 @@ def main():
                                physicsClientId=ctrl.env.PYB_CLIENT)
 
         # Run the experiment.
-        results = ctrl.run(iterations=ITERATIONS)
+        results = ctrl.run(max_steps=max_steps)
                 
         # Plot the experiment.
-        for i in range(ITERATIONS):
+        for i in range(max_steps):
             # Step the environment and print all returned information.
             obs, reward, done, info, action = results['obs'][i], results['reward'][i], results['done'][i], results['info'][i], results['action'][i]
             
@@ -70,7 +70,7 @@ def main():
 
         elapsed_sec = time.time() - START
         print("\n{:d} iterations (@{:d}Hz) and {:d} episodes in {:.2f} seconds, i.e. {:.2f} steps/sec for a {:.2f}x speedup.\n"
-              .format(ITERATIONS, config.quadrotor_config.ctrl_freq, 1, elapsed_sec, ITERATIONS/elapsed_sec, (ITERATIONS*(1. / config.quadrotor_config.ctrl_freq))/elapsed_sec))
+              .format(max_steps, config.quadrotor_config.ctrl_freq, 1, elapsed_sec, max_steps/elapsed_sec, (max_steps*(1. / config.quadrotor_config.ctrl_freq))/elapsed_sec))
 
 
 if __name__ == "__main__":
