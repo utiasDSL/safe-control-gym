@@ -130,8 +130,9 @@ class TubeMPC(MPC):
         A, B = discretize_linear_system(A, B, self.model.dt)
         P = scipy.linalg.solve_discrete_are(A, B, self.Q, self.R)
         btp = np.dot(B.T, P)
-        self.K = np.dot(np.linalg.inv(self.R + np.dot(btp, B)),
+        self.K = -1 * np.dot(np.linalg.inv(self.R + np.dot(btp, B)),
                            np.dot(btp, A))
+        print('K: {}'.format(self.K))
 
     def set_dynamics_func(self):
         """Updates symbolic dynamics with actual control frequency.
@@ -280,5 +281,6 @@ class TubeMPC(MPC):
         else:
             action = np.array([u_val[0]])
         action += self.U_LIN
+        action += self.K @ (obs - (x_val[:, 0] + self.X_LIN))
         self.prev_action = action
         return action
