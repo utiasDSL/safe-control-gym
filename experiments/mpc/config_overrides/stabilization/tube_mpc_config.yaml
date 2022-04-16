@@ -1,0 +1,33 @@
+algo_config:
+  horizon: 5
+  r_mpc:
+    - 1.
+  q_mpc:
+    - 10.
+    - 1.
+    - 10.
+    - 1.
+    - 0.01
+    - 0.001
+  use_prev_start: True
+  additional_constraints:
+    - constraint_form: linear_constraint
+      A:
+        - [ -1.0, 0.0, 1.0, 0.0, 0.0, 0.0 ]
+      b:
+        - 1.1
+      constrained_variable: state
+  wmin:
+    - -0.01088052
+    - -0.17558181
+    - -0.0184635
+    - -0.36668783
+    - -0.03066587
+    - -0.27536048
+  wmax:
+    - 0.01060329
+    - 0.17244758
+    - 0.01411587
+    - 0.27917838
+    - 0.03146067
+    - 0.28972009

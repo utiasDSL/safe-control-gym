@@ -1,16 +1,3 @@
-algo_config:
-  horizon: 5
-  r_mpc:
-    - 1.
-  q_mpc:
-    - 10.
-    - 1.
-    - 10.
-    - 1.
-    - 0.01
-    - 0.001
-  use_prev_start: True
-
 quadrotor_config:
   seed: 1337
   info_in_reset: True

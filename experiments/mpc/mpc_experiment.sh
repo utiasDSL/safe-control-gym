@@ -2,9 +2,13 @@
 
 # MPC Experiment.
 
-## Tracking
-python3 ./mpc_experiment.py --task quadrotor --algo linear_mpc --overrides ./mpc_quad.yaml
+# ENV="cartpole"
+ENV="quadrotor"
 
-python3 ./mpc_experiment.py --task quadrotor --algo linear_mpc --overrides ./mpc_stab.yaml
+TASK="stabilization"
+# TASK="tracking"
 
-python3 ./mpc_experiment.py --task quadrotor --algo tube_mpc --overrides ./tube_mpc_stab.yaml
+# ALGO="linear_mpc"
+ALGO="tube_mpc"
+
+python3 ./mpc_experiment.py --task ${ENV} --algo ${ALGO} --overrides ./config_overrides/${TASK}/${ENV}_config.yaml ./config_overrides/${TASK}/${ALGO}_config.yaml

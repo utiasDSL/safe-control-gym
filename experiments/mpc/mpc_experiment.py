@@ -82,6 +82,5 @@ def main():
     print('wmax: {}'.format(wmax))
 
 
-
 if __name__ == "__main__":
     main()

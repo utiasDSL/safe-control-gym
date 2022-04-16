@@ -145,8 +145,6 @@ class MPC(BaseController):
         """
         self.env.close()
 
-
-
     def set_dynamics_func(self):
         """Updates symbolic dynamics with actual control frequency.
 
