@@ -1,5 +1,5 @@
 # MPC args
-horizon: 10
+horizon: 5
 r_mpc:
   - 1.
 q_mpc:

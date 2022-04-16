@@ -11,6 +11,7 @@ Run as:
 import time
 import pybullet as p
 from functools import partial
+import numpy as np
 
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
@@ -53,9 +54,10 @@ def main():
     # Run the experiment.
     results = ctrl.run(max_steps=max_steps)
     ctrl.close()
-            
+
+    N = len(results['obs']) - 1
     # Plot the experiment.
-    for i in range(max_steps):
+    for i in range(N):
         # Step the environment and print all returned information.
         obs, reward, done, info, action = results['obs'][i], results['reward'][i], results['done'][i], results['info'][i], results['action'][i]
         
@@ -63,9 +65,22 @@ def main():
         print(i, '-th step.')
         print(action, '\n', obs, '\n', reward, '\n', done, '\n', info, '\n')
 
-    elapsed_sec = time.time() - START
-    print("\n{:d} max_steps (@{:d}Hz) and {:d} episodes in {:.2f} seconds, i.e. {:.2f} steps/sec for a {:.2f}x speedup.\n"
-            .format(max_steps, config.quadrotor_config.ctrl_freq, 1, elapsed_sec, max_steps/elapsed_sec, (max_steps*(1. / config.quadrotor_config.ctrl_freq))/elapsed_sec))
+    # Calculate the maximum disturbance:
+    D = results['obs'][0].shape[0]
+    disturbances = np.zeros((N, D))
+    for i in range(N):
+            xkp1 = results['horizon_states'][i][:,1]
+            obs = results['obs'][i + 1]
+            disturbances[i,:] = obs - xkp1
+    print('min disturbance: {}'.format(np.min(disturbances, axis=0)))            
+    print('max disturbance: {}'.format(np.max(disturbances, axis=0)))
+    print('mean disturbance: {}'.format(np.mean(disturbances, axis=0)))
+    print('std dev disturbance: {}'.format(np.std(disturbances, axis=0)))
+    wmin = np.mean(disturbances, axis=0) - 3 * np.std(disturbances, axis=0)
+    wmax = np.mean(disturbances, axis=0) + 3 * np.std(disturbances, axis=0)
+    print('wmin: {}'.format(wmin))
+    print('wmax: {}'.format(wmax))
+
 
 
 if __name__ == "__main__":

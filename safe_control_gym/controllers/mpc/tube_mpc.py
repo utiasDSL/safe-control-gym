@@ -1,7 +1,7 @@
 """ Robust (Tube) Model Predictive Control
 
 Based on:
-	* D. Mayne, M. Seron and S. Raković "Robust model predictive control of constrained linear
+    * D. Mayne, M. Seron and S. Raković "Robust model predictive control of constrained linear
 systems with bounded disturbance," in Automatica 41(2): 219–224. 2005. doi: https://doi.org/10.1016/
 j.automatica.2004.08.019
 
@@ -9,17 +9,20 @@ j.automatica.2004.08.019
 
 import numpy as np
 import casadi as cs
+import scipy.linalg
 
 from sys import platform
 from copy import deepcopy
 
 from safe_control_gym.controllers.mpc.mpc import MPC
+from safe_control_gym.controllers.mpc.mpc_utils import discretize_linear_system, get_cost_weight_matrix
+from safe_control_gym.envs.constraints import ConstraintList, GENERAL_CONSTRAINTS, create_constraint_list
 from safe_control_gym.envs.benchmark_env import Task
 
 class TubeMPC(MPC):
-	"""Robust linear tube MPC 
+    """Robust linear tube MPC 
 
-	"""
+    """
 
     def __init__(
             self,
@@ -27,6 +30,8 @@ class TubeMPC(MPC):
             horizon=5,
             q_mpc=[1],
             r_mpc=[1],
+            wmin=[-0.1],
+            wmax=[0.1],
             warmstart=True,
             output_dir="results/temp",
             additional_constraints=[],
@@ -59,9 +64,74 @@ class TubeMPC(MPC):
         )
 
     def reset(self):
+        """Prepares for training or evaluation.
+
+        """
+        self.init_obs, init_info = self.env.reset()
+        self.reference = init_info['x_reference']
+
+        # Setup reference input.
+        if self.env.TASK == Task.STABILIZATION:
+            self.mode = "stabilization"
+            self.x_goal = self.env.X_GOAL
+        elif self.env.TASK == Task.TRAJ_TRACKING:
+            self.mode = "tracking"
+            self.traj = self.env.X_GOAL.T
+            # Step along the reference.
+            self.traj_step = 0
+        self.wmin = np.array(self.wmin)
+        self.wmax = np.array(self.wmax)
+        # Model parameters
+        self.model = self.env.symbolic
         self.X_LIN = np.atleast_2d(self.env.X_GOAL)[0,:].T
         self.U_LIN = np.atleast_2d(self.env.U_GOAL)[0,:]
-        super().reset()
+        self.dt = self.model.dt
+        self.Q = get_cost_weight_matrix(self.q_mpc, self.model.nx)
+        self.R = get_cost_weight_matrix(self.r_mpc, self.model.nu)
+        self.compute_lqr_gain(self.X_LIN, self.U_LIN)  # calculates self.K
+        # Constraints
+        if self.additional_constraints_input is not None:
+            additional_ConstraintsList = create_constraint_list(self.additional_constraints_input,
+                                                                GENERAL_CONSTRAINTS,
+                                                                self.env)
+            self.additional_constraints = additional_ConstraintsList.constraints
+            if self.env.constraints is None:
+                self.reset_constraints(self.additional_constraints)
+            else:
+                self.reset_constraints(self.env.constraints.constraints + self.additional_constraints)
+        else:
+            if self.env.constraints is not None:
+                self.reset_constraints(self.env.constraints.constraints)
+            else:
+                self.reset_constraints([])
+            self.additional_constraints = []
+        # Dynamics model.
+        self.set_dynamics_func()
+        # CasADi optimizer.
+        self.setup_optimizer()
+        # Previously solved states & inputs, useful for warm start.
+        self.x_prev = None
+        self.u_prev = None
+        self.reset_results_dict()
+        
+
+    # def reset(self):
+    #     self.X_LIN = np.atleast_2d(self.env.X_GOAL)[0,:].T
+    #     self.U_LIN = np.atleast_2d(self.env.U_GOAL)[0,:]
+    #     super().reset()
+    #     self.compute_lqr_gain(self.X_LIN, self.U_LIN)
+
+    def compute_lqr_gain(self, x_0, u_0):
+        # Linearization.
+        df = self.model.df_func(x=x_0, u=u_0)
+        A = df['dfdx'].toarray()
+        B = df['dfdu'].toarray()
+        # Compute controller gain.
+        A, B = discretize_linear_system(A, B, self.model.dt)
+        P = scipy.linalg.solve_discrete_are(A, B, self.Q, self.R)
+        btp = np.dot(B.T, P)
+        self.K = np.dot(np.linalg.inv(self.R + np.dot(btp, B)),
+                           np.dot(btp, A))
 
     def set_dynamics_func(self):
         """Updates symbolic dynamics with actual control frequency.
@@ -127,9 +197,11 @@ class TubeMPC(MPC):
             opti.subject_to(x_var[:, i + 1] == next_state)
             # State and input constraints.
             for state_constraint in self.state_constraints_sym:
-                opti.subject_to(state_constraint(x_var[:,i] + self.X_LIN.T) < 0)
+                opti.subject_to(state_constraint(x_var[:,i] + self.X_LIN.T + self.wmax) < 0)
+                opti.subject_to(state_constraint(x_var[:,i] + self.X_LIN.T + self.wmin) < 0)
             for input_constraint in self.input_constraints_sym:
-                opti.subject_to(input_constraint(u_var[:,i] + self.U_LIN.T) < 0)
+                opti.subject_to(input_constraint(u_var[:,i] + self.U_LIN.T + self.K @ self.wmax) < 0)
+                opti.subject_to(input_constraint(u_var[:,i] + self.U_LIN.T + self.K @ self.wmin) < 0)
         # Final state constraints.
         for state_constraint in self.state_constraints_sym:
             opti.subject_to(state_constraint(x_var[:,-1] + self.X_LIN.T)  < 0)

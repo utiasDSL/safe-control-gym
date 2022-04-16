@@ -94,6 +94,8 @@ class MPC(BaseController):
         self.x_prev = None
         self.u_prev = None
         self.reset_results_dict()
+        print('state cons: {}'.format(len(self.state_constraints_sym)))
+        print('input cons: {}'.format(len(self.input_constraints_sym)))
 
     def reset_constraints(self,
                           constraints
