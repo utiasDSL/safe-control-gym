@@ -41,10 +41,10 @@ def main():
                            'quadrotor',
                            **config.quadrotor_config
                            )
-        ctrl = make(config.controller,
+        ctrl = make('pid',
                     env_func=env_func,
                     )
-                    
+
         reference_traj = ctrl.reference
 
         # Plot trajectory.

@@ -37,6 +37,7 @@ def main():
                     )
     ctrl = make(config.algo,
                 env_func,
+                **config.algo_config
                 )
                 
     if config.quadrotor_config.task == 'traj_tracking':
@@ -50,7 +51,7 @@ def main():
                                 physicsClientId=ctrl.env.PYB_CLIENT)
 
     # Run the experiment.
-    results = ctrl.run( max_steps=max_steps)
+    results = ctrl.run(max_steps=max_steps)
     ctrl.close()
             
     # Plot the experiment.
