@@ -16,7 +16,7 @@ from copy import deepcopy
 
 from safe_control_gym.controllers.mpc.mpc import MPC
 from safe_control_gym.controllers.mpc.mpc_utils import discretize_linear_system, get_cost_weight_matrix
-from safe_control_gym.envs.constraints import ConstraintList, GENERAL_CONSTRAINTS, create_constraint_list
+from safe_control_gym.envs.constraints import GENERAL_CONSTRAINTS, create_constraint_list
 from safe_control_gym.envs.benchmark_env import Task
 
 class TubeMPC(MPC):
@@ -35,6 +35,8 @@ class TubeMPC(MPC):
             warmstart=True,
             output_dir="results/temp",
             additional_constraints=[],
+            n_samples=600,
+            sigma_confidence=3,
             **kwargs):
         """Creates task and controller.
 
@@ -48,10 +50,14 @@ class TubeMPC(MPC):
             additional_constraints (list): list of constraints.
 
         """
+        self.n_samples = n_samples
+        self.sigma_confidence = sigma_confidence
+
         # Store all params/args.
         for k, v in locals().items():
             if k != "self" and k != "kwargs" and "__" not in k:
                 self.__dict__[k] = v
+
         super().__init__(
             env_func,
             horizon=horizon,
@@ -113,13 +119,6 @@ class TubeMPC(MPC):
         self.x_prev = None
         self.u_prev = None
         self.reset_results_dict()
-        
-
-    # def reset(self):
-    #     self.X_LIN = np.atleast_2d(self.env.X_GOAL)[0,:].T
-    #     self.U_LIN = np.atleast_2d(self.env.U_GOAL)[0,:]
-    #     super().reset()
-    #     self.compute_lqr_gain(self.X_LIN, self.U_LIN)
 
     def compute_lqr_gain(self, x_0, u_0):
         # Linearization.
@@ -284,3 +283,34 @@ class TubeMPC(MPC):
         action += self.K @ (obs - (x_val[:, 0] + self.X_LIN))
         self.prev_action = action
         return action
+
+    def learn(self,
+              env=None
+              ):
+        """Compute the bounded disturbance set.
+        Args:
+            env (BenchmarkEnv): If a different environment is to be used for learning, can supply it here.
+        """
+
+        if env is None:
+            env = self.training_env
+
+        # Create set of error residuals.
+        w = np.zeros((self.model.nx, self.n_samples))
+
+        # Use uniform sampling of control inputs and states.
+        for i in range(self.n_samples):
+            init_state, _ = env.reset()
+            if self.env.NAME == 'quadrotor':
+                u = np.random.rand(self.model.nu)/8 - 1/16 + self.U_LIN
+            else:
+                u = env.action_space.sample() # Will yield a random action within action space.
+            x_next_obs, _, _, _ = env.step(u)
+            x_next_estimated = self.linear_dynamics_func(x0=init_state, p=u)['xf'].toarray()
+            w[:,i] = x_next_obs - x_next_estimated[:,0]
+
+        self.wmax = np.mean(w.T, axis=0) + self.sigma_confidence*np.std(w.T, axis=0)
+        self.wmin = np.mean(w.T, axis=0) - self.sigma_confidence*np.std(w.T, axis=0)
+
+        # Now that constraints are defined, setup the optimizer.
+        self.setup_optimizer()

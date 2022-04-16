@@ -1,10 +1,11 @@
 seed: 79123 #9078
-quadrotor_config:
+task: quadrotor
+task_config:
   task: stabilization
   ctrl_freq: 10
   episode_len_sec: 5
   pyb_freq: 240
-  gui: True
+  gui: False
   init_state:
     init_x: -1
     init_x_dot: 0
@@ -24,5 +25,8 @@ quadrotor_config:
       upper_bounds:
         - 0.4
         - 0.4
+      lower_bounds:
+        - -0.4
+        - -0.4
   done_on_violation: True
   disturbances: null

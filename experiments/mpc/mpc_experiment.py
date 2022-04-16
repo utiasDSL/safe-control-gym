@@ -24,9 +24,9 @@ def main():
     # Create an environment
     CONFIG_FACTORY = ConfigFactory()               
     config = CONFIG_FACTORY.merge()
-    
+
     # Set max_steps and episode counter.
-    max_steps = int(config.quadrotor_config['episode_len_sec']*config.quadrotor_config['ctrl_freq'])
+    max_steps = int(config.task_config['episode_len_sec']*config.task_config['ctrl_freq'])
     
     # Start a timer.
     START = time.time()
@@ -34,14 +34,18 @@ def main():
     # Create controller.
     env_func = partial(make,
                     config.task,
-                    **config.quadrotor_config
+                    **config.task_config
                     )
     ctrl = make(config.algo,
                 env_func,
                 **config.algo_config
                 )
+
+    train_env = env_func(randomized_init=True, init_state=None, disturbances=None) # training without disturbances
+    # train_env = env_func(randomized_init=True, init_state=None) # training with disturbances
+    # ctrl.learn(env=train_env)
                 
-    if config.quadrotor_config.task == 'traj_tracking':
+    if config.task_config.task == 'traj_tracking':
         reference_traj = ctrl.reference
 
         # Plot trajectory.
