@@ -56,17 +56,21 @@ def discretize_linear_system(A,
         Bd = B * dt
     return Ad, Bd
 
-def compute_min_RPI(A, W, eps=1e-5, s_max=50):
+def compute_min_RPI(A, wmax, eps=1e-5, s_max=50):
     """Compute the minimal robust positively invariant set (mRPI)
     
     From: Rakovic et al. (2005, IEEE Tran on Automatic Control)
 
     Args:
         A: np.array, system transition matrix
-        W: pytope.Polytope, defines the disturbance bounds
+        w: np.array, defines the disturbance bounds |w| < wmax
         eps: float, precision criteria for stopping (eq 14 : Rakovic, 2005)
         s_max: int, max number of iterations
     """
+    if abs(np.linalg.det(np.eye(A.shape[0]) + A) - 1) < 1.0e-8:
+        raise NotImplementedError("mRPI for nilpotent A not yet implemented")
+
+    W = Polytope(lb=-wmax, ub=wmax)
     return pytope.eps_MRPI(A, W, eps, s_max)
 
 

@@ -69,22 +69,5 @@ def main():
         print(i, '-th step.')
         print(action, '\n', obs, '\n', reward, '\n', done, '\n', info, '\n')
 
-    # Calculate the maximum disturbance:
-    D = results['obs'][0].shape[0]
-    disturbances = np.zeros((N, D))
-    for i in range(N):
-            xkp1 = results['horizon_states'][i][:,1]
-            obs = results['obs'][i + 1]
-            disturbances[i,:] = obs - xkp1
-    print('min disturbance: {}'.format(np.min(disturbances, axis=0)))            
-    print('max disturbance: {}'.format(np.max(disturbances, axis=0)))
-    print('mean disturbance: {}'.format(np.mean(disturbances, axis=0)))
-    print('std dev disturbance: {}'.format(np.std(disturbances, axis=0)))
-    wmin = np.mean(disturbances, axis=0) - 3 * np.std(disturbances, axis=0)
-    wmax = np.mean(disturbances, axis=0) + 3 * np.std(disturbances, axis=0)
-    print('wmin: {}'.format(wmin))
-    print('wmax: {}'.format(wmax))
-
-
 if __name__ == "__main__":
     main()

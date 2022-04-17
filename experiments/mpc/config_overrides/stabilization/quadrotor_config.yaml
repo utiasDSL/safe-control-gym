@@ -5,7 +5,7 @@ task_config:
   ctrl_freq: 10
   episode_len_sec: 5
   pyb_freq: 240
-  gui: False
+  gui: True
   init_state:
     init_x: -1
     init_x_dot: 0
@@ -20,6 +20,20 @@ task_config:
   constraints:
     - constraint_form: default_constraint
       constrained_variable: state
+      # upper_bounds:
+      #   - 0.25
+      #   - 2.0
+      #   - 0.25
+      #   - 2.0
+      #   - 3.14
+      #   - 30.0
+      # lower_bounds:
+      #   - -1.25
+      #   - -2.0
+      #   - -0.25
+      #   - -2.0
+      #   - -3.14
+      #   - -30.0
     - constraint_form: default_constraint
       constrained_variable: input
       upper_bounds:

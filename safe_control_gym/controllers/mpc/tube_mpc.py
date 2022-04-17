@@ -16,8 +16,12 @@ from copy import deepcopy
 
 from safe_control_gym.controllers.mpc.mpc import MPC
 from safe_control_gym.controllers.mpc.mpc_utils import discretize_linear_system, get_cost_weight_matrix
+from safe_control_gym.controllers.mpc.mpc_utils import compute_min_RPI
 from safe_control_gym.envs.constraints import GENERAL_CONSTRAINTS, create_constraint_list
 from safe_control_gym.envs.benchmark_env import Task
+
+# Notes:
+# state constraints must be polytopes, so far only tested BoundedConstraint
 
 class TubeMPC(MPC):
     """Robust linear tube MPC 
@@ -30,13 +34,14 @@ class TubeMPC(MPC):
             horizon=5,
             q_mpc=[1],
             r_mpc=[1],
-            wmin=[-0.1],
             wmax=[0.1],
             warmstart=True,
             output_dir="results/temp",
             additional_constraints=[],
             n_samples=600,
             sigma_confidence=3,
+            eps_rpi=1e-5,
+            s_max_rpi=50,
             **kwargs):
         """Creates task and controller.
 
@@ -48,10 +53,10 @@ class TubeMPC(MPC):
             warmstart (bool): if to initialize from previous iteration.
             output_dir (str): output directory to write logs and results.
             additional_constraints (list): list of constraints.
+            n_samples (int): number of samples used to learn disturbances.
+            sigma_confidence (int): num of std devs to compute learned dist bound.
 
         """
-        self.n_samples = n_samples
-        self.sigma_confidence = sigma_confidence
 
         # Store all params/args.
         for k, v in locals().items():
@@ -68,57 +73,20 @@ class TubeMPC(MPC):
             additional_constraints=additional_constraints,
             **kwargs
         )
+        print(self.constraints_input)
 
     def reset(self):
         """Prepares for training or evaluation.
 
         """
-        self.init_obs, init_info = self.env.reset()
-        self.reference = init_info['x_reference']
-
-        # Setup reference input.
-        if self.env.TASK == Task.STABILIZATION:
-            self.mode = "stabilization"
-            self.x_goal = self.env.X_GOAL
-        elif self.env.TASK == Task.TRAJ_TRACKING:
-            self.mode = "tracking"
-            self.traj = self.env.X_GOAL.T
-            # Step along the reference.
-            self.traj_step = 0
-        self.wmin = np.array(self.wmin)
         self.wmax = np.array(self.wmax)
-        # Model parameters
-        self.model = self.env.symbolic
         self.X_LIN = np.atleast_2d(self.env.X_GOAL)[0,:].T
         self.U_LIN = np.atleast_2d(self.env.U_GOAL)[0,:]
-        self.dt = self.model.dt
+        self.model = self.env.symbolic
         self.Q = get_cost_weight_matrix(self.q_mpc, self.model.nx)
         self.R = get_cost_weight_matrix(self.r_mpc, self.model.nu)
-        self.compute_lqr_gain(self.X_LIN, self.U_LIN)  # calculates self.K
-        # Constraints
-        if self.additional_constraints_input is not None:
-            additional_ConstraintsList = create_constraint_list(self.additional_constraints_input,
-                                                                GENERAL_CONSTRAINTS,
-                                                                self.env)
-            self.additional_constraints = additional_ConstraintsList.constraints
-            if self.env.constraints is None:
-                self.reset_constraints(self.additional_constraints)
-            else:
-                self.reset_constraints(self.env.constraints.constraints + self.additional_constraints)
-        else:
-            if self.env.constraints is not None:
-                self.reset_constraints(self.env.constraints.constraints)
-            else:
-                self.reset_constraints([])
-            self.additional_constraints = []
-        # Dynamics model.
-        self.set_dynamics_func()
-        # CasADi optimizer.
-        self.setup_optimizer()
-        # Previously solved states & inputs, useful for warm start.
-        self.x_prev = None
-        self.u_prev = None
-        self.reset_results_dict()
+        self.compute_lqr_gain(self.X_LIN, self.U_LIN)
+        super().reset()
 
     def compute_lqr_gain(self, x_0, u_0):
         # Linearization.
@@ -127,11 +95,11 @@ class TubeMPC(MPC):
         B = df['dfdu'].toarray()
         # Compute controller gain.
         A, B = discretize_linear_system(A, B, self.model.dt)
-        P = scipy.linalg.solve_discrete_are(A, B, self.Q, self.R)
-        btp = np.dot(B.T, P)
+        self.P = scipy.linalg.solve_discrete_are(A, B, self.Q, self.R)
+        btp = np.dot(B.T, self.P)
         self.K = -1 * np.dot(np.linalg.inv(self.R + np.dot(btp, B)),
                            np.dot(btp, A))
-        print('K: {}'.format(self.K))
+        self.A = A
 
     def set_dynamics_func(self):
         """Updates symbolic dynamics with actual control frequency.
@@ -163,6 +131,8 @@ class TubeMPC(MPC):
         """
         nx, nu = self.model.nx, self.model.nu
         T = self.T
+        # Compute minimal Robust Positively Invariant (mRPI) set:
+        Z = compute_min_RPI(self.A, self.wmax, self.eps_rpi, self.s_max_rpi)
         # Define optimizer and variables.
         opti = cs.Opti()
         # States.
@@ -198,10 +168,10 @@ class TubeMPC(MPC):
             # State and input constraints.
             for state_constraint in self.state_constraints_sym:
                 opti.subject_to(state_constraint(x_var[:,i] + self.X_LIN.T + self.wmax) < 0)
-                opti.subject_to(state_constraint(x_var[:,i] + self.X_LIN.T + self.wmin) < 0)
+                opti.subject_to(state_constraint(x_var[:,i] + self.X_LIN.T - self.wmax) < 0)
             for input_constraint in self.input_constraints_sym:
                 opti.subject_to(input_constraint(u_var[:,i] + self.U_LIN.T + self.K @ self.wmax) < 0)
-                opti.subject_to(input_constraint(u_var[:,i] + self.U_LIN.T + self.K @ self.wmin) < 0)
+                opti.subject_to(input_constraint(u_var[:,i] + self.U_LIN.T - self.K @ self.wmax) < 0)
         # Final state constraints.
         for state_constraint in self.state_constraints_sym:
             opti.subject_to(state_constraint(x_var[:,-1] + self.X_LIN.T)  < 0)
@@ -310,7 +280,7 @@ class TubeMPC(MPC):
             w[:,i] = x_next_obs - x_next_estimated[:,0]
 
         self.wmax = np.mean(w.T, axis=0) + self.sigma_confidence*np.std(w.T, axis=0)
-        self.wmin = np.mean(w.T, axis=0) - self.sigma_confidence*np.std(w.T, axis=0)
+        print('Learned distur')
 
         # Now that constraints are defined, setup the optimizer.
         self.setup_optimizer()

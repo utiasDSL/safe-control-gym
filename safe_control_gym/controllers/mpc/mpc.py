@@ -94,8 +94,6 @@ class MPC(BaseController):
         self.x_prev = None
         self.u_prev = None
         self.reset_results_dict()
-        print('state cons: {}'.format(len(self.state_constraints_sym)))
-        print('input cons: {}'.format(len(self.input_constraints_sym)))
 
     def reset_constraints(self,
                           constraints
@@ -106,6 +104,7 @@ class MPC(BaseController):
             constraints (list): List of constraints controller is subject to.
 
         """
+        self.constraints_input = constraints
         self.constraints = ConstraintList(constraints)
         self.state_constraints_sym = self.constraints.get_state_constraint_symbolic_models()
         self.input_constraints_sym = self.constraints.get_input_constraint_symbolic_models()

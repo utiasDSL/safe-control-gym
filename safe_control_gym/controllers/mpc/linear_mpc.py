@@ -59,6 +59,9 @@ class LinearMPC(MPC):
         )
 
     def reset(self):
+        """Prepares for training or evaluation.
+
+        """
         self.X_LIN = np.atleast_2d(self.env.X_GOAL)[0,:].T
         self.U_LIN = np.atleast_2d(self.env.U_GOAL)[0,:]
         super().reset()
