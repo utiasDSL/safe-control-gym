@@ -3,6 +3,8 @@
 """
 import numpy as np
 import scipy
+from pytope import Polytope
+import pytope
 
 
 def get_cost_weight_matrix(weights,
@@ -53,3 +55,19 @@ def discretize_linear_system(A,
         Ad = I + A * dt
         Bd = B * dt
     return Ad, Bd
+
+def compute_min_RPI(A, W, eps=1e-5, s_max=50):
+    """Compute the minimal robust positively invariant set (mRPI)
+    
+    From: Rakovic et al. (2005, IEEE Tran on Automatic Control)
+
+    Args:
+        A: np.array, system transition matrix
+        W: pytope.Polytope, defines the disturbance bounds
+        eps: float, precision criteria for stopping (eq 14 : Rakovic, 2005)
+        s_max: int, max number of iterations
+    """
+    return pytope.eps_MRPI(A, W, eps, s_max)
+
+
+
