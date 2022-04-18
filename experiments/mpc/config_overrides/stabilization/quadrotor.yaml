@@ -2,7 +2,7 @@ seed: 79123 #9078
 task: quadrotor
 task_config:
   task: stabilization
-  ctrl_freq: 10
+  ctrl_freq: 60
   episode_len_sec: 5
   pyb_freq: 240
   gui: True
@@ -37,12 +37,12 @@ task_config:
     - constraint_form: default_constraint
       constrained_variable: input
       upper_bounds:
-        - 0.4
-        - 0.4
+        - 0.2
+        - 0.2
       lower_bounds:
-        - -0.4
-        - -0.4
-  done_on_violation: False
+        - -0.2
+        - -0.2
+  done_on_violation: True
   disturbances: null
   task_info:
     stabilization_goal: [0, 0]

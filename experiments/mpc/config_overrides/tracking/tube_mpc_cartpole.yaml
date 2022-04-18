@@ -1,0 +1,19 @@
+algo_config:
+  horizon: 5
+  r_mpc:
+    - 1.
+  q_mpc:
+    - 10.
+    - 1.
+    - 10.
+    - 1.
+  use_prev_start: True
+  wmax:
+    - 0.1
+    - 0.1
+    - 0.1
+    - 0.1
+  n_samples: 600
+  sigma_confidence: 3
+  eps_rpi: 1.0e-2
+  s_max_rpi: 100

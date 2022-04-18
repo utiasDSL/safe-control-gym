@@ -10,6 +10,7 @@ j.automatica.2004.08.019
 import numpy as np
 import casadi as cs
 import scipy.linalg
+import matplotlib.pyplot as plt
 
 from sys import platform
 from copy import deepcopy
@@ -73,7 +74,6 @@ class TubeMPC(MPC):
             additional_constraints=additional_constraints,
             **kwargs
         )
-        print(self.constraints_input)
 
     def reset(self):
         """Prepares for training or evaluation.
@@ -86,6 +86,17 @@ class TubeMPC(MPC):
         self.Q = get_cost_weight_matrix(self.q_mpc, self.model.nx)
         self.R = get_cost_weight_matrix(self.r_mpc, self.model.nu)
         self.compute_lqr_gain(self.X_LIN, self.U_LIN)
+        # Compute minimal Robust Positively Invariant (mRPI) set:
+        print('computing min RPI...')
+        Ak = self.A + self.B @ self.K
+        self.Z, _ = compute_min_RPI(Ak, self.wmax, self.eps_rpi, self.s_max_rpi)
+        print(self.Z.A.shape)
+        print(self.Z.b.shape)
+        fig1, ax1 = plt.subplots(num=1)
+        plt.grid()
+        plt.axis([-1.5, 4.5, -2.5, 3.5])
+        self.Z.plot(ax1, fill=False, edgecolor='r', linewidth=2)
+        plt.show()
         super().reset()
 
     def compute_lqr_gain(self, x_0, u_0):
@@ -100,6 +111,7 @@ class TubeMPC(MPC):
         self.K = -1 * np.dot(np.linalg.inv(self.R + np.dot(btp, B)),
                            np.dot(btp, A))
         self.A = A
+        self.B = B
 
     def set_dynamics_func(self):
         """Updates symbolic dynamics with actual control frequency.
@@ -131,8 +143,6 @@ class TubeMPC(MPC):
         """
         nx, nu = self.model.nx, self.model.nu
         T = self.T
-        # Compute minimal Robust Positively Invariant (mRPI) set:
-        Z = compute_min_RPI(self.A, self.wmax, self.eps_rpi, self.s_max_rpi)
         # Define optimizer and variables.
         opti = cs.Opti()
         # States.

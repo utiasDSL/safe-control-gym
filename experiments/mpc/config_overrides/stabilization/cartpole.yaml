@@ -1,0 +1,33 @@
+seed: 42
+task_config:
+  task: stabilization
+  ctrl_freq: 50
+  episode_len_sec: 5
+  pyb_freq: 1000
+  gui: True
+  randomized_inertial_prop: False
+  randomized_init: True
+  init_state_randomization_info:
+    init_x:
+      distrib: uniform
+      low: -0.3
+      high: 0.3
+    init_theta:
+      distrib: uniform
+      low: -0.1
+      high: 0.1
+  info_in_reset: True
+  cost: quadratic
+  # constraint
+  # constraints:
+  # - constraint_form: bounded_constraint
+  #   constrained_variable: state
+  #   active_dims: [2, 3]
+  #   lower_bounds: [-0.2, -0.2]
+  #   upper_bounds: [0.2, 0.2]
+  #   tolerance: [0.05, 0.05, 0.05, 0.05]
+  disturbances: null
+  done_on_violation: False
+  task_info:
+    stabilization_goal: [0]
+    stabilization_goal_tolerance: 0.01  

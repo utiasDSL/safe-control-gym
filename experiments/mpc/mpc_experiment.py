@@ -41,7 +41,7 @@ def main():
                 **config.algo_config
                 )
 
-    train_env = env_func(randomized_init=True, init_state=None, disturbances=None) # training without disturbances
+    # train_env = env_func(randomized_init=True, init_state=None, disturbances=None) # training without disturbances
     # train_env = env_func(randomized_init=True, init_state=None) # training with disturbances
     # ctrl.learn(env=train_env)
                 
