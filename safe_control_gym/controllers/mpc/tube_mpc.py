@@ -90,9 +90,10 @@ class TubeMPC(MPC):
         print('computing min RPI...')
         Ak = self.A + self.B @ self.K
         self.Z, _ = compute_min_RPI(Ak, self.wmax, self.eps_rpi, self.s_max_rpi)
+        self.initialized_tube_mpc = False
         super().reset()
         self.reset_constraint_polytopes()
-        self.initialized_tube_mpc = False
+        self.setup_optimizer()
 
     def reset_constraint_polytopes(self):
         for constraint in self.constraints.state_constraints:
@@ -106,10 +107,6 @@ class TubeMPC(MPC):
             U = U - self.K * self.Z
             constraint = LinearConstraint(self.env, U.A, U.b, 'input')
         self.reset_constraints(self.constraints.constraints)
-        assert(len(self.constraints.state_constraints) == 1)
-        assert(len(self.constraints.input_constraints) == 1)
-        print(self.constraints.state_constraints[0].A.shape)
-        print(self.constraints.input_constraints[0].A.shape)
 
     def compute_lqr_gain(self, x_0, u_0):
         # Linearization.
@@ -147,7 +144,7 @@ class TubeMPC(MPC):
         self.dfdx = dfdx
         self.dfdu = dfdu
 
-    def setup_optimizer(self, obs=None):
+    def setup_optimizer(self, x_init=None):
         """Sets up convex optimization problem.
 
         Including cost objective, variable bounds and dynamics constraints.
@@ -165,7 +162,8 @@ class TubeMPC(MPC):
         if not self.initialized_tube_mpc:
             x_init = opti.parameter(nx, 1)
         else:
-            X_init = obs + self.Z  # Minkowski addition with polytope Z.
+            print(x_init)
+            X_init = x_init + self.Z  # Minkowski addition with polytope Z.
             init_con = LinearConstraint(self.env, X_init.A, X_init.b, 'state')
             opti.subject_to(init_con(x_var[:, 0]) < 0)
 
@@ -222,7 +220,6 @@ class TubeMPC(MPC):
             "x_ref": x_ref,
             "cost": cost
         }
-        self.initialized_tube_mpc = True
 
     def select_action(self,
                       obs
@@ -249,6 +246,7 @@ class TubeMPC(MPC):
         x_init = obs-self.X_LIN
         if not self.initialized_tube_mpc:
             opti.set_value(x_init, obs-self.X_LIN)
+            self.initialized_tube_mpc = True
         else:
             self.setup_optimizer(x_init)
         # Assign reference trajectory within horizon.
