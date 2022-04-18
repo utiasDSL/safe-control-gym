@@ -10,7 +10,7 @@ j.automatica.2004.08.019
 import numpy as np
 import casadi as cs
 import scipy.linalg
-import matplotlib.pyplot as plt
+from pytope import Polytope
 
 from sys import platform
 from copy import deepcopy
@@ -18,7 +18,7 @@ from copy import deepcopy
 from safe_control_gym.controllers.mpc.mpc import MPC
 from safe_control_gym.controllers.mpc.mpc_utils import discretize_linear_system, get_cost_weight_matrix
 from safe_control_gym.controllers.mpc.mpc_utils import compute_min_RPI
-from safe_control_gym.envs.constraints import GENERAL_CONSTRAINTS, create_constraint_list
+from safe_control_gym.envs.constraints import GENERAL_CONSTRAINTS, create_constraint_list, LinearConstraint
 from safe_control_gym.envs.benchmark_env import Task
 
 # Notes:
@@ -90,14 +90,26 @@ class TubeMPC(MPC):
         print('computing min RPI...')
         Ak = self.A + self.B @ self.K
         self.Z, _ = compute_min_RPI(Ak, self.wmax, self.eps_rpi, self.s_max_rpi)
-        print(self.Z.A.shape)
-        print(self.Z.b.shape)
-        fig1, ax1 = plt.subplots(num=1)
-        plt.grid()
-        plt.axis([-1.5, 4.5, -2.5, 3.5])
-        self.Z.plot(ax1, fill=False, edgecolor='r', linewidth=2)
-        plt.show()
         super().reset()
+        self.reset_constraint_polytopes()
+        self.initialized_tube_mpc = False
+
+    def reset_constraint_polytopes(self):
+        for constraint in self.constraints.state_constraints:
+            S = Polytope(lb=np.array(constraint.lower_bounds),
+                         ub=np.array(constraint.upper_bounds))
+            S = S - self.Z
+            constraint = LinearConstraint(self.env, S.A, S.b, 'state')
+        for constraint in self.constraints.input_constraints:
+            U = Polytope(lb=np.array(constraint.lower_bounds),
+                         ub=np.array(constraint.upper_bounds))
+            U = U - self.K * self.Z
+            constraint = LinearConstraint(self.env, U.A, U.b, 'input')
+        self.reset_constraints(self.constraints.constraints)
+        assert(len(self.constraints.state_constraints) == 1)
+        assert(len(self.constraints.input_constraints) == 1)
+        print(self.constraints.state_constraints[0].A.shape)
+        print(self.constraints.input_constraints[0].A.shape)
 
     def compute_lqr_gain(self, x_0, u_0):
         # Linearization.
@@ -135,7 +147,7 @@ class TubeMPC(MPC):
         self.dfdx = dfdx
         self.dfdu = dfdu
 
-    def setup_optimizer(self):
+    def setup_optimizer(self, obs=None):
         """Sets up convex optimization problem.
 
         Including cost objective, variable bounds and dynamics constraints.
@@ -150,7 +162,13 @@ class TubeMPC(MPC):
         # Inputs.
         u_var = opti.variable(nu, T)
         # Initial state.
-        x_init = opti.parameter(nx, 1)
+        if not self.initialized_tube_mpc:
+            x_init = opti.parameter(nx, 1)
+        else:
+            X_init = obs + self.Z  # Minkowski addition with polytope Z.
+            init_con = LinearConstraint(self.env, X_init.A, X_init.b, 'state')
+            opti.subject_to(init_con(x_var[:, 0]) < 0)
+
         # Reference (equilibrium point or trajectory, last step for terminal cost).
         x_ref = opti.parameter(nx, T + 1)
         # Cost (cumulative).
@@ -177,16 +195,15 @@ class TubeMPC(MPC):
             opti.subject_to(x_var[:, i + 1] == next_state)
             # State and input constraints.
             for state_constraint in self.state_constraints_sym:
-                opti.subject_to(state_constraint(x_var[:,i] + self.X_LIN.T + self.wmax) < 0)
-                opti.subject_to(state_constraint(x_var[:,i] + self.X_LIN.T - self.wmax) < 0)
+                opti.subject_to(state_constraint(x_var[:,i] + self.X_LIN.T) < 0)
             for input_constraint in self.input_constraints_sym:
-                opti.subject_to(input_constraint(u_var[:,i] + self.U_LIN.T + self.K @ self.wmax) < 0)
-                opti.subject_to(input_constraint(u_var[:,i] + self.U_LIN.T - self.K @ self.wmax) < 0)
+                opti.subject_to(input_constraint(u_var[:,i] + self.U_LIN.T) < 0)
         # Final state constraints.
         for state_constraint in self.state_constraints_sym:
             opti.subject_to(state_constraint(x_var[:,-1] + self.X_LIN.T)  < 0)
         # Initial condition constraints.
-        opti.subject_to(x_var[:, 0] == x_init)
+        if not self.initialized_tube_mpc:
+            opti.subject_to(x_var[:, 0] == x_init)
         # Create solver (IPOPT solver in this version).
         opts = {}
         if platform == "linux":
@@ -205,6 +222,7 @@ class TubeMPC(MPC):
             "x_ref": x_ref,
             "cost": cost
         }
+        self.initialized_tube_mpc = True
 
     def select_action(self,
                       obs
@@ -228,7 +246,11 @@ class TubeMPC(MPC):
         x_ref = opti_dict["x_ref"]
         cost = opti_dict["cost"]
         # Assign the initial state.
-        opti.set_value(x_init, obs-self.X_LIN)
+        x_init = obs-self.X_LIN
+        if not self.initialized_tube_mpc:
+            opti.set_value(x_init, obs-self.X_LIN)
+        else:
+            self.setup_optimizer(x_init)
         # Assign reference trajectory within horizon.
         goal_states = self.get_references()
         opti.set_value(x_ref, goal_states)
@@ -260,7 +282,7 @@ class TubeMPC(MPC):
         else:
             action = np.array([u_val[0]])
         action += self.U_LIN
-        action += self.K @ (obs - (x_val[:, 0] + self.X_LIN))
+        action += self.K @ (x_init - x_val[:, 0])
         self.prev_action = action
         return action
 

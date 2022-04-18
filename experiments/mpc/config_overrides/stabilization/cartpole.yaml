@@ -29,5 +29,5 @@ task_config:
   disturbances: null
   done_on_violation: False
   task_info:
-    stabilization_goal: [0]
+    stabilization_goal: [0, 0]
     stabilization_goal_tolerance: 0.01  

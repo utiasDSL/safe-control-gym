@@ -19,5 +19,5 @@ algo_config:
     - 0.28
   n_samples: 600
   sigma_confidence: 3
-  eps_rpi: 1.0e-2
-  s_max_rpi: 100
+  eps_rpi: 1.0e-5
+  s_max_rpi: 2

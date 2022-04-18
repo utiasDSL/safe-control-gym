@@ -104,9 +104,6 @@ class MPC(BaseController):
             constraints (list): List of constraints controller is subject to.
 
         """
-        self.constraints_input = constraints
-        print('constraints:')
-        print(self.constraints_input)
         self.constraints = ConstraintList(constraints)
         self.state_constraints_sym = self.constraints.get_state_constraint_symbolic_models()
         self.input_constraints_sym = self.constraints.get_input_constraint_symbolic_models()
