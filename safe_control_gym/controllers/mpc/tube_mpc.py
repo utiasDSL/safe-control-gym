@@ -89,7 +89,8 @@ class TubeMPC(MPC):
         # Compute minimal Robust Positively Invariant (mRPI) set:
         print('computing min RPI...')
         Ak = self.A + self.B @ self.K
-        self.Z, _ = compute_min_RPI(Ak, self.wmax, self.eps_rpi, self.s_max_rpi)
+        # self.Z, _ = compute_min_RPI(Ak, self.wmax, self.eps_rpi, self.s_max_rpi)
+        self.Z = Polytope(lb=-self.wmax, ub=self.wmax)
         self.initialized_tube_mpc = False
         super().reset()
         self.reset_constraint_polytopes()
@@ -162,10 +163,9 @@ class TubeMPC(MPC):
         if not self.initialized_tube_mpc:
             x_init = opti.parameter(nx, 1)
         else:
-            print(x_init)
             X_init = x_init + self.Z  # Minkowski addition with polytope Z.
             init_con = LinearConstraint(self.env, X_init.A, X_init.b, 'state')
-            opti.subject_to(init_con(x_var[:, 0]) < 0)
+            init_symb_con = init_con.get_symbolic_model()
 
         # Reference (equilibrium point or trajectory, last step for terminal cost).
         x_ref = opti.parameter(nx, T + 1)
@@ -192,8 +192,11 @@ class TubeMPC(MPC):
             next_state = self.linear_dynamics_func(x0=x_var[:, i], p=u_var[:,i])['xf']
             opti.subject_to(x_var[:, i + 1] == next_state)
             # State and input constraints.
-            for state_constraint in self.state_constraints_sym:
-                opti.subject_to(state_constraint(x_var[:,i] + self.X_LIN.T) < 0)
+            if i == 0 and self.initialized_tube_mpc:
+                opti.subject_to(init_symb_con(x_var[:, 0]) < 0)
+            else:
+                for state_constraint in self.state_constraints_sym:
+                    opti.subject_to(state_constraint(x_var[:,i] + self.X_LIN.T) < 0)
             for input_constraint in self.input_constraints_sym:
                 opti.subject_to(input_constraint(u_var[:,i] + self.U_LIN.T) < 0)
         # Final state constraints.
@@ -239,16 +242,15 @@ class TubeMPC(MPC):
         opti = opti_dict["opti"]
         x_var = opti_dict["x_var"]
         u_var = opti_dict["u_var"]
-        x_init = opti_dict["x_init"]
         x_ref = opti_dict["x_ref"]
         cost = opti_dict["cost"]
         # Assign the initial state.
-        x_init = obs-self.X_LIN
         if not self.initialized_tube_mpc:
+            x_init = opti_dict["x_init"]
             opti.set_value(x_init, obs-self.X_LIN)
             self.initialized_tube_mpc = True
         else:
-            self.setup_optimizer(x_init)
+            self.setup_optimizer(obs-self.X_LIN)
         # Assign reference trajectory within horizon.
         goal_states = self.get_references()
         opti.set_value(x_ref, goal_states)
@@ -280,7 +282,7 @@ class TubeMPC(MPC):
         else:
             action = np.array([u_val[0]])
         action += self.U_LIN
-        action += self.K @ (x_init - x_val[:, 0])
+        action += self.K @ (obs - self.X_LIN - x_val[:, 0])
         self.prev_action = action
         return action
 
