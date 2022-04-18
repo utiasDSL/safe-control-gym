@@ -4,9 +4,9 @@ algo_config:
     - 1.
   q_mpc:
     - 10.
-    - 1.
+    - 0.5
     - 10.
-    - 1.
+    - 0.5
     - 0.01
     - 0.001
   use_prev_start: True

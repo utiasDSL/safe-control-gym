@@ -3,7 +3,7 @@ task: quadrotor
 task_config:
   task: stabilization
   ctrl_freq: 60
-  episode_len_sec: 5
+  episode_len_sec: 10
   pyb_freq: 240
   gui: True
   init_state:
@@ -20,30 +20,30 @@ task_config:
   constraints:
     - constraint_form: default_constraint
       constrained_variable: state
-      # upper_bounds:
-      #   - 0.25
-      #   - 2.0
-      #   - 0.25
-      #   - 2.0
-      #   - 3.14
-      #   - 30.0
-      # lower_bounds:
-      #   - -1.25
-      #   - -2.0
-      #   - -0.25
-      #   - -2.0
-      #   - -3.14
-      #   - -30.0
+      upper_bounds:
+        - 0.25
+        - 4.0
+        - 1.25
+        - 4.0
+        - 3.14
+        - 30.0
+      lower_bounds:
+        - -1.25
+        - -4.0
+        - -0.25
+        - -4.0
+        - -3.14
+        - -30.0
     - constraint_form: default_constraint
       constrained_variable: input
       upper_bounds:
-        - 0.2
-        - 0.2
+        - 0.4
+        - 0.4
       lower_bounds:
-        - -0.2
-        - -0.2
-  done_on_violation: True
+        - -0.4
+        - -0.4
+  done_on_violation: False
   disturbances: null
   task_info:
-    stabilization_goal: [0, 0]
-    stabilization_goal_tolerance: 0.01
+    stabilization_goal: [0, 1]
+    stabilization_goal_tolerance: 0.1

@@ -5,8 +5,8 @@
 # ENV="cartpole"
 ENV="quadrotor"
 
-TASK="stabilization"
-# TASK="tracking"
+# TASK="stabilization"
+TASK="tracking"
 
 # ALGO="linear_mpc"
 ALGO="linear_mpc"
