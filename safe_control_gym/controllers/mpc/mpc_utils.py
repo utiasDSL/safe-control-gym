@@ -3,7 +3,6 @@
 """
 import numpy as np
 import scipy
-from pytope import Polytope
 import pytope
 
 
@@ -70,5 +69,5 @@ def compute_min_RPI(A, wmax, eps=1e-5, s_max=50):
     if abs(np.linalg.det(np.eye(A.shape[0]) + A) - 1) < 1.0e-8:
         raise NotImplementedError("mRPI for nilpotent A not yet implemented")
 
-    W = Polytope(lb=-wmax, ub=wmax)
+    W = pytope.Polytope(lb=-wmax, ub=wmax)
     return pytope.eps_MRPI(A, W, eps, s_max)
