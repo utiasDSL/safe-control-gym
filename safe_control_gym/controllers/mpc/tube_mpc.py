@@ -18,7 +18,7 @@ from copy import deepcopy
 from safe_control_gym.controllers.mpc.mpc import MPC
 from safe_control_gym.controllers.mpc.mpc_utils import discretize_linear_system, get_cost_weight_matrix
 from safe_control_gym.controllers.mpc.mpc_utils import compute_min_RPI
-from safe_control_gym.envs.constraints import GENERAL_CONSTRAINTS, create_constraint_list, LinearConstraint
+from safe_control_gym.envs.constraints import LinearConstraint
 from safe_control_gym.envs.benchmark_env import Task
 from safe_control_gym.envs.gym_pybullet_drones.quadrotor_utils import QuadType
 
@@ -112,20 +112,24 @@ class TubeMPC(MPC):
         self.initialized_tube_mpc = False
         super().reset()
         self.reset_constraint_polytopes()
-        self.setup_optimizer()
 
     def reset_constraint_polytopes(self):
+        temp_state_constraints = []
         for constraint in self.constraints.state_constraints:
             S = Polytope(lb=np.array(constraint.lower_bounds),
                          ub=np.array(constraint.upper_bounds))
             S = S - self.Z
-            constraint = LinearConstraint(self.env, S.A, S.b, 'state')
+            temp_state_constraints.append(LinearConstraint(self.env, S.A, S.b, 'state'))
+        self.constraints.state_constraints = temp_state_constraints
+
+        temp_input_constraints = []
         for constraint in self.constraints.input_constraints:
             U = Polytope(lb=np.array(constraint.lower_bounds),
                          ub=np.array(constraint.upper_bounds))
             U = U - self.K * self.Z
-            constraint = LinearConstraint(self.env, U.A, U.b, 'input')
-        self.reset_constraints(self.constraints.constraints)
+            temp_input_constraints.append(LinearConstraint(self.env, U.A, U.b, 'input'))
+        self.constraints.input_constraints = temp_input_constraints
+        self.reset_constraints(self.constraints.state_constraints + self.constraints.input_constraints)
 
     def compute_lqr_gain(self, x_0, u_0):
         # Linearization.
@@ -163,7 +167,7 @@ class TubeMPC(MPC):
         self.dfdx = dfdx
         self.dfdu = dfdu
 
-    def setup_optimizer(self, x_init=None):
+    def setup_optimizer(self, x_init=np.zeros([6, 1])):
         """Sets up convex optimization problem.
 
         Including cost objective, variable bounds and dynamics constraints.
@@ -178,12 +182,9 @@ class TubeMPC(MPC):
         # Inputs.
         u_var = opti.variable(nu, T)
         # Initial state.
-        if not self.initialized_tube_mpc:
-            x_init = opti.parameter(nx, 1)
-        else:
-            X_init = x_init + self.Z  # Minkowski addition with polytope Z.
-            init_con = LinearConstraint(self.env, X_init.A, X_init.b, 'state')
-            init_symb_con = init_con.get_symbolic_model()
+        X_init = x_init + self.Z  # Minkowski addition with polytope Z.
+        init_con = LinearConstraint(self.env, X_init.A, X_init.b, 'state')
+        init_symb_con = init_con.get_symbolic_model()
 
         # Reference (equilibrium point or trajectory, last step for terminal cost).
         x_ref = opti.parameter(nx, T + 1)
@@ -210,19 +211,15 @@ class TubeMPC(MPC):
             next_state = self.linear_dynamics_func(x0=x_var[:, i], p=u_var[:,i])['xf']
             opti.subject_to(x_var[:, i + 1] == next_state)
             # State and input constraints.
-            if i == 0 and self.initialized_tube_mpc:
-                opti.subject_to(init_symb_con(x_var[:, 0]) < 0)
-            else:
-                for state_constraint in self.state_constraints_sym:
-                    opti.subject_to(state_constraint(x_var[:,i] + self.X_LIN.T) < 0)
+            for state_constraint in self.state_constraints_sym:
+                opti.subject_to(state_constraint(x_var[:,i] + self.X_LIN.T) < 0)
             for input_constraint in self.input_constraints_sym:
                 opti.subject_to(input_constraint(u_var[:,i] + self.U_LIN.T) < 0)
+        # Initial state constraints
+        opti.subject_to(init_symb_con(x_var[:, 0]) < 0)
         # Final state constraints.
         for state_constraint in self.state_constraints_sym:
             opti.subject_to(state_constraint(x_var[:,-1] + self.X_LIN.T)  < 0)
-        # Initial condition constraints.
-        if not self.initialized_tube_mpc:
-            opti.subject_to(x_var[:, 0] == x_init)
         # Create solver (IPOPT solver in this version).
         opts = {}
         if platform == "linux":
@@ -254,21 +251,13 @@ class TubeMPC(MPC):
             action (np.array): input/action to the task/env.
 
         """
-        nx, nu = self.model.nx, self.model.nu
-        T = self.T
+        self.setup_optimizer(x_init=obs-self.X_LIN)
         opti_dict = self.opti_dict
         opti = opti_dict["opti"]
         x_var = opti_dict["x_var"]
         u_var = opti_dict["u_var"]
         x_ref = opti_dict["x_ref"]
-        cost = opti_dict["cost"]
-        # Assign the initial state.
-        if not self.initialized_tube_mpc:
-            x_init = opti_dict["x_init"]
-            opti.set_value(x_init, obs-self.X_LIN)
-            self.initialized_tube_mpc = True
-        else:
-            self.setup_optimizer(obs-self.X_LIN)
+
         # Assign reference trajectory within horizon.
         goal_states = self.get_references()
         opti.set_value(x_ref, goal_states)
@@ -277,6 +266,7 @@ class TubeMPC(MPC):
         if self.warmstart and self.u_prev is not None and self.x_prev is not None:
             opti.set_initial(x_var, self.x_prev)
             opti.set_initial(u_var, self.u_prev)
+        
         # Solve the optimization problem.
         try:
             sol = opti.solve()
@@ -330,7 +320,6 @@ class TubeMPC(MPC):
             w[:,i] = x_next_obs - x_next_estimated[:,0]
 
         self.wmax = np.mean(w.T, axis=0) + self.sigma_confidence*np.std(w.T, axis=0)
-        print('Learned distur')
-
-        # Now that constraints are defined, setup the optimizer.
-        self.setup_optimizer()
+        self.Z = Polytope(lb=-self.wmax, ub=self.wmax)
+        self.reset_constraint_polytopes()
+        print('Learned disturbance set')
