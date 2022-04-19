@@ -102,6 +102,46 @@ control_agent.load(os.path.join(config.restore, "model_latest.pt"))
 
 After testing, the results can be extracted in different ways. 
 
+#### Logging 
+
+To enable logging for plotting purposes or otherwise during training, the trainable approaches require that training is set to True when the environment is made. This is includes ppo, rap, rarl, safe_explorer_ppo and sac: 
+```
+control_agent = make(config.algo,
+                        env_func,
+                        training=True,
+                        checkpoint_path=os.path.join(config.output_dir, "model_latest.pt"),
+                        output_dir=config.output_dir,
+                        device=config.device,
+                        seed=config.seed,
+                        **config.algo_config)
+```
+This will log the statistics for the training using the `ExperimentLogger()` and dump the results into the output_dir location under "logs". 
+
+Results from running can be immediately collected: 
+
+```
+results = control_agent.run(n_episodes=config.algo_config.eval_batch_size,
+                            render=config.render,
+                            verbose=config.verbose,
+                            use_adv=config.use_adv)
+```
+
+To enable logging for the MPC based control approaches (gp_mpc, linear_mpc), logging cannot be done during training as there is no training step (with the exception of training the gaussian process for gp_mpc). Therefore, results can be immediately collected by running linear_mpc and by first training the gaussian process and running the agent for gp_mpc. 
+
+#### Results 
+
+The trainable and mpc-based controllers all have different results stored in dictionaries that are output at the end of training. 
+
+Here is a short guide to the results that can be used for parsing results as you would like from running the different controllers. 
+
+| Control Approach | Available Results | 
+| -----------------|-------------------|
+| PPO, Safe Explorer PPO, SAC, RARL, RAP | <ul><li>ep_returns (the return for each episode)</li><li>ep_lengths (the number of steps in each epsiode)<li>constraint_violations (the number of constraint violations in each episode)</li><li>constraint_values (the constraint cost in each episode)</li><li>mse (the mean squared error of the expected and observed states for each episode)</li><li>frames (if render=true, the frames of the visualization of the run in the simulation environment)</li></ul>|
+| MPSC             | Same as the controller being certified | 
+| Linear MPC       | <ul><li>obs (the states/observations over the run)</li><li>reward (the reward at each step)</li><li>done (whether or not the run is complete)</li><li>info (includes goal_reached (bool), mse, constraint values, and constraint violation count)</li><li>action (which action was taken at each step)</li><li>horizon_inputs(the previous input at each step)</li><li>horizon_states(the previous state at each step)</li><li>horizon_states(the previous state at each step)</li>| 
+| GP MPC           | <ul><li>obs (the states/observations over the run)</li><li>reward (the reward at each step)</li><li>done (whether or not the run is complete)</li><li>info (includes goal_reached (bool), mse, constraint values, and constraint violation count)</li><li>action (which action was taken at each step)</li><li>horizon_inputs(the previous input at each step)</li><li>horizon_states(the previous state at each step)</li><li>horizon_states(the previous state at each step)</li><li>input_constraint_set</li><li>state_constraint_set</li><li>state_horizon_cov(covariance of each state)</li><li>input_horizon_cov(covariance of each input)</li><li>gp_mean_eq_pred()</li><li>gp_pred()</li><li>linear_pred()</li></ul> | 
+ 
+ 
 #### Plotting results 
 
 The `safe-control-gym` has plotting capabilities imported as `safe_control_gym.utils.plotting` that use the data saved to the output directory to use for visualization after running an experiment. To run plotting with this example, specify `--func plot` in the command line
@@ -115,7 +155,36 @@ plot_dir = os.path.join(config.output_dir, "plots")
 mkdirs(plot_dir)
 plot_from_logs(log_dir, plot_dir, window=3)
 ```
-Here, log_dir is the location of the stored logs which is automatically the logs directory of your output directory when you train. The plot_dir is where you want to plots stored. `plot_from_logs` will generate a plot for each stat in the logs. If you only want to plot certain stats, you can specify a fourth argument, keys. 
+Here, log_dir is the location of the stored logs which is automatically the logs directory of your output directory when you train. The plot_dir is where you want to plots stored. `plot_from_logs` will generate a plot for each stat in the logs. If you only want to plot certain stats, you can specify a fourth argument, keys, which is a list of the stats you want to plot.  
+
+```
+plot_from_logs(log_dir, plot_dir, window=3, keys)
+```
+
+For other plotting functions, refer to [plotting.py](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/utils/plotting.py)
+
+
+##### GP MPC Plotting
+
+The GP MPC approach has plotting capabilities to visualize the gaussian process in each dimension. To enable plotting for gp_mpc, add `plot: true` to your configuration file, in your experiment script add it directly to where the control agent is made, or add it as a commandline argument, based on your preference: 
+
+Option 2: 
+```
+control_agent = make(config.algo,
+                        env_func,
+                        checkpoint_path=os.path.join(config.output_dir, "model_latest.pt"),
+                        output_dir=config.output_dir,
+                        device=config.device,
+                        seed=config.seed,
+                        plot=True,
+                        **config.algo_config)
+```
+Option 3: 
+```
+fac = ConfigFactory()
+fac.add_argument("--plot", type=str, default="False", help="Whether or not to plot for gp_mpc controller")
+config = fac.merge()
+```
 
 ## Using configuration/override files 
 
@@ -184,7 +253,7 @@ For more information on some common utilities in this repo, refer to `safe-contr
 | Approach | id | Location | 
 | -------- | --- | ----------- |
 |  Model Predictive Control w/ a Gaussian Process Model | 'gp_mpc' | [GP-MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/gp_mpc.py)  |
-|  Linear Model Predictive Control | 'gp_mpc' | [Linear MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/linear_mpc.py) |
+|  Linear Model Predictive Control | 'linear_mpc' | [Linear MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/linear_mpc.py) |
 
 #### Safe and Robust Reinforcement Learning
 | Approach | id | Location | 
@@ -224,12 +293,6 @@ disturbances:
         - disturbance_func: white_noise
           std: 0.05
 ```
-<!-- #### Randomization
-
-- Randomize initial state 
-    distributions:
-        - uniform 
-        - choice -->
 
 Constraint Types:
 | Applied to | Types |
@@ -242,7 +305,9 @@ These tasks are designed to be used in benchmarking experiments:
 1. Stabilization - `stabilization`
 2. Trajectory tracking - `traj_tracking`
 
-The tasks have been implemented at the controller level. See each controllers source code for details 
+The tasks have been implemented at the controller level. See each controllers source code for details. 
+
+
 
 
 
