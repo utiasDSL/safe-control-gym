@@ -64,6 +64,15 @@ pip install poetry
 poetry install
 ```
 
+#### Note:
+You may need to separately install `gmp`, a dependency of `pycddlib`:
+ ```bash
+conda install -c anaconda gmp
+ ```
+ or 
+  ```bash
+ sudo apt-get install libgmp-dev
+ ```
 
 
 ## Architecture
