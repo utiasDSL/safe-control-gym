@@ -1,19 +1,27 @@
 algo_config:
   horizon: 5
   r_mpc:
-    - 1.
+    - 0.1
   q_mpc:
     - 10.
-    - 1.
-    - 10.
-    - 1.
+    - 1
+    - 10
+    - 1
   use_prev_start: True
   wmax:
-    - 0.1
-    - 0.1
-    - 0.1
-    - 0.1
+    - 0.001
+    - 0.001
+    - 0.001
+    - 0.001
+  mRPI: # for wmax = 0.001, r = 0.1, q_mpc = [10, 1, 10, 1]
+    - 0.20727917
+    - 0.3290414
+    - 0.05400274
+    - 0.18543247
+  compute_mRPI: True
   n_samples: 600
   sigma_confidence: 3
-  eps_rpi: 1.0e-2
-  s_max_rpi: 100
+  eps_rpi: 1.0e-3
+  s_max_rpi: 500
+  vol_converge: 1.0e-4
+  debug_mRPI: True

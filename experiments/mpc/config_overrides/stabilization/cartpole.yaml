@@ -19,13 +19,25 @@ task_config:
   info_in_reset: True
   cost: quadratic
   # constraint
-  # constraints:
-  # - constraint_form: bounded_constraint
-  #   constrained_variable: state
-  #   active_dims: [2, 3]
-  #   lower_bounds: [-0.2, -0.2]
-  #   upper_bounds: [0.2, 0.2]
-  #   tolerance: [0.05, 0.05, 0.05, 0.05]
+  constraints:
+    - constraint_form: default_constraint
+      constrained_variable: state
+      upper_bounds:
+        - 2.0
+        - 5.0
+        - 0.75
+        - 7.5
+      lower_bounds:
+        - -2.0
+        - -5.0
+        - -0.75
+        - -7.5
+    - constraint_form: default_constraint
+      constrained_variable: input
+      upper_bounds:
+        - 10.0
+      lower_bounds:
+        - -10.0
   disturbances: null
   done_on_violation: False
   task_info:

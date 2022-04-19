@@ -20,6 +20,7 @@ from safe_control_gym.controllers.mpc.mpc_utils import discretize_linear_system,
 from safe_control_gym.controllers.mpc.mpc_utils import compute_min_RPI
 from safe_control_gym.envs.constraints import GENERAL_CONSTRAINTS, create_constraint_list, LinearConstraint
 from safe_control_gym.envs.benchmark_env import Task
+from safe_control_gym.envs.gym_pybullet_drones.quadrotor_utils import QuadType
 
 # Notes:
 # state constraints must be polytopes, so far only tested BoundedConstraint
@@ -43,6 +44,10 @@ class TubeMPC(MPC):
             sigma_confidence=3,
             eps_rpi=1e-5,
             s_max_rpi=50,
+            mRPI=[0.1],
+            compute_mRPI=True,
+            vol_converge=1e-4,
+            debug_mRPI=False,
             **kwargs):
         """Creates task and controller.
 
@@ -56,6 +61,12 @@ class TubeMPC(MPC):
             additional_constraints (list): list of constraints.
             n_samples (int): number of samples used to learn disturbances.
             sigma_confidence (int): num of std devs to compute learned dist bound.
+            eps_rpi (float): epsilon convergence parameter for computing mRPI (Mayne et al. 2005)
+            s_max_rpi (int): max number of Minkowski additions for computing mRPI (Mayne et al. 2005)
+            mRPI (list): users have the option of manually specifying the mRPI as the max point of a hypercube centered on the origin.
+            compute_mRPI (bool): if True, mRPI ignored and we will calculate it, if False we will use the user-defined mRPI.
+            vol_converge (float): mRPI algo converges when (vol - volprev) / vol < vol_converge
+            debug_mRPI (bool): shows a plot of RPI volume vs. iterations and prints out information from algo
 
         """
 
@@ -79,6 +90,12 @@ class TubeMPC(MPC):
         """Prepares for training or evaluation.
 
         """
+        if compute_min_RPI:
+            if (self.env.NAME != 'quadrotor' and self.env.NAME != 'cartpole'):
+                raise NotImplementedError("our current method to compute mRPI does not work for the chosen environment")
+            if self.env.NAME == 'quadrotor':
+                if self.env.QUAD_TYPE != QuadType.ONE_D:
+                    raise NotImplementedError("our current method to compute mRPI does not work for the chosen environment")
         self.wmax = np.array(self.wmax)
         self.X_LIN = np.atleast_2d(self.env.X_GOAL)[0,:].T
         self.U_LIN = np.atleast_2d(self.env.U_GOAL)[0,:]
@@ -86,11 +103,12 @@ class TubeMPC(MPC):
         self.Q = get_cost_weight_matrix(self.q_mpc, self.model.nx)
         self.R = get_cost_weight_matrix(self.r_mpc, self.model.nu)
         self.compute_lqr_gain(self.X_LIN, self.U_LIN)
-        # Compute minimal Robust Positively Invariant (mRPI) set:
-        print('computing min RPI...')
         Ak = self.A + self.B @ self.K
-        # self.Z, _ = compute_min_RPI(Ak, self.wmax, self.eps_rpi, self.s_max_rpi)
-        self.Z = Polytope(lb=-self.wmax, ub=self.wmax)
+        # Compute minimal Robust Positively Invariant (mRPI) set:
+        if self.compute_mRPI:
+            self.Z = compute_min_RPI(Ak, self.wmax, self.vol_converge, self.s_max_rpi, self.debug_mRPI)
+        else:
+            self.Z = Polytope(lb=-np.array(self.mRPI), ub=np.array(self.mRPI))
         self.initialized_tube_mpc = False
         super().reset()
         self.reset_constraint_polytopes()

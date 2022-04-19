@@ -2,8 +2,8 @@
 
 # MPC Experiment.
 
-# ENV="cartpole"
-ENV="quadrotor"
+ENV="cartpole"
+# ENV="quadrotor"
 
 TASK="stabilization"
 # TASK="tracking"
