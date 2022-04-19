@@ -1,7 +1,7 @@
 algo_config:
   horizon: 5
   r_mpc:
-    - 0.1
+    - 1
   q_mpc:
     - 10.
     - 1
@@ -13,11 +13,11 @@ algo_config:
     - 0.001
     - 0.001
     - 0.001
-  mRPI: # for wmax = 0.001, r = 0.1, q_mpc = [10, 1, 10, 1]
-    - 0.20727917
-    - 0.3290414
-    - 0.05400274
-    - 0.18543247
+  mRPI: # for wmax = 0.001, r = 1, q_mpc = [10, 1, 10, 1]
+    - 0.35612957
+    - 0.42101279
+    - 0.06128637
+    - 0.16081624
   compute_mRPI: True
   n_samples: 600
   sigma_confidence: 3

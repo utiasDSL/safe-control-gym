@@ -107,6 +107,7 @@ def compute_min_RPI(A, wmax, vol_converge=1e-3, s_max=500, debug=False):
             print('i: {} vol: {} Z_sides: {}'.format(i, vol, sides))
         if (vol - volprev) / (vol + 1e-15) < vol_converge:
             print('mRPI converged!')
+            print('mRPI: {}'.format(np.max(Z.V, axis=0)))
             vol_converged = True
             break
         Ai = A @ Ai
@@ -116,5 +117,4 @@ def compute_min_RPI(A, wmax, vol_converge=1e-3, s_max=500, debug=False):
         plt.show()
     if not vol_converged:
         raise RuntimeError("volume of mRPI did not converge!")
-    print('mRPI: {}'.format(np.max(Z.V, axis=0)))
     return Z

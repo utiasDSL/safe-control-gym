@@ -109,7 +109,6 @@ class TubeMPC(MPC):
             self.Z = compute_min_RPI(Ak, self.wmax, self.vol_converge, self.s_max_rpi, self.debug_mRPI)
         else:
             self.Z = Polytope(lb=-np.array(self.mRPI), ub=np.array(self.mRPI))
-        self.initialized_tube_mpc = False
         super().reset()
         self.reset_constraint_polytopes()
 
@@ -167,7 +166,7 @@ class TubeMPC(MPC):
         self.dfdx = dfdx
         self.dfdu = dfdu
 
-    def setup_optimizer(self, x_init=np.zeros([6, 1])):
+    def setup_optimizer(self, x_init=None):
         """Sets up convex optimization problem.
 
         Including cost objective, variable bounds and dynamics constraints.
@@ -182,6 +181,8 @@ class TubeMPC(MPC):
         # Inputs.
         u_var = opti.variable(nu, T)
         # Initial state.
+        if x_init is None:
+            x_init = np.zeros((self.A.shape[0], 1))
         X_init = x_init + self.Z  # Minkowski addition with polytope Z.
         init_con = LinearConstraint(self.env, X_init.A, X_init.b, 'state')
         init_symb_con = init_con.get_symbolic_model()
