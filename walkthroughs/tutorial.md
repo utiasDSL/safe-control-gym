@@ -161,8 +161,7 @@ Here, log_dir is the location of the stored logs which is automatically the logs
 plot_from_logs(log_dir, plot_dir, window=3, keys)
 ```
 
-<!-- Here is short guide to the other plotting functions available. Note that plotting from logs is only available for the trainable approaches in the repo (ppo, sac, rarl, rap): 
-TODO ADD PLOT FUNCTIONS OVERVIEW -->
+For other plotting functions, refer to [plotting.py](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/utils/plotting.py)
 
 
 ##### GP MPC Plotting
