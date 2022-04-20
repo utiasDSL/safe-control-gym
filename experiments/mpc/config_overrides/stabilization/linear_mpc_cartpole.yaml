@@ -7,4 +7,5 @@ algo_config:
     - 1.
     - 10.
     - 1.
-  use_prev_start: True
+  warmstart: True
+  use_backup: True

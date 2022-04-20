@@ -1,4 +1,5 @@
 algo_config:
+  # MPC parameters
   horizon: 5
   r_mpc:
     - 1
@@ -7,7 +8,10 @@ algo_config:
     - 1
     - 10
     - 1
-  use_prev_start: True
+  warmstart: True
+  use_backup: True
+
+  # Default values for disturbance (wmax) and mRPI
   wmax:
     - 0.001
     - 0.001
@@ -18,10 +22,14 @@ algo_config:
     - 0.42101279
     - 0.06128637
     - 0.16081624
-  compute_mRPI: True
+
+  # Computing Disturbance
   n_samples: 600
   sigma_confidence: 3
+
+  # Minimal Robust Positively Invariant Set (mRPI)
+  compute_mRPI: True
   eps_rpi: 1.0e-3
   s_max_rpi: 500
   vol_converge: 1.0e-4
-  debug_mRPI: True
+  debug_mRPI: False

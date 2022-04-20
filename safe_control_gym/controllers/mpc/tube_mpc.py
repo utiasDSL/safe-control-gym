@@ -38,6 +38,7 @@ class TubeMPC(MPC):
             r_mpc=[1],
             wmax=[0.1],
             warmstart=True,
+            use_backup=False,
             output_dir="results/temp",
             additional_constraints=[],
             n_samples=600,
@@ -57,6 +58,7 @@ class TubeMPC(MPC):
             q_mpc (list): diagonals of state cost weight.
             r_mpc (list): diagonals of input/action cost weight.
             warmstart (bool): if to initialize from previous iteration.
+            use_backup (bool): whether to retry the MPC optimization without constraints if the constrained MPC fails
             output_dir (str): output directory to write logs and results.
             additional_constraints (list): list of constraints.
             n_samples (int): number of samples used to learn disturbances.
@@ -110,25 +112,30 @@ class TubeMPC(MPC):
         else:
             self.Z = Polytope(lb=-np.array(self.mRPI), ub=np.array(self.mRPI))
         super().reset()
+
+        self.original_state_constraints_sym = self.state_constraints_sym
+        self.original_input_constraints_sym = self.input_constraints_sym
+        self.original_state_constraints = self.constraints.state_constraints
+        self.original_input_constraints = self.constraints.input_constraints
+
         self.reset_constraint_polytopes()
 
     def reset_constraint_polytopes(self):
         temp_state_constraints = []
-        for constraint in self.constraints.state_constraints:
+        for constraint in self.original_state_constraints:
             S = Polytope(lb=np.array(constraint.lower_bounds),
                          ub=np.array(constraint.upper_bounds))
             S = S - self.Z
             temp_state_constraints.append(LinearConstraint(self.env, S.A, S.b, 'state'))
-        self.constraints.state_constraints = temp_state_constraints
 
         temp_input_constraints = []
-        for constraint in self.constraints.input_constraints:
+        for constraint in self.original_input_constraints:
             U = Polytope(lb=np.array(constraint.lower_bounds),
                          ub=np.array(constraint.upper_bounds))
             U = U - self.K * self.Z
             temp_input_constraints.append(LinearConstraint(self.env, U.A, U.b, 'input'))
-        self.constraints.input_constraints = temp_input_constraints
-        self.reset_constraints(self.constraints.state_constraints + self.constraints.input_constraints)
+        
+        self.reset_constraints(temp_state_constraints + temp_input_constraints)
 
     def compute_lqr_gain(self, x_0, u_0):
         # Linearization.
@@ -166,10 +173,14 @@ class TubeMPC(MPC):
         self.dfdx = dfdx
         self.dfdu = dfdu
 
-    def setup_optimizer(self, x_init=None):
+    def setup_optimizer(self, x_init=None, unconstrained=False):
         """Sets up convex optimization problem.
 
         Including cost objective, variable bounds and dynamics constraints.
+
+        Args:
+            x_init (np.array): current state/observation.
+            unconstrained (bool): whether to run the MPC without state and input constraints 
 
         """
         nx, nu = self.model.nx, self.model.nu
@@ -212,15 +223,17 @@ class TubeMPC(MPC):
             next_state = self.linear_dynamics_func(x0=x_var[:, i], p=u_var[:,i])['xf']
             opti.subject_to(x_var[:, i + 1] == next_state)
             # State and input constraints.
-            for state_constraint in self.state_constraints_sym:
-                opti.subject_to(state_constraint(x_var[:,i] + self.X_LIN.T) < 0)
-            for input_constraint in self.input_constraints_sym:
-                opti.subject_to(input_constraint(u_var[:,i] + self.U_LIN.T) < 0)
+            if unconstrained == False:
+                for state_constraint in self.state_constraints_sym:
+                    opti.subject_to(state_constraint(x_var[:,i] + self.X_LIN.T) < 0)
+                for input_constraint in self.input_constraints_sym:
+                    opti.subject_to(input_constraint(u_var[:,i] + self.U_LIN.T) < 0)
         # Initial state constraints
         opti.subject_to(init_symb_con(x_var[:, 0]) < 0)
         # Final state constraints.
-        for state_constraint in self.state_constraints_sym:
-            opti.subject_to(state_constraint(x_var[:,-1] + self.X_LIN.T)  < 0)
+        if unconstrained == False:
+            for state_constraint in self.state_constraints_sym:
+                opti.subject_to(state_constraint(x_var[:,-1] + self.X_LIN.T)  < 0)
         # Create solver (IPOPT solver in this version).
         opts = {}
         if platform == "linux":
@@ -241,18 +254,20 @@ class TubeMPC(MPC):
         }
 
     def select_action(self,
-                      obs
+                      obs,
+                      unconstrained=False
                       ):
         """Solve nonlinear mpc problem to get next action.
         
         Args:
-            obs (np.array): current state/observation. 
+            obs (np.array): current state/observation.
+            unconstrained (bool): whether to run the MPC without state and input constraints 
         
         Returns:
             action (np.array): input/action to the task/env.
 
         """
-        self.setup_optimizer(x_init=obs-self.X_LIN)
+        self.setup_optimizer(x_init=obs-self.X_LIN, unconstrained=unconstrained)
         opti_dict = self.opti_dict
         opti = opti_dict["opti"]
         x_var = opti_dict["x_var"]
@@ -277,6 +292,9 @@ class TubeMPC(MPC):
             self.results_dict['horizon_states'].append(deepcopy(self.x_prev) + self.X_LIN[:, None])
             self.results_dict['horizon_inputs'].append(deepcopy(self.u_prev) + self.U_LIN[:, None])
         except RuntimeError as e:
+            if self.use_backup and not unconstrained:
+                action = self.select_action(obs, unconstrained=True)
+                return action
             print(e)
             return_status = opti.return_status()
             if return_status == 'unknown':
@@ -293,6 +311,7 @@ class TubeMPC(MPC):
         action += self.U_LIN
         action += self.K @ (obs - self.X_LIN - x_val[:, 0])
         self.prev_action = action
+
         return action
 
     def learn(self,
@@ -321,6 +340,11 @@ class TubeMPC(MPC):
             w[:,i] = x_next_obs - x_next_estimated[:,0]
 
         self.wmax = np.mean(w.T, axis=0) + self.sigma_confidence*np.std(w.T, axis=0)
-        self.Z = Polytope(lb=-self.wmax, ub=self.wmax)
+        
+        if self.compute_mRPI:
+            self.Z = compute_min_RPI(self.A + self.B @ self.K, self.wmax, self.vol_converge, self.s_max_rpi, self.debug_mRPI)
+        else:
+            self.Z = Polytope(lb=-np.array(self.mRPI), ub=np.array(self.mRPI))
+
         self.reset_constraint_polytopes()
         print('Learned disturbance set')

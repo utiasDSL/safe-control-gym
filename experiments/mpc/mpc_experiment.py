@@ -41,9 +41,9 @@ def main():
                 **config.algo_config
                 )
 
-    # train_env = env_func(randomized_init=True, init_state=None, disturbances=None) # training without disturbances
-    # train_env = env_func(randomized_init=True, init_state=None) # training with disturbances
-    # ctrl.learn(env=train_env)
+    train_env = env_func(gui=False, randomized_init=True, init_state=None, disturbances=None) # training without disturbances
+    # train_env = env_func(gui=False, randomized_init=True, init_state=None) # training with disturbances
+    ctrl.learn(env=train_env)
                 
     if config.task_config.task == 'traj_tracking':
         reference_traj = ctrl.reference
@@ -57,17 +57,18 @@ def main():
 
     # Run the experiment.
     results = ctrl.run(max_steps=max_steps)
+    print('Violations: ', sum(results['violations']))
     ctrl.close()
 
-    N = len(results['obs']) - 1
-    # Plot the experiment.
-    for i in range(N):
-        # Step the environment and print all returned information.
-        obs, reward, done, info, action = results['obs'][i], results['reward'][i], results['done'][i], results['info'][i], results['action'][i]
+    # N = len(results['obs']) - 1
+    # # Plot the experiment.
+    # for i in range(N):
+    #     # Step the environment and print all returned information.
+    #     obs, reward, done, info, action = results['obs'][i], results['reward'][i], results['done'][i], results['info'][i], results['action'][i]
         
-        # Print the last action and the information returned at each step.
-        print(i, '-th step.')
-        print(action, '\n', obs, '\n', reward, '\n', done, '\n', info, '\n')
+    #     # Print the last action and the information returned at each step.
+    #     print(i, '-th step.')
+    #     print(action, '\n', obs, '\n', reward, '\n', done, '\n', info, '\n')
 
 if __name__ == "__main__":
     main()

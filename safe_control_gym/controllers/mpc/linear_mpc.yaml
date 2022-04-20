@@ -4,7 +4,8 @@ r_mpc:
   - 1.
 q_mpc:
   - 1.
-use_prev_start: True
+warmstart: True
+use_backup: False
 
 # Runner args
 deque_size: 10
