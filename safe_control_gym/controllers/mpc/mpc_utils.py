@@ -75,20 +75,21 @@ def compute_min_RPI_v0(A, wmax, eps=1e-5, s_max=50):
     W = Polytope(lb=-wmax, ub=wmax)
     return pytope.eps_MRPI(A, W, eps, s_max)
 
-def compute_min_RPI(A, wmax, vol_converge=1e-3, s_max=500, debug=False):
+def compute_min_RPI(A, wmax, wmin, vol_converge=1e-3, s_max=500, debug=False):
     """Compute the minimal robust positively invariant set (mRPI)
     
     Args:
         A: np.array, closed-loop system transition matrix
-        wmax: np.array, defines the disturbance bounds |w| < wmax
+        wmax: np.array, defines the disturbance bounds w < wmax
+        wmin: np.array, defines the disturbance bounds w > wmin
         vol_converge: float, algo converges when (vol - volprev) / vol < vol_converge
         s_max: int, max number of iterations (Minkowski additions)
     """
     print('computing min RPI...')
     if abs(np.linalg.det(np.eye(A.shape[0]) + A) - 1) < 1.0e-8:
         raise NotImplementedError("mRPI for nilpotent A not yet implemented")
-    Z = Polytope(lb=-wmax, ub=wmax)
-    W = Polytope(lb=-wmax, ub=wmax)
+    Z = Polytope(lb=wmin, ub=wmax)
+    W = Polytope(lb=wmin, ub=wmax)
     vols = []
     Ai = np.copy(A)
     Ai = np.identity(A.shape[0])

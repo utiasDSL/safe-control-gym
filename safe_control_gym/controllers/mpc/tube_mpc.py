@@ -37,6 +37,7 @@ class TubeMPC(MPC):
             q_mpc=[1],
             r_mpc=[1],
             wmax=[0.1],
+            wmin=[-0.1],
             warmstart=True,
             use_backup=False,
             output_dir="results/temp",
@@ -45,7 +46,7 @@ class TubeMPC(MPC):
             sigma_confidence=3,
             eps_rpi=1e-5,
             s_max_rpi=50,
-            mRPI=[0.1],
+            mRPI=None,
             compute_mRPI=True,
             vol_converge=1e-4,
             debug_mRPI=False,
@@ -57,6 +58,8 @@ class TubeMPC(MPC):
             horizon (int): mpc planning horizon.
             q_mpc (list): diagonals of state cost weight.
             r_mpc (list): diagonals of input/action cost weight.
+            wmax (list): maximum bound of disturbance
+            wmin (list): minimum bound of disturbance
             warmstart (bool): if to initialize from previous iteration.
             use_backup (bool): whether to retry the MPC optimization without constraints if the constrained MPC fails
             output_dir (str): output directory to write logs and results.
@@ -65,7 +68,7 @@ class TubeMPC(MPC):
             sigma_confidence (int): num of std devs to compute learned dist bound.
             eps_rpi (float): epsilon convergence parameter for computing mRPI (Mayne et al. 2005)
             s_max_rpi (int): max number of Minkowski additions for computing mRPI (Mayne et al. 2005)
-            mRPI (list): users have the option of manually specifying the mRPI as the max point of a hypercube centered on the origin.
+            mRPI (object): users have the option of manually specifying the mRPI as the max point of a hypercube centered on the origin.
             compute_mRPI (bool): if True, mRPI ignored and we will calculate it, if False we will use the user-defined mRPI.
             vol_converge (float): mRPI algo converges when (vol - volprev) / vol < vol_converge
             debug_mRPI (bool): shows a plot of RPI volume vs. iterations and prints out information from algo
@@ -99,6 +102,7 @@ class TubeMPC(MPC):
                 if self.env.QUAD_TYPE != QuadType.ONE_D:
                     raise NotImplementedError("our current method to compute mRPI does not work for the chosen environment")
         self.wmax = np.array(self.wmax)
+        self.wmin = np.array(self.wmin)
         self.X_LIN = np.atleast_2d(self.env.X_GOAL)[0,:].T
         self.U_LIN = np.atleast_2d(self.env.U_GOAL)[0,:]
         self.model = self.env.symbolic
@@ -108,10 +112,11 @@ class TubeMPC(MPC):
         Ak = self.A + self.B @ self.K
         # Compute minimal Robust Positively Invariant (mRPI) set:
         if self.compute_mRPI:
-            self.Z = compute_min_RPI(Ak, self.wmax, self.vol_converge, self.s_max_rpi, self.debug_mRPI)
+            self.Z = compute_min_RPI(Ak, self.wmax, self.wmin, self.vol_converge, self.s_max_rpi, self.debug_mRPI)
         else:
-            self.Z = Polytope(lb=-np.array(self.mRPI), ub=np.array(self.mRPI))
+            self.Z = Polytope(lb=np.array(self.mRPI.lower_bounds), ub=np.array(self.mRPI.upper_bounds))
         super().reset()
+        self.results_dict['original_violations'] = []
 
         self.original_state_constraints_sym = self.state_constraints_sym
         self.original_input_constraints_sym = self.input_constraints_sym
@@ -312,6 +317,13 @@ class TubeMPC(MPC):
         action += self.K @ (obs - self.X_LIN - x_val[:, 0])
         self.prev_action = action
 
+        violation = False
+        for constraint in self.original_state_constraints_sym:
+            violation = violation or not np.all(constraint(obs) <= 0)
+        for constraint in self.original_input_constraints_sym:
+            violation = violation or not np.all(constraint(action) <= 0)
+        self.results_dict['original_violations'].append(violation)
+
         return action
 
     def learn(self,
@@ -340,11 +352,12 @@ class TubeMPC(MPC):
             w[:,i] = x_next_obs - x_next_estimated[:,0]
 
         self.wmax = np.mean(w.T, axis=0) + self.sigma_confidence*np.std(w.T, axis=0)
+        self.wmin = np.mean(w.T, axis=0) - self.sigma_confidence*np.std(w.T, axis=0)
         
         if self.compute_mRPI:
-            self.Z = compute_min_RPI(self.A + self.B @ self.K, self.wmax, self.vol_converge, self.s_max_rpi, self.debug_mRPI)
+            self.Z = compute_min_RPI(self.A + self.B @ self.K, self.wmax, self.wmin, self.vol_converge, self.s_max_rpi, self.debug_mRPI)
         else:
-            self.Z = Polytope(lb=-np.array(self.mRPI), ub=np.array(self.mRPI))
+            self.Z = Polytope(lb=np.array(self.mRPI.lower_bounds), ub=np.array(self.mRPI.upper_bounds))
 
         self.reset_constraint_polytopes()
         print('Learned disturbance set')

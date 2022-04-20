@@ -11,17 +11,28 @@ algo_config:
   warmstart: True
   use_backup: True
 
-  # Default values for disturbance (wmax) and mRPI
+  # Default values for disturbance (wmax, wmin) and mRPI
   wmax:
     - 0.001
     - 0.001
     - 0.001
     - 0.001
-  mRPI: # for wmax = 0.001, r = 1, q_mpc = [10, 1, 10, 1]
-    - 0.35612957
-    - 0.42101279
-    - 0.06128637
-    - 0.16081624
+  wmin:
+    - -0.001
+    - -0.001
+    - -0.001
+    - -0.001
+  mRPI: # for wmax = 0.001, wmin = -0.001, r = 1, q_mpc = [10, 1, 10, 1]
+    upper_bounds:
+      - 0.35612957
+      - 0.42101279
+      - 0.06128637
+      - 0.16081624
+    lower_bounds:
+      - -0.35612957
+      - -0.42101279
+      - -0.06128637
+      - -0.16081624
 
   # Computing Disturbance
   n_samples: 600

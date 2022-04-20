@@ -57,6 +57,8 @@ def main():
 
     # Run the experiment.
     results = ctrl.run(max_steps=max_steps)
+    if config.algo == 'tube_mpc':
+        print('Original Violations: ', sum(results['original_violations']))
     print('Violations: ', sum(results['violations']))
     ctrl.close()
 
