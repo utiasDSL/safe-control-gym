@@ -101,11 +101,17 @@ class TubeMPC(MPC):
             if self.env.NAME == 'quadrotor':
                 if self.env.QUAD_TYPE != QuadType.ONE_D:
                     raise NotImplementedError("our current method to compute mRPI does not work for the chosen environment")
+        
+        self.model = self.env.symbolic
         self.wmax = np.array(self.wmax)
         self.wmin = np.array(self.wmin)
+
+        origin_in_disturbance = np.all(np.logical_and(self.wmin < np.zeros(self.model.nx), np.zeros(self.model.nx) < self.wmax))
+        if not origin_in_disturbance:
+            raise ValueError('[ERROR] Origin must be included in disturbance set')
+
         self.X_LIN = np.atleast_2d(self.env.X_GOAL)[0,:].T
         self.U_LIN = np.atleast_2d(self.env.U_GOAL)[0,:]
-        self.model = self.env.symbolic
         self.Q = get_cost_weight_matrix(self.q_mpc, self.model.nx)
         self.R = get_cost_weight_matrix(self.r_mpc, self.model.nu)
         self.compute_lqr_gain(self.X_LIN, self.U_LIN)
@@ -114,6 +120,9 @@ class TubeMPC(MPC):
         if self.compute_mRPI:
             self.Z = compute_min_RPI(Ak, self.wmax, self.wmin, self.vol_converge, self.s_max_rpi, self.debug_mRPI)
         else:
+            origin_in_mRPI = np.all(np.logical_and(self.mRPI.lower_bounds < np.zeros(self.model.nx), np.zeros(self.model.nx) < self.mRPI.upper_bounds))
+            if not origin_in_mRPI:
+                raise ValueError('[ERROR] Origin must be included in mRPI set')
             self.Z = Polytope(lb=np.array(self.mRPI.lower_bounds), ub=np.array(self.mRPI.upper_bounds))
         super().reset()
         self.results_dict['original_violations'] = []
@@ -353,6 +362,10 @@ class TubeMPC(MPC):
 
         self.wmax = np.mean(w.T, axis=0) + self.sigma_confidence*np.std(w.T, axis=0)
         self.wmin = np.mean(w.T, axis=0) - self.sigma_confidence*np.std(w.T, axis=0)
+
+        origin_in_disturbance = np.all(np.logical_and(self.wmin < np.zeros(self.model.nx), np.zeros(self.model.nx) < self.wmax))
+        if not origin_in_disturbance:
+            raise ValueError('[ERROR] Origin must be included in disturbance set')
         
         if self.compute_mRPI:
             self.Z = compute_min_RPI(self.A + self.B @ self.K, self.wmax, self.wmin, self.vol_converge, self.s_max_rpi, self.debug_mRPI)
