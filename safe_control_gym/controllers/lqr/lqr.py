@@ -10,19 +10,17 @@ Example:
         python3 experiments/main.py --func test --tag lqr_quad --algo lqr --task quadrotor --q_lqr 0.1
 
 """
+from copy import deepcopy
 import os
 import numpy as np
-from collections import defaultdict
 import scipy.linalg
 from termcolor import colored
-import matplotlib.pyplot as plt
-from matplotlib.ticker import FormatStrFormatter
 
-from safe_control_gym.envs.env_wrappers.record_episode_statistics import RecordEpisodeStatistics, VecRecordEpisodeStatistics
+from safe_control_gym.envs.env_wrappers.record_episode_statistics import RecordEpisodeStatistics
 from safe_control_gym.utils.logging import ExperimentLogger
 from safe_control_gym.controllers.base_controller import BaseController
 from safe_control_gym.controllers.lqr.lqr_utils import *
-from safe_control_gym.envs.benchmark_env import Cost, Task
+from safe_control_gym.envs.benchmark_env import Task
 
 
 class LQR(BaseController):
@@ -46,23 +44,15 @@ class LQR(BaseController):
             # Runner args.
             deque_size=10,
             eval_batch_size=1,
-            # Task
-            task: Task = Task.STABILIZATION,
-            task_info=None,
-            episode_len_sec=10,
             # Shared/base args.
             output_dir="results/temp",
             verbose=False,
             model_step_chk=False,
-            random_init=True,
-            ctrl_freq=240,
-            pyb_freq=240,
             save_data=False,
             data_dir=None,
             plot_traj=False,
             plot_dir=None,
             save_plot=False,
-            init_state_randomization_info=None,
             **kwargs):
         """Creates task and controller.
 
@@ -81,27 +71,9 @@ class LQR(BaseController):
             if k != "self" and k != "kwargs" and "__" not in k:
                 self.__dict__[k] = v
 
-        # Task.
-        self.task = Task(task)
         self.env_func = env_func
-        self.cost = Cost.QUADRATIC
-        self.init_state_randomization_info = init_state_randomization_info
-        self.episode_len_sec = episode_len_sec
-        self.task = task
-        self.task_info = task_info
-        self.ctrl_freq = ctrl_freq
-        self.pyb_freq = pyb_freq
         self.deque_size = deque_size
-        self.random_init = random_init
-        self.env = env_func(cost=self.cost,
-                            randomized_init=random_init,
-                            init_state_randomization_info=init_state_randomization_info,
-                            randomized_inertial_prop=False,
-                            episode_len_sec=episode_len_sec,
-                            task=task,
-                            task_info=task_info,
-                            ctrl_freq=ctrl_freq,
-                            pyb_freq=pyb_freq)
+        self.env = env_func()
         self.env = RecordEpisodeStatistics(self.env, deque_size)
 
         # Controller params.
@@ -114,7 +86,7 @@ class LQR(BaseController):
         self.x_0, self.u_0 = self.env.X_GOAL, self.env.U_GOAL
         self.discrete_dynamics = discrete_dynamics
 
-        if self.task == Task.STABILIZATION:
+        if self.env.TASK == Task.STABILIZATION:
             self.gain = compute_lqr_gain(self.model, self.x_0, self.u_0,
                                          self.Q, self.R, self.discrete_dynamics)
 
@@ -149,6 +121,25 @@ class LQR(BaseController):
 
         # Logging.
         self.logger = ExperimentLogger(output_dir)
+        self.reset_results_dict()
+    
+    def reset(self):
+        """Prepares for evaluation.
+
+        """
+        self.env.reset()
+        self.reset_results_dict()
+    
+    def reset_results_dict(self):
+        """
+        Reset dictionary of experiment results
+        """
+        self.results_dict = { 'obs': [],
+                              'reward': [],
+                              'done': [],
+                              'info': [],
+                              'action': [],
+        }
 
     def model_step(self):
         model = self.env.symbolic
@@ -171,9 +162,9 @@ class LQR(BaseController):
            np.array: step-wise control input/actino.
 
         """
-        if self.task == Task.STABILIZATION:
+        if self.env.TASK == Task.STABILIZATION:
             return -self.gain @ (x - self.x_0) + self.u_0
-        elif self.task == Task.TRAJ_TRACKING:
+        elif self.env.TASK == Task.TRAJ_TRACKING:
             self.gain = compute_lqr_gain(self.model, self.x_0[self.k],
                                          self.u_0, self.Q, self.R,
                                          self.discrete_dynamics)
@@ -201,7 +192,7 @@ class LQR(BaseController):
 
         return gain
 
-    def run(self, n_episodes=1, render=False, logging=False, verbose=False, use_adv=False):
+    def run(self, render=False, logging=False, verbose=False):
         """Runs evaluation with current policy.
 
         Args:
@@ -212,20 +203,22 @@ class LQR(BaseController):
             dict: evaluation results
             
         """
-        ep_returns, ep_lengths = [], []
+        ep_returns, ep_lengths, ep_results = [], [], []
         frames = []
         self.ep_counter = 0
         self.k = 0
 
         # Reseed for batch-wise consistency.
-        obs = self.env.reset()
+        obs, _ = self.env.reset()
+        self.results_dict['obs'].append(obs)
+
         ep_seed = 1 #self.env.SEED
 
         while len(ep_returns) < self.eval_batch_size:
             # Current goal.
-            if self.task == Task.STABILIZATION:
+            if self.env.TASK == Task.STABILIZATION:
                 current_goal = self.x_0
-            elif self.task == Task.TRAJ_TRACKING:
+            elif self.env.TASK == Task.TRAJ_TRACKING:
                 current_goal = self.x_0[self.k]
 
             # Select action.
@@ -253,6 +246,11 @@ class LQR(BaseController):
 
             # Step forward.
             obs, reward, done, info = self.env.step(action)
+            self.results_dict['obs'].append(obs)
+            self.results_dict['reward'].append(reward)
+            self.results_dict['done'].append(done)
+            self.results_dict['info'].append(info)
+            self.results_dict['action'].append(action)
 
             # Debug with analytical model.
             if self.model_step_chk:
@@ -262,7 +260,7 @@ class LQR(BaseController):
             self.k += 1
 
             if verbose:
-                if self.task == Task.TRAJ_TRACKING:
+                if self.env.TASK == Task.TRAJ_TRACKING:
                     print("goal state: " + get_arr_str(self.x_0))
                 print("state: " + get_arr_str(self.env.state))
                 if self.model_step_chk:
@@ -299,10 +297,12 @@ class LQR(BaseController):
                 assert "episode" in info
                 ep_returns.append(info["episode"]["r"])
                 ep_lengths.append(info["episode"]["l"])
+                ep_results.append(deepcopy(self.results_dict))
+                self.reset_results_dict()
 
                 print(colored("Test Run %d reward %.2f" % (self.ep_counter, ep_returns[-1]), "yellow"))
                 print(colored("initial state: " + get_arr_str(x_init), "yellow"))
-                if self.task == Task.STABILIZATION:
+                if self.env.TASK == Task.STABILIZATION:
                     print(colored("final state: " + get_arr_str(self.env.state),  "yellow"))
                     print(colored("goal state: " + get_arr_str(self.x_0), "yellow"))
                 print(colored("==========================\n", "yellow"))
@@ -314,22 +314,14 @@ class LQR(BaseController):
                 self.ep_counter += 1
                 ep_seed += 1
                 self.k = 0
-                self.env = self.env_func(cost=self.cost,
-                                    randomized_init=self.random_init,
-                                    seed=ep_seed,
-                                    init_state_randomization_info=self.init_state_randomization_info,
-                                    randomized_inertial_prop=False,
-                                    episode_len_sec=self.episode_len_sec,
-                                    task=self.task,
-                                    task_info=self.task_info,
-                                    ctrl_freq=self.ctrl_freq,
-                                    pyb_freq=self.pyb_freq)
+                self.env = self.env_func()
                 self.env = RecordEpisodeStatistics(self.env, self.deque_size)
-                obs = self.env.reset()
+                obs, _ = self.env.reset()
 
         # Collect evaluation results.
         ep_lengths = np.asarray(ep_lengths)
         ep_returns = np.asarray(ep_returns)
+        ep_results = np.asarray(ep_results)
         if logging:
             msg = "****** Evaluation ******\n"
             msg += "eval_ep_length {:.2f} +/- {:.2f} | eval_ep_return {:.3f} +/- {:.3f}\n".format(
@@ -340,7 +332,7 @@ class LQR(BaseController):
         if self.save_data:
             np.savetxt(self.data_dir + "all_test_mean_rmse.csv", ep_rmse, delimiter=',', fmt='%.8f')
 
-        eval_results = {"ep_returns": ep_returns, "ep_lengths": ep_lengths}
+        eval_data = {"ep_returns": ep_returns, "ep_lengths": ep_lengths, "ep_results": ep_results}
         if len(frames) > 0 and frames[0] is not None:
-            eval_results["frames"] = frames
-        return eval_results
+            eval_data["frames"] = frames
+        return eval_data

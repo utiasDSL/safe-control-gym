@@ -699,7 +699,7 @@ class GPMPC(MPC):
         """
 
         """
-        "Result the results_dict before running."
+        "Reset the results_dict before running."
         super().reset_results_dict()
         self.results_dict['input_constraint_set'] = []
         self.results_dict['state_constraint_set'] = []

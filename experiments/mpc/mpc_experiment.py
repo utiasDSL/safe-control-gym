@@ -9,9 +9,11 @@ Run as:
 
 """
 import time
+import pickle
+import numpy as np
 import pybullet as p
 from functools import partial
-import numpy as np
+
 
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
@@ -28,9 +30,6 @@ def main():
     # Set max_steps and episode counter.
     max_steps = int(config.task_config['episode_len_sec']*config.task_config['ctrl_freq'])
     
-    # Start a timer.
-    START = time.time()
-    
     # Create controller.
     env_func = partial(make,
                     config.task,
@@ -44,33 +43,56 @@ def main():
     train_env = env_func(gui=False, randomized_init=True, init_state=None, disturbances=None) # training without disturbances
     # train_env = env_func(gui=False, randomized_init=True, init_state=None) # training with disturbances
     ctrl.learn(env=train_env)
+
+    all_results = {'init_state': [], 'final_state': [], 'iters': [], 'violations': [], 'success': [], 'time': []}
                 
-    if config.task_config.task == 'traj_tracking':
-        reference_traj = ctrl.reference
+    num_tests = 100
+    for iter in range(num_tests):
+        # Run the experiment.
+        START = time.time()
+        if config.algo == 'lqr':
+            results = ctrl.run()
+            results = results['ep_results'][0]
+        else:
+            results = ctrl.run(max_steps=max_steps)
 
-        # Plot trajectory.
-        for i in range(0, reference_traj.shape[0], 10):
-            p.addUserDebugLine(lineFromXYZ=[reference_traj[i-10,0], 0, reference_traj[i-10,2]],
-                                lineToXYZ=[reference_traj[i,0], 0, reference_traj[i,2]],
-                                lineColorRGB=[1, 0, 0],
-                                physicsClientId=ctrl.env.PYB_CLIENT)
+        elapsed_time = time.time() - START
+        print('Iteration #', iter)
+        ctrl.reset()
 
-    # Run the experiment.
-    results = ctrl.run(max_steps=max_steps)
-    if config.algo == 'tube_mpc':
-        print('Original Violations: ', sum(results['original_violations']))
-    print('Violations: ', sum(results['violations']))
+        if config.algo == 'tube_mpc':
+            print('Original Violations: ', sum(results['original_violations']))
+            print('Tightened Violations: ', sum(results['violations']))
+            violations = sum(results['original_violations'])
+        else:
+            violations = 0
+            upper_state = np.array(config.task_config.constraints[0].upper_bounds)
+            lower_state = np.array(config.task_config.constraints[0].lower_bounds)
+            upper_input = np.array(config.task_config.constraints[1].upper_bounds)
+            lower_input = np.array(config.task_config.constraints[1].lower_bounds)
+            for i in range(len(results['obs'])-1):
+                violations += not np.all(np.logical_and(lower_state < results['obs'][i+1], results['obs'][i+1] < upper_state))
+                violations += not np.all(np.logical_and(lower_input < results['action'][i], results['action'][i] < upper_input))
+
+            print('Violations: ', violations)
+
+        success = results['info'][-1]['goal_reached']
+        all_results['init_state'].append(results['obs'][0])
+        all_results['time'].append(elapsed_time)
+        all_results['iters'].append(len(results['obs']))
+        all_results['success'].append(success)
+        all_results['violations'].append(violations)
+        all_results['final_state'].append(np.vstack(results['obs'])[-1, :])
+    
     ctrl.close()
 
-    # N = len(results['obs']) - 1
-    # # Plot the experiment.
-    # for i in range(N):
-    #     # Step the environment and print all returned information.
-    #     obs, reward, done, info, action = results['obs'][i], results['reward'][i], results['done'][i], results['info'][i], results['action'][i]
-        
-    #     # Print the last action and the information returned at each step.
-    #     print(i, '-th step.')
-    #     print(action, '\n', obs, '\n', reward, '\n', done, '\n', info, '\n')
+    with open('results_tube.pkl', "wb") as f:
+        pickle.dump(all_results, f)
+
+    print("NUM SUCCESSES:", sum(all_results['success']))
+    print("NUM VIOLATIONS:", sum(all_results['violations']))
+    print("AVG ITERATIONS:", sum(all_results['iters'])/len(all_results['iters']))
+
 
 if __name__ == "__main__":
     main()
