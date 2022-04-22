@@ -1,8 +1,8 @@
 seed: 42
 task_config:
   task: stabilization
-  ctrl_freq: 50
-  episode_len_sec: 7.5
+  ctrl_freq: 10
+  episode_len_sec: 10
   pyb_freq: 1000
   gui: False
   randomized_inertial_prop: False
@@ -12,8 +12,16 @@ task_config:
       distrib: uniform
       low: -0.3
       high: 0.3
+    init_x_dot:
+      distrib: 'uniform'
+      low: -0.3
+      high: 0.3
     init_theta:
       distrib: uniform
+      low: -0.1
+      high: 0.1
+    init_theta_dot:
+      distrib: 'uniform'
       low: -0.1
       high: 0.1
   info_in_reset: True
@@ -35,12 +43,15 @@ task_config:
     - constraint_form: default_constraint
       constrained_variable: input
       upper_bounds:
-        - 10.0
+        - 2.0
       lower_bounds:
-        - -10.0
-  disturbances: null
+        - -2.0
+  disturbances:
+    dynamics:
+      - disturbance_func: white_noise
+        std: 0.01  
   done_on_violation: False
   done_on_out_of_bound: False
   task_info:
-    stabilization_goal: [0, 0]
-    stabilization_goal_tolerance: 0.01  
+    stabilization_goal: [1.9, 0]
+    stabilization_goal_tolerance: 0.05  

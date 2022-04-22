@@ -9,7 +9,7 @@ algo_config:
     - 1
 
   # Verbose
-  verbose: True
+  verbose: False
 
   # Number of test runs
   eval_batch_size: 1

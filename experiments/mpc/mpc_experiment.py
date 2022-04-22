@@ -83,6 +83,10 @@ def main():
         all_results['success'].append(success)
         all_results['violations'].append(violations)
         all_results['final_state'].append(np.vstack(results['obs'])[-1, :])
+
+        print('Success', success)
+        print('Final state', np.vstack(results['obs'])[-1, :])
+        print('Num Iters', len(results['obs']))
     
     ctrl.close()
 
