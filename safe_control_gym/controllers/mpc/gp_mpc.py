@@ -48,7 +48,7 @@ class GPMPC(MPC):
             q_mpc: list = [1],
             r_mpc: list = [1],
             additional_constraints: list = None,
-            use_prev_start: bool = True,
+            warmstart: bool = True,
             train_iterations: int = 800,
             validation_iterations: int = 200,
             optimization_iterations: list = None,
@@ -75,7 +75,7 @@ class GPMPC(MPC):
             seed (int): random seed.
             horizon (int): MPC planning horizon.
             Q, R (np.array): cost weight matrix.
-            use_prev_start (bool): Warmstart mpc with the previous solution.
+            warmstart (bool): Warmstart mpc with the previous solution.
             train_iterations (int): the number of training examples to use for each dimension of the GP.
             validation_iterations (int): the number of points to use use for the test set during training.
             optimization_iterations (list): the number of optimization iterations for each dimension of the GP.
@@ -104,7 +104,7 @@ class GPMPC(MPC):
             horizon=horizon,
             q_mpc=q_mpc,
             r_mpc=r_mpc,
-            use_prev_start=use_prev_start,
+            warmstart=warmstart,
             output_dir=output_dir,
             additional_constraints=additional_constraints,
         )
@@ -114,7 +114,7 @@ class GPMPC(MPC):
             horizon=horizon,
             q_mpc=q_mpc,
             r_mpc=r_mpc,
-            use_prev_start=use_prev_start,
+            warmstart=warmstart,
             output_dir=output_dir,
             additional_constraints=additional_constraints,
             **kwargs)
