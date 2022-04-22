@@ -4,12 +4,18 @@ r_mpc:
   - 1.
 q_mpc:
   - 1.
-use_prev_start: True
+warmstart: True
+use_backup: True
+alpha: 10
+use_terminal_ingredients: False
 
-# Runner args
-deque_size: 10
-eval_batch_size: 10
-
-# Learning disturbance bounds
+# Computing Disturbance
 n_samples: 600
 sigma_confidence: 3
+
+# Minimal Robust Positively Invariant Set (mRPI)
+compute_mRPI: True
+eps_rpi: 1.0e-3
+s_max_rpi: 500
+vol_converge: 1.0e-4
+debug_mRPI: False

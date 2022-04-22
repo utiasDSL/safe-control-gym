@@ -36,6 +36,8 @@ class TubeMPC(MPC):
             horizon=5,
             q_mpc=[1],
             r_mpc=[1],
+            alpha=1,
+            use_terminal_ingredients=False,
             wmax=[0.1],
             wmin=[-0.1],
             warmstart=True,
@@ -106,7 +108,7 @@ class TubeMPC(MPC):
         self.wmax = np.array(self.wmax)
         self.wmin = np.array(self.wmin)
 
-        origin_in_disturbance = np.all(np.logical_and(self.wmin < np.zeros(self.model.nx), np.zeros(self.model.nx) < self.wmax))
+        origin_in_disturbance = np.all(np.logical_and(self.wmin <= np.zeros(self.model.nx), np.zeros(self.model.nx) <= self.wmax))
         if not origin_in_disturbance:
             raise ValueError('[ERROR] Origin must be included in disturbance set')
 
@@ -120,7 +122,7 @@ class TubeMPC(MPC):
         if self.compute_mRPI:
             self.Z = compute_min_RPI(Ak, self.wmax, self.wmin, self.vol_converge, self.s_max_rpi, self.debug_mRPI)
         else:
-            origin_in_mRPI = np.all(np.logical_and(self.mRPI.lower_bounds < np.zeros(self.model.nx), np.zeros(self.model.nx) < self.mRPI.upper_bounds))
+            origin_in_mRPI = np.all(np.logical_and(self.mRPI.lower_bounds <= np.zeros(self.model.nx), np.zeros(self.model.nx) <= self.mRPI.upper_bounds))
             if not origin_in_mRPI:
                 raise ValueError('[ERROR] Origin must be included in mRPI set')
             self.Z = Polytope(lb=np.array(self.mRPI.lower_bounds), ub=np.array(self.mRPI.upper_bounds))
@@ -225,12 +227,16 @@ class TubeMPC(MPC):
                               Q=self.Q,
                               R=self.R)["l"]
         # Terminal cost.
-        cost += cost_func(x=x_var[:, -1]+self.X_LIN[:,None],
-                          u=np.zeros((nu, 1))+self.U_LIN[:, None],
-                          Xr=x_ref[:, -1],
-                          Ur=np.zeros((nu, 1)),
-                          Q=self.Q,
-                          R=self.R)["l"]
+        if self.use_terminal_ingredients:
+            cost += (x_var[:, -1]+self.X_LIN[:,None]).T @ self.P @ (x_var[:, -1]+self.X_LIN[:,None])
+        else:
+            cost += cost_func(x=x_var[:, -1]+self.X_LIN[:, None],
+                              u=np.zeros((nu, 1))+self.U_LIN[:, None],
+                              Xr=x_ref[:, -1],
+                              Ur=np.zeros((nu, 1)),
+                              Q=self.Q,
+                              R=self.R)["l"]
+
         opti.minimize(cost)
         for i in range(self.T):
             # Dynamics constraints.
@@ -248,6 +254,8 @@ class TubeMPC(MPC):
         if unconstrained == False:
             for state_constraint in self.state_constraints_sym:
                 opti.subject_to(state_constraint(x_var[:,-1] + self.X_LIN.T)  < 0)
+            if self.use_terminal_ingredients:
+                opti.subject_to((x_var[:, -1]+self.X_LIN[:,None]).T @ self.P @ (x_var[:, -1]+self.X_LIN[:,None])  < self.alpha)
         # Create solver (IPOPT solver in this version).
         opts = {}
         if platform == "linux":
@@ -363,7 +371,7 @@ class TubeMPC(MPC):
         self.wmax = np.mean(w.T, axis=0) + self.sigma_confidence*np.std(w.T, axis=0)
         self.wmin = np.mean(w.T, axis=0) - self.sigma_confidence*np.std(w.T, axis=0)
 
-        origin_in_disturbance = np.all(np.logical_and(self.wmin < np.zeros(self.model.nx), np.zeros(self.model.nx) < self.wmax))
+        origin_in_disturbance = np.all(np.logical_and(self.wmin <= np.zeros(self.model.nx), np.zeros(self.model.nx) <= self.wmax))
         if not origin_in_disturbance:
             raise ValueError('[ERROR] Origin must be included in disturbance set')
         

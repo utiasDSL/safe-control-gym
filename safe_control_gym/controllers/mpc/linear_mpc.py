@@ -8,12 +8,14 @@ Based on:
 """
 import numpy as np
 import casadi as cs
-
+import scipy.linalg
 from sys import platform
 from copy import deepcopy
 
 from safe_control_gym.controllers.mpc.mpc import MPC
 from safe_control_gym.envs.benchmark_env import Task
+from safe_control_gym.controllers.cbf.cbf_qp_utils import cartesian_product
+from safe_control_gym.controllers.mpc.mpc_utils import discretize_linear_system, get_cost_weight_matrix
 
 
 class LinearMPC(MPC):
@@ -27,6 +29,8 @@ class LinearMPC(MPC):
             horizon=5,
             q_mpc=[1],
             r_mpc=[1],
+            alpha=1,
+            use_terminal_ingredients=False,
             warmstart=True,
             use_backup=False,
             output_dir="results/temp",
@@ -48,6 +52,7 @@ class LinearMPC(MPC):
         for k, v in locals().items():
             if k != "self" and k != "kwargs" and "__" not in k:
                 self.__dict__[k] = v
+
         super().__init__(
             env_func,
             horizon=horizon,
@@ -65,7 +70,25 @@ class LinearMPC(MPC):
         """
         self.X_LIN = np.atleast_2d(self.env.X_GOAL)[0,:].T
         self.U_LIN = np.atleast_2d(self.env.U_GOAL)[0,:]
+        self.model = self.env.symbolic
+        self.Q = get_cost_weight_matrix(self.q_mpc, self.model.nx)
+        self.R = get_cost_weight_matrix(self.r_mpc, self.model.nu)
+        self.compute_lqr_gain(self.X_LIN, self.U_LIN)
         super().reset()
+    
+    def compute_lqr_gain(self, x_0, u_0):
+        # Linearization.
+        df = self.model.df_func(x=x_0, u=u_0)
+        A = df['dfdx'].toarray()
+        B = df['dfdu'].toarray()
+        # Compute controller gain.
+        A, B = discretize_linear_system(A, B, self.model.dt)
+        self.P = scipy.linalg.solve_discrete_are(A, B, self.Q, self.R)
+        btp = np.dot(B.T, self.P)
+        self.K = -1 * np.dot(np.linalg.inv(self.R + np.dot(btp, B)),
+                           np.dot(btp, A))
+        self.A = A
+        self.B = B
 
     def set_dynamics_func(self):
         """Updates symbolic dynamics with actual control frequency.
@@ -88,6 +111,66 @@ class LinearMPC(MPC):
         )
         self.dfdx = dfdx
         self.dfdu = dfdu
+    
+    def is_valid_terminal_set(self, num_points=100):
+        # Select the states to check the CBF condition
+        max_bounds = np.array(self.constraints.state_constraints[0].upper_bounds)
+        min_bounds = np.array(self.constraints.state_constraints[0].lower_bounds)
+
+        # state dimension and input dimension
+        nx, nu = self.model.nx, self.model.nu
+
+        # Make sure that every vertex is checked
+        num_points = max(2 * nx, num_points + num_points % (2 * nx))
+        num_points_per_dim = num_points // nx
+
+        # Create the lists of states to check
+        states_to_sample = [np.linspace(min_bounds[i], max_bounds[i], num_points_per_dim) for i in range(nx)]
+        states_to_check = cartesian_product(*states_to_sample)
+
+        # Select the inputs to check
+        max_bounds = np.array(self.constraints.input_constraints[0].upper_bounds)
+        min_bounds = np.array(self.constraints.input_constraints[0].lower_bounds)
+
+        # Make sure that every vertex is checked
+        num_points = max(2 * nu, num_points + num_points % (2 * nu))
+        num_points_per_dim = num_points // nu
+
+        # Create the lists of inputs to check
+        inputs_to_sample = [np.linspace(min_bounds[i], max_bounds[i], num_points_per_dim) for i in range(nu)]
+        inputs_to_check = cartesian_product(*inputs_to_sample)
+
+        invalid_states = []
+
+        counter = 0
+        volume_terminal_set = len(states_to_check)
+
+        # Check if the set is valid for every considered state
+        for state in states_to_check:
+            counter += 1
+            print(f'States Checked: {counter} / {len(states_to_check)}')
+
+            terminal_cost = state.T @ self.P @ state
+            if terminal_cost > self.alpha:
+                volume_terminal_set -= 1
+                continue
+
+            for input in inputs_to_check:
+                next_state = self.linear_dynamics_func(x0=state-self.X_LIN, p=input-self.U_LIN)['xf']
+                next_terminal_cost = next_state.T @ self.P @ next_state
+                stage_cost = state.T @ self.Q @ state + input.T @ self.R @ input
+                success = next_terminal_cost - terminal_cost <= -stage_cost
+                if success:
+                    break
+
+            if not success:
+                invalid_states.append(state)
+
+        print(f'Volume of terminal set: {float(volume_terminal_set) / len(states_to_check)}')
+
+        valid_terminal_set = len(invalid_states) == 0
+        return valid_terminal_set, invalid_states
+
 
     def setup_optimizer(self, unconstrained=False):
         """Sets up convex optimization problem.
@@ -118,12 +201,16 @@ class LinearMPC(MPC):
                               Q=self.Q,
                               R=self.R)["l"]
         # Terminal cost.
-        cost += cost_func(x=x_var[:, -1]+self.X_LIN[:,None],
-                          u=np.zeros((nu, 1))+self.U_LIN[:, None],
-                          Xr=x_ref[:, -1],
-                          Ur=np.zeros((nu, 1)),
-                          Q=self.Q,
-                          R=self.R)["l"]
+        if self.use_terminal_ingredients:
+            cost += (x_var[:, -1]+self.X_LIN[:,None]).T @ self.P @ (x_var[:, -1]+self.X_LIN[:,None])
+        else:
+            cost += cost_func(x=x_var[:, -1]+self.X_LIN[:, None],
+                              u=np.zeros((nu, 1))+self.U_LIN[:, None],
+                              Xr=x_ref[:, -1],
+                              Ur=np.zeros((nu, 1)),
+                              Q=self.Q,
+                              R=self.R)["l"]
+
         opti.minimize(cost)
         for i in range(self.T):
             # Dynamics constraints.
@@ -139,6 +226,8 @@ class LinearMPC(MPC):
         if not unconstrained:
             for state_constraint in self.state_constraints_sym:
                 opti.subject_to(state_constraint(x_var[:,-1] + self.X_LIN.T)  < 0)
+            if self.use_terminal_ingredients:
+                opti.subject_to((x_var[:, -1]+self.X_LIN[:,None]).T @ self.P @ (x_var[:, -1]+self.X_LIN[:,None])  < self.alpha)
         # Initial condition constraints.
         opti.subject_to(x_var[:, 0] == x_init)
         # Create solver (IPOPT solver in this version).

@@ -6,6 +6,8 @@ q_mpc:
   - 1.
 warmstart: True
 use_backup: False
+alpha: 1
+use_terminal_ingredients: False
 
 # Runner args
 deque_size: 10

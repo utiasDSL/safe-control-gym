@@ -40,6 +40,10 @@ def main():
                 **config.algo_config
                 )
 
+    # valid, states = ctrl.is_valid_terminal_set()
+    # print(valid, len(states))
+    # 1/0
+
     train_env = env_func(gui=False, randomized_init=True, init_state=None, disturbances=None) # training without disturbances
     # train_env = env_func(gui=False, randomized_init=True, init_state=None) # training with disturbances
     ctrl.learn(env=train_env)

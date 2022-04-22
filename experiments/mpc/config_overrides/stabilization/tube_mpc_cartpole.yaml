@@ -10,6 +10,8 @@ algo_config:
     - 1
   warmstart: True
   use_backup: True
+  alpha: 10
+  use_terminal_ingredients: True
 
   # Default values for disturbance (wmax, wmin) and mRPI
   wmax:
