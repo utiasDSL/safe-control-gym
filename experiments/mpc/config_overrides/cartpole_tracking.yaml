@@ -2,9 +2,9 @@ seed: 42
 task_config:
   task: stabilization
   ctrl_freq: 10
-  episode_len_sec: 10
+  episode_len_sec: 20
   pyb_freq: 1000
-  gui: False
+  gui: True
   randomized_inertial_prop: False
   randomized_init: True
   init_state_randomization_info:
@@ -46,12 +46,18 @@ task_config:
         - 2.0
       lower_bounds:
         - -2.0
-  disturbances:
-    dynamics:
-      - disturbance_func: white_noise
-        std: 0.01  
+  # disturbances:
+  #   dynamics:
+  #     - disturbance_func: white_noise
+  #       std: 0.01  
   done_on_violation: False
   done_on_out_of_bound: False
+  task: traj_tracking
   task_info:
-    stabilization_goal: [1.9, 0]
-    stabilization_goal_tolerance: 0.05  
+    stabilization_goal: [0, 0]
+    stabilization_goal_tolerance: 0.05
+    trajectory_type: "circle"
+    num_cycles: 1
+    trajectory_plane: "zx"
+    trajectory_position_offset: [0, 0]
+    trajectory_scale: 1

@@ -314,7 +314,6 @@ class LQR(BaseController):
                 self.ep_counter += 1
                 ep_seed += 1
                 self.k = 0
-                self.env = self.env_func()
                 self.env = RecordEpisodeStatistics(self.env, self.deque_size)
                 obs, _ = self.env.reset()
 

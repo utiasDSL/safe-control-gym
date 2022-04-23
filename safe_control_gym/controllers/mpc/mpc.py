@@ -266,25 +266,6 @@ class MPC(BaseController):
         self.prev_action = action
 
         return action
-    
-    def check_constraint_satisfaction(self, state, action):
-        """Checks whether constraints are violated
-
-        Args:
-            state (np.array): current state/observation. 
-            action (np.array): current action being executed.
-        
-        Returns:
-            bool: True if constraints violated. 
-
-        """
-
-        violation = False
-        for constraint in self.state_constraints_sym:
-            violation = violation or not np.all(constraint(state) <= 0)
-        for constraint in self.input_constraints_sym:
-            violation = violation or not np.all(constraint(action) <= 0)
-        return violation
 
     def get_references(self):
         """Constructs reference states along mpc horizon.(nx, T+1).
@@ -304,6 +285,7 @@ class MPC(BaseController):
             ], -1)
         else:
             raise Exception("Reference for this mode is not implemented.")
+        
         return goal_states  # (nx, T+1).
 
     def reset_results_dict(self):
@@ -316,8 +298,7 @@ class MPC(BaseController):
                               'info': [],
                               'action': [],
                               'horizon_inputs': [],
-                              'horizon_states': [],
-                              'violations': []
+                              'horizon_states': []
         }
 
     def run(self,
@@ -370,7 +351,6 @@ class MPC(BaseController):
             self.results_dict['done'].append(done)
             self.results_dict['info'].append(info)
             self.results_dict['action'].append(action)
-            self.results_dict['violations'].append(self.check_constraint_satisfaction(obs, action))
             print(i, '-th step.')
             print(action)
             print(obs)

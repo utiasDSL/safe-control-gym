@@ -40,7 +40,7 @@ def main():
                 **config.algo_config
                 )
 
-    # valid, states = ctrl.is_valid_terminal_set()
+    # valid, states = ctrl.is_valid_terminal_set(num_points=30)
     # print(valid, len(states))
     # 1/0
 
@@ -48,7 +48,7 @@ def main():
     # train_env = env_func(gui=False, randomized_init=True, init_state=None) # training with disturbances
     ctrl.learn(env=train_env)
 
-    all_results = {'init_state': [], 'final_state': [], 'iters': [], 'violations': [], 'success': [], 'time': []}
+    all_results = {'init_state': [], 'final_state': [], 'iters': [], 'violations': [], 'success': [], 'time': [], 'rmse': []}
                 
     num_tests = 100
     for iter in range(num_tests):
@@ -64,23 +64,17 @@ def main():
         print('Iteration #', iter)
         ctrl.reset()
 
-        if config.algo == 'tube_mpc':
-            print('Original Violations: ', sum(results['original_violations']))
-            print('Tightened Violations: ', sum(results['violations']))
-            violations = sum(results['original_violations'])
+        violations = sum([results['info'][i]['constraint_violation'] for i in range(len(results['info']))])
+
+        if config.task_config.task == 'stabilization':
+            success = results['info'][-1]['goal_reached']
         else:
-            violations = 0
-            upper_state = np.array(config.task_config.constraints[0].upper_bounds)
-            lower_state = np.array(config.task_config.constraints[0].lower_bounds)
-            upper_input = np.array(config.task_config.constraints[1].upper_bounds)
-            lower_input = np.array(config.task_config.constraints[1].lower_bounds)
-            for i in range(len(results['obs'])-1):
-                violations += not np.all(np.logical_and(lower_state < results['obs'][i+1], results['obs'][i+1] < upper_state))
-                violations += not np.all(np.logical_and(lower_input < results['action'][i], results['action'][i] < upper_input))
+            success = bool(np.linalg.norm(results['obs'][-1][[0, 2]] - config.task_config.task_info.stabilization_goal) < config.task_config.task_info.stabilization_goal_tolerance)
+        
+        mse = np.square(np.subtract(np.vstack(results['obs'])[1:, :],ctrl.env.X_GOAL)).mean() 
+        rmse = mse**0.5
 
-            print('Violations: ', violations)
-
-        success = results['info'][-1]['goal_reached']
+        all_results['rmse'].append(rmse)
         all_results['init_state'].append(results['obs'][0])
         all_results['time'].append(elapsed_time)
         all_results['iters'].append(len(results['obs']))
@@ -94,8 +88,8 @@ def main():
     
     ctrl.close()
 
-    with open('results_tube.pkl', "wb") as f:
-        pickle.dump(all_results, f)
+    # with open('results_tube.pkl', "wb") as f:
+    #     pickle.dump(all_results, f)
 
     print("NUM SUCCESSES:", sum(all_results['success']))
     print("NUM VIOLATIONS:", sum(all_results['violations']))

@@ -127,7 +127,6 @@ class TubeMPC(MPC):
                 raise ValueError('[ERROR] Origin must be included in mRPI set')
             self.Z = Polytope(lb=np.array(self.mRPI.lower_bounds), ub=np.array(self.mRPI.upper_bounds))
         super().reset()
-        self.results_dict['original_violations'] = []
 
         self.original_state_constraints_sym = self.state_constraints_sym
         self.original_input_constraints_sym = self.input_constraints_sym
@@ -318,13 +317,13 @@ class TubeMPC(MPC):
                 return action
             print(e)
             return_status = opti.return_status()
-            if return_status == 'unknown':
-                self.terminate_loop = True
-                return None
-            elif return_status == 'Maximum_Iterations_Exceeded':
+            if return_status == 'Maximum_Iterations_Exceeded' or return_status == 'Search_Direction_Becomes_Too_Small':
                 self.terminate_loop = True
                 u_val = opti.debug.value(u_var)
                 x_val = opti.debug.value(x_var)
+            else:
+                self.terminate_loop = True
+                return None
         # Take first one from solved action sequence.
         if u_val.ndim > 1:
             action = u_val[:, 0]
@@ -333,14 +332,6 @@ class TubeMPC(MPC):
         action += self.U_LIN
         action += self.K @ (obs - self.X_LIN - x_val[:, 0])
         self.prev_action = action
-
-        violation = False
-        for constraint in self.original_state_constraints_sym:
-            violation = violation or not np.all(constraint(obs) <= 0)
-        for constraint in self.original_input_constraints_sym:
-            violation = violation or not np.all(constraint(action) <= 0)
-        self.results_dict['original_violations'].append(violation)
-
         return action
 
     def learn(self,
