@@ -202,7 +202,7 @@ class LinearMPC(MPC):
                               R=self.R)["l"]
         # Terminal cost.
         if self.use_terminal_ingredients:
-            cost += (x_var[:, -1]+self.X_LIN[:,None]).T @ self.P @ (x_var[:, -1]+self.X_LIN[:,None])
+            cost += (x_var[:, -1]+self.X_LIN[:,None]-x_ref[:, -1]).T @ self.P @ (x_var[:, -1]+self.X_LIN[:,None]-x_ref[:, -1])
         else:
             cost += cost_func(x=x_var[:, -1]+self.X_LIN[:, None],
                               u=np.zeros((nu, 1))+self.U_LIN[:, None],
@@ -227,7 +227,7 @@ class LinearMPC(MPC):
             for state_constraint in self.state_constraints_sym:
                 opti.subject_to(state_constraint(x_var[:,-1] + self.X_LIN.T)  < 0)
             if self.use_terminal_ingredients:
-                opti.subject_to((x_var[:, -1]+self.X_LIN[:,None]).T @ self.P @ (x_var[:, -1]+self.X_LIN[:,None])  < self.alpha)
+                opti.subject_to((x_var[:, -1]+self.X_LIN[:,None]-x_ref[:, -1]).T @ self.P @ (x_var[:, -1]+self.X_LIN[:,None]-x_ref[:, -1]) <= self.alpha)
         # Initial condition constraints.
         opti.subject_to(x_var[:, 0] == x_init)
         # Create solver (IPOPT solver in this version).

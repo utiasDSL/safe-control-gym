@@ -228,7 +228,7 @@ class TubeMPC(MPC):
                               R=self.R)["l"]
         # Terminal cost.
         if self.use_terminal_ingredients:
-            cost += (x_var[:, -1]+self.X_LIN[:,None]).T @ self.P @ (x_var[:, -1]+self.X_LIN[:,None])
+            cost += (x_var[:, -1]+self.X_LIN[:,None]-x_ref[:, -1]).T @ self.P @ (x_var[:, -1]+self.X_LIN[:,None]-x_ref[:, -1])
         else:
             cost += cost_func(x=x_var[:, -1]+self.X_LIN[:, None],
                               u=np.zeros((nu, 1))+self.U_LIN[:, None],
@@ -255,8 +255,7 @@ class TubeMPC(MPC):
             for state_constraint in self.state_constraints_sym:
                 opti.subject_to(state_constraint(x_var[:,-1] + self.X_LIN.T)  < 0)
             if self.use_terminal_ingredients:
-                opti.subject_to((x_var[:, -1]+self.X_LIN[:,None]).T @ self.P @ (x_var[:, -1]+self.X_LIN[:,None])  < self.alpha)
-        # Create solver (IPOPT solver in this version).
+                opti.subject_to((x_var[:, -1]+self.X_LIN[:,None]-x_ref[:, -1]).T @ self.P @ (x_var[:, -1]+self.X_LIN[:,None]-x_ref[:, -1]) <= self.alpha)        # Create solver (IPOPT solver in this version).
         opts = {}
         if platform == "linux":
             opti.solver('sqpmethod', opts)
@@ -325,6 +324,7 @@ class TubeMPC(MPC):
             elif return_status == 'Maximum_Iterations_Exceeded':
                 self.terminate_loop = True
                 u_val = opti.debug.value(u_var)
+                x_val = opti.debug.value(x_var)
         # Take first one from solved action sequence.
         if u_val.ndim > 1:
             action = u_val[:, 0]
