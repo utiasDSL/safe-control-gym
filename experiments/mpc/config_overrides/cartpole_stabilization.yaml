@@ -46,10 +46,10 @@ task_config:
         - 2.0
       lower_bounds:
         - -2.0
-  # disturbances:
-  #   dynamics:
-  #     - disturbance_func: white_noise
-  #       std: 0.01  
+  disturbances:
+    dynamics:
+      - disturbance_func: white_noise
+        std: 0.02 
   done_on_violation: False
   done_on_out_of_bound: False
   task: stabilization

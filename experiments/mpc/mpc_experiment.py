@@ -71,8 +71,12 @@ def main():
         else:
             success = bool(np.linalg.norm(results['obs'][-1][[0, 2]] - config.task_config.task_info.stabilization_goal) < config.task_config.task_info.stabilization_goal_tolerance)
         
-        mse = np.square(np.subtract(np.vstack(results['obs'])[1:, :],ctrl.env.X_GOAL)).mean() 
-        rmse = mse**0.5
+        if np.vstack(results['obs'])[1:, :].shape ==  ctrl.env.X_GOAL.shape:
+            mse = np.square(np.subtract(np.vstack(results['obs'])[1:, :], ctrl.env.X_GOAL)).mean() 
+            rmse = mse**0.5
+        else:
+            rmse = float('inf')
+            success = False
 
         all_results['rmse'].append(rmse)
         all_results['init_state'].append(results['obs'][0])
@@ -88,12 +92,14 @@ def main():
     
     ctrl.close()
 
-    # with open('results_tube.pkl', "wb") as f:
-    #     pickle.dump(all_results, f)
+    with open(f'results/{config.task_config.task}_{config.algo}.pkl', "wb") as f:
+        pickle.dump(all_results, f)
 
     print("NUM SUCCESSES:", sum(all_results['success']))
     print("NUM VIOLATIONS:", sum(all_results['violations']))
     print("AVG ITERATIONS:", sum(all_results['iters'])/len(all_results['iters']))
+    print("RMSE:", sum(all_results['rmse'])/len(all_results['rmse']))
+    print("FAILED:", all_results['rmse'].count(float('inf')))
 
 
 if __name__ == "__main__":

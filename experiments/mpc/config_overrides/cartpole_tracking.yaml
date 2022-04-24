@@ -4,7 +4,7 @@ task_config:
   ctrl_freq: 10
   episode_len_sec: 20
   pyb_freq: 1000
-  gui: True
+  gui: False
   randomized_inertial_prop: False
   randomized_init: True
   init_state_randomization_info:
