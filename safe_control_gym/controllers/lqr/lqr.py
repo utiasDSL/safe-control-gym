@@ -212,13 +212,17 @@ class LQR(BaseController):
             dict: evaluation results
             
         """
+        if env is None:
+            env = self.env
+        else:
+            env = RecordEpisodeStatistics(env, self.deque_size)
         ep_returns, ep_lengths = [], []
         frames = []
         self.ep_counter = 0
         self.k = 0
 
         # Reseed for batch-wise consistency.
-        obs = self.env.reset()
+        obs = env.reset()
         ep_seed = 1 #self.env.SEED
 
         while len(ep_returns) < self.eval_batch_size:
@@ -229,30 +233,30 @@ class LQR(BaseController):
                 current_goal = self.x_0[self.k]
 
             # Select action.
-            action = self.select_action(self.env.state)
+            action = self.select_action(env.state)
 
             # Save initial condition.
             if self.k == 0:
-                x_init = self.env.state
+                x_init = env.state
                 if self.model_step_chk:
-                    self.model_state = self.env.state
+                    self.model_state = env.state
 
                 # Initialize state and input stack.
-                state_stack = self.env.state
+                state_stack = env.state
                 input_stack = action
                 goal_stack = current_goal
 
                 # Print initial state.
-                print(colored("initial state (%d): " % ep_seed + get_arr_str(self.env.state), "green"))
+                print(colored("initial state (%d): " % ep_seed + get_arr_str(env.state), "green"))
 
             else:
                 # Save state and input.
-                state_stack = np.vstack((state_stack, self.env.state))
+                state_stack = np.vstack((state_stack, env.state))
                 input_stack = np.vstack((input_stack, action))
                 goal_stack = np.vstack((goal_stack, current_goal))
 
             # Step forward.
-            obs, reward, done, info = self.env.step(action)
+            obs, reward, done, info = env.step(action)
 
             # Debug with analytical model.
             if self.model_step_chk:
@@ -264,27 +268,27 @@ class LQR(BaseController):
             if verbose:
                 if self.task == Task.TRAJ_TRACKING:
                     print("goal state: " + get_arr_str(self.x_0))
-                print("state: " + get_arr_str(self.env.state))
+                print("state: " + get_arr_str(env.state))
                 if self.model_step_chk:
                     print("model_state: " + get_arr_str(self.model_state))
                 print("obs: " + get_arr_str(obs))
                 print("action: " + get_arr_str(action) + "\n")
 
             if render:
-                self.env.render()
-                frames.append(self.env.render("rgb_array"))
+                env.render()
+                frames.append(env.render("rgb_array"))
 
             if done:
                 # Push last state and input to stack.
                 # Note: the last input is not used.
-                state_stack = np.vstack((state_stack, self.env.state))
+                state_stack = np.vstack((state_stack, env.state))
                 input_stack = np.vstack((input_stack, action))
                 goal_stack = np.vstack((goal_stack, current_goal))
 
                 # Post analysis.
                 if self.plot_traj or self.save_plot or self.save_data:
                     analysis_data = post_analysis(goal_stack, state_stack,
-                                                  input_stack, self.env, 0,
+                                                  input_stack, env, 0,
                                                   self.ep_counter,
                                                   self.plot_traj,
                                                   self.save_plot,
@@ -303,7 +307,7 @@ class LQR(BaseController):
                 print(colored("Test Run %d reward %.2f" % (self.ep_counter, ep_returns[-1]), "yellow"))
                 print(colored("initial state: " + get_arr_str(x_init), "yellow"))
                 if self.task == Task.STABILIZATION:
-                    print(colored("final state: " + get_arr_str(self.env.state),  "yellow"))
+                    print(colored("final state: " + get_arr_str(env.state),  "yellow"))
                     print(colored("goal state: " + get_arr_str(self.x_0), "yellow"))
                 print(colored("==========================\n", "yellow"))
 
@@ -324,7 +328,7 @@ class LQR(BaseController):
                                     task_info=self.task_info,
                                     ctrl_freq=self.ctrl_freq,
                                     pyb_freq=self.pyb_freq)
-                self.env = RecordEpisodeStatistics(self.env, self.deque_size)
+                self.env = RecordEpisodeStatistics(env, self.deque_size)
                 obs = self.env.reset()
 
         # Collect evaluation results.
@@ -340,7 +344,7 @@ class LQR(BaseController):
         if self.save_data:
             np.savetxt(self.data_dir + "all_test_mean_rmse.csv", ep_rmse, delimiter=',', fmt='%.8f')
 
-        eval_results = {"ep_returns": ep_returns, "ep_lengths": ep_lengths}
+        eval_results = {"ep_returns": ep_returns, "ep_lengths": ep_lengths, "obs":state_stack, "action": input_stack}
         if len(frames) > 0 and frames[0] is not None:
             eval_results["frames"] = frames
         return eval_results
