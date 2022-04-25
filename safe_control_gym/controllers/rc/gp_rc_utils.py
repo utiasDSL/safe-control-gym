@@ -183,7 +183,7 @@ def compute_state_rmse(state_error):
     print(colored("scalarized rmse: %.2f" % state_rmse_scalar, "blue"))
     return state_rmse, state_rmse_scalar
 
-def get_derivative_posterior(gp, query):
+def get_derivative_posterior(gp_collection, query):
     """ Get jacobians of the mean prediction and related uncertainties
 
     Args:
@@ -197,9 +197,9 @@ def get_derivative_posterior(gp, query):
     print("Computing Jacobians and Uncertainties..")
     mean_jacobs = []
     uncertainties = []
-    len_scales, outscales, _, _ = gp.get_hyperparameters()
-    train_inputs = gp.gp_list[0].model.train_inputs[0]
-    for i, gp in enumerate(gp.gp_list):
+    len_scales, outscales, _, _ = gp_collection.get_hyperparameters()
+    train_inputs = gp_collection.gp_list[0].model.train_inputs[0]
+    for i, gp in enumerate(gp_collection.gp_list):
         train_targets = gp.model.train_targets
         K_inv = gp.model.K_plus_noise_inv.detach().numpy()
         M_inv_sq = np.diag(1/(len_scales[i]**2))
@@ -237,6 +237,9 @@ class InitCtrl(LQR):
             task_info=None,
             episode_len_sec=10,
             **Kwargs):
+        self.env_func = env_func
+        self.env = env_func()
+        self.env = RecordEpisodeStatistics(self.env, deque_size)
         super().__init__(
             env_func=env_func,
             # Model args.
@@ -252,9 +255,7 @@ class InitCtrl(LQR):
             episode_len_sec= episode_len_sec,
             **Kwargs)
 
-    self.env_func = env_func
-    self.env = env_func()
-    self.env = RecordEpisodeStatistics(self.env, deque_size)
+    
 
     def run(self, env=None, n_episodes=1, render=False, logging=False, verbose=False, use_adv=False):
             """Runs evaluation with current policy.
@@ -359,13 +360,6 @@ class InitCtrl(LQR):
                     assert "episode" in info
                     ep_returns.append(info["episode"]["r"])
                     ep_lengths.append(info["episode"]["l"])
-
-                    print(colored("Test Run %d reward %.2f" % (self.ep_counter, ep_returns[-1]), "yellow"))
-                    print(colored("initial state: " + get_arr_str(x_init), "yellow"))
-                    if self.task == Task.STABILIZATION:
-                        print(colored("final state: " + get_arr_str(env.state),  "yellow"))
-                        print(colored("goal state: " + get_arr_str(self.x_0), "yellow"))
-                    print(colored("==========================\n", "yellow"))
 
                     # Save reward
                     if self.save_data:

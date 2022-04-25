@@ -33,15 +33,13 @@ def train(config):
     # Create the controller/control_agent.
     control_agent = make(config.algo,
                          env_func,
-                         output_dir=config.output_dir,
                          device=config.device,
-                         seed=config.seed,
                          **config.algo_config)
     control_agent.reset()
     if config.restore:
         control_agent.load(os.path.join(config.restore, "model_latest.pt"))
     # Training.
-    control_agent.learn()
+    control_agent.learn(plot=True,save=True)
     control_agent.close()
     print("Training done.")
 
@@ -84,24 +82,16 @@ def test_policy(config):
     # Create the controller/control_agent.
     control_agent = make(config.algo,
                          env_func,
-                         checkpoint_path=os.path.join(config.output_dir, "model_latest.pt"),
-                         output_dir=config.output_dir,
-                         device=config.device,
-                         seed=config.seed,
                          **config.algo_config)
     control_agent.reset()
     if config.restore:
         control_agent.load(os.path.join(config.restore, "model_latest.pt"))
     # Test controller.
-    results = control_agent.run(n_episodes=config.algo_config.eval_batch_size,
-                                render=config.render,
+    results = control_agent.run(render=config.render,
                                 verbose=config.verbose,
                                 use_adv=config.use_adv)
     # Save evalution results.
-    if config.eval_output_dir is not None:
-        eval_output_dir = config.eval_output_dir
-    else:
-        eval_output_dir = os.path.join(config.output_dir, "eval")
+    eval_output_dir = os.path.join(config.output_dir, "eval")
     os.makedirs(eval_output_dir, exist_ok=True)
     # test trajs and statistics 
     eval_path = os.path.join(eval_output_dir, config.eval_output_path)
