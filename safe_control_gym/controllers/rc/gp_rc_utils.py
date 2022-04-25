@@ -183,6 +183,43 @@ def compute_state_rmse(state_error):
     print(colored("scalarized rmse: %.2f" % state_rmse_scalar, "blue"))
     return state_rmse, state_rmse_scalar
 
+def get_derivative_posterior(gp, query):
+    """ Get jacobians of the mean prediction and related uncertainties
+
+    Args:
+        gp(gpytorch.model): Gaussian process used to generate predictions on the query.
+        query(torch.tensor): Jacobian evaluation query point.
+
+    Returns:
+        mean_jacobs(np.array): Derivatives evaluated at query of mean prediction w.r.t inputs .
+        uncertainties(np.array): 95% confidence interval for each mean_jacobs element. [A_u B_u]
+    """
+    print("Computing Jacobians and Uncertainties..")
+    mean_jacobs = []
+    uncertainties = []
+    len_scales, outscales, _, _ = gp.get_hyperparameters()
+    train_inputs = gp.gp_list[0].model.train_inputs[0]
+    for i, gp in enumerate(gp.gp_list):
+        train_targets = gp.model.train_targets
+        K_inv = gp.model.K_plus_noise_inv.detach().numpy()
+        M_inv_sq = np.diag(1/(len_scales[i]**2))
+        sigma_n_sq = outscales[i].numpy()
+        ai_a = (train_inputs-query).numpy()
+        k_a_ai = gp.model.covar_module.forward(train_inputs, query).detach().numpy()
+        dk_da = np.dot(M_inv_sq, np.transpose(ai_a*k_a_ai))
+        d2k_da2 = sigma_n_sq*M_inv_sq
+        mean_der = dk_da@K_inv@train_targets.numpy() #Could've used autograd but this works
+        sigma_der = d2k_da2-dk_da@K_inv@dk_da.T
+        mean_jacobs.append(mean_der)
+        uncertainties.append(np.diag(sigma_der))
+
+    mean_jacobs = np.vstack(mean_jacobs)
+    uncertainties = 2*np.sqrt(np.vstack(uncertainties))
+    print("Done!")
+    return mean_jacobs, uncertainties
+
+
+
 class InitCtrl(LQR):
     """ LQR Controller used to gather datapoints for GP.
     """
@@ -214,6 +251,10 @@ class InitCtrl(LQR):
             task_info = task_info,
             episode_len_sec= episode_len_sec,
             **Kwargs)
+
+    self.env_func = env_func
+    self.env = env_func()
+    self.env = RecordEpisodeStatistics(self.env, deque_size)
 
     def run(self, env=None, n_episodes=1, render=False, logging=False, verbose=False, use_adv=False):
             """Runs evaluation with current policy.

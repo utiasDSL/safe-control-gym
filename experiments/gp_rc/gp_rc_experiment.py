@@ -33,8 +33,6 @@ def train(config):
     # Create the controller/control_agent.
     control_agent = make(config.algo,
                          env_func,
-                         training=True,
-                         checkpoint_path=os.path.join(config.output_dir, "model_latest.pt"),
                          output_dir=config.output_dir,
                          device=config.device,
                          seed=config.seed,
@@ -86,7 +84,6 @@ def test_policy(config):
     # Create the controller/control_agent.
     control_agent = make(config.algo,
                          env_func,
-                         training=False,
                          checkpoint_path=os.path.join(config.output_dir, "model_latest.pt"),
                          output_dir=config.output_dir,
                          device=config.device,
