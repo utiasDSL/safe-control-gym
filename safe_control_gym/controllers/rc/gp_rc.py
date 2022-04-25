@@ -142,6 +142,7 @@ class GPRC(BaseController):
 
     	Args:
     		use_custom_dynamics(bool): Whether to use a custom prior for dynamics.
+
         """     
         if not use_custom_dynamics:
         	# Prior dynamics taken as f(x,u)=x
@@ -177,6 +178,7 @@ class GPRC(BaseController):
         Returns:
             inputs (np.array): inputs for GP training, (N, nx+nu).
             targets (np.array): targets for GP training, (N, nx).
+
         """
         # Get the predicted dynamics. This is a linear prior, thus we need to account for the fact that
         # it is linearized about an eq using self.x_0 and self.u_0.
@@ -191,11 +193,12 @@ class GPRC(BaseController):
     def sample_init_states(self):
 	    """Use Latin Hypercube Sampling to generate initial state samples within environment bounds.
 
-		    Args:
-		    	None
+	    Args:
+	    	None
 
-		    Returns:
-				init_state_samples(np.array): Initial state samples for init_ctrl to gather data.
+	    Returns:
+			init_state_samples(np.array): Initial state samples for init_ctrl to gather data.
+
 	    """ 
 	   	lhs_sampler = Lhs(lhs_type='classic', criterion='maximin')
 		limits = [(self.init_ctrl.env.INIT_STATE_RAND_INFO[key]['low'], self.init_ctrl.env.INIT_STATE_RAND_INFO[key]['high']) for key in
@@ -213,9 +216,11 @@ class GPRC(BaseController):
     		ctrl (gym.Controller): Controller to use for rollout. If None, uses init_ctrl.
 			init_state_samples (np.array): Initial states for each rollout.
 			total_samples (int): Amount of samples needed.
+
     	Returns:
 			inputs (np.array): Inputs for learning model.
 			targets (np.array): Targets for learning model.
+
 		"""
 		if ctrl is None:
 			ctrl = self.init_ctrl
@@ -259,6 +264,7 @@ class GPRC(BaseController):
 			train_targets_tensor (torch.Tensor)
 			test_inputs_tensor (torch.Tensor)
 			test_targets_tensor (torch.Tensor)
+
 		"""
 		init_state_samples = self.sample_init_states()
 		total_samples = self.train_samples + self.val_samples	
@@ -289,11 +295,12 @@ class GPRC(BaseController):
 		return train_inputs_tensor, train_targets_tensor, test_inputs_tensor, test_targets_tensor
 
 	def solve_H2_optim(self, x_0, u_0, beta=1.):
-	"""Setups LMI and solves H2 Optimization problem in eq (22).
-	
-	Args:
-		beta (float): Hyperparameter beta representing amount of uncertainty injected into the system. 
-	"""
+		"""Setups LMI and solves H2 Optimization problem in eq (22).
+		
+		Args:
+			beta (float): Hyperparameter beta representing amount of uncertainty injected into the system. 
+
+		"""
 		#Prediction query
 		query = torch.tensor(np.hstack((self.x_0[:,np.new_axis].T, self.u_0[:,np.new_axis].T)))
 
@@ -602,6 +609,7 @@ class GPRC(BaseController):
 
     def close(self):
 	    """Shuts down and cleans up lingering resources.
+	    
         """
     	self.env.close()
     	self.logger.close()

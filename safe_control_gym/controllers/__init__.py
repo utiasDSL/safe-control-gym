@@ -57,4 +57,4 @@ register(id="rap",
 
 register(id="gp_rc",
          entry_point="safe_control_gym.controllers.rc.gp_rc:GPRC",
-         config_entry_point="safe_control_gym.controllers.gp_rc:gp_rc.yaml")
+         config_entry_point="safe_control_gym.controllers.rc:gp_rc.yaml")
