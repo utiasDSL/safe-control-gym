@@ -26,11 +26,11 @@ max_optim_tries: 100
 # Runner args
 deque_size: 10
 eval_batch_size: 1
-output_dir: "./results/gprc_baseline/"
+output_dir: null
 # Plot
 plot_traj: False
-save_plot: True
-plot_dir: "./results/gprc_baseline/"
+save_plot: False
+plot_dir: null
 # Export csv files
-save_data: True
-data_dir: "./results/lgprc_baseline/"
+save_data: False
+data_dir: null
