@@ -15,6 +15,7 @@ import numpy as np
 from collections import defaultdict
 import scipy.linalg
 from termcolor import colored
+import pdb
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 
@@ -218,7 +219,7 @@ class LQR(BaseController):
         self.k = 0
 
         # Reseed for batch-wise consistency.
-        obs = self.env.reset()
+        obs, _ = self.env.reset()
         ep_seed = 1 #self.env.SEED
 
         while len(ep_returns) < self.eval_batch_size:
@@ -229,10 +230,10 @@ class LQR(BaseController):
                 current_goal = self.x_0[self.k]
 
             # Select action.
-            action = self.select_action(self.env.state)
+            action = self.select_action(obs)
 
             # Save initial condition.
-            if self.k == 0:
+            if self.k == 0:                
                 x_init = self.env.state
                 if self.model_step_chk:
                     self.model_state = self.env.state
@@ -325,7 +326,7 @@ class LQR(BaseController):
                                     ctrl_freq=self.ctrl_freq,
                                     pyb_freq=self.pyb_freq)
                 self.env = RecordEpisodeStatistics(self.env, self.deque_size)
-                obs = self.env.reset()
+                obs, _ = self.env.reset()
 
         # Collect evaluation results.
         ep_lengths = np.asarray(ep_lengths)

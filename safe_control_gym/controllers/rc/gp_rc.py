@@ -251,6 +251,7 @@ class GPRC(BaseController):
         while len(inputs) < samples and i < len(init_state_samples):        
             init_state = init_state_samples[i,:]
             run_env = self.env_func(init_state=init_state, randomized_init=False)
+            ctrl.reset()
             eval_results = ctrl.run(run_env)
             x_obs = eval_results["obs"]
             u_seq = eval_results["action"][:-1,:]
@@ -512,7 +513,7 @@ class GPRC(BaseController):
         self.k = 0
 
         # Reseed for batch-wise consistency.
-        obs = self.env.reset()
+        obs, _ = self.env.reset()
         ep_seed = 1 #self.env.SEED
 
         while len(ep_returns) < self.eval_batch_size:
@@ -521,12 +522,12 @@ class GPRC(BaseController):
                 current_goal = self.x_0
             elif self.task == Task.TRAJ_TRACKING:
                 current_goal = self.x_0[self.k]
-
+            
             # Select action.
-            action = self.select_action(self.env.state)
-
+            action = self.select_action(obs)
+            
             # Save initial condition.
-            if self.k == 0:
+            if self.k == 0:           
                 x_init = self.env.state
                 if self.model_step_chk:
                     self.model_state = self.env.state
@@ -610,7 +611,7 @@ class GPRC(BaseController):
                 self.k = 0
                 self.env = self.env_func(seed=ep_seed)
                 self.env = RecordEpisodeStatistics(self.env, self.deque_size)
-                obs = self.env.reset()
+                obs, _ = self.env.reset()
 
         # Collect evaluation results.
         ep_lengths = np.asarray(ep_lengths)

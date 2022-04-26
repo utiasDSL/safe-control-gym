@@ -100,10 +100,10 @@ def test_policy(config):
         pickle.dump(results, f)
     ep_lengths = results["ep_lengths"]
     ep_returns = results["ep_returns"]
-    mse = results["mse"]
+    #mse = results["mse"]
     msg = "eval_ep_length {:.2f} +/- {:.2f}\n".format(ep_lengths.mean(), ep_lengths.std())
     msg += "eval_ep_return {:.3f} +/- {:.3f}\n".format(ep_returns.mean(), ep_returns.std())
-    msg += "eval_mse {:.3f} +/- {:.3f}\n".format(mse.mean(), mse.std())
+    #msg += "eval_mse {:.3f} +/- {:.3f}\n".format(mse.mean(), mse.std())
     print(msg)
     if "frames" in results:
         save_video(os.path.join(eval_output_dir, "video.gif"), results["frames"])

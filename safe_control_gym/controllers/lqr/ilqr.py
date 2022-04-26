@@ -180,11 +180,12 @@ class iLQR(BaseController):
             elif self.task == Task.TRAJ_TRACKING:
                 current_goal = self.x_0[self.k]
 
-            # Compute input.
-            action = self.select_action(self.env.state, self.k)
+            
 
             # Save rollout data.
             if self.k == 0:
+                # Compute input.
+                action = self.select_action(self.env.state, self.k)
                 # Initialize state and input stack.
                 state_stack = self.env.state
                 input_stack = action
@@ -197,6 +198,8 @@ class iLQR(BaseController):
                     self.init_state = self.env.state
             else:
                 # Save state and input.
+                # Compute input.
+                action = self.select_action(obs, self.k)
                 state_stack = np.vstack((state_stack, self.env.state))
                 input_stack = np.vstack((input_stack, action))
                 goal_stack = np.vstack((goal_stack, current_goal))
