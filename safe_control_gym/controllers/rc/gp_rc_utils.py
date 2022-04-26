@@ -3,6 +3,7 @@
 """
 import numpy as np
 import scipy
+import pdb
 from termcolor import colored
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
@@ -279,7 +280,7 @@ class InitCtrl(LQR):
             self.k = 0
 
             # Reseed for batch-wise consistency.
-            obs = env.reset()
+            obs, _ = env.reset()
             ep_seed = 1 #self.env.SEED
 
             while len(ep_returns) < self.eval_batch_size:
@@ -290,7 +291,7 @@ class InitCtrl(LQR):
                     current_goal = self.x_0[self.k]
 
                 # Select action.
-                action = self.select_action(env.state)
+                action = self.select_action(obs)
 
                 # Save initial condition.
                 if self.k == 0:
@@ -300,21 +301,23 @@ class InitCtrl(LQR):
 
                     # Initialize state and input stack.
                     state_stack = env.state
+                    obs_stack = obs
                     input_stack = action
                     goal_stack = current_goal
-
                     # Print initial state.
                     print(colored("initial state (%d): " % ep_seed + get_arr_str(env.state), "green"))
 
                 else:
                     # Save state and input.
+                    # Save state and input.
+                    action = self.select_action(obs)
                     state_stack = np.vstack((state_stack, env.state))
+                    obs_stack = np.vstack((obs_stack, obs))
                     input_stack = np.vstack((input_stack, action))
                     goal_stack = np.vstack((goal_stack, current_goal))
 
                 # Step forward.
                 obs, reward, done, info = env.step(action)
-
                 # Debug with analytical model.
                 if self.model_step_chk:
                     self.model_step()
@@ -339,6 +342,7 @@ class InitCtrl(LQR):
                     # Push last state and input to stack.
                     # Note: the last input is not used.
                     state_stack = np.vstack((state_stack, env.state))
+                    obs_stack = np.vstack((obs_stack, obs))
                     input_stack = np.vstack((input_stack, action))
                     goal_stack = np.vstack((goal_stack, current_goal))
 
@@ -379,7 +383,7 @@ class InitCtrl(LQR):
                                         ctrl_freq=self.ctrl_freq,
                                         pyb_freq=self.pyb_freq)
                     self.env = RecordEpisodeStatistics(env, self.deque_size)
-                    obs = self.env.reset()
+                    obs, _ = self.env.reset()
 
             # Collect evaluation results.
             ep_lengths = np.asarray(ep_lengths)
@@ -394,7 +398,8 @@ class InitCtrl(LQR):
             if self.save_data:
                 np.savetxt(self.data_dir + "all_test_mean_rmse.csv", ep_rmse, delimiter=',', fmt='%.8f')
 
-            eval_results = {"ep_returns": ep_returns, "ep_lengths": ep_lengths, "obs":state_stack, "action": input_stack}
+            #Return observations and actions 
+            eval_results = {"ep_returns": ep_returns, "ep_lengths": ep_lengths, "obs":obs_stack, "action": input_stack}
             if len(frames) > 0 and frames[0] is not None:
                 eval_results["frames"] = frames
             return eval_results

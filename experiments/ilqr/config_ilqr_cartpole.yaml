@@ -28,27 +28,22 @@ task_config:
 
 
 algo_config:
-  q: [1]
-  r: [0.1]
-  # GP training args
-  train_samples: 500
-  validation_samples: 200
-  train_iterations: [500]
-  learning_rate: [0.1]
-  gp_model_path: ./results/gprc_baseline
-
-  #H2 optimization args
-  step_size: 0.1
-  max_optim_tries: 100
-
+  q_lqr: [1]
+  r_lqr: [0.1]
+  ctrl_freq: 50
+  pyb_freq: 50
+  random_init: False
+  task: stabilization
   # Runner args
   deque_size: 10
   eval_batch_size: 10
-  output_dir: ./results/gprc_baseline/
+  output_dir: ./results/ilqr_baseline/
+  task_info: null
+  episode_len_sec: 10
   # Plot
   plot_traj: False
   save_plot: True
-  plot_dir: ./results/gprc_baseline/
+  plot_dir: ./results/ilqr_baseline/
   # Export csv files
   save_data: True
-  data_dir: ./results/gprc_baseline/
+  data_dir: ./results/ilqr_baseline/

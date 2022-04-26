@@ -1,15 +1,17 @@
 task_config:
   info_in_reset: True
-  ctrl_freq: 50
-  pyb_freq: 50
+  ctrl_freq: 60
+  pyb_freq: 240
   gui: False
-  episode_len_sec: 10
+  episode_len_sec: 5
   # State initialization
   init_state:
-    init_x: -1
-    init_x_dot: 0
-    init_theta: -0.1
-    init_theta_dot: 0
+    init_x: 0.3
+    init_x_dot: 0.
+    init_z: 0.
+    init_z_dot: 0.
+    init_theta: 0.
+    init_theta_dot: 0.
 
   randomized_init: False
   init_state_randomization_info: null
@@ -31,11 +33,11 @@ algo_config:
   q: [1]
   r: [0.1]
   # GP training args
-  train_samples: 500
+  train_samples: 700
   validation_samples: 200
   train_iterations: [500]
   learning_rate: [0.1]
-  gp_model_path: ./results/gprc_baseline
+  gp_model_path: ./results/gprc_quad/
 
   #H2 optimization args
   step_size: 0.1
@@ -44,11 +46,11 @@ algo_config:
   # Runner args
   deque_size: 10
   eval_batch_size: 10
-  output_dir: ./results/gprc_baseline/
+  output_dir: ./results/gprc_quad/
   # Plot
   plot_traj: False
   save_plot: True
-  plot_dir: ./results/gprc_baseline/
+  plot_dir: ./results/gprc_quad/
   # Export csv files
   save_data: True
-  data_dir: ./results/gprc_baseline/
+  data_dir: ./results/gprc_quad/
