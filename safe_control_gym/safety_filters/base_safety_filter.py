@@ -1,10 +1,10 @@
-"""Base classes.
+"""Base class for safety filter.
 
 """
 
 
-class BaseController:
-    """Template for controller/agent, implement the following methods as needed.
+class BaseSafetyFilter:
+    """Template for safety filter, implement the following methods as needed.
 
     """
 
@@ -15,7 +15,6 @@ class BaseController:
                  output_dir="temp",
                  device="cpu",
                  seed=0,
-                 safety_filter=None,
                  **kwargs
                  ):
         """Initializes controller agent.
@@ -27,7 +26,6 @@ class BaseController:
             output_dir (str): folder to write outputs.
             device (str): cpu or cuda.
             seed (int): random seed.
-            safety_filter (SafetyFilter): a SafetyFilter object instantiation
 
         """
         # Base args.
@@ -37,8 +35,6 @@ class BaseController:
         self.output_dir = output_dir
         self.device = device
         self.seed = seed
-        self.safety_filter = safety_filter
-
         # Algorithm specific args.
         for k, v in kwargs.items():
             self.__dict__[k] = v
@@ -80,14 +76,12 @@ class BaseController:
         """
         pass
 
-    def run(self,
-            env=None,
-            render=False,
-            n_episodes=10,
-            verbose=False,
-            **kwargs
-            ):
-        """Runs evaluation with current policy.
+    def certify_action(self,
+                       current_state, 
+                       unsafe_action,  
+                       **kwargs
+                       ):
+        """Determines a safe action from the current state and proposed action
 
         """
         pass

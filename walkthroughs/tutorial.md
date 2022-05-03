@@ -170,6 +170,7 @@ For more information on some common utilities in this repo, refer to `safe-contr
 
 | Approach | id | Location | 
 | -------- | --- | ----------- |
+|  PID Controller    | 'pid' |   [PID](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/pid/pid.py)   |
 |  Linear Quadratic Regulator    | 'lqr' |   coming soon   |
 |  Iterative Linear Quadratic Regulator   | 'ilqr' |   coming soon  |
 
@@ -184,7 +185,7 @@ For more information on some common utilities in this repo, refer to `safe-contr
 | Approach | id | Location | 
 | -------- | --- | ----------- |
 |  Model Predictive Control w/ a Gaussian Process Model | 'gp_mpc' | [GP-MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/gp_mpc.py)  |
-|  Linear Model Predictive Control | 'gp_mpc' | [Linear MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/linear_mpc.py) |
+|  Linear Model Predictive Control | 'linear_mpc' | [Linear MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/linear_mpc.py) |
 
 #### Safe and Robust Reinforcement Learning
 | Approach | id | Location | 

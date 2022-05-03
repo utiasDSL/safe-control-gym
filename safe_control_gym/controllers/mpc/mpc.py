@@ -190,7 +190,7 @@ class MPC(BaseController):
                 opti.subject_to(input_constraint(u_var[:,i]) < 0)
         # Final state constraints.
         for state_constraint in self.state_constraints_sym:
-            opti.subject_to(state_constraint(x_var[:, i]) < 0)
+            opti.subject_to(state_constraint(x_var[:, -1]) < 0)
         # Initial condition constraints.
         opti.subject_to(x_var[:, 0] == x_init)
         # Create solver (IPOPT solver in this version)
@@ -361,4 +361,6 @@ class MPC(BaseController):
         except ValueError:
             raise Exception("[ERROR] mpc.run().py: MPC could not find a solution for the first step given the initial conditions. "
                   "Check to make sure initial conditions are feasible.")
+
+        self.results_dict['frames'] = frames
         return deepcopy(self.results_dict)

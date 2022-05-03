@@ -1,0 +1,13 @@
+safety_filter: mpsc_sf
+sf_config:
+  horizon: 20
+  r_lin:
+    - 0.1
+  q_lin:
+    - 1
+    - 1
+    - 1
+    - 1
+  n_samples: 600
+  warmstart: True
+  tau: 0.95

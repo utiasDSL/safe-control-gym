@@ -45,6 +45,7 @@ class ConfigFactory:
         # Need to explicitly provide from command line (if training for the 1st time).
         self.add_argument("--algo", type=str, help='algorithm/controller')
         self.add_argument("--task", type=str, help='task/environment')
+        self.add_argument("--safety_filter", type=str, help='safety filter')
         self.add_argument("--overrides",
                           nargs='+',
                           type=str,
@@ -68,6 +69,8 @@ class ConfigFactory:
             # Start fresh training.
             config_dict["algo_config"] = get_config(args.algo)
             config_dict["task_config"] = get_config(args.task)
+            if args.safety_filter:
+                config_dict["sf_config"] = get_config(args.safety_filter)
         else:
             warnings.warn("No agent/task config given.")
         # Experiment-specific overrides, e.g. training hyperparameters.

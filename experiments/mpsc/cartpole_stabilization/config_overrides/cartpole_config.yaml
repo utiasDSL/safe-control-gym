@@ -1,0 +1,48 @@
+task_config:
+  seed: 42
+  ctrl_freq: 15
+  pyb_freq: 750
+
+  cost: quadratic
+  task: stabilization
+  task_info:
+    stabilization_goal: [0, 0]
+    stabilization_goal_tolerance: 0.05
+
+  randomized_init: False
+
+  # state initialization
+  init_state:
+    init_x: 0.1
+    init_x_dot: -0.5
+    init_theta: -0.19
+    init_theta_dot: -0.5  
+  # init_state:
+  #   init_x: -0.8
+  #   init_x_dot: -0.29
+  #   init_theta: 0.15
+  #   init_theta_dot: 0.0
+  
+  info_in_reset: True
+
+  # constraints
+  constraints:
+  - constraint_form: default_constraint
+    constrained_variable: state
+    upper_bounds:
+      - 10
+      - 10
+      - 0.2
+      - 10
+    lower_bounds:
+      - -10
+      - -10
+      - -0.2
+      - -10
+  - constraint_form: default_constraint
+    constrained_variable: input
+  
+  # disturbances:
+  #   dynamics:
+  #     - disturbance_func: white_noise
+  #       std: 0.1

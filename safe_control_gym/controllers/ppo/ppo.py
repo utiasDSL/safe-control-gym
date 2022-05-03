@@ -17,6 +17,7 @@ import time
 import numpy as np
 import torch
 from collections import defaultdict
+from munch import munchify
 
 from safe_control_gym.utils.logging import ExperimentLogger
 from safe_control_gym.utils.utils import get_random_state, set_random_state, is_wrapped
@@ -40,8 +41,10 @@ class PPO(BaseController):
                  output_dir="temp",
                  device="cpu",
                  seed=0,
+                 safety_filter=None,
                  **kwargs):
-        super().__init__(env_func, training, checkpoint_path, output_dir, device, seed, **kwargs)
+        super().__init__(env_func, training, checkpoint_path, output_dir, device, seed, safety_filter, **kwargs)
+        
         # Task.
         if self.training:
             # Training and testing.
@@ -194,6 +197,7 @@ class PPO(BaseController):
             env=None,
             render=False,
             n_episodes=10,
+            num_iterations=0,
             verbose=False,
             **kwargs
             ):
@@ -211,27 +215,65 @@ class PPO(BaseController):
                 env.add_tracker("constraint_violation", 0, mode="queue")
                 env.add_tracker("constraint_values", 0, mode="queue")
                 env.add_tracker("mse", 0, mode="queue")
-                
-        obs, info = env.reset()
-        obs = self.obs_normalizer(obs)
+
+        self.setup_results_dict()
+
+        raw_obs, info = env.reset()
+        self.results_dict['obs'].append(raw_obs)
+        obs = self.obs_normalizer(raw_obs)
         ep_returns, ep_lengths = [], []
-        frames = []
-        while len(ep_returns) < n_episodes:
-            with torch.no_grad():
-                obs = torch.FloatTensor(obs).to(self.device)
-                action = self.agent.ac.act(obs)
-            obs, reward, done, info = env.step(action)
-            if render:
-                env.render()
-                frames.append(env.render("rgb_array"))
-            if verbose:
-                print("obs {} | act {}".format(obs, action))
-            if done:
-                assert "episode" in info
-                ep_returns.append(info["episode"]["r"])
-                ep_lengths.append(info["episode"]["l"])
-                obs, _ = env.reset()
-            obs = self.obs_normalizer(obs)
+        frames = [] 
+
+        if num_iterations > 0:
+            for i in range(num_iterations):
+                with torch.no_grad():
+                    obs = torch.FloatTensor(raw_obs).to(self.device)
+                    action, _, _ = self.agent.ac.step(obs)
+                    if self.safety_filter:
+                        new_action, success = self.safety_filter.certify_action(raw_obs[:env.symbolic.nx], action)
+                        if success:
+                            action_diff = np.linalg.norm(new_action - action)
+                            self.results_dict['corrections'].append(action_diff)
+                            action = new_action
+                        else:
+                            self.results_dict['corrections'].append(0.0)
+                    else:
+                        self.results_dict['corrections'].append(0.0)
+                
+                raw_obs, reward, done, info = env.step(action)
+
+                self.results_dict['obs'].append(raw_obs)
+                self.results_dict['reward'].append(reward)
+                self.results_dict['done'].append(done)
+                self.results_dict['info'].append(info)
+                self.results_dict['action'].append(action)
+
+                # if done:
+                #     break
+        else:
+            while len(ep_returns) < n_episodes:
+                with torch.no_grad():
+                    obs = torch.FloatTensor(obs).to(self.device)
+                    action = self.agent.ac.act(obs)
+                obs, reward, done, info = env.step(action)
+                if render:
+                    env.render()
+                    frames.append(env.render("rgb_array"))
+                if verbose:
+                    print("obs {} | act {}".format(obs, action))
+                if done:
+                    assert "episode" in info
+                    ep_returns.append(info["episode"]["r"])
+                    ep_lengths.append(info["episode"]["l"])
+                    obs, _ = env.reset()
+                obs = self.obs_normalizer(obs)
+
+                self.results_dict['obs'].append(obs)
+                self.results_dict['reward'].append(reward)
+                self.results_dict['done'].append(done)
+                self.results_dict['info'].append(info)
+                self.results_dict['action'].append(action)
+
         # Collect evaluation results.
         ep_lengths = np.asarray(ep_lengths)
         ep_returns = np.asarray(ep_returns)
@@ -242,7 +284,36 @@ class PPO(BaseController):
         if len(env.queued_stats) > 0:
             queued_stats = {k: np.asarray(v) for k, v in env.queued_stats.items()}
             eval_results.update(queued_stats)
-        return eval_results
+
+        self.close_results_dict()
+
+        return eval_results, self.results_dict
+
+    def setup_results_dict(self):
+        """Setup the results dictionary to store run information.
+
+        """
+        self.results_dict = {}
+        self.results_dict['obs'] = []
+        self.results_dict['reward'] = []
+        self.results_dict['done'] = []
+        self.results_dict['info'] = []
+        self.results_dict['action'] = []
+        self.results_dict['corrections'] = []
+    
+    def close_results_dict(self):
+        """Cleanup the results dict and munchify it.
+
+        """
+        self.results_dict['obs'] = np.vstack(self.results_dict['obs'])
+        self.results_dict['reward'] = np.vstack(self.results_dict['reward'])
+        self.results_dict['done'] = np.vstack(self.results_dict['done'])
+        self.results_dict['info'] = np.vstack(self.results_dict['info'])
+        self.results_dict['action'] = np.vstack(self.results_dict['action'])
+        self.results_dict['corrections'].append(0.0)
+        self.results_dict['corrections'] = np.hstack(self.results_dict['corrections'])
+
+        self.results_dict = munchify(self.results_dict)
 
     def train_step(self):
         """Performs a training/fine-tuning step.

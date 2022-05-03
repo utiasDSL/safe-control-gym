@@ -10,35 +10,32 @@ Based on
 """
 import numpy as np
 import casadi as cs
-import torch
 
 from copy import deepcopy
 from itertools import product
 from munch import munchify
 from scipy.linalg import solve_discrete_are
 
-from safe_control_gym.controllers.base_controller import BaseController
+from safe_control_gym.safety_filters.base_safety_filter import BaseSafetyFilter
 from safe_control_gym.controllers.mpc.mpc_utils import get_cost_weight_matrix, discretize_linear_system
-from safe_control_gym.controllers.mpsc.mpsc_utils import compute_RPI_set, pontryagin_difference_AABB, ellipse_bounding_box
+from safe_control_gym.safety_filters.mpsc.mpsc_utils import compute_RPI_set, pontryagin_difference_AABB, ellipse_bounding_box
 from safe_control_gym.envs.constraints import QuadraticContstraint, ConstraintList, ConstrainedVariableType
 from safe_control_gym.envs.benchmark_env import Task
 
 
-class MPSC(BaseController):
+class MPSC(BaseSafetyFilter):
     """Model Predictive Safety Certification Class.
 
     """
 
     def __init__(self,
                  env_func,
-                 rl_controller=None,
                  horizon: int = 10,
                  q_lin: list = None,
                  r_lin: list = None,
                  n_samples: int = 600,
                  tau: float = 0.95,
                  warmstart: bool = True,
-                 run_length: int = 200,
                  additional_constraints: list = None,
                  **kwargs
                  ):
@@ -46,19 +43,18 @@ class MPSC(BaseController):
 
         Args:
             env_func (partial gym.Env): Environment for the task.
-            rl_controller (BaseController): The RL controller to certify.
             q_lin, r_lin (list): Q and R gain matrices for linear controller.
             n_samples (int): Number of samples to create W set.
             tau (float): The constant use in eqn. 8.b. of the paper when finding the RPI.
             warmstart (bool): If the previous MPC soln should be used to warmstart the next mpc step.
-            run_length (int): How many iterations to run for.
             additional_constraints (list): List of additional constraints to consider.
-
         """
+
         # Setup the Environments.
         self.env_func = env_func
         self.env = env_func(randomized_init=False)
         self.training_env = env_func(randomized_init=True)
+        
         # Setup attributes.
         self.model = self.env.symbolic
         self.dt = self.model.dt
@@ -72,16 +68,18 @@ class MPSC(BaseController):
         self.horizon = horizon
         self.warmstart = warmstart
         self.tau = tau
-        self.run_length = run_length
-        self.rl_controller = rl_controller
         self.omega_AABB_verts = None
         self.z_prev = None
         self.v_prev = None
+        
         if additional_constraints is None:
             additional_constraints = []
         self.constraints, self.state_constraints_sym, self.input_constraints_sym = self.reset_constraints(
                                                                                     self.env.constraints.constraints +
                                                                                     additional_constraints)
+
+        self.kinf = self.horizon - 1
+        self.setup_results_dict()
 
     def reset_constraints(self,
                           constraints
@@ -146,27 +144,31 @@ class MPSC(BaseController):
             env = self.training_env
         # Create set of error residuals.
         w = np.zeros((self.model.nx, self.n_samples))
-        next_true_states = np.zeros((self.model.nx, self.n_samples))
-        next_pred_states = np.zeros((self.model.nx, self.n_samples))
-        actions = np.zeros((self.model.nu, self.n_samples))
         # Use uniform sampling of control inputs and states.
         for i in range(self.n_samples):
-            init_state, info = env.reset()
-            u = env.action_space.sample() # Will yield a random action within action space.
-            actions[:,i] = u
+            init_state, _ = env.reset()
+            if self.env.NAME == 'quadrotor':
+                u = np.random.rand(2)/6 - 1/12 + self.U_LIN
+            else:
+                u = env.action_space.sample() # Will yield a random action within action space.
             x_next_obs, _, _, _ = env.step(u)
-            x_next_linear = self.linear_dynamics_func(x0=init_state - self.X_LIN, p=u - self.U_LIN)['xf'].toarray()
-            next_true_states[:,i] = x_next_obs
-            next_pred_states[:,i] = x_next_linear[:,0]
+            x_next_linear = self.linear_dynamics_func(x0=init_state - self.X_LIN, p=u - self.U_LIN)['xf'].toarray() + self.X_LIN[:,None]
             w[:,i] = x_next_obs - x_next_linear[:,0]
         A_cl = self.discrete_dfdx + self.discrete_dfdu @ self.lqr_gain
         P = compute_RPI_set(A_cl, w, self.tau)
-        self.learn_actions = actions
-        self.learn_next_true_states = next_true_states
-        self.learn_next_pred_states = next_pred_states
-        self.w = w
-        self.A_cl = A_cl
-        self.omega_P = P
+        self.omega_AABB_verts = ellipse_bounding_box(P)
+        self.tighten_state_and_input_constraints()
+        self.omega_constraint = QuadraticContstraint(self.env,
+                                                     P,
+                                                     1.0,
+                                                     constrained_variable=ConstrainedVariableType.STATE)
+        # Now that constraints are defined, setup the optimizer.
+        self.setup_optimizer()
+    
+    def load(self,
+             path,
+             ):
+        P = np.load(path)
         self.omega_AABB_verts = ellipse_bounding_box(P)
         self.tighten_state_and_input_constraints()
         self.omega_constraint = QuadraticContstraint(self.env,
@@ -183,18 +185,26 @@ class MPSC(BaseController):
         if self.omega_AABB_verts is not None:
             K_omega_AABB_verts_raw = (self.lqr_gain @ self.omega_AABB_verts.T).T
             # Take the outermost values.
-            self.K_omega_AABB_verts = np.vstack((np.max(K_omega_AABB_verts_raw), np.min(K_omega_AABB_verts_raw)))
+            K_omega_AABB_verts_raw_limits = np.array([np.amax(K_omega_AABB_verts_raw, axis=0), np.amin(K_omega_AABB_verts_raw, axis=0)])
+            self.K_omega_AABB_verts = np.vstack(list(product(*(K_omega_AABB_verts_raw_limits.T))))
             # Get the current input constraint vertices.
             input_constraint = self.constraints.input_constraints
             if len(input_constraint) > 1:
                 raise NotImplementedError("MPSC currently can't handle more than 1 constraint")
+            
             input_constraint = input_constraint[0]
-            #self.U_vertices = np.array([np.atleast_1d(input_constraint.upper_bounds), np.atleast_1d(input_constraint.lower_bounds)]).T
-            self.U_vertices = np.array([np.atleast_1d(input_constraint.upper_bounds), np.atleast_1d(input_constraint.lower_bounds)])
+            if self.training_env.NAME != 'quadrotor':
+                U_vertices_raw = [(input_constraint.upper_bounds[i], input_constraint.lower_bounds[i]) for i in range(self.model.nu)]
+            else:
+                U_vertices_raw = [(input_constraint.upper_bounds[i], -input_constraint.upper_bounds[i]) for i in range(self.model.nu)]
+            self.U_vertices = np.clip(np.vstack(list(product(*U_vertices_raw))), -100, 100)
             self.tightened_input_constraint_verts, tightened_input_constr_func\
                 = pontryagin_difference_AABB(
                 self.U_vertices,
                 self.K_omega_AABB_verts)
+
+            if self.training_env.NAME == 'quadrotor':
+                self.tightened_input_constraint_verts = np.clip(self.tightened_input_constraint_verts, 0, 100)
             self.tightened_input_constraint = tightened_input_constr_func(env=self.env,
                                                                           constrained_variable=ConstrainedVariableType.INPUT)
             # Get the state constraint vertices.
@@ -239,11 +249,11 @@ class MPSC(BaseController):
             next_state = self.linear_dynamics_func(x0=z_var[:,i], p=v_var[:,i])['xf']
             opti.subject_to(z_var[:, i + 1] == next_state)
             # Input constraints (eqn 5.c).
-            opti.subject_to( input_constraints(v_var[:,i]) <= 0)
+            opti.subject_to(input_constraints(v_var[:,i]) <= 0)
             # State Constraints
             opti.subject_to(state_constraints(z_var[:,i]) <= 0)
         # Final state constraints (5.d).
-        opti.subject_to(z_var[:, -1] == 0 )
+        # opti.subject_to(z_var[:, -1] == 0 )
         # Initial state constraints (5.e).
         opti.subject_to(omega_constraint(x - z_var[:, 0]) <= 0)
         # Real input (5.f).
@@ -290,8 +300,8 @@ class MPSC(BaseController):
                 self.v_prev is not None and
                 self.u_tilde_prev is not None):
             # Shift previous solutions by 1 step.
-            z_guess = deepcopy(self.x_prev)
-            v_guess = deepcopy(self.u_prev)
+            z_guess = deepcopy(self.z_prev)
+            v_guess = deepcopy(self.v_prev)
             z_guess[:, :-1] = z_guess[:, 1:]
             v_guess[:-1] = v_guess[1:]
             opti.set_initial(z_var, z_guess)
@@ -302,7 +312,7 @@ class MPSC(BaseController):
             sol = opti.solve()
             x_val, u_val, u_tilde_val = sol.value(z_var), sol.value(v_var), sol.value(u_tilde)
             self.z_prev = x_val
-            self.v_prev = u_val
+            self.v_prev = u_val.reshape((self.model.nu), self.horizon)
             self.u_tilde_prev = u_tilde_val
             # Take the first one from solved action sequence.
             if u_val.ndim > 1:
@@ -317,130 +327,60 @@ class MPSC(BaseController):
         return action, feasible
 
     def certify_action(self,
-                       obs,
-                       u_L
+                       current_state,
+                       unsafe_action,
                        ):
         """Algorithm 1 from Wabsersich 2019.
 
         """
-        action, feasible = self.solve_optimization(obs, u_L)
+        
+        self.results_dict['unsafe_action'].append(unsafe_action)        
+        success = True
+        
+        action, feasible = self.solve_optimization(current_state, unsafe_action)
         self.results_dict['feasible'].append(feasible)
         if feasible:
             self.kinf = 0
             self.results_dict['kinf'].append(self.kinf)
-            return action
+            self.results_dict['action'].append(action)
+            return action, success
         else:
             self.kinf += 1
             self.results_dict['kinf'].append(self.kinf)
             if (self.kinf <= self.horizon-1 and
                 self.z_prev is not None and
                 self.v_prev is not None):
-                action = self.v_prev[self.kinf] +\
-                         self.lqr_gain @ (obs - self.z_prev[:, self.kinf, None])
-                return action
+                action = self.v_prev[:, self.kinf] +\
+                         self.lqr_gain @ (current_state.reshape((self.model.nx, 1)) - self.z_prev[:, self.kinf].reshape((self.model.nx, 1)))
+                action = action[0, 0]
+                action = np.clip(action, self.constraints.input_constraints[0].lower_bounds, self.constraints.input_constraints[0].upper_bounds)
+                self.results_dict['action'].append(action)
+                return action, success
             else:
-                action = self.lqr_gain @ obs
-                return action
-
-    def select_action(self,
-                      obs
-                      ):
-        """Selection feedback action.
-
-        Args:
-            obs (np.array): Observation from the environment.
-
-        Returns:
-            action (np.array): Action to take based on the obs.
-            u_L (np.array): The rl_controllers action based on the obs.
-
-        """
-        if self.rl_controller is not None:
-            with torch.no_grad():
-                u_L, v, logp = self.rl_controller.agent.ac.step(torch.FloatTensor(obs).to(self.rl_controller.device))
-        else:
-            u_L = 2*np.sin(0.01*np.pi*self.time_step) + 0.5*np.sin(0.12*np.pi*self.time_step)
-        self.results_dict['learning_actions'].append(u_L)
-        action = self.certify_action(obs, u_L)
-        action_diff = np.linalg.norm(u_L - action)
-        self.results_dict['corrections'].append(action_diff)
-        return action, u_L
-
-    def run(self,
-            env=None,
-            uncertified_env=None,
-            run_length=None,
-            **kwargs
-            ):
-        """Run the simulation.
-
-        Args:
-            env (BenchmarkEnv): Environment to for the controller to run.
-            uncertified_env (BenchmarkEnv): Environement for the uncertified controller to run on for comparison.
-            run_length (int): Number of steps to run the MPSC.
-
-        Return:
-            results_dict (dict): Dictionary of the run results.
-
-        """
-        if env is None:
-            env = self.env
-        if run_length is None:
-            run_length = self.run_length
-        if uncertified_env is None:
-            uncertified_env = self.env_func(randomized_init=False)
-        self.setup_results_dict()
-        obs, _ = env.reset()
-        self.results_dict['obs'].append(obs)
-        self.kinf = self.horizon - 1
-        self.time_step = 0
-        for i in range(run_length):
-            action, u_L = self.select_action(obs)
-            obs, _, _, _ = env.step(action)
-            self.results_dict['obs'].append(obs)
-            self.results_dict['actions'].append(action)
-            self.time_step += 1
-        uncertified_obs, _ = uncertified_env.reset()
-        self.results_dict['uncertified_obs'].append(uncertified_obs)
-        for i in range(run_length):
-            if self.rl_controller is not None:
-                with torch.no_grad():
-                    uncertified_action, _, _ = self.rl_controller.agent.ac.step(
-                        torch.FloatTensor(uncertified_obs).to(self.rl_controller.device)
-                    )
-            uncertified_obs, _, _, _ = uncertified_env.step(uncertified_action)
-            self.results_dict['uncertified_actions'].append(uncertified_action)
-            self.results_dict['uncertified_obs'].append(uncertified_obs)
-        self.close_results_dict()
-        uncertified_env.close()
-        return self.results_dict
-
+                success = False
+                action = self.lqr_gain @ current_state
+                action = np.clip(action, self.constraints.input_constraints[0].lower_bounds, self.constraints.input_constraints[0].upper_bounds)
+                self.results_dict['action'].append(action)
+                return action, success
+    
     def setup_results_dict(self):
         """Setup the results dictionary to store run information.
 
         """
         self.results_dict = {}
-        self.results_dict['obs'] = []
-        self.results_dict['actions'] = []
-        self.results_dict['uncertified_obs'] = []
-        self.results_dict['uncertified_actions'] = []
-        self.results_dict['cost'] = []
-        self.results_dict['learning_actions'] = []
-        self.results_dict['corrections'] = [0.0]
         self.results_dict['feasible'] = []
         self.results_dict['kinf'] = []
+        self.results_dict['unsafe_action'] = []
+        self.results_dict['action'] = []
 
     def close_results_dict(self):
         """Cleanup the results dict and munchify it.
 
         """
-        self.results_dict['obs'] = np.vstack(self.results_dict['obs'])
-        self.results_dict['uncertified_obs'] = np.vstack(self.results_dict['uncertified_obs'])
-        self.results_dict['uncertified_actions'] = np.vstack(self.results_dict['uncertified_actions'])
-        self.results_dict['actions'] = np.vstack(self.results_dict['actions'])
-        self.results_dict['learning_actions'] = np.vstack(self.results_dict['learning_actions'])
-        self.results_dict['corrections'] = np.hstack(self.results_dict['corrections'])
+        self.results_dict['feasible'] = np.hstack(self.results_dict['feasible'])
         self.results_dict['kinf'] = np.vstack(self.results_dict['kinf'])
+        self.results_dict['unsafe_action'] = np.vstack(self.results_dict['unsafe_action'])
+        self.results_dict['action'] = np.vstack(self.results_dict['action'])
         self.results_dict = munchify(self.results_dict)
 
     def close(self):
@@ -453,6 +393,9 @@ class MPSC(BaseController):
         """Prepares for training or evaluation.
 
         """
+        self.env.reset()
+        self.setup_results_dict()
+
         # setup reference input
         if self.env.TASK == Task.STABILIZATION:
             self.mode = "stabilization"

@@ -336,7 +336,7 @@ class GaussianProcessCollection:
         """Return Jacobian.
 
         """
-        return NotImplementedError
+        raise NotImplementedError
 
     def plot_trained_gp(self,
                         inputs,

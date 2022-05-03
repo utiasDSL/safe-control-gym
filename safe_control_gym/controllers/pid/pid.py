@@ -22,7 +22,7 @@ class PID(BaseController):
 
     def __init__(self,
                  env_func=None,
-                 g = 9.8,
+                 g = 9.81,
                  KF = 3.16e-10,
                  KM = 7.94e-12,
                  P_COEFF_FOR = np.array([.4, .4, 1.25]),
@@ -47,6 +47,7 @@ class PID(BaseController):
 
         super().__init__(env_func, **kwargs)
 
+        self.env = env_func()
         self.GRAVITY = float(g) * 0.027
         self.KF = float(KF)
         self.KM = float(KM)
@@ -65,7 +66,7 @@ class PID(BaseController):
         self.reset()
 
     def run(self,
-            iterations,
+            num_iterations,
             **kwargs
             ):
         """Computes the PID control action (as RPMs) for a single drone.
@@ -90,12 +91,12 @@ class PID(BaseController):
             float: The current yaw error.
 
         """
-        action = np.zeros(2)
 
-        for i in range(iterations):
+        obs, info = self.env.reset()
+        self.results_dict['obs'].append(obs)
+
+        for i in range(num_iterations):
             # Step the environment and print all returned information.
-            obs, reward, done, info = self.env.step(action)
-
             cur_pos=np.array([obs[0], 0, obs[2]])
             cur_quat=np.array(p.getQuaternionFromEuler([0, obs[4], 0]))
             cur_vel=np.array([obs[1], 0, obs[3]])
@@ -142,12 +143,29 @@ class PID(BaseController):
             action = rpm
             action = self.KF * action**2
             action = np.array([action[0]+action[3], action[1]+action[2]])
+
+            if self.safety_filter:
+                new_action, success = self.safety_filter.certify_action(obs, action)
+                if success:
+                    action_diff = np.linalg.norm(new_action - action)
+                    self.results_dict['corrections'].append(action_diff)
+                    action = new_action
+                else:
+                    self.results_dict['corrections'].append(0.0)
+            else:
+                self.results_dict['corrections'].append(0.0)
             
+            obs, reward, done, info = self.env.step(action)
+
             self.results_dict['obs'].append(obs)
             self.results_dict['reward'].append(reward)
             self.results_dict['done'].append(done)
             self.results_dict['info'].append(info)
             self.results_dict['action'].append(action)
+
+            if done:
+                print(f'SUCCESS: Reached goal on iteration {i}. Terminating...')
+                break
 
         self.close_results_dict()
 
@@ -254,9 +272,21 @@ class PID(BaseController):
 
         """
         self.env.close()
+    
+    def setup_results_dict(self):
+        """Setup the results dictionary to store run information.
+
+        """
+        self.results_dict = {}
+        self.results_dict['obs'] = []
+        self.results_dict['reward'] = []
+        self.results_dict['done'] = []
+        self.results_dict['info'] = []
+        self.results_dict['action'] = []
+        self.results_dict['corrections'] = []
 
     def close_results_dict(self):
-        """Cleanup the rtesults dict and munchify it.
+        """Cleanup the results dict and munchify it.
 
         """
         self.results_dict['obs'] = np.vstack(self.results_dict['obs'])
@@ -264,6 +294,8 @@ class PID(BaseController):
         self.results_dict['done'] = np.vstack(self.results_dict['done'])
         self.results_dict['info'] = np.vstack(self.results_dict['info'])
         self.results_dict['action'] = np.vstack(self.results_dict['action'])
+        self.results_dict['corrections'].append(0.0)
+        self.results_dict['corrections'] = np.hstack(self.results_dict['corrections'])
 
         self.results_dict = munchify(self.results_dict)
 
@@ -273,8 +305,7 @@ class PID(BaseController):
         The previous step's and integral errors for both position and attitude are set to zero.
 
         """
-        self.env = self.env_func()
-        initial_obs, initial_info = self.env.reset()
+        _, initial_info = self.env.reset()
         self.control_timestep = self.env.CTRL_TIMESTEP
         self.reference = initial_info['x_reference']
 
@@ -289,9 +320,4 @@ class PID(BaseController):
         self.last_rpy_e = np.zeros(3)
         self.integral_rpy_e = np.zeros(3)
 
-        self.results_dict = { 'obs': [],
-                        'reward': [],
-                        'done': [],
-                        'info': [],
-                        'action': [],
-                        }
+        self.setup_results_dict()

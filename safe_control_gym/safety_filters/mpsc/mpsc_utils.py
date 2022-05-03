@@ -7,7 +7,6 @@ import pytope as pt
 
 from itertools import product
 from functools import partial
-from matplotlib.patches import Ellipse
 
 from safe_control_gym.envs.constraints import BoundedConstraint, LinearConstraint
 
@@ -34,10 +33,8 @@ def compute_RPI_set(Acl,
 
     """
     n_samples = w.shape[1]
-    P = cp.Variable(Acl.shape, symmetric=True)
-    small = 1e-8
+    P = cp.Variable(Acl.shape, PSD=True)
     constraints = []
-    constraints += [P >> small]
     for i in range(n_samples):
         w_i = w[:, i, None]
         con_11 = Acl.T @ P @ Acl - tau*P
@@ -53,6 +50,7 @@ def compute_RPI_set(Acl,
         print("[ERROR] RPI computation requires the MOSEK solver.")
         exit()
     return P.value
+
 
 def ellipse_bounding_box(P):
     """Finds the bounding box of an ellipse defined by x^T P x <= 1.
@@ -72,81 +70,6 @@ def ellipse_bounding_box(P):
     vertices = list(product(*extremes))
     return np.vstack(vertices)
 
-def get_ellipse_eig_decomp(P):
-    """Gets the egienvalue decomposition of an ellipse defined by P.
-
-    Args:
-        P (np.array): n by n array defining the ellipse.
-
-    Returns:
-        minor_eval (float): Minor axis eigenvalue.
-        major_eval (np.array): major axis eigenvalue.
-        minor_evec (float): Minor axis eigenvector.
-        major_evec (np.array): Major axis eigenvector.
-
-    """
-    evals, evecs = np.linalg.eig(P)
-    major_axis_ind = np.argmin(evals)
-    minor_axis_ind = 0 if major_axis_ind == 1 else 1
-    major_eval = evals[major_axis_ind]
-    minor_eval = evals[minor_axis_ind]
-    major_evec = evecs[:, major_axis_ind]
-    minor_evec = evecs[:, minor_axis_ind]
-    return minor_eval, major_eval, minor_evec, major_evec
-
-def get_ellipse_angle_rep(P,
-                          rads=True
-                          ):
-    """Gets the angle representation of the ellipse which is required for plotting.
-
-    Args:
-        P (np.array): n by n array defining the ellipse.
-        rads (bool) : Optional argument to return the angle in rads (True) or degrees (False)
-
-    Returns:
-        minor_axis_length (float): Length of the minor axis.
-        major_axis_length (float): Length of the major axis.
-        alpha (float): Angle between the horizontal axis and the major axis.
-
-    """
-    minor_eval, major_eval, minor_evec, major_evec = get_ellipse_eig_decomp(P)
-    alpha = np.arctan2(major_evec[1], major_evec[0])
-    major_axis_length = 1/np.sqrt(major_eval)
-    minor_axis_length = 1/np.sqrt(minor_eval)
-    if rads:
-        return minor_axis_length, major_axis_length, alpha
-    else:
-        return minor_axis_length, major_axis_length, alpha*180/np.pi
-
-def add_2d_ellipse(position,
-                   cov,
-                   ax,
-                   legend=None
-                   ):
-    """Add a 2D Ellipse patch to an axis.
-
-    Args:
-        position (np.array): Position of the centre of the ellipse.
-        cov (np.array): Covariance matrix (ellipse to be plotted).
-        ax (matplotlib.axes): Axis on which to the ellipse should be added.
-        legend (str): Optional addition of ellipse legend.
-
-    """
-    minor_axis_length, major_axis_length, alpha = get_ellipse_angle_rep(cov, rads=False)
-    if legend:
-        ellipse = Ellipse(position,
-                          2*major_axis_length,
-                          2*minor_axis_length,
-                          angle=alpha,
-                          alpha=0.5,
-                          label=legend)
-    else:
-        ellipse = Ellipse(position,
-                          2*major_axis_length,
-                          2*minor_axis_length,
-                          angle=alpha,
-                          alpha=0.5)
-    ax.add_artist(ellipse)
 
 def pontryagin_difference_AABB(verts1,
                                verts2

@@ -1,0 +1,13 @@
+# LQR controller parameters
+horizon: 20
+r_lin:
+  - 1.
+q_lin:
+  - 1.
+warmstart: False
+
+# Safe set calculation
+n_samples: 600
+
+# Tau parameter for the calcuation of the RPI
+tau: 0.95

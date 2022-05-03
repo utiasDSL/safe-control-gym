@@ -1,0 +1,20 @@
+algo: pid
+algo_config:
+  g: 9.8
+
+  KF: 3.16e-10
+  KM: 7.94e-12
+
+  P_COEFF_FOR: [.4, .4, 1.25]
+  I_COEFF_FOR: [.05, .05, .05]
+  D_COEFF_FOR: [.2, .2, .5]
+
+  P_COEFF_TOR: [70000., 70000., 60000.]
+  I_COEFF_TOR: [.0, .0, 500.]
+  D_COEFF_TOR: [20000., 20000., 12000.]
+
+  PWM2RPM_SCALE: 0.2685
+  PWM2RPM_CONST: 4070.3
+
+  MIN_PWM: 20000
+  MAX_PWM: 65535
