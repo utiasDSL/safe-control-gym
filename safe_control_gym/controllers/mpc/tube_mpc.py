@@ -9,14 +9,13 @@ j.automatica.2004.08.019
 
 import numpy as np
 import casadi as cs
-import scipy.linalg
 from pytope import Polytope
 
 from sys import platform
 from copy import deepcopy
 
-from safe_control_gym.controllers.mpc.mpc import MPC
-from safe_control_gym.controllers.mpc.mpc_utils import discretize_linear_system, get_cost_weight_matrix
+from safe_control_gym.controllers.mpc.linear_mpc import LinearMPC
+from safe_control_gym.controllers.mpc.mpc_utils import get_cost_weight_matrix
 from safe_control_gym.controllers.mpc.mpc_utils import compute_min_RPI
 from safe_control_gym.envs.constraints import LinearConstraint
 from safe_control_gym.envs.benchmark_env import Task
@@ -25,7 +24,7 @@ from safe_control_gym.envs.gym_pybullet_drones.quadrotor_utils import QuadType
 # Notes:
 # state constraints must be polytopes, so far only tested BoundedConstraint
 
-class TubeMPC(MPC):
+class TubeMPC(LinearMPC):
     """Robust linear tube MPC 
 
     """
@@ -90,6 +89,9 @@ class TubeMPC(MPC):
             warmstart=warmstart,
             output_dir=output_dir,
             additional_constraints=additional_constraints,
+            alpha=alpha,
+            use_terminal_ingredients=use_terminal_ingredients,
+            use_backup=use_backup,
             **kwargs
         )
 
@@ -151,42 +153,6 @@ class TubeMPC(MPC):
             temp_input_constraints.append(LinearConstraint(self.env, U.A, U.b, 'input'))
         
         self.reset_constraints(temp_state_constraints + temp_input_constraints)
-
-    def compute_lqr_gain(self, x_0, u_0):
-        # Linearization.
-        df = self.model.df_func(x=x_0, u=u_0)
-        A = df['dfdx'].toarray()
-        B = df['dfdu'].toarray()
-        # Compute controller gain.
-        A, B = discretize_linear_system(A, B, self.model.dt)
-        self.P = scipy.linalg.solve_discrete_are(A, B, self.Q, self.R)
-        btp = np.dot(B.T, self.P)
-        self.K = -1 * np.dot(np.linalg.inv(self.R + np.dot(btp, B)),
-                           np.dot(btp, A))
-        self.A = A
-        self.B = B
-
-    def set_dynamics_func(self):
-        """Updates symbolic dynamics with actual control frequency.
-
-        """
-        # Original version, used in shooting.
-        dfdxdfdu = self.model.df_func(x=self.X_LIN, u=self.U_LIN)
-        dfdx = dfdxdfdu['dfdx'].toarray()
-        dfdu = dfdxdfdu['dfdu'].toarray()
-        delta_x = cs.MX.sym('delta_x', self.model.nx,1)
-        delta_u = cs.MX.sym('delta_u', self.model.nu,1)
-        x_dot_lin_vec = dfdx @ delta_x + dfdu @ delta_u
-        self.linear_dynamics_func = cs.integrator(
-            'linear_discrete_dynamics', self.model.integration_algo,
-            {
-                'x': delta_x,
-                'p': delta_u,
-                'ode': x_dot_lin_vec
-            }, {'tf': self.dt}
-        )
-        self.dfdx = dfdx
-        self.dfdu = dfdu
 
     def setup_optimizer(self, x_init=None, unconstrained=False):
         """Sets up convex optimization problem.

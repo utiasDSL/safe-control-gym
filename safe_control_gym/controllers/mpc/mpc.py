@@ -264,7 +264,6 @@ class MPC(BaseController):
         else:
             action = np.array([u_val[0]])
         self.prev_action = action
-
         return action
 
     def get_references(self):
@@ -285,7 +284,6 @@ class MPC(BaseController):
             ], -1)
         else:
             raise Exception("Reference for this mode is not implemented.")
-        
         return goal_states  # (nx, T+1).
 
     def reset_results_dict(self):

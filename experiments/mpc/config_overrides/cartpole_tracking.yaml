@@ -1,5 +1,5 @@
-seed: 42
 task_config:
+  seed: 42
   task: stabilization
   ctrl_freq: 10
   episode_len_sec: 20

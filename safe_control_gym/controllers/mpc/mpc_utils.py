@@ -3,7 +3,6 @@
 """
 import numpy as np
 import scipy
-import pytope
 from pytope import Polytope
 import matplotlib.pyplot as plt
 
@@ -56,24 +55,6 @@ def discretize_linear_system(A,
         Ad = I + A * dt
         Bd = B * dt
     return Ad, Bd
-
-def compute_min_RPI_v0(A, wmax, eps=1e-5, s_max=50):
-    """Compute the minimal robust positively invariant set (mRPI)
-    
-    From: Rakovic et al. (2005, IEEE Tran on Automatic Control)
-
-    Note: doesn't work for high-dim state spaces (n > 2)
-
-    Args:
-        A: np.array, closed-loop system transition matrix
-        wmax: np.array, defines the disturbance bounds |w| < wmax
-        eps: float, precision criteria for stopping (eq 14 : Rakovic, 2005)
-        s_max: int, max number of iterations
-    """
-    if abs(np.linalg.det(np.eye(A.shape[0]) + A) - 1) < 1.0e-8:
-        raise NotImplementedError("mRPI for nilpotent A not yet implemented")
-    W = Polytope(lb=-wmax, ub=wmax)
-    return pytope.eps_MRPI(A, W, eps, s_max)
 
 def compute_min_RPI(A, wmax, wmin, vol_converge=1e-3, s_max=500, debug=False):
     """Compute the minimal robust positively invariant set (mRPI)
