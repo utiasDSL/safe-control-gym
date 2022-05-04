@@ -11,3 +11,4 @@ sf_config:
   n_samples: 600
   warmstart: True
   tau: 0.95
+  use_terminal_set: False

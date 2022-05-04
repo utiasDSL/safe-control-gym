@@ -37,6 +37,7 @@ class MPSC(BaseSafetyFilter):
                  tau: float = 0.95,
                  warmstart: bool = True,
                  additional_constraints: list = None,
+                 use_terminal_set: bool = True,
                  **kwargs
                  ):
         """Initialize the MPSC.
@@ -48,6 +49,7 @@ class MPSC(BaseSafetyFilter):
             tau (float): The constant use in eqn. 8.b. of the paper when finding the RPI.
             warmstart (bool): If the previous MPC soln should be used to warmstart the next mpc step.
             additional_constraints (list): List of additional constraints to consider.
+            use_terminal_set (bool): Whether to use a terminal set constraint or not
         """
 
         # Setup the Environments.
@@ -68,6 +70,7 @@ class MPSC(BaseSafetyFilter):
         self.horizon = horizon
         self.warmstart = warmstart
         self.tau = tau
+        self.use_terminal_set = use_terminal_set
         self.omega_AABB_verts = None
         self.z_prev = None
         self.v_prev = None
@@ -253,7 +256,8 @@ class MPSC(BaseSafetyFilter):
             # State Constraints
             opti.subject_to(state_constraints(z_var[:,i]) <= 0)
         # Final state constraints (5.d).
-        opti.subject_to(z_var[:, -1] == 0 )
+        if self.use_terminal_set:
+            opti.subject_to(z_var[:, -1] == 0 )
         # Initial state constraints (5.e).
         opti.subject_to(omega_constraint(x - z_var[:, 0]) <= 0)
         # Real input (5.f).

@@ -4,7 +4,10 @@ r_lin:
   - 1.
 q_lin:
   - 1.
+
+# MPC Parameters
 warmstart: False
+use_terminal_set: True
 
 # Safe set calculation
 n_samples: 600

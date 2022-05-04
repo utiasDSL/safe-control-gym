@@ -38,7 +38,7 @@ def main():
     
     # Run without safety filter
     iterations = 30
-    with open('state1.pkl', 'rb') as f:
+    with open('./unsafe_ppo_model/state1.pkl', 'rb') as f:
         state1 = pickle.load(f)
     set_random_state(state1)
     _, results = ctrl.run(env=uncertified_env, num_iterations=iterations)
@@ -57,7 +57,7 @@ def main():
     ctrl.safety_filter = safety_filter
     
     # Run with safety filter
-    with open('state0.pkl', 'rb') as f:
+    with open('./unsafe_ppo_model/state0.pkl', 'rb') as f:
         state0 = pickle.load(f)
     set_random_state(state0)
     _, certified_results = ctrl.run(env=certified_env, num_iterations=iterations)
