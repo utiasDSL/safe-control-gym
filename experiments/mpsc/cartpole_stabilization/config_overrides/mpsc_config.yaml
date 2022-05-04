@@ -1,4 +1,4 @@
-safety_filter: mpsc_sf
+safety_filter: mpsc
 sf_config:
   horizon: 20
   r_lin:

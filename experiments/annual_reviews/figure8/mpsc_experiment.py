@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 from functools import partial
 import pickle
 
-from safe_control_gym import safety_filters
 from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.utils import set_random_state

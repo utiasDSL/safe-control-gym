@@ -7,7 +7,6 @@ import shutil
 import matplotlib.pyplot as plt
 from functools import partial
 
-from safe_control_gym import safety_filters
 from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.configuration import ConfigFactory
 
