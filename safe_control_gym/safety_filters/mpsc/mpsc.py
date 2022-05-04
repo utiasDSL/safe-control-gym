@@ -357,12 +357,22 @@ class MPSC(BaseSafetyFilter):
                 action = self.v_prev[:, self.kinf] +\
                          self.lqr_gain @ (current_state.reshape((self.model.nx, 1)) - self.z_prev[:, self.kinf].reshape((self.model.nx, 1)))
                 action = action[0, 0]
-                action = np.clip(action, self.constraints.input_constraints[0].lower_bounds, self.constraints.input_constraints[0].upper_bounds)
+                clipped_action = np.clip(action, self.constraints.input_constraints[0].lower_bounds, self.constraints.input_constraints[0].upper_bounds)
+                
+                if clipped_action != action:
+                    success = False
+                action = clipped_action
+                
                 self.results_dict['action'].append(action)
                 return action, success
             else:
                 action = self.lqr_gain @ current_state
-                action = np.clip(action, self.constraints.input_constraints[0].lower_bounds, self.constraints.input_constraints[0].upper_bounds)
+                clipped_action = np.clip(action, self.constraints.input_constraints[0].lower_bounds, self.constraints.input_constraints[0].upper_bounds)
+                
+                if clipped_action != action:
+                    success = False
+                action = clipped_action
+                
                 self.results_dict['action'].append(action)
                 return action, success
     
