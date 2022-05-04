@@ -45,6 +45,7 @@ def main():
                 env_func,
                 **config.sf_config)
     safety_filter.reset()
+
     # train_env = env_func(randomized_init=True, init_state=None, disturbances=None) # training without disturbances
     train_env = env_func(randomized_init=True, init_state=None) # training with disturbances
     safety_filter.learn(env=train_env)
@@ -57,8 +58,6 @@ def main():
     # Run with safety filter
     _, certified_results = ctrl.run(env=env, num_iterations=iterations)
     ctrl.close()
-    safety_filter.close_results_dict()
-    safety_filter_results = safety_filter.results_dict
     safety_filter.close()
 
     elapsed_time = time.time() - START

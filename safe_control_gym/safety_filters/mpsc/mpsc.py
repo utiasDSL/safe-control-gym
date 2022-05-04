@@ -253,7 +253,7 @@ class MPSC(BaseSafetyFilter):
             # State Constraints
             opti.subject_to(state_constraints(z_var[:,i]) <= 0)
         # Final state constraints (5.d).
-        # opti.subject_to(z_var[:, -1] == 0 )
+        opti.subject_to(z_var[:, -1] == 0 )
         # Initial state constraints (5.e).
         opti.subject_to(omega_constraint(x - z_var[:, 0]) <= 0)
         # Real input (5.f).
@@ -333,7 +333,7 @@ class MPSC(BaseSafetyFilter):
         """Algorithm 1 from Wabsersich 2019.
 
         """
-        
+
         self.results_dict['unsafe_action'].append(unsafe_action)        
         success = True
         
@@ -357,7 +357,6 @@ class MPSC(BaseSafetyFilter):
                 self.results_dict['action'].append(action)
                 return action, success
             else:
-                success = False
                 action = self.lqr_gain @ current_state
                 action = np.clip(action, self.constraints.input_constraints[0].lower_bounds, self.constraints.input_constraints[0].upper_bounds)
                 self.results_dict['action'].append(action)
