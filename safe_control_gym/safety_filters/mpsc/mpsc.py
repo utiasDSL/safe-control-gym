@@ -359,7 +359,7 @@ class MPSC(BaseSafetyFilter):
                 action = action[0, 0]
                 clipped_action = np.clip(action, self.constraints.input_constraints[0].lower_bounds, self.constraints.input_constraints[0].upper_bounds)
                 
-                if clipped_action != action:
+                if np.all(clipped_action == action):
                     success = False
                 action = clipped_action
                 
@@ -369,7 +369,7 @@ class MPSC(BaseSafetyFilter):
                 action = self.lqr_gain @ current_state
                 clipped_action = np.clip(action, self.constraints.input_constraints[0].lower_bounds, self.constraints.input_constraints[0].upper_bounds)
                 
-                if clipped_action != action:
+                if np.all(clipped_action == action):
                     success = False
                 action = clipped_action
                 

@@ -10,6 +10,8 @@ task_config:
     stabilization_goal_tolerance: 0.05
 
   randomized_init: False
+  done_on_violation: False
+  done_on_out_of_bound: False
 
   # state initialization
   init_state:

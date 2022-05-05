@@ -197,8 +197,9 @@ class PPO(BaseController):
             env=None,
             render=False,
             n_episodes=10,
-            num_iterations=0,
+            max_steps=1000,
             verbose=False,
+            use_step=False,
             **kwargs
             ):
         """Runs evaluation with current policy.
@@ -224,55 +225,51 @@ class PPO(BaseController):
         ep_returns, ep_lengths = [], []
         frames = [] 
 
-        if num_iterations > 0:
-            for i in range(num_iterations):
-                with torch.no_grad():
-                    obs = torch.FloatTensor(raw_obs).to(self.device)
+        steps = 0
+        while len(ep_returns) < n_episodes:
+            with torch.no_grad():
+                obs = torch.FloatTensor(raw_obs).to(self.device)
+                if use_step:
                     action, _, _ = self.agent.ac.step(obs)
-                    if self.safety_filter:
-                        new_action, success = self.safety_filter.certify_action(raw_obs[:env.symbolic.nx], action)
-                        if success:
-                            action_diff = np.linalg.norm(new_action - action)
-                            self.results_dict['corrections'].append(action_diff)
-                            action = new_action
-                        else:
-                            self.results_dict['corrections'].append(0.0)
+                else:
+                    action = self.agent.ac.act(obs)
+                if self.safety_filter:
+                    new_action, success = self.safety_filter.certify_action(raw_obs[:env.symbolic.nx], action)
+                    if success:
+                        action_diff = np.linalg.norm(new_action - action)
+                        self.results_dict['corrections'].append(action_diff)
+                        action = new_action
                     else:
                         self.results_dict['corrections'].append(0.0)
-                
-                raw_obs, reward, done, info = env.step(action)
+                else:
+                    self.results_dict['corrections'].append(0.0)
 
-                self.results_dict['obs'].append(raw_obs)
-                self.results_dict['reward'].append(reward)
-                self.results_dict['done'].append(done)
-                self.results_dict['info'].append(info)
-                self.results_dict['action'].append(action)
+            raw_obs, reward, done, info = env.step(action)
+            steps += 1
 
-                # if done:
-                #     break
-        else:
-            while len(ep_returns) < n_episodes:
-                with torch.no_grad():
-                    obs = torch.FloatTensor(obs).to(self.device)
-                    action = self.agent.ac.act(obs)
-                obs, reward, done, info = env.step(action)
-                if render:
-                    env.render()
-                    frames.append(env.render("rgb_array"))
-                if verbose:
-                    print("obs {} | act {}".format(obs, action))
-                if done:
-                    assert "episode" in info
-                    ep_returns.append(info["episode"]["r"])
-                    ep_lengths.append(info["episode"]["l"])
-                    obs, _ = env.reset()
-                obs = self.obs_normalizer(obs)
+            self.results_dict['obs'].append(raw_obs)
+            self.results_dict['reward'].append(reward)
+            self.results_dict['done'].append(done)
+            self.results_dict['info'].append(info)
+            self.results_dict['action'].append(action)
 
-                self.results_dict['obs'].append(obs)
-                self.results_dict['reward'].append(reward)
-                self.results_dict['done'].append(done)
-                self.results_dict['info'].append(info)
-                self.results_dict['action'].append(action)
+            if render:
+                env.render()
+                frames.append(env.render("rgb_array"))
+            if verbose:
+                print("obs {} | act {}".format(raw_obs, action))
+            if done:
+                assert "episode" in info
+                ep_returns.append(info["episode"]["r"])
+                ep_lengths.append(info["episode"]["l"])
+                raw_obs, _ = env.reset()
+                steps = 0
+            if steps >= max_steps and not done:
+                ep_returns.append('INCOMPLETE')
+                ep_lengths.append('INCOMPLETE')
+                raw_obs, _ = env.reset()
+                steps = 0
+            obs = self.obs_normalizer(raw_obs)
 
         # Collect evaluation results.
         ep_lengths = np.asarray(ep_lengths)

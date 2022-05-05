@@ -35,8 +35,8 @@ def main():
     shutil.rmtree(os.path.dirname(os.path.abspath(__file__))+'/temp', ignore_errors=True)
     
     # Run without safety filter
-    iterations = 150
-    _, results = ctrl.run(env=env, num_iterations=iterations)
+    max_steps = 150
+    _, results = ctrl.run(env=env, max_steps=max_steps, n_episodes=1)
     ctrl.reset()
 
     # Setup MPSC.
@@ -55,7 +55,7 @@ def main():
     START = time.time()
     
     # Run with safety filter
-    _, certified_results = ctrl.run(env=env, num_iterations=iterations)
+    _, certified_results = ctrl.run(env=env, max_steps=max_steps, n_episodes=1)
     ctrl.close()
     safety_filter.close()
 

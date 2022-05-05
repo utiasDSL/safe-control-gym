@@ -44,7 +44,7 @@ def main():
     state_constraints_sym = mpsc.state_constraints_sym
     input_constraints_sym = mpsc.input_constraints_sym
     
-    iterations = 150
+    max_steps = 150
     limits = np.array([[10, 0.5, 0.05, 0.5]])
 
     all_results = {}
@@ -63,7 +63,7 @@ def main():
         # Run without safety filter
         START = time.time()
         ctrl.safety_filter = None
-        _, results = ctrl.run(env=env, num_iterations=iterations)
+        _, results = ctrl.run(env=env, max_steps=max_steps, n_episodes=1)
         elapsed_time_uncert = time.time() - START
 
         num_violations = sum([results.info[i][0]['constraint_violation'] for i in range(len(results.info))])
@@ -73,7 +73,7 @@ def main():
         # Run with safety filter
         START = time.time()
         ctrl.safety_filter = mpsc
-        _, certified_results = ctrl.run(env=env, num_iterations=iterations)
+        _, certified_results = ctrl.run(env=env, max_steps=max_steps, n_episodes=1)
         elapsed_time_cert = time.time() - START
 
         # Reset

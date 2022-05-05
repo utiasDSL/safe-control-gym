@@ -37,11 +37,11 @@ def main():
     shutil.rmtree(os.path.dirname(os.path.abspath(__file__))+'/temp')
     
     # Run without safety filter
-    iterations = 30
+    max_steps = 30
     with open('./unsafe_ppo_model/state1.pkl', 'rb') as f:
         state1 = pickle.load(f)
     set_random_state(state1)
-    _, results = ctrl.run(env=uncertified_env, num_iterations=iterations)
+    _, results = ctrl.run(env=uncertified_env, max_steps=max_steps, n_episodes=1, use_step=True)
     uncertified_env.close()
     ctrl.reset()
 
@@ -60,7 +60,7 @@ def main():
     with open('./unsafe_ppo_model/state0.pkl', 'rb') as f:
         state0 = pickle.load(f)
     set_random_state(state0)
-    _, certified_results = ctrl.run(env=certified_env, num_iterations=iterations)
+    _, certified_results = ctrl.run(env=certified_env, max_steps=max_steps, n_episodes=1, use_step=True)
     certified_env.close()
     ctrl.close()
     safety_filter.close_results_dict()

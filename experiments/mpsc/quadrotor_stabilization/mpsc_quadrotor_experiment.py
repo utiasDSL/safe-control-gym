@@ -37,11 +37,11 @@ def main():
         shutil.rmtree(os.path.dirname(os.path.abspath(__file__))+'/temp', ignore_errors=True)
     
     # Run without safety filter
-    iterations = 250
+    max_steps = 250
     if config.algo in ['ppo', 'sac']:
-        _, results = ctrl.run(num_iterations=iterations)
+        _, results = ctrl.run(max_steps=max_steps, n_episodes=1)
     else:
-        results = ctrl.run(num_iterations=iterations)
+        results = ctrl.run(num_iterations=max_steps)
     ctrl.reset()
 
     # Setup MPSC.
@@ -60,9 +60,9 @@ def main():
     
     # Run with safety filter
     if config.algo in ['ppo', 'sac']:
-        _, certified_results = ctrl.run(num_iterations=iterations)
+        _, certified_results = ctrl.run(max_steps=max_steps, n_episodes=1)
     else:
-        certified_results = ctrl.run(num_iterations=iterations)
+        certified_results = ctrl.run(num_iterations=max_steps)
     ctrl.close()
     safety_filter.close()
 
