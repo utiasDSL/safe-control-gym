@@ -11,3 +11,4 @@ sf_config:
   warmstart: False
   tau: 0.95
   use_terminal_set: True
+  learn_terminal_set: False

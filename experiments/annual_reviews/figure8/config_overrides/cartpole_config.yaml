@@ -30,3 +30,8 @@ task_config:
     init_theta: -0.19
     init_theta_dot: -0.5
   randomized_init: False
+
+  task: stabilization
+  task_info:
+    stabilization_goal: [0, 0]
+    stabilization_goal_tolerance: 0.0

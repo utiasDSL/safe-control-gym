@@ -15,11 +15,12 @@ from copy import deepcopy
 from itertools import product
 from munch import munchify
 from scipy.linalg import solve_discrete_are
+from pytope import Polytope
 
 from safe_control_gym.safety_filters.base_safety_filter import BaseSafetyFilter
 from safe_control_gym.controllers.mpc.mpc_utils import get_cost_weight_matrix, discretize_linear_system
 from safe_control_gym.safety_filters.mpsc.mpsc_utils import compute_RPI_set, pontryagin_difference_AABB, ellipse_bounding_box
-from safe_control_gym.envs.constraints import QuadraticContstraint, ConstraintList, ConstrainedVariableType
+from safe_control_gym.envs.constraints import LinearConstraint, QuadraticContstraint, ConstraintList, ConstrainedVariableType
 from safe_control_gym.envs.benchmark_env import Task
 
 
@@ -34,10 +35,12 @@ class MPSC(BaseSafetyFilter):
                  q_lin: list = None,
                  r_lin: list = None,
                  n_samples: int = 600,
+                 n_samples_terminal_set: int = 100,
                  tau: float = 0.95,
                  warmstart: bool = True,
                  additional_constraints: list = None,
                  use_terminal_set: bool = True,
+                 learn_terminal_set: bool = False,
                  **kwargs
                  ):
         """Initialize the MPSC.
@@ -67,15 +70,21 @@ class MPSC(BaseSafetyFilter):
         self.linear_dynamics_func, self.discrete_dfdx, self.discrete_dfdu = self.set_linear_dynamics()
         self.compute_lqr_gain()
         self.n_samples = n_samples
+        self.n_samples_terminal_set = n_samples_terminal_set
         self.horizon = horizon
         self.warmstart = warmstart
         self.tau = tau
         self.use_terminal_set = use_terminal_set
+        self.learn_terminal_set = learn_terminal_set
+
         self.omega_AABB_verts = None
         self.z_prev = None
         self.v_prev = None
+        self.terminal_set = None
+
+        self.additional_constraints = additional_constraints
         
-        if additional_constraints is None:
+        if self.additional_constraints is None:
             additional_constraints = []
         self.constraints, self.state_constraints_sym, self.input_constraints_sym = self.reset_constraints(
                                                                                     self.env.constraints.constraints +
@@ -167,11 +176,46 @@ class MPSC(BaseSafetyFilter):
                                                      constrained_variable=ConstrainedVariableType.STATE)
         # Now that constraints are defined, setup the optimizer.
         self.setup_optimizer()
+
+        if self.learn_terminal_set:
+            if self.additional_constraints is not None:
+                print("[WARNING] Terminal set calculation assumes convex constraints")
+            
+            if self.env.TASK == Task.TRAJ_TRACKING:
+                self.terminal_set = Polytope(self.X_LIN)
+                self.terminal_set.minimize_V_rep()
+            elif self.env.TASK == Task.STABILIZATION:
+                self.terminal_set = None
+            
+            for i in range(self.n_samples_terminal_set):
+                if self.terminal_set is None:
+                    init_state = self.X_LIN
+                else:
+                    init_state = self.terminal_set.V[np.random.choice(self.terminal_set.V.shape[0], 1)]
+
+                init_state = init_state.reshape((self.model.nx, 1))                
+                init_state += (np.random.rand(self.model.nx, 1) - np.ones((self.model.nx, 1))/2)/2
+                
+                if self.env.NAME == 'quadrotor':
+                    u = np.random.rand(self.model.nu)/6 - 1/12 + self.U_LIN
+                else:
+                    u = env.action_space.sample() # Will yield a random action within action space.
+
+                _, feasible = self.solve_optimization(obs=init_state, uncertified_input=u)
+                if feasible: 
+                    if self.terminal_set is None:
+                        self.terminal_set = Polytope(self.z_prev.T)
+                    else: 
+                        points = np.vstack((self.z_prev.T, self.terminal_set.V))
+                        self.terminal_set = Polytope(points)
+                    self.terminal_set.minimize_V_rep() 
+                    self.setup_optimizer()
     
     def load(self,
-             path,
+             path_to_P,
+             path_to_terminal_set=None,
              ):
-        P = np.load(path)
+        P = np.load(path_to_P)
         self.omega_AABB_verts = ellipse_bounding_box(P)
         self.tighten_state_and_input_constraints()
         self.omega_constraint = QuadraticContstraint(self.env,
@@ -180,6 +224,10 @@ class MPSC(BaseSafetyFilter):
                                                      constrained_variable=ConstrainedVariableType.STATE)
         # Now that constraints are defined, setup the optimizer.
         self.setup_optimizer()
+
+        if self.learn_terminal_set and path_to_terminal_set is not None:
+            terminal_set_verts = np.load(path_to_terminal_set)
+            self.terminal_set = Polytope(terminal_set_verts)
 
     def tighten_state_and_input_constraints(self):
         """Tigthen the state and input constraints based on the RPI.
@@ -221,6 +269,11 @@ class MPSC(BaseSafetyFilter):
                                                                                                                 self.omega_AABB_verts)
             self.tightened_state_constraint = tightened_state_constraint_func(env=self.env,
                                                                               constrained_variable=ConstrainedVariableType.STATE)
+        
+            self.simple_terminal_set = QuadraticContstraint(env=self.env, 
+                                                            P=np.eye(self.model.nx), 
+                                                            b=self.env.TASK_INFO['stabilization_goal_tolerance'],
+                                                            constrained_variable=ConstrainedVariableType.STATE)
         else:
             raise ValueError("")
 
@@ -247,6 +300,7 @@ class MPSC(BaseSafetyFilter):
         state_constraints = self.tightened_state_constraint.get_symbolic_model()
         input_constraints = self.tightened_input_constraint.get_symbolic_model()
         omega_constraint = self.omega_constraint.get_symbolic_model()
+        simple_terminal_constraint = self.simple_terminal_set.get_symbolic_model()
         for i in range(self.horizon):
             # Dynamics constraints (eqn 5.b).
             next_state = self.linear_dynamics_func(x0=z_var[:,i], p=v_var[:,i])['xf']
@@ -257,7 +311,12 @@ class MPSC(BaseSafetyFilter):
             opti.subject_to(state_constraints(z_var[:,i]) <= 0)
         # Final state constraints (5.d).
         if self.use_terminal_set:
-            opti.subject_to(z_var[:, -1] == 0 )
+            if self.terminal_set is not None:
+                terminal_constraint = LinearConstraint(env=self.env, A=self.terminal_set.A, b=self.terminal_set.b, constrained_variable=ConstrainedVariableType.STATE)
+                terminal_constraint = terminal_constraint.get_symbolic_model()
+                opti.subject_to(terminal_constraint(z_var[:, -1]) <= 0)
+            else:
+                opti.subject_to(simple_terminal_constraint(z_var[:, -1] - self.X_LIN[:,None]) <= 0)
         # Initial state constraints (5.e).
         opti.subject_to(omega_constraint(x - z_var[:, 0]) <= 0)
         # Real input (5.f).
@@ -359,7 +418,7 @@ class MPSC(BaseSafetyFilter):
                 action = action[0, 0]
                 clipped_action = np.clip(action, self.constraints.input_constraints[0].lower_bounds, self.constraints.input_constraints[0].upper_bounds)
                 
-                if np.all(clipped_action == action):
+                if np.linalg.norm(clipped_action - action) >= 0.01:
                     success = False
                 action = clipped_action
                 
@@ -369,7 +428,7 @@ class MPSC(BaseSafetyFilter):
                 action = self.lqr_gain @ current_state
                 clipped_action = np.clip(action, self.constraints.input_constraints[0].lower_bounds, self.constraints.input_constraints[0].upper_bounds)
                 
-                if np.all(clipped_action == action):
+                if np.linalg.norm(clipped_action - action) >= 0.01:
                     success = False
                 action = clipped_action
                 
