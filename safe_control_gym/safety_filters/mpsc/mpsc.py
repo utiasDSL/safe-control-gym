@@ -295,7 +295,7 @@ class MPSC(BaseSafetyFilter):
         # Desired input.
         u_L = opti.parameter(nu, 1)
         # Current observed state.
-        x = opti.parameter(nx, 1)
+        x_init = opti.parameter(nx, 1)
         # Constraints (currently only handles a single constraint for state and input).
         state_constraints = self.tightened_state_constraint.get_symbolic_model()
         input_constraints = self.tightened_input_constraint.get_symbolic_model()
@@ -318,9 +318,9 @@ class MPSC(BaseSafetyFilter):
             else:
                 opti.subject_to(simple_terminal_constraint(z_var[:, -1] - self.X_LIN[:,None]) <= 0)
         # Initial state constraints (5.e).
-        opti.subject_to(omega_constraint(x - z_var[:, 0]) <= 0)
+        opti.subject_to(omega_constraint(x_init- z_var[:, 0]) <= 0)
         # Real input (5.f).
-        opti.subject_to(u_tilde == v_var[:,0] + self.lqr_gain @ (x - z_var[:,0]))
+        opti.subject_to(u_tilde == v_var[:,0] + self.lqr_gain @ (x_init - z_var[:,0]))
         # Cost (# eqn 5.a, note: using 2norm or sqrt makes this infeasible).
         cost = (u_L - u_tilde).T @ (u_L - u_tilde)  
         opti.minimize(cost)
@@ -336,7 +336,7 @@ class MPSC(BaseSafetyFilter):
             "v_var": v_var,
             "u_tilde": u_tilde,
             "u_L": u_L,
-            "x": x,
+            "x_init": x_init,
             "cost": cost
         }
 
@@ -353,9 +353,9 @@ class MPSC(BaseSafetyFilter):
         v_var = opti_dict["v_var"]
         u_tilde = opti_dict["u_tilde"]
         u_L = opti_dict["u_L"]
-        x = opti_dict["x"]
+        x_init = opti_dict["x_init"]
         cost = opti_dict["cost"]
-        opti.set_value(x, obs)
+        opti.set_value(x_init, obs)
         opti.set_value(u_L, uncertified_input)
         # Initial guess for optimization problem.
         if (self.warmstart and
