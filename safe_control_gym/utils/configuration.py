@@ -22,7 +22,7 @@ class ConfigFactory:
         self.base_dict = dict(
             tag="temp",
             seed=None,
-            device="cpu",
+            use_gpu=False,
             output_dir="results",
             restore=None,
         )
@@ -39,7 +39,8 @@ class ConfigFactory:
         """
         self.add_argument("--tag", type=str, help='id of the experiment')
         self.add_argument("--seed", type=int, help="random seed, default is no seed/None")
-        self.add_argument("--device", type=str, help="cpu or cuda(gpu)")
+        # self.add_argument("--device", type=str, help="cpu or cuda(gpu)")
+        self.add_argument("--use_gpu", action='store_true', help="added to use gpu (if available)")
         self.add_argument("--output_dir", type=str, help="output saving folder")
         self.add_argument("--restore", type=str, help='folder to reload from')
         # Need to explicitly provide from command line (if training for the 1st time).
@@ -70,6 +71,8 @@ class ConfigFactory:
             config_dict["task_config"] = get_config(args.task)
         else:
             warnings.warn("No agent/task config given.")
+        if args.use_gpu:
+            config_dict["use_gpu"] = args.use_gpu
         # Experiment-specific overrides, e.g. training hyperparameters.
         if args.overrides:
             for f in args.overrides:

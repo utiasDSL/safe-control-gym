@@ -30,11 +30,11 @@ class SafeExplorerPPO(BaseController):
                  training=True,
                  checkpoint_path="model_latest.pt",
                  output_dir="temp",
-                 device="cpu",
+                 use_gpu=False,
                  seed=0,
                  **kwargs
                  ):
-        super().__init__(env_func, training, checkpoint_path, output_dir, device, seed, **kwargs)
+        super().__init__(env_func, training, checkpoint_path, output_dir, use_gpu, seed, **kwargs)
         # Task.
         if self.training:
             # Training and testing.
@@ -54,9 +54,8 @@ class SafeExplorerPPO(BaseController):
                                         hidden_dim=self.constraint_hidden_dim,
                                         num_constraints=self.num_constraints,
                                         lr=self.constraint_lr,
-                                        slack=self.constraint_slack, 
-                                        device=device)
-        self.safety_layer.to(device)
+                                        slack=self.constraint_slack)
+        self.safety_layer.to(self.device)
         # Agent.
         self.agent = SafePPOAgent(
             self.env.observation_space,
@@ -72,7 +71,7 @@ class SafeExplorerPPO(BaseController):
             mini_batch_size=self.mini_batch_size,
             action_modifier=self.safety_layer.get_safe_action,
         )
-        self.agent.to(device)
+        self.agent.to(self.device)
         # Pre-/post-processing.
         self.obs_normalizer = BaseNormalizer()
         if self.norm_obs:

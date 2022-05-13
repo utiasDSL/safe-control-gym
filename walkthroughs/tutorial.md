@@ -19,7 +19,7 @@ python3 tutorial.py --algo ppo --task cartpole --overrides ./tutorial_configs/tu
 If you have a GPU available, run the example with cuda:
 
 ```
-python3 tutorial.py --algo ppo --task cartpole --overrides ./tutorial_configs/tutorial_ppo_cartpole.yaml --output_dir ./tutorial_models --tag tutorial_results/ppo --thread 1 --seed 222 --device cuda
+python3 tutorial.py --algo ppo --task cartpole --overrides ./tutorial_configs/tutorial_ppo_cartpole.yaml --output_dir ./tutorial_models --tag tutorial_results/ppo --thread 1 --seed 222 --use_gpu
 ```
 
 Open up tutorial.py and let's look at how this example runs.
@@ -68,7 +68,7 @@ control_agent = make(config.algo,
                         training=True,
                         checkpoint_path=os.path.join(config.output_dir, "model_latest.pt"),
                         output_dir=config.output_dir,
-                        device=config.device,
+                        use_gpu=config.use_gpu,
                         seed=config.seed,
                         **config.algo_config)
 control_agent.reset()
@@ -227,7 +227,7 @@ These are some examples of common options you'd want to set in your experiment. 
 | ---- | ------ | ------ |
 | tag | id of the experiment | N/A |
 | seed | Randomization seed | `set_seed_from_config(config)` and input as arg at `make()`: `seed=config.seed` |
-| device | Where to perform training ("cpu" or "cuda") | `set device_from_config(config)` and input as arg at `make()`: `device=config.device` | 
+| use_gpu | Whether or not to use gpu (cuda) | `set_device_from_config(config)` and input as arg at `make()`: `use_gpu=config.use_gpu` | 
 | output_dir | Where to stored output models | `set_dir_from_config(config)` and input as arg at `make()`: `output_dir=config.output_dir` |
 | thread | How many threads to use | `torch.set_num_threads(config.thread)` | 
 
