@@ -92,6 +92,22 @@ Overview of [`safe-control-gym`](https://arxiv.org/abs/2109.06325)'s API:
 ```
 
 
+## Performance
+
+| Environment              | GUI    | Control Freq.  | PyBullet Freq.  | Constraints & Disturbances^       | Speed-Up^^      |
+| :----------------------: | :----: | :------------: | :-------------: | :-------------------------------: | :-------------: |
+| cartpole                 | True   | 50Hz           | 50Hz            | No                                | 0.85x           |
+| cartpole                 | False  | 50Hz           | 1000Hz          | No                                | 24.73x          |
+| cartpole                 | False  | 50Hz           | 1000Hz          | Yes                               | 22.39x          |
+| quadrotor                | True   | 60Hz           | 240Hz           | No                                | 0.74x           |
+| quadrotor                | False  | 50Hz           | 1000Hz          | No                                | 9.28x           |
+| quadrotor                | False  | 50Hz           | 1000Hz          | Yes                               | 7.62x           |
+
+> ^ Whether the environment includes a default set of constraints and disturbances
+> 
+> ^^ On a 2.30GHz Quad-Core i7-1068NG7 with 32GB 3733MHz LPDDR4X; no GPU
+
+
 
 
 ## Getting Started
@@ -110,10 +126,11 @@ $ python3 verbose_api.py --system cartpole --overrides verbose_api.yaml         
 <img src="figures/systems.png" alt="systems" width="450"> <img src="figures/figure8.gif" alt="trajectory" width="350">
 
 
-
 ## Verbose API Example
 
 <img src="figures/prints.png" al="prints" width="800">
+
+
 
 
 ## List of Implemented Controllers
@@ -129,6 +146,8 @@ $ python3 verbose_api.py --system cartpole --overrides verbose_api.yaml         
 - [RAP](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/rarl/rap.py)
 - [MPSC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpsc/mpsc.py)
 - [CBF](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/cbf/cbf_qp.py)
+
+
 
 
 ## Re-create the Results in "Safe Learning in Robotics" [[arXiv link]](https://arxiv.org/pdf/2108.06266.pdf)
