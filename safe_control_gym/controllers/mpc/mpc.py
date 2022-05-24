@@ -285,7 +285,8 @@ class MPC(BaseController):
                               'info': [],
                               'action': [],
                               'horizon_inputs': [],
-                              'horizon_states': []
+                              'horizon_states': [],
+                              'frames': []
         }
 
     def run(self,
@@ -355,6 +356,8 @@ class MPC(BaseController):
                 ep_lengths.mean(), ep_lengths.std(), ep_returns.mean(),
                 ep_returns.std())
         self.results_dict['obs'] = np.vstack(self.results_dict['obs'])
+        if len(frames) != 0:
+            self.results_dict['frames'] = frames
         try:
             self.results_dict['reward'] = np.vstack(self.results_dict['reward'])
             self.results_dict['action'] = np.vstack(self.results_dict['action'])
