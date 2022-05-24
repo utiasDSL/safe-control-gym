@@ -12,6 +12,8 @@ Example:
     run ilqr on quadrotor stabilization:
     
         python3 experiments/main.py --func test --tag ilqr_quad --algo ilqr --task quadrotor --q_lqr 0.1
+    
+    Add the '--render' flag to produce a gif of the results
 
 """
 import os
@@ -174,168 +176,174 @@ class iLQR(BaseController):
 
         # Loop through iLQR iterations
         while self.ite_counter < self.max_iterations:
-            # Current goal.
-            if self.task == Task.STABILIZATION:
-                current_goal = self.x_0
-            elif self.task == Task.TRAJ_TRACKING:
-                current_goal = self.x_0[self.k]
-
-            # Compute input.
-            action = self.select_action(self.env.state, self.k)
-
-            # Save rollout data.
-            if self.k == 0:
-                # Initialize state and input stack.
-                state_stack = self.env.state
-                input_stack = action
-                goal_stack = current_goal
-
-                # Print initial state.
-                print(colored("initial state: " + get_arr_str(self.env.state), "green"))
-
-                if self.ite_counter == 0:
-                    self.init_state = self.env.state
-            else:
-                # Save state and input.
-                state_stack = np.vstack((state_stack, self.env.state))
-                input_stack = np.vstack((input_stack, action))
-                goal_stack = np.vstack((goal_stack, current_goal))
-
-            # Step forward.
-            obs, reward, done, info = self.env.step(action)
-
-            # Update step counter.
-            self.k += 1
-            # print("step", k, "done", done)
-
-            # Print out.
-            if self.verbose and self.k % 100 == 0:
-                print(colored("episode: %d step: %d" % (self.ite_counter, self.k), "green"))
-                print("state: " + get_arr_str(self.env.state))
-                print("action: " + get_arr_str(self.env.state) + "\n")
-
-            # Save frame for visualization.
-            if render:
-                self.env.render()
-                frames.append(self.env.render("rgb_array"))
-
-            # Save data and update policy if iteration is finished.
-            if done:
-                # Push last state and input to stack.
-                # Last input is not really used.
-                state_stack = np.vstack((state_stack, self.env.state))
-                # input_stack = np.vstack((input_stack, action))
-                # goal_stack = np.vstack((goal_stack, current_goal))
-
-                # Update iteration return and length lists.
-                assert "episode" in info
-                ite_returns.append(info["episode"]["r"])
-                ite_lengths.append(info["episode"]["l"])
-                ite_data["ite%d_state" % self.ite_counter] = state_stack
-                ite_data["ite%d_input" % self.ite_counter] = input_stack
-
-                # Print iteration reward.
-                print(colored("final state: " + get_arr_str(self.env.state), "green"))
-                print(colored("iteration %d reward %.4f" %
-                        (self.ite_counter, info["episode"]["r"]), "green"))
-                print(colored("--------------------------", "green"))
-
-                # Break if the first iteration is not successful
+            done = False
+            frames_k = []
+            while not done:
+                # Current goal.
                 if self.task == Task.STABILIZATION:
-                    if self.ite_counter == 0 and not info["goal_reached"]:
-                        print(colored("The initial policy might be unstable. "
-                                + "Break from iLQR updates.", "red"))
-                        break
+                    current_goal = self.x_0
+                elif self.task == Task.TRAJ_TRACKING:
+                    current_goal = self.x_0[self.k]
 
-                # Maximum episode length.
-                self.num_steps = np.shape(input_stack)[0]
-                self.episode_len_sec = self.num_steps * self.stepsize
-                print(colored("Maximum episode length: %d steps!" % (self.num_steps), "blue"))
-                print(np.shape(input_stack), np.shape(self.gains_fb))
-                # import ipdb; ipdb.set_trace()
+                # Compute input.
+                action = self.select_action(self.env.state, self.k)
 
-                # Check if cost is increased and update lambda correspondingly
-                delta_reward = np.diff(ite_returns[-2:])
-                if self.ite_counter == 0:
+                # Save rollout data.
+                if self.k == 0:
+                    # Initialize state and input stack.
+                    state_stack = self.env.state
+                    input_stack = action
+                    goal_stack = current_goal
 
-                    # Save best iteration.
-                    print("Save iteration gains. Best iteration %d" % self.ite_counter)
-                    self.best_iteration = self.ite_counter
-                    self.input_ff_best = np.copy(self.input_ff)
-                    self.gains_fb_best = np.copy(self.gains_fb)
+                    # Print initial state.
+                    print(colored("initial state: " + get_arr_str(self.env.state), "green"))
 
-                    # Update controller gains
-                    self.update_policy(state_stack, input_stack)
+                    if self.ite_counter == 0:
+                        self.init_state = self.env.state
+                else:
+                    # Save state and input.
+                    state_stack = np.vstack((state_stack, self.env.state))
+                    input_stack = np.vstack((input_stack, action))
+                    goal_stack = np.vstack((goal_stack, current_goal))
 
-                    # Initialize improved flag.
-                    self.prev_ite_improved = False
+                # Step forward.
+                obs, reward, done, info = self.env.step(action)
 
-                elif delta_reward < 0.0 or self.update_unstable:
-                    # If cost is increased, increase lambda
-                    self.lamb *= self.lamb_factor
+                # Update step counter.
+                self.k += 1
+                # print("step", k, "done", done)
 
-                    # Reset feedforward term and controller gain to that from
-                    # the previous iteration.
-                    print("Cost increased by %.2f. " % -delta_reward
-                          + "Set feedforward term and controller gain to that "
-                          "from the previous iteration. "
-                          "Increased lambda to %.2f." % self.lamb)
-                    print("Current policy is from iteration %d." % self.best_iteration)
-                    self.input_ff = np.copy(self.input_ff_best)
-                    self.gains_fb = np.copy(self.gains_fb_best)
+                # Print out.
+                if self.verbose and self.k % 100 == 0:
+                    print(colored("episode: %d step: %d" % (self.ite_counter, self.k), "green"))
+                    print("state: " + get_arr_str(self.env.state))
+                    print("action: " + get_arr_str(self.env.state) + "\n")
 
-                    # Set improved flag to False.
-                    self.prev_ite_improved = False
+                # Save frame for visualization.
+                if render:
+                    self.env.render()
+                    frames_k.append(self.env.render("rgb_array"))
 
-                    # Break if maximum lambda is reached.
-                    if self.lamb > self.lamb_max:
-                        print(colored("Maximum lambda reached.", "red"))
-                        self.lamb = self.lamb_max
+                # Save data and update policy if iteration is finished.
+                if done:
+                    # Push last state and input to stack.
+                    # Last input is not really used.
+                    state_stack = np.vstack((state_stack, self.env.state))
+                    # input_stack = np.vstack((input_stack, action))
+                    # goal_stack = np.vstack((goal_stack, current_goal))
+                    
+                    # Add set of kth set of frames to frames 
+                    frames.append(frames_k)
 
-                    # Reset update_unstable flag to False.
-                    self.update_unstable = False
+                    # Update iteration return and length lists.
+                    assert "episode" in info
+                    ite_returns.append(info["episode"]["r"])
+                    ite_lengths.append(info["episode"]["l"])
+                    ite_data["ite%d_state" % self.ite_counter] = state_stack
+                    ite_data["ite%d_input" % self.ite_counter] = input_stack
 
-                elif delta_reward >= 0.0:
-                    # If cost is reduced, reduce lambda.
-                    # Smoother convergence if not scaling down lambda.
-                    # self.lamb /= self.lamb_factor
+                    # Print iteration reward.
+                    print(colored("final state: " + get_arr_str(self.env.state), "green"))
+                    print(colored("iteration %d reward %.4f" %
+                            (self.ite_counter, info["episode"]["r"]), "green"))
+                    print(colored("--------------------------", "green"))
 
-                    # Save feedforward term and gain and state and input stacks.
-                    print("Save iteration gains. Best iteration %d" % self.ite_counter)
-                    self.best_iteration = self.ite_counter
-                    self.input_ff_best = np.copy(self.input_ff)
-                    self.gains_fb_best = np.copy(self.gains_fb)
+                    # Break if the first iteration is not successful
+                    if self.task == Task.STABILIZATION:
+                        if self.ite_counter == 0 and not info["goal_reached"]:
+                            print(colored("The initial policy might be unstable. "
+                                    + "Break from iLQR updates.", "red"))
+                            break
 
-                    # Check consecutive reward increment (cost decrement).
-                    if delta_reward < self.epsilon and self.prev_ite_improved:
-                        # Cost converged.
-                        print(colored("iLQR cost converged with a tolerance "
-                                + "of %.2f." % self.epsilon, "yellow"))
-                        break
+                    # Maximum episode length.
+                    self.num_steps = np.shape(input_stack)[0]
+                    self.episode_len_sec = self.num_steps * self.stepsize
+                    print(colored("Maximum episode length: %d steps!" % (self.num_steps), "blue"))
+                    print(np.shape(input_stack), np.shape(self.gains_fb))
+                    # import ipdb; ipdb.set_trace()
 
-                    # Set improved flag to True.
-                    self.prev_ite_improved = True
+                    # Check if cost is increased and update lambda correspondingly
+                    delta_reward = np.diff(ite_returns[-2:])
+                    if self.ite_counter == 0:
 
-                    # Update controller gains
-                    self.update_policy(state_stack, input_stack)
+                        # Save best iteration.
+                        print("Save iteration gains. Best iteration %d" % self.ite_counter)
+                        self.best_iteration = self.ite_counter
+                        self.input_ff_best = np.copy(self.input_ff)
+                        self.gains_fb_best = np.copy(self.gains_fb)
 
-                # Reset iteration and step counter.
-                self.ite_counter += 1
-                self.k = 0
+                        # Update controller gains
+                        self.update_policy(state_stack, input_stack)
 
-                # Reset environment.
-                print("Reset environment.")
-                self.reset_env()
+                        # Initialize improved flag.
+                        self.prev_ite_improved = False
 
-                # Post analysis.
-                if self.plot_traj or self.save_plot or self.save_data:
-                    analysis_data = post_analysis(goal_stack, state_stack,
-                                                  input_stack, self.env, 0,
-                                                  self.ep_counter,
-                                                  self.plot_traj,
-                                                  self.save_plot,
-                                                  self.save_data,
-                                                  self.plot_dir, self.data_dir)
+                    elif delta_reward < 0.0 or self.update_unstable:
+                        # If cost is increased, increase lambda
+                        self.lamb *= self.lamb_factor
+
+                        # Reset feedforward term and controller gain to that from
+                        # the previous iteration.
+                        print("Cost increased by %.2f. " % -delta_reward
+                            + "Set feedforward term and controller gain to that "
+                            "from the previous iteration. "
+                            "Increased lambda to %.2f." % self.lamb)
+                        print("Current policy is from iteration %d." % self.best_iteration)
+                        self.input_ff = np.copy(self.input_ff_best)
+                        self.gains_fb = np.copy(self.gains_fb_best)
+
+                        # Set improved flag to False.
+                        self.prev_ite_improved = False
+
+                        # Break if maximum lambda is reached.
+                        if self.lamb > self.lamb_max:
+                            print(colored("Maximum lambda reached.", "red"))
+                            self.lamb = self.lamb_max
+
+                        # Reset update_unstable flag to False.
+                        self.update_unstable = False
+
+                    elif delta_reward >= 0.0:
+                        # If cost is reduced, reduce lambda.
+                        # Smoother convergence if not scaling down lambda.
+                        # self.lamb /= self.lamb_factor
+
+                        # Save feedforward term and gain and state and input stacks.
+                        print("Save iteration gains. Best iteration %d" % self.ite_counter)
+                        self.best_iteration = self.ite_counter
+                        self.input_ff_best = np.copy(self.input_ff)
+                        self.gains_fb_best = np.copy(self.gains_fb)
+
+                        # Check consecutive reward increment (cost decrement).
+                        if delta_reward < self.epsilon and self.prev_ite_improved:
+                            # Cost converged.
+                            print(colored("iLQR cost converged with a tolerance "
+                                    + "of %.2f." % self.epsilon, "yellow"))
+                            break
+
+                        # Set improved flag to True.
+                        self.prev_ite_improved = True
+
+                        # Update controller gains
+                        self.update_policy(state_stack, input_stack)
+
+                    # Reset iteration and step counter.
+                    self.ite_counter += 1
+                    self.k = 0
+
+                    # Reset environment.
+                    print("Reset environment.")
+                    self.reset_env()
+
+                    # Post analysis.
+                    if self.plot_traj or self.save_plot or self.save_data:
+                        analysis_data = post_analysis(goal_stack, state_stack,
+                                                    input_stack, self.env, 0,
+                                                    self.ep_counter,
+                                                    self.plot_traj,
+                                                    self.save_plot,
+                                                    self.save_data,
+                                                    self.plot_dir, self.data_dir)
 
         # Collect evaluation results.
         ite_lengths = np.asarray(ite_lengths)
@@ -353,6 +361,7 @@ class iLQR(BaseController):
             "ite_lengths": ite_lengths,
             "ite_data": ite_data
         }
+        print(len(frames))
 
         if len(frames) > 0:
             ilqr_eval_results["frames"] = frames
@@ -569,7 +578,6 @@ class iLQR(BaseController):
             evaluation trial.
 
         """
-
         # Initialize logging variables.
         ep_returns, ep_lengths, ep_fulldata, frames = [], [], {}, []
 
@@ -587,7 +595,7 @@ class iLQR(BaseController):
             ep_fulldata["run%d_data"
                         % self.ep_counter] = ilqr_eval_results["ite_data"]
             if "frames" in ilqr_eval_results:
-                frames.append(ilqr_eval_results["frames"][-1])
+                frames.extend(np.asarray(ilqr_eval_results["frames"][-1]))
 
             # Print episode reward.
             print(colored("Test Run %d reward %.4f" % (self.ep_counter, ep_returns[-1]), "yellow"))
