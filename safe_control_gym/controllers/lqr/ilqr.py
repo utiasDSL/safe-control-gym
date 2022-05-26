@@ -232,7 +232,7 @@ class iLQR(BaseController):
                     # input_stack = np.vstack((input_stack, action))
                     # goal_stack = np.vstack((goal_stack, current_goal))
                     
-                    # Add set of kth set of frames to frames 
+                    # Add set of k frames to frames (for all episodes)
                     frames.append(frames_k)
 
                     # Update iteration return and length lists.
