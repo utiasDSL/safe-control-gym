@@ -178,7 +178,6 @@ class iLQR(BaseController):
         frames_k = []
 
         # Loop through iLQR iterations
-        self.max_iterations = 2
         while self.ite_counter < self.max_iterations:
             
             # Current goal.
@@ -364,7 +363,6 @@ class iLQR(BaseController):
             "ite_lengths": ite_lengths,
             "ite_data": ite_data
         }
-        print(len(frames))
 
         if len(frames) > 0:
             ilqr_eval_results["frames"] = frames
