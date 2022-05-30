@@ -247,7 +247,7 @@ $ ./create_unsafe_ppo_model.sh                                     # Run the scr
 
 
 
-## Desiderata/WIP/Summer 2022 Internships TODOs
+# Desiderata/WIP/Summer 2022 Internships TODOs
 - Publish to [PyPI](https://realpython.com/pypi-publish-python-package/)
 - [Colab](https://colab.research.google.com/notebooks/intro.ipynb) examples
 - Create a list of FAQs from [Issues tagged as questions](https://github.com/utiasDSL/safe-control-gym/issues?q=is%3Aissue+is%3Aopen+label%3Aquestion)
