@@ -97,7 +97,7 @@ Overview of [`safe-control-gym`](https://arxiv.org/abs/2109.06325)'s API:
 We compare the sample efficiency of `safe-control-gym` with the original [OpenAI Cartpole][1] and [PyBullet Gym's Inverted Pendulum][2], as well as [`gym-pybullet-drones`][3].
 We report performance results for open-loop, random action inputs.
 We choose the default physic simulation integration step of each project.
-Note that the Bullet engine frequency reported for `safe-control-gym is typically much finer grained for improved fidelity.
+Note that the Bullet engine frequency reported for `safe-control-gym` is typically much finer grained for improved fidelity.
 `safe-control-gym` quadrotor environment is not as light-weight as [`gym-pybullet-drones`][3] but provides the same order of magnitude speed-up and several more safety features/symbolic models.
 
 | Environment              | GUI    | Control Freq.  | PyBullet Freq.  | Constraints & Disturbances^       | Speed-Up^^      |
