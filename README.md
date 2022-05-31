@@ -96,7 +96,7 @@ Overview of [`safe-control-gym`](https://arxiv.org/abs/2109.06325)'s API:
 
 | Environment              | GUI    | Control Freq.  | PyBullet Freq.  | Constraints & Disturbances^       | Speed-Up^^      |
 | :----------------------: | :----: | :------------: | :-------------: | :-------------------------------: | :-------------: |
-| [OpenAI Gym cartpole][1] | True   | 50Hz           | N/A             | No                                | 1.16x           |
+| [Gym cartpole][1]        | True   | 50Hz           | N/A             | No                                | 1.16x           |
 | [InvPenPyBulletEnv][2]   | False | 60Hz | 60Hz            | No                                | 158.29x         |
 | [cartpole][4]            | True   | 50Hz           | 50Hz            | No                                | 0.85x           |
 | [cartpole][4]            | False  | 50Hz           | 1000Hz          | No                                | 24.73x          |
