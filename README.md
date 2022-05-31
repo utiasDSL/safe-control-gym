@@ -94,10 +94,16 @@ Overview of [`safe-control-gym`](https://arxiv.org/abs/2109.06325)'s API:
 
 ## Performance
 
+We compare the sample efficiency of `safe-control-gym` with the original [OpenAI Cartpole][1] and [PyBullet Gym's Inverted Pendulum][2], as well as [`gym-pybullet-drones`][3].
+We report performance results for open-loop, random action inputs.
+We choose the default physic simulation integration step of each project.
+Note that the Bullet engine frequency reported for `safe-control-gym is typically much finer grained for improved fidelity.
+`safe-control-gym` quadrotor environment is not as light-weight as [`gym-pybullet-drones`][3] but provides the same order of magnitude speed-up and several more safety features/symbolic models.
+
 | Environment              | GUI    | Control Freq.  | PyBullet Freq.  | Constraints & Disturbances^       | Speed-Up^^      |
 | :----------------------: | :----: | :------------: | :-------------: | :-------------------------------: | :-------------: |
 | [Gym cartpole][1]        | True   | 50Hz           | N/A             | No                                | 1.16x           |
-| [InvPenPyBulletEnv][2]   | False | 60Hz | 60Hz            | No                                | 158.29x         |
+| [InvPenPyBulletEnv][2]   | False  | 60Hz           | 60Hz            | No                                | 158.29x         |
 | [cartpole][4]            | True   | 50Hz           | 50Hz            | No                                | 0.85x           |
 | [cartpole][4]            | False  | 50Hz           | 1000Hz          | No                                | 24.73x          |
 | [cartpole][4]            | False  | 50Hz           | 1000Hz          | Yes                               | 22.39x          |
@@ -110,7 +116,7 @@ Overview of [`safe-control-gym`](https://arxiv.org/abs/2109.06325)'s API:
 
 > ^ Whether the environment includes a default set of constraints and disturbances
 > 
-> ^^ On a 2.30GHz Quad-Core i7-1068NG7 with 32GB 3733MHz LPDDR4X; no GPU
+> ^^ Speed-up = Elapsed Simulation Time / Elapsed Wall Clock Time; On a 2.30GHz Quad-Core i7-1068NG7 with 32GB 3733MHz LPDDR4X; no GPU
 
 [1]: https://github.com/openai/gym/blob/master/gym/envs/classic_control/cartpole.py
 [2]: https://github.com/benelot/pybullet-gym/blob/master/pybulletgym/envs/mujoco/envs/pendulum/inverted_pendulum_env.py
