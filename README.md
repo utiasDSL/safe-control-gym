@@ -92,6 +92,10 @@ Overview of [`safe-control-gym`](https://arxiv.org/abs/2109.06325)'s API:
 ```
 
 
+## Configuration
+
+<img src="figures/config.png" alt="config" width="800"> 
+
 ## Performance
 
 We compare the sample efficiency of `safe-control-gym` with the original [OpenAI Cartpole][1] and [PyBullet Gym's Inverted Pendulum][2], as well as [`gym-pybullet-drones`][3].
