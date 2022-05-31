@@ -103,7 +103,7 @@ Overview of [`safe-control-gym`](https://arxiv.org/abs/2109.06325)'s API:
 | [cartpole][4]            | False  | 50Hz           | 1000Hz          | Yes                               | 22.39x          |
 | | | | | | |
 | [gym-pybullet-drones][3] | True   | 48Hz           | 240Hz           | No                                | 2.43x           |
-| [gym-pybullet-drones][3] | False  | 48Hz           | 240Hz           | No                                | 49.80x          |
+| [gym-pybullet-drones][3] | False  | 50Hz           | 1000Hz          | No                                | 21.50x          |
 | [quadrotor][5]           | True   | 60Hz           | 240Hz           | No                                | 0.74x           |
 | [quadrotor][5]           | False  | 50Hz           | 1000Hz          | No                                | 9.28x           |
 | [quadrotor][5]           | False  | 50Hz           | 1000Hz          | Yes                               | 7.62x           |
