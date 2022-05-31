@@ -96,9 +96,13 @@ Overview of [`safe-control-gym`](https://arxiv.org/abs/2109.06325)'s API:
 
 | Environment              | GUI    | Control Freq.  | PyBullet Freq.  | Constraints & Disturbances^       | Speed-Up^^      |
 | :----------------------: | :----: | :------------: | :-------------: | :-------------------------------: | :-------------: |
+| cartpole ([OpenAI Gym][1])| True  | --Hz           | --Hz            | No                                | -.--x           |
+| cartpole ([OpenAI Gym][1])| False | --Hz           | --Hz            | No                                | -.--x           |
 | cartpole                 | True   | 50Hz           | 50Hz            | No                                | 0.85x           |
 | cartpole                 | False  | 50Hz           | 1000Hz          | No                                | 24.73x          |
 | cartpole                 | False  | 50Hz           | 1000Hz          | Yes                               | 22.39x          |
+| [gym-pybullet-drones][2] | True   | --Hz           | --Hz            | No                                | -.--x           |
+| [gym-pybullet-drones][2] | False  | --Hz           | --Hz            | No                                | -.--x           |
 | quadrotor                | True   | 60Hz           | 240Hz           | No                                | 0.74x           |
 | quadrotor                | False  | 50Hz           | 1000Hz          | No                                | 9.28x           |
 | quadrotor                | False  | 50Hz           | 1000Hz          | Yes                               | 7.62x           |
@@ -107,7 +111,8 @@ Overview of [`safe-control-gym`](https://arxiv.org/abs/2109.06325)'s API:
 > 
 > ^^ On a 2.30GHz Quad-Core i7-1068NG7 with 32GB 3733MHz LPDDR4X; no GPU
 
-
+[1]: www.google.com
+[2]: www.google.com
 
 
 ## Getting Started
