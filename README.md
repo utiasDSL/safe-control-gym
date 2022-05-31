@@ -116,7 +116,7 @@ Note that the Bullet engine frequency reported for `safe-control-gym` is typical
 
 > ^ Whether the environment includes a default set of constraints and disturbances
 > 
-> ^^ Speed-up = Elapsed Simulation Time / Elapsed Wall Clock Time; On a 2.30GHz Quad-Core i7-1068NG7 with 32GB 3733MHz LPDDR4X; no GPU
+> ^^ Speed-up = Elapsed Simulation Time / Elapsed Wall Clock Time; on a 2.30GHz Quad-Core i7-1068NG7 with 32GB 3733MHz LPDDR4X; no GPU
 
 [1]: https://github.com/openai/gym/blob/master/gym/envs/classic_control/cartpole.py
 [2]: https://github.com/benelot/pybullet-gym/blob/master/pybulletgym/envs/mujoco/envs/pendulum/inverted_pendulum_env.py
