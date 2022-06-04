@@ -549,10 +549,10 @@ class BaseAviary(BenchmarkEnv):
         rpy_rates_deriv = np.dot(self.J_INV, torques)
         no_pybullet_dyn_accs = force_world_frame / self.MASS
         # Update state.
-        vel = vel + self.TIMESTEP * no_pybullet_dyn_accs
-        rpy_rates = rpy_rates + self.TIMESTEP * rpy_rates_deriv
-        pos = pos + self.TIMESTEP * vel
-        rpy = rpy + self.TIMESTEP * rpy_rates
+        vel = vel + self.PYB_TIMESTEP * no_pybullet_dyn_accs
+        rpy_rates = rpy_rates + self.PYB_TIMESTEP * rpy_rates_deriv
+        pos = pos + self.PYB_TIMESTEP * vel
+        rpy = rpy + self.PYB_TIMESTEP * rpy_rates
         # Set PyBullet's state.
         p.resetBasePositionAndOrientation(self.DRONE_IDS[nth_drone],
                                           pos,
