@@ -1,10 +1,10 @@
 task_config:
   seed: 42
-  task: stabilization
   ctrl_freq: 10
   episode_len_sec: 10
   pyb_freq: 1000
   gui: False
+
   randomized_inertial_prop: False
   randomized_init: True
   init_state_randomization_info:
@@ -25,8 +25,8 @@ task_config:
       low: -0.1
       high: 0.1
   info_in_reset: True
-  cost: quadratic
-  # constraint
+  
+  # constraints
   constraints:
     - constraint_form: default_constraint
       constrained_variable: state
@@ -46,10 +46,13 @@ task_config:
         - 2.0
       lower_bounds:
         - -2.0
+
   # disturbances:
   #   dynamics:
   #     - disturbance_func: white_noise
-  #       std: 0.02 
+  #       std: 0.02
+
+  cost: quadratic
   done_on_violation: False
   done_on_out_of_bound: False
   task: stabilization
