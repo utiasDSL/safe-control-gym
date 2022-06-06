@@ -7,7 +7,7 @@ r_mpc:
   - 1.
 q_mpc:
   - 1.
-use_prev_start: True
+warmstart: True
 additional_constraints: null
 
 # GP training args

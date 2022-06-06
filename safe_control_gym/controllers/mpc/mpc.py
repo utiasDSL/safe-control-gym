@@ -45,21 +45,55 @@ class MPC(BaseController):
                 self.__dict__.update({k: v})
         # Task.
         self.env = env_func()
-        if additional_constraints is not None:
-            additional_ConstraintsList = create_constraint_list(additional_constraints,
-                                                                GENERAL_CONSTRAINTS,
-                                                                self.env)
-            self.additional_constraints = additional_ConstraintsList.constraints
-            self.reset_constraints(self.env.constraints.constraints + self.additional_constraints)
-        else:
-            self.reset_constraints(self.env.constraints.constraints)
-            self.additional_constraints = []
+        self.T = horizon
+        self.additional_constraints_input = additional_constraints
+        self.reset()
+
+    def reset(self):
+        """Prepares for training or evaluation.
+
+        """
+        self.init_obs, init_info = self.env.reset()
+        self.reference = init_info['x_reference']
+
+        # Setup reference input.
+        if self.env.TASK == Task.STABILIZATION:
+            self.mode = "stabilization"
+            self.x_goal = self.env.X_GOAL
+        elif self.env.TASK == Task.TRAJ_TRACKING:
+            self.mode = "tracking"
+            self.traj = self.env.X_GOAL.T
+            # Step along the reference.
+            self.traj_step = 0
         # Model parameters
         self.model = self.env.symbolic
         self.dt = self.model.dt
-        self.T = horizon
         self.Q = get_cost_weight_matrix(self.q_mpc, self.model.nx)
         self.R = get_cost_weight_matrix(self.r_mpc, self.model.nu)
+        # Constraints
+        if self.additional_constraints_input is not None:
+            additional_ConstraintsList = create_constraint_list(self.additional_constraints_input,
+                                                                GENERAL_CONSTRAINTS,
+                                                                self.env)
+            self.additional_constraints = additional_ConstraintsList.constraints
+            if self.env.constraints is None:
+                self.reset_constraints(self.additional_constraints)
+            else:
+                self.reset_constraints(self.env.constraints.constraints + self.additional_constraints)
+        else:
+            if self.env.constraints is not None:
+                self.reset_constraints(self.env.constraints.constraints)
+            else:
+                self.reset_constraints([])
+            self.additional_constraints = []
+        # Dynamics model.
+        self.set_dynamics_func()
+        # CasADi optimizer.
+        self.setup_optimizer()
+        # Previously solved states & inputs, useful for warm start.
+        self.x_prev = None
+        self.u_prev = None
+        self.reset_results_dict()
 
     def reset_constraints(self,
                           constraints
@@ -108,29 +142,6 @@ class MPC(BaseController):
 
         """
         self.env.close()
-
-    def reset(self):
-        """Prepares for training or evaluation.
-
-        """
-        # Setup reference input.
-        if self.env.TASK == Task.STABILIZATION:
-            self.mode = "stabilization"
-            self.x_goal = self.env.X_GOAL
-        elif self.env.TASK == Task.TRAJ_TRACKING:
-            self.mode = "tracking"
-            self.traj = self.env.X_GOAL.T
-            # Step along the reference.
-            self.traj_step = 0
-        # Dynamics model.
-        self.set_dynamics_func()
-        # CasADi optimizer.
-        self.setup_optimizer()
-        # Previously solved states & inputs, useful for warm start.
-        self.x_prev = None
-        self.u_prev = None
-
-        self.reset_results_dict()
 
     def set_dynamics_func(self):
         """Updates symbolic dynamics with actual control frequency.
@@ -306,14 +317,17 @@ class MPC(BaseController):
         """
         if env is None:
             env = self.env
+        else:
+            self.env = env
+            self.reset()
         self.x_prev = None
         self.u_prev = None
-        obs, info = env.reset()
+
         print("Init State:")
+        obs = self.init_obs
         print(obs)
         ep_returns, ep_lengths = [], []
         frames = []
-        self.reset_results_dict()
         self.results_dict['obs'].append(obs)
         i = 0
         if self.env.TASK == Task.STABILIZATION:
@@ -345,6 +359,9 @@ class MPC(BaseController):
             if render:
                 env.render()
                 frames.append(env.render("rgb_array"))
+            if done:
+                print("Done")
+                break
             i += 1
         # Collect evaluation results.
         ep_lengths = np.asarray(ep_lengths)

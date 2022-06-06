@@ -3,6 +3,8 @@
 """
 import numpy as np
 import scipy
+from pytope import Polytope
+import matplotlib.pyplot as plt
 
 
 def get_cost_weight_matrix(weights,
@@ -53,3 +55,48 @@ def discretize_linear_system(A,
         Ad = I + A * dt
         Bd = B * dt
     return Ad, Bd
+
+def compute_min_RPI(A, wmax, wmin, vol_converge=1e-3, s_max=500, debug=False):
+    """Compute the minimal robust positively invariant set (mRPI)
+    
+    Args:
+        A: np.array, closed-loop system transition matrix
+        wmax: np.array, defines the disturbance bounds w < wmax
+        wmin: np.array, defines the disturbance bounds w > wmin
+        vol_converge: float, algo converges when (vol - volprev) / vol < vol_converge
+        s_max: int, max number of iterations (Minkowski additions)
+    """
+    print('computing min RPI...')
+    if abs(np.linalg.det(np.eye(A.shape[0]) + A) - 1) < 1.0e-8:
+        raise NotImplementedError("mRPI for nilpotent A not yet implemented")
+    Z = Polytope(lb=wmin, ub=wmax)
+    W = Polytope(lb=wmin, ub=wmax)
+    vols = []
+    Ai = np.copy(A)
+    Ai = np.identity(A.shape[0])
+    volprev = 0
+    vol_converged = False
+    for i in range(s_max):
+        Z += Ai * W
+        # approximate Z with hypercube
+        Z = Polytope(lb=np.min(Z.V, axis=0), ub=np.max(Z.V, axis=0))
+        sides = np.max(Z.V, axis=0) - np.min(Z.V, axis=0)
+        vol = 1
+        for side in sides:
+            vol *= side
+        vols.append(vol)
+        if debug:
+            print('i: {} vol: {} Z_sides: {}'.format(i, vol, sides))
+        if (vol - volprev) / (vol + 1e-15) < vol_converge:
+            print('mRPI converged!')
+            print('mRPI: {}'.format(np.max(Z.V, axis=0)))
+            vol_converged = True
+            break
+        Ai = A @ Ai
+        volprev = vol
+    if debug:
+        plt.plot(vols)
+        plt.show()
+    if not vol_converged:
+        raise RuntimeError("volume of mRPI did not converge!")
+    return Z

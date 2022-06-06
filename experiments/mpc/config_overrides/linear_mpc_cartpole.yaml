@@ -1,0 +1,13 @@
+algo_config:
+  horizon: 10
+  r_mpc:
+    - 10
+  q_mpc:
+    - 10.
+    - 1.
+    - 10.
+    - 1.
+  warmstart: True
+  use_backup: True
+  alpha: 10
+  use_terminal_ingredients: True

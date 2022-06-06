@@ -1,0 +1,21 @@
+# MPC args
+horizon: 10
+r_mpc:
+  - 1.
+q_mpc:
+  - 1.
+warmstart: True
+use_backup: True
+alpha: 10
+use_terminal_ingredients: False
+
+# Computing Disturbance
+n_samples: 600
+sigma_confidence: 3
+
+# Minimal Robust Positively Invariant Set (mRPI)
+compute_mRPI: True
+eps_rpi: 1.0e-3
+s_max_rpi: 500
+vol_converge: 1.0e-4
+debug_mRPI: False

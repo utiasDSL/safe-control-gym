@@ -1,0 +1,66 @@
+task_config:
+  seed: 42
+  ctrl_freq: 10
+  episode_len_sec: 20
+  pyb_freq: 1000
+  gui: False
+
+  randomized_inertial_prop: False
+  randomized_init: True
+  init_state_randomization_info:
+    init_x:
+      distrib: uniform
+      low: -0.3
+      high: 0.3
+    init_x_dot:
+      distrib: 'uniform'
+      low: -0.3
+      high: 0.3
+    init_theta:
+      distrib: uniform
+      low: -0.1
+      high: 0.1
+    init_theta_dot:
+      distrib: 'uniform'
+      low: -0.1
+      high: 0.1
+  info_in_reset: True
+
+  # constraints
+  constraints:
+    - constraint_form: default_constraint
+      constrained_variable: state
+      upper_bounds:
+        - 2.0
+        - 2.0
+        - 0.2
+        - 2.0
+      lower_bounds:
+        - -2.0
+        - -2.0
+        - -0.2
+        - -2.0
+    - constraint_form: default_constraint
+      constrained_variable: input
+      upper_bounds:
+        - 2.0
+      lower_bounds:
+        - -2.0
+
+  # disturbances:
+  #   dynamics:
+  #     - disturbance_func: white_noise
+  #       std: 0.01
+
+  cost: quadratic
+  done_on_violation: False
+  done_on_out_of_bound: False
+  task: traj_tracking
+  task_info:
+    stabilization_goal: [0, 0]
+    stabilization_goal_tolerance: 0.05
+    trajectory_type: "circle"
+    num_cycles: 1
+    trajectory_plane: "zx"
+    trajectory_position_offset: [0, 0]
+    trajectory_scale: 1
