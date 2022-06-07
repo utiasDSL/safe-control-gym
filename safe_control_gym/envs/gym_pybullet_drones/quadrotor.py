@@ -487,8 +487,10 @@ class Quadrotor(BaseAviary):
                                            dtype=np.float32)
         else:
             # direct thrust control 
-            self.action_space = spaces.Box(low=np.zeros(action_dim), 
-                                           high=self.MAX_THRUST * np.ones(action_dim), 
+            a_low = self.KF * action_dim * (self.PWM2RPM_SCALE * self.MIN_PWM + self.PWM2RPM_CONST)**2
+            a_high = self.KF * action_dim * (self.PWM2RPM_SCALE * self.MAX_PWM + self.PWM2RPM_CONST)**2
+            self.action_space = spaces.Box(low=np.full(action_dim, a_low, np.float32), 
+                                           high=np.full(action_dim, a_high, np.float32), 
                                            dtype=np.float32)
 
     def _set_observation_space(self):
