@@ -270,6 +270,7 @@ $ ./create_unsafe_ppo_model.sh                                     # Run the scr
 - Publish to [PyPI](https://realpython.com/pypi-publish-python-package/)
 - [Colab](https://colab.research.google.com/notebooks/intro.ipynb) examples
 - Create a list of FAQs from [Issues tagged as questions](https://github.com/utiasDSL/safe-control-gym/issues?q=is%3Aissue+is%3Aopen+label%3Aquestion)
+- Link [papers](https://www.semanticscholar.org/paper/safe-control-gym%3A-a-Unified-Benchmark-Suite-for-and-Yuan-Hall/66b4656ab7732dcdcf39c466e8ab948c2b4a042d#citingPapers), projects, blog posts (Cat's, etc.) using `safe-control-gym`
 
 -----
 > University of Toronto's [Dynamic Systems Lab](https://github.com/utiasDSL) / [Vector Institute for Artificial Intelligence](https://github.com/VectorInstitute)
