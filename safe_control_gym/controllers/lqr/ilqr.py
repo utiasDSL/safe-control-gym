@@ -12,6 +12,8 @@ Example:
     run ilqr on quadrotor stabilization:
     
         python3 experiments/main.py --func test --tag ilqr_quad --algo ilqr --task quadrotor --q_lqr 0.1
+    
+    Add the '--render' flag to produce a gif of the results
 
 """
 import os
@@ -172,8 +174,12 @@ class iLQR(BaseController):
         # Set update unstable flag to False
         self.update_unstable = False
 
+        # Initialize list of frames for each iteration
+        frames_k = []
+
         # Loop through iLQR iterations
         while self.ite_counter < self.max_iterations:
+            
             # Current goal.
             if self.task == Task.STABILIZATION:
                 current_goal = self.x_0
@@ -217,7 +223,7 @@ class iLQR(BaseController):
             # Save frame for visualization.
             if render:
                 self.env.render()
-                frames.append(self.env.render("rgb_array"))
+                frames_k.append(self.env.render("rgb_array"))
 
             # Save data and update policy if iteration is finished.
             if done:
@@ -226,6 +232,10 @@ class iLQR(BaseController):
                 state_stack = np.vstack((state_stack, self.env.state))
                 # input_stack = np.vstack((input_stack, action))
                 # goal_stack = np.vstack((goal_stack, current_goal))
+                
+                # Add set of k frames to frames (for all episodes)
+                frames.append(frames_k)
+                frames_k = []
 
                 # Update iteration return and length lists.
                 assert "episode" in info
@@ -277,9 +287,9 @@ class iLQR(BaseController):
                     # Reset feedforward term and controller gain to that from
                     # the previous iteration.
                     print("Cost increased by %.2f. " % -delta_reward
-                          + "Set feedforward term and controller gain to that "
-                          "from the previous iteration. "
-                          "Increased lambda to %.2f." % self.lamb)
+                        + "Set feedforward term and controller gain to that "
+                        "from the previous iteration. "
+                        "Increased lambda to %.2f." % self.lamb)
                     print("Current policy is from iteration %d." % self.best_iteration)
                     self.input_ff = np.copy(self.input_ff_best)
                     self.gains_fb = np.copy(self.gains_fb_best)
@@ -330,12 +340,12 @@ class iLQR(BaseController):
                 # Post analysis.
                 if self.plot_traj or self.save_plot or self.save_data:
                     analysis_data = post_analysis(goal_stack, state_stack,
-                                                  input_stack, self.env, 0,
-                                                  self.ep_counter,
-                                                  self.plot_traj,
-                                                  self.save_plot,
-                                                  self.save_data,
-                                                  self.plot_dir, self.data_dir)
+                                                input_stack, self.env, 0,
+                                                self.ep_counter,
+                                                self.plot_traj,
+                                                self.save_plot,
+                                                self.save_data,
+                                                self.plot_dir, self.data_dir)
 
         # Collect evaluation results.
         ite_lengths = np.asarray(ite_lengths)
@@ -569,7 +579,6 @@ class iLQR(BaseController):
             evaluation trial.
 
         """
-
         # Initialize logging variables.
         ep_returns, ep_lengths, ep_fulldata, frames = [], [], {}, []
 
@@ -587,7 +596,7 @@ class iLQR(BaseController):
             ep_fulldata["run%d_data"
                         % self.ep_counter] = ilqr_eval_results["ite_data"]
             if "frames" in ilqr_eval_results:
-                frames.append(ilqr_eval_results["frames"][-1])
+                frames.extend(np.asarray(ilqr_eval_results["frames"][-1]))
 
             # Print episode reward.
             print(colored("Test Run %d reward %.4f" % (self.ep_counter, ep_returns[-1]), "yellow"))
