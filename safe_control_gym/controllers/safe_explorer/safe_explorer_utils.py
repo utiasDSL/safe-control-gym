@@ -175,18 +175,17 @@ class SafetyLayer:
             mult = F.relu(numer / denomin)  # (B,)
             multipliers.append(mult)
         multipliers = torch.stack(multipliers, -1)  # (B,C)
-        # check assumption on at most 1 active constraint 
+        # Check assumption on at most 1 active constraint 
         # - as mentioned in the original paper, this simple, analytical solution of the safety layer only holds 
         # with this assumption; otherwise resort to a differentiable layer for solving constrained optimization, 
         # e.g. OptLayer or the differentiable MPC works; or alternatively combine multiple constraints to a single one.
         # - if the assumption is not satisfied, the layer will try to address the worst violation from the 
         # the largest lagrange variable (with the use of `topk(..., 1)`)
-        # - to check assumption, for each step in batch, |{i | \lambda_i > 0}| <= 1
-        if torch.gt(multipliers, 0).float().sum() > multipliers.shape[0]:
-            warn_msg = """Assumption of at most 1 active constraint per step is violated in the current batch, 
+        # - to check the assumption, check for each step in batch if |{i | \lambda_i > 0}| <= 1
+        if float(torch.gt(multipliers, 0).float().sum()) > multipliers.shape[0]:
+            warnings.warn("""Assumption of at most 1 active constraint per step is violated in the current batch, 
                 the filtered action will alleviate the worst violation but do not guarantee 
-                satisfaction of all constraints, are you sure to proceed?"""
-            warnings.warn(warn_msg)
+                satisfaction of all constraints, are you sure to proceed?""")
         # Calculate correction, equation (6) from Dalal 2018.
         max_mult, max_idx = torch.topk(multipliers, 1, dim=-1)  # (B,1)
         max_idx = max_idx.view(-1).tolist()  # []_B
