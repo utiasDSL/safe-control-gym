@@ -78,7 +78,7 @@ class BaseSafetyFilter:
 
     def certify_action(self,
                        current_state, 
-                       unsafe_action,  
+                       uncertified_action,  
                        **kwargs
                        ):
         """Determines a safe action from the current state and proposed action

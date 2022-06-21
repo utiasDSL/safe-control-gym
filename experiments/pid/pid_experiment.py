@@ -14,6 +14,8 @@ from functools import partial
 
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
+from safe_control_gym.envs.benchmark_env import Task
+
 
 def main():
     """The main function creating, running, and closing an environment.
@@ -39,7 +41,7 @@ def main():
                 env_func,
                 )
                 
-    if config.quadrotor_config.task == 'traj_tracking':
+    if config.quadrotor_config.task == Task.TRAJ_TRACKING:
         reference_traj = ctrl.reference
 
         # Plot trajectory.

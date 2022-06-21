@@ -16,14 +16,27 @@ task_config:
   # state initialization
   init_state:
     init_x: 0.1
-    init_x_dot: -0.5
+    init_x_dot: -1.5
     init_theta: -0.19
-    init_theta_dot: -0.5  
-  # init_state:
-  #   init_x: -0.8
-  #   init_x_dot: -0.29
-  #   init_theta: 0.15
-  #   init_theta_dot: 0.0
+    init_theta_dot: 0.5  
+
+  init_state_randomization_info:
+    init_x:
+      distrib: "uniform"
+      low: -2
+      high: 2
+    init_x_dot:
+      distrib: "uniform"
+      low: -2
+      high: 2
+    init_theta:
+      distrib: "uniform"
+      low: -0.2
+      high: 0.2
+    init_theta_dot:
+      distrib: "uniform"
+      low: -2
+      high: 2
   
   info_in_reset: True
 
@@ -32,15 +45,15 @@ task_config:
   - constraint_form: default_constraint
     constrained_variable: state
     upper_bounds:
-      - 10
-      - 10
+      - 2
+      - 2
       - 0.2
-      - 10
+      - 2
     lower_bounds:
-      - -10
-      - -10
+      - -2
+      - -2
       - -0.2
-      - -10
+      - -2
   - constraint_form: default_constraint
     constrained_variable: input
   

@@ -43,7 +43,6 @@ def main():
     set_random_state(state1)
     _, results = ctrl.run(env=uncertified_env, max_steps=max_steps, n_episodes=1, use_step=True)
     uncertified_env.close()
-    ctrl.reset()
 
     # Setup MPSC.
     safety_filter = make(config.safety_filter,
@@ -55,7 +54,8 @@ def main():
     safety_filter.learn(env=train_env)
     
     ctrl.safety_filter = safety_filter
-    
+    ctrl.reset()
+
     # Run with safety filter
     with open('./unsafe_ppo_model/state0.pkl', 'rb') as f:
         state0 = pickle.load(f)
@@ -68,7 +68,7 @@ def main():
     safety_filter.close()
     
     # Plot Results
-    fig_obs, ax_obs = plt.subplots()
+    _, ax_obs = plt.subplots()
     ax_obs.plot(certified_results.obs[:, 0], certified_results.obs[:, 2], '.-', label='Certified')
     ax_obs.plot(results.obs[:10, 0], results.obs[:10, 2], 'r--', label='Uncertified')
     ax_obs.plot(certified_results.obs[certified_results.corrections>1e-6, 0], certified_results.obs[certified_results.corrections>1e-6, 2], 'r.', label='Modified')
@@ -78,16 +78,16 @@ def main():
     ax_obs.set_ylabel(r'$\theta$')
     ax_obs.set_box_aspect(0.5)
     
-    fig_act, ax_act = plt.subplots()
+    _, ax_act = plt.subplots()
     ax_act.plot(certified_results.action[:], 'b-', label='Certified Inputs')
-    ax_act.plot(mpsc_results.unsafe_action[:], 'r--', label='Uncertified Input')
+    ax_act.plot(mpsc_results.uncertified_action[:], 'r--', label='Uncertified Input')
     ax_act.legend()
     ax_act.set_title('Input comparison')
     ax_act.set_xlabel('Step')
     ax_act.set_ylabel('Input')
     ax_act.set_box_aspect(0.5)
     
-    fig, ax = plt.subplots()
+    _, ax = plt.subplots()
     ax.plot(certified_results.obs[:,2], certified_results.obs[:,3],'.-', label='Certified')
     ax.plot(certified_results.obs[certified_results.corrections>1e-6, 2], certified_results.obs[certified_results.corrections>1e-6, 3], 'r.', label='Modified')
     uncert_end = results.obs.shape[0]

@@ -21,7 +21,7 @@ from safe_control_gym.safety_filters.base_safety_filter import BaseSafetyFilter
 from safe_control_gym.controllers.mpc.mpc_utils import get_cost_weight_matrix, discretize_linear_system
 from safe_control_gym.safety_filters.mpsc.mpsc_utils import compute_RPI_set, pontryagin_difference_AABB, ellipse_bounding_box
 from safe_control_gym.envs.constraints import LinearConstraint, QuadraticContstraint, ConstraintList, ConstrainedVariableType
-from safe_control_gym.envs.benchmark_env import Task
+from safe_control_gym.envs.benchmark_env import Task, Environment
 
 
 class MPSC(BaseSafetyFilter):
@@ -34,6 +34,7 @@ class MPSC(BaseSafetyFilter):
                  horizon: int = 10,
                  q_lin: list = None,
                  r_lin: list = None,
+                 integration_algo: str = 'rk4',
                  n_samples: int = 600,
                  n_samples_terminal_set: int = 100,
                  tau: float = 0.95,
@@ -41,22 +42,34 @@ class MPSC(BaseSafetyFilter):
                  additional_constraints: list = None,
                  use_terminal_set: bool = True,
                  learn_terminal_set: bool = False,
+                 linearize_about_trajectory: bool = False,
                  **kwargs
                  ):
         """Initialize the MPSC.
 
         Args:
             env_func (partial gym.Env): Environment for the task.
+            horizon (int): The MPC horizon.
             q_lin, r_lin (list): Q and R gain matrices for linear controller.
+            integration_algo (str): The algorithm used for integrating the dynamics,
+                either 'euler', 'rk4', 'rk', or 'cvodes'. 
             n_samples (int): Number of samples to create W set.
+            n_samples_terminal_set (int): Number of samples to grow the terminal set.
             tau (float): The constant use in eqn. 8.b. of the paper when finding the RPI.
             warmstart (bool): If the previous MPC soln should be used to warmstart the next mpc step.
             additional_constraints (list): List of additional constraints to consider.
-            use_terminal_set (bool): Whether to use a terminal set constraint or not
+            use_terminal_set (bool): Whether to use a terminal set constraint or not.
+            learn_terminal_set (bool): Whether to learn a terminal set or not.
+            linearize_about_trajectory (bool): Whether to linearize about every point in the trajectory
+                or only the first (assumed to be an equilibrium)
         """
 
+        # Store all params/args.
+        for k, v in locals().items():
+            if k != "self" and k != "kwargs" and "__" not in k:
+                self.__dict__[k] = v
+
         # Setup the Environments.
-        self.env_func = env_func
         self.env = env_func(randomized_init=False)
         self.training_env = env_func(randomized_init=True)
         
@@ -65,25 +78,23 @@ class MPSC(BaseSafetyFilter):
         self.dt = self.model.dt
         self.Q = get_cost_weight_matrix(q_lin, self.model.nx)
         self.R = get_cost_weight_matrix(r_lin, self.model.nu)
-        self.X_LIN = np.atleast_2d(self.env.X_GOAL)[0, :].T
+
+        if self.env.NAME == Environment.CARTPOLE:
+            self.X_LIN = np.atleast_2d(self.env.X_GOAL)[0, :].T
+            self.X_LIN = np.array([self.X_LIN[0], 0, 0, 0])
+        elif self.env.NAME == Environment.QUADROTOR:
+            self.X_LIN = np.atleast_2d(self.env.X_GOAL)[0, :].T
+            self.X_LIN = np.array([self.X_LIN[0], 0, self.X_LIN[2], 0, 0, 0])
+
         self.U_LIN = np.atleast_2d(self.env.U_GOAL)[0, :]
         self.linear_dynamics_func, self.discrete_dfdx, self.discrete_dfdu = self.set_linear_dynamics()
         self.compute_lqr_gain()
-        self.n_samples = n_samples
-        self.n_samples_terminal_set = n_samples_terminal_set
-        self.horizon = horizon
-        self.warmstart = warmstart
-        self.tau = tau
-        self.use_terminal_set = use_terminal_set
-        self.learn_terminal_set = learn_terminal_set
 
         self.omega_AABB_verts = None
         self.z_prev = None
         self.v_prev = None
         self.terminal_set = None
 
-        self.additional_constraints = additional_constraints
-        
         if self.additional_constraints is None:
             additional_constraints = []
         self.constraints, self.state_constraints_sym, self.input_constraints_sym = self.reset_constraints(
@@ -119,16 +130,35 @@ class MPSC(BaseSafetyFilter):
         dfdu = dfdxdfdu['dfdu'].toarray()
         delta_x = cs.MX.sym('delta_x', self.model.nx,1)
         delta_u = cs.MX.sym('delta_u', self.model.nu,1)
-        x_dot_lin_vec = dfdx @ delta_x + dfdu @ delta_u
-        linear_dynamics_func = cs.integrator(
-            'linear_discrete_dynamics', self.model.integration_algo,
-            {
-                'x': delta_x,
-                'p': delta_u,
-                'ode': x_dot_lin_vec
-            }, {'tf': self.dt}
-        )
         discrete_dfdx, discrete_dfdu = discretize_linear_system(dfdx, dfdu, self.dt)
+        
+        if self.integration_algo == 'euler':
+            x_dot_lin_vec = discrete_dfdx @ delta_x + discrete_dfdu @ delta_u
+            linear_dynamics_func = cs.Function('linear_dyn',
+                                            [delta_x, delta_u],
+                                            [x_dot_lin_vec],
+                                            ['x0', 'p'],
+                                            ['xf'])
+        elif self.integration_algo == 'rk4':
+            k1 = self.model.fc_func(delta_x, delta_u)
+            k2 = self.model.fc_func(delta_x+self.dt/2*k1, delta_u)
+            k3 = self.model.fc_func(delta_x+self.dt/2*k2, delta_u)
+            k4 = self.model.fc_func(delta_x+self.dt*k3, delta_u)
+            x_next = delta_x + self.dt/6*(k1+2*k2+2*k3+k4)
+
+            linear_dynamics_func = cs.Function('rk_f', [delta_x, delta_u], [x_next], ['x0', 'p'], ['xf'])
+        else:
+            x_dot_lin_vec = dfdx @ delta_x + dfdu @ delta_u
+            linear_dynamics_func = cs.integrator(
+                'linear_discrete_dynamics', self.integration_algo,
+                {
+                    'x': delta_x,
+                    'p': delta_u,
+                    'ode': x_dot_lin_vec
+                }, {'tf': self.dt}
+            )
+            discrete_dfdx, discrete_dfdu = discretize_linear_system(dfdx, dfdu, self.dt)
+        
         return linear_dynamics_func, discrete_dfdx, discrete_dfdu
 
     def compute_lqr_gain(self):
@@ -159,8 +189,8 @@ class MPSC(BaseSafetyFilter):
         # Use uniform sampling of control inputs and states.
         for i in range(self.n_samples):
             init_state, _ = env.reset()
-            if self.env.NAME == 'quadrotor':
-                u = np.random.rand(2)/6 - 1/12 + self.U_LIN
+            if self.env.NAME == Environment.QUADROTOR:
+                u = np.random.rand(2)/20 - 1/40 + self.U_LIN
             else:
                 u = env.action_space.sample() # Will yield a random action within action space.
             x_next_obs, _, _, _ = env.step(u)
@@ -182,7 +212,7 @@ class MPSC(BaseSafetyFilter):
                 print("[WARNING] Terminal set calculation assumes convex constraints")
             
             if self.env.TASK == Task.TRAJ_TRACKING:
-                self.terminal_set = Polytope(self.X_LIN)
+                self.terminal_set = Polytope(self.env.X_GOAL.T)
                 self.terminal_set.minimize_V_rep()
             elif self.env.TASK == Task.STABILIZATION:
                 self.terminal_set = None
@@ -196,7 +226,7 @@ class MPSC(BaseSafetyFilter):
                 init_state = init_state.reshape((self.model.nx, 1))                
                 init_state += (np.random.rand(self.model.nx, 1) - np.ones((self.model.nx, 1))/2)/2
                 
-                if self.env.NAME == 'quadrotor':
+                if self.env.NAME == Environment.QUADROTOR:
                     u = np.random.rand(self.model.nu)/6 - 1/12 + self.U_LIN
                 else:
                     u = env.action_space.sample() # Will yield a random action within action space.
@@ -244,7 +274,7 @@ class MPSC(BaseSafetyFilter):
                 raise NotImplementedError("MPSC currently can't handle more than 1 constraint")
             
             input_constraint = input_constraint[0]
-            if self.training_env.NAME != 'quadrotor':
+            if self.training_env.NAME != Environment.QUADROTOR:
                 U_vertices_raw = [(input_constraint.upper_bounds[i], input_constraint.lower_bounds[i]) for i in range(self.model.nu)]
             else:
                 U_vertices_raw = [(input_constraint.upper_bounds[i], -input_constraint.upper_bounds[i]) for i in range(self.model.nu)]
@@ -254,7 +284,7 @@ class MPSC(BaseSafetyFilter):
                 self.U_vertices,
                 self.K_omega_AABB_verts)
 
-            if self.training_env.NAME == 'quadrotor':
+            if self.training_env.NAME == Environment.QUADROTOR:
                 self.tightened_input_constraint_verts = np.clip(self.tightened_input_constraint_verts, 0, 100)
             self.tightened_input_constraint = tightened_input_constr_func(env=self.env,
                                                                           constrained_variable=ConstrainedVariableType.INPUT)
@@ -296,6 +326,9 @@ class MPSC(BaseSafetyFilter):
         u_L = opti.parameter(nu, 1)
         # Current observed state.
         x_init = opti.parameter(nx, 1)
+        # Linearization point
+        X_LIN = opti.parameter(nx, 1)
+
         # Constraints (currently only handles a single constraint for state and input).
         state_constraints = self.tightened_state_constraint.get_symbolic_model()
         input_constraints = self.tightened_input_constraint.get_symbolic_model()
@@ -306,9 +339,10 @@ class MPSC(BaseSafetyFilter):
             next_state = self.linear_dynamics_func(x0=z_var[:,i], p=v_var[:,i])['xf']
             opti.subject_to(z_var[:, i + 1] == next_state)
             # Input constraints (eqn 5.c).
-            opti.subject_to(input_constraints(v_var[:,i]) <= 0)
+            opti.subject_to(input_constraints(v_var[:,i] + self.U_LIN) <= 0)
             # State Constraints
-            opti.subject_to(state_constraints(z_var[:,i]) <= 0)
+            opti.subject_to(state_constraints(z_var[:,i] + X_LIN) <= 0)
+
         # Final state constraints (5.d).
         if self.use_terminal_set:
             if self.terminal_set is not None:
@@ -316,19 +350,24 @@ class MPSC(BaseSafetyFilter):
                 terminal_constraint = terminal_constraint.get_symbolic_model()
                 opti.subject_to(terminal_constraint(z_var[:, -1]) <= 0)
             else:
-                opti.subject_to(simple_terminal_constraint(z_var[:, -1] - self.X_LIN[:,None]) <= 0)
+                opti.subject_to(simple_terminal_constraint(z_var[:, -1]) <= 0)
+        
         # Initial state constraints (5.e).
-        opti.subject_to(omega_constraint(x_init- z_var[:, 0]) <= 0)
+        opti.subject_to(omega_constraint(x_init - z_var[:, 0]) <= 0)
         # Real input (5.f).
-        opti.subject_to(u_tilde == v_var[:,0] + self.lqr_gain @ (x_init - z_var[:,0]))
+        opti.subject_to(u_tilde == (v_var[:,0] + self.U_LIN) + self.lqr_gain @ (x_init - z_var[:,0]))
+
         # Cost (# eqn 5.a, note: using 2norm or sqrt makes this infeasible).
         cost = (u_L - u_tilde).T @ (u_L - u_tilde)  
         opti.minimize(cost)
         # Create solver (IPOPT solver as of this version).
-        opts = {"ipopt.print_level": 4,
+        opts = {"expand": False,
+                "ipopt.print_level": 4,
                 "ipopt.sb": "yes",
                 "ipopt.max_iter": 50,
                 "print_time": 1}
+        if self.integration_algo in ['euler', 'rk4']:
+            opts['expand'] = True
         opti.solver('ipopt', opts)
         self.opti_dict = {
             "opti": opti,
@@ -337,16 +376,20 @@ class MPSC(BaseSafetyFilter):
             "u_tilde": u_tilde,
             "u_L": u_L,
             "x_init": x_init,
-            "cost": cost
+            "X_LIN": X_LIN,
         }
 
     def solve_optimization(self,
                            obs,
-                           uncertified_input
+                           uncertified_input,
+                           iteration=None,
                            ):
         """Solve the MPC optimization problem for a given observation and uncertified input.
 
         """
+        if self.env.TASK == Task.TRAJ_TRACKING and self.linearize_about_trajectory:
+            self.X_LIN = np.atleast_2d(self.env.X_GOAL)[iteration, :].T
+
         opti_dict = self.opti_dict
         opti = opti_dict["opti"]
         z_var = opti_dict["z_var"]
@@ -354,9 +397,11 @@ class MPSC(BaseSafetyFilter):
         u_tilde = opti_dict["u_tilde"]
         u_L = opti_dict["u_L"]
         x_init = opti_dict["x_init"]
-        cost = opti_dict["cost"]
-        opti.set_value(x_init, obs)
+        X_LIN = opti_dict["X_LIN"]
+        opti.set_value(x_init, obs - self.X_LIN)
         opti.set_value(u_L, uncertified_input)
+        opti.set_value(X_LIN, self.X_LIN)
+        
         # Initial guess for optimization problem.
         if (self.warmstart and
                 self.z_prev is not None and
@@ -370,6 +415,7 @@ class MPSC(BaseSafetyFilter):
             opti.set_initial(z_var, z_guess)
             opti.set_initial(v_var, v_guess)
             opti.set_initial(u_tilde, deepcopy(self.u_tilde_prev))
+        
         # Solve the optimization problem.
         try:
             sol = opti.solve()
@@ -378,29 +424,29 @@ class MPSC(BaseSafetyFilter):
             self.v_prev = u_val.reshape((self.model.nu), self.horizon)
             self.u_tilde_prev = u_tilde_val
             # Take the first one from solved action sequence.
-            if u_val.ndim > 1:
-                action = u_tilde_val
-            else:
-                action = u_tilde_val
+            action = u_tilde_val
             self.prev_action = u_tilde_val
             feasible = True
-        except RuntimeError:
+        except Exception as e:
+            print("Error Return Status: ", opti.debug.return_status())
+            print(e)
             feasible = False
             action = None
         return action, feasible
 
     def certify_action(self,
                        current_state,
-                       unsafe_action,
+                       uncertified_action,
+                       iteration=None,
                        ):
         """Algorithm 1 from Wabsersich 2019.
 
         """
 
-        self.results_dict['unsafe_action'].append(unsafe_action)        
+        self.results_dict['uncertified_action'].append(uncertified_action)        
         success = True
         
-        action, feasible = self.solve_optimization(current_state, unsafe_action)
+        action, feasible = self.solve_optimization(current_state, uncertified_action, iteration)
         self.results_dict['feasible'].append(feasible)
         if feasible:
             self.kinf = 0
@@ -413,9 +459,9 @@ class MPSC(BaseSafetyFilter):
             if (self.kinf <= self.horizon-1 and
                 self.z_prev is not None and
                 self.v_prev is not None):
-                action = self.v_prev[:, self.kinf] +\
-                         self.lqr_gain @ (current_state.reshape((self.model.nx, 1)) - self.z_prev[:, self.kinf].reshape((self.model.nx, 1)))
-                action = action[0, 0]
+                action = np.squeeze(self.v_prev[:, self.kinf] + self.U_LIN) + \
+                         np.squeeze(self.lqr_gain @ (current_state.reshape((self.model.nx, 1)) - self.z_prev[:, self.kinf].reshape((self.model.nx, 1))))
+                action = np.squeeze(action)
                 clipped_action = np.clip(action, self.constraints.input_constraints[0].lower_bounds, self.constraints.input_constraints[0].upper_bounds)
                 
                 if np.linalg.norm(clipped_action - action) >= 0.01:
@@ -425,7 +471,8 @@ class MPSC(BaseSafetyFilter):
                 self.results_dict['action'].append(action)
                 return action, success
             else:
-                action = self.lqr_gain @ current_state
+                action = np.squeeze(self.lqr_gain @ (current_state - self.X_LIN)) + self.U_LIN
+                action = np.squeeze(action)
                 clipped_action = np.clip(action, self.constraints.input_constraints[0].lower_bounds, self.constraints.input_constraints[0].upper_bounds)
                 
                 if np.linalg.norm(clipped_action - action) >= 0.01:
@@ -442,7 +489,7 @@ class MPSC(BaseSafetyFilter):
         self.results_dict = {}
         self.results_dict['feasible'] = []
         self.results_dict['kinf'] = []
-        self.results_dict['unsafe_action'] = []
+        self.results_dict['uncertified_action'] = []
         self.results_dict['action'] = []
 
     def close_results_dict(self):
@@ -451,7 +498,7 @@ class MPSC(BaseSafetyFilter):
         """
         self.results_dict['feasible'] = np.hstack(self.results_dict['feasible'])
         self.results_dict['kinf'] = np.vstack(self.results_dict['kinf'])
-        self.results_dict['unsafe_action'] = np.vstack(self.results_dict['unsafe_action'])
+        self.results_dict['uncertified_action'] = np.vstack(self.results_dict['uncertified_action'])
         self.results_dict['action'] = np.vstack(self.results_dict['action'])
         self.results_dict = munchify(self.results_dict)
 
@@ -467,9 +514,3 @@ class MPSC(BaseSafetyFilter):
         """
         self.env.reset()
         self.setup_results_dict()
-
-        # setup reference input
-        if self.env.TASK == Task.STABILIZATION:
-            self.mode = "stabilization"
-        elif self.env.TASK == Task.TRAJ_TRACKING:
-            raise NotImplementedError

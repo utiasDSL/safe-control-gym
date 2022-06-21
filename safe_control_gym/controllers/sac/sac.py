@@ -45,8 +45,10 @@ class SAC(BaseController):
                  device="cpu", 
                  seed=0, 
                  safety_filter=None,
+                 id='sac',
                  **kwargs):
-        super().__init__(env_func, training, checkpoint_path, output_dir, device, seed, safety_filter, **kwargs)
+
+        super().__init__(env_func, training, checkpoint_path, output_dir, device, seed, safety_filter, id, **kwargs)
 
         # task
         if self.training:
@@ -196,6 +198,23 @@ class SAC(BaseController):
             if self.log_interval and self.total_steps % self.log_interval == 0:
                 self.log_step(results)
 
+    def select_action(self, obs, step=0):
+        """Calculates control input.
+
+        Args:
+            obs (np.array): step-wise observation/input.
+            step (int): the current iteration for trajectory tracking purposes
+
+        Returns:
+           np.array: step-wise control input/action.
+        """
+        
+        with torch.no_grad():
+            obs = torch.FloatTensor(obs).to(self.device)
+            action = self.agent.ac.act(obs, deterministic=True)
+            
+        return action
+
     def run(self, env=None, render=False, n_episodes=10, max_steps=1000, verbose=False, **kwargs):
         """Runs evaluation with current policy."""
         self.agent.eval()
@@ -205,7 +224,7 @@ class SAC(BaseController):
         else:
             if not is_wrapped(env, RecordEpisodeStatistics):
                 env = RecordEpisodeStatistics(env, n_episodes)
-                # Add eposodic stats to be tracked.
+                # Add episodic stats to be tracked.
                 env.add_tracker("constraint_violation", 0, mode="queue")
                 env.add_tracker("constraint_values", 0, mode="queue")
                 env.add_tracker("mse", 0, mode="queue")
@@ -220,17 +239,13 @@ class SAC(BaseController):
 
         steps = 0
         while len(ep_returns) < n_episodes:
-            with torch.no_grad():
-                obs = torch.FloatTensor(raw_obs).to(self.device)
-                action = self.agent.ac.act(obs, deterministic=True)
-                if self.safety_filter:
-                    new_action, success = self.safety_filter.certify_action(raw_obs[:env.symbolic.nx], action)
-                    if success:
-                        action_diff = np.linalg.norm(new_action - action)
-                        self.results_dict['corrections'].append(action_diff)
-                        action = new_action
-                    else:
-                        self.results_dict['corrections'].append(0.0)
+            action = self.select_action(obs=obs, step=steps)
+            if self.safety_filter:
+                new_action, success = self.safety_filter.certify_action(raw_obs[:env.symbolic.nx], action, iteration=steps)
+                if success:
+                    action_diff = np.linalg.norm(new_action - action)
+                    self.results_dict['corrections'].append(action_diff)
+                    action = new_action
                 else:
                     self.results_dict['corrections'].append(0.0)
 
@@ -253,6 +268,7 @@ class SAC(BaseController):
                 ep_returns.append(info["episode"]["r"])
                 ep_lengths.append(info["episode"]["l"])
                 obs, _ = env.reset()
+                print(f'SUCCESS: Reached goal on step {steps}. Terminating...')
                 steps = 0
             if steps >= max_steps and not done:
                 ep_returns.append('INCOMPLETE')
@@ -285,7 +301,9 @@ class SAC(BaseController):
         self.results_dict['done'] = []
         self.results_dict['info'] = []
         self.results_dict['action'] = []
-        self.results_dict['corrections'] = []
+
+        if self.safety_filter:
+            self.results_dict['corrections'] = []
 
     def close_results_dict(self):
         """Cleanup the rtesults dict and munchify it.
@@ -295,8 +313,10 @@ class SAC(BaseController):
         self.results_dict['done'] = np.vstack(self.results_dict['done'])
         self.results_dict['info'] = np.vstack(self.results_dict['info'])
         self.results_dict['action'] = np.vstack(self.results_dict['action'])
-        self.results_dict['corrections'].append(0.0)
-        self.results_dict['corrections'] = np.hstack(self.results_dict['corrections'])
+
+        if self.safety_filter:
+            self.results_dict['corrections'].append(0.0)
+            self.results_dict['corrections'] = np.hstack(self.results_dict['corrections'])
 
         self.results_dict = munchify(self.results_dict)
 

@@ -1,6 +1,6 @@
 algo: sac
 algo_config:
-  training: false
+  training: False
   # model args
   hidden_dim: 256
   use_entropy_tuning: False

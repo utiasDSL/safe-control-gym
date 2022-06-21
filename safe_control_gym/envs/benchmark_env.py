@@ -34,6 +34,15 @@ class Task(str, Enum):
     TRAJ_TRACKING = "traj_tracking"  # Trajectory tracking task.
 
 
+class Environment(str, Enum):
+    """Environment enumeration class.
+
+    """
+
+    CARTPOLE = "cartpole"  # Cartpole system
+    QUADROTOR = "quadrotor"  # Quadrotor, both 1D and 2D
+
+
 class BenchmarkEnv(gym.Env):
     """Benchmark environment base class.
     

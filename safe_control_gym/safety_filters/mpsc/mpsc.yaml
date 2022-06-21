@@ -1,16 +1,20 @@
 # LQR controller parameters
-horizon: 20
 r_lin:
   - 1.
 q_lin:
   - 1.
 
 # MPC Parameters
+horizon: 20
 warmstart: False
-use_terminal_set: True
+integration_algo: rk4
+use_terminal_set: False
+linearize_about_trajectory: False
 
 # Safe set calculation
 n_samples: 600
+n_samples_terminal_set: 10
+learn_terminal_set: False
 
 # Tau parameter for the calcuation of the RPI
 tau: 0.95

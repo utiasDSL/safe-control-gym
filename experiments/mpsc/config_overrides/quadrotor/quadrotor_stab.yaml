@@ -7,19 +7,48 @@ task_config:
   pyb_freq: 1000
   physics: pyb
   quad_type: 2
+
   init_state:
     init_x: 0.5
     init_x_dot: 0
-    init_z: 0.5
+    init_z: 1.5
     init_z_dot: 0
     init_theta: 0
     init_theta_dot: 0
   randomized_init: False
   randomized_inertial_prop: False
+
+  init_state_randomization_info:
+    init_x:
+      distrib: 'uniform'
+      low: -1
+      high: 1
+    init_x_dot:
+      distrib: 'uniform'
+      low: -1
+      high: 1
+    init_z:
+      distrib: 'uniform'
+      low: 1
+      high: 2
+    init_z_dot:
+      distrib: 'uniform'
+      low: -1
+      high: 1
+    init_theta:
+      distrib: 'uniform'
+      low: -0.2
+      high: 0.2
+    init_theta_dot:
+      distrib: 'uniform'
+      low: -1
+      high: 1
+
   task: stabilization
   task_info:
-    stabilization_goal: [0, 0]
-    stabilization_goal_tolerance: 0.05
+    stabilization_goal: [0, 1]
+    stabilization_goal_tolerance: 0.1
+
   obs_goal_horizon: 1
   episode_len_sec: 6
   cost: rl_reward
@@ -28,18 +57,18 @@ task_config:
       constrained_variable: state
       upper_bounds:
         - 4
-        - 100
+        - 20
         - 4
-        - 100
-        - 3
-        - 100
+        - 20
+        - 0.2
+        - 20
       lower_bounds:
         - -4
-        - -100
+        - -20
         - 0
-        - -100
-        - -3
-        - -100
+        - -20
+        - -0.2
+        - -20
     - constraint_form: default_constraint
       constrained_variable: input
   done_on_out_of_bound: False

@@ -1,6 +1,6 @@
 algo: ppo
 algo_config:
-  training: True
+  training: False
   actor_lr: 0.0003
   clip_obs: 10.0
   clip_param: 0.2

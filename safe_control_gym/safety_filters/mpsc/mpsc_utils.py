@@ -47,7 +47,7 @@ def compute_RPI_set(Acl,
     try:
         results =  prob.solve(solver='MOSEK', verbose=True)
     except cp.SolverError:
-        print("[ERROR] RPI computation requires the MOSEK solver.")
+        print("[ERROR] RPI Computation failed. Ensure you have the MOSEK solver. Otherwise, error unknown.")
         exit()
     return P.value
 

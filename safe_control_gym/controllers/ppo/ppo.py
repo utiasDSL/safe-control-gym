@@ -42,8 +42,10 @@ class PPO(BaseController):
                  device="cpu",
                  seed=0,
                  safety_filter=None,
+                 id='ppo',
                  **kwargs):
-        super().__init__(env_func, training, checkpoint_path, output_dir, device, seed, safety_filter, **kwargs)
+
+        super().__init__(env_func, training, checkpoint_path, output_dir, device, seed, safety_filter, id, **kwargs)
         
         # Task.
         if self.training:
@@ -192,6 +194,26 @@ class PPO(BaseController):
             # Logging.
             if self.log_interval and self.total_steps % self.log_interval == 0:
                 self.log_step(results)
+    
+    def select_action(self, obs, step=0):
+        """Calculates control input.
+
+        Args:
+            obs (np.array): step-wise observation/input.
+            step (int): the current iteration for trajectory tracking purposes
+
+        Returns:
+           np.array: step-wise control input/action.
+        """
+        
+        with torch.no_grad():
+            obs = torch.FloatTensor(obs).to(self.device)
+            if self.use_step:
+                action, _, _ = self.agent.ac.step(obs)
+            else:
+                action = self.agent.ac.act(obs)
+            
+        return action
 
     def run(self,
             env=None,
@@ -212,11 +234,12 @@ class PPO(BaseController):
         else:
             if not is_wrapped(env, RecordEpisodeStatistics):
                 env = RecordEpisodeStatistics(env, n_episodes)
-                # Add eposodic stats to be tracked.
+                # Add episodic stats to be tracked.
                 env.add_tracker("constraint_violation", 0, mode="queue")
                 env.add_tracker("constraint_values", 0, mode="queue")
                 env.add_tracker("mse", 0, mode="queue")
 
+        self.use_step = use_step
         self.setup_results_dict()
 
         raw_obs, info = env.reset()
@@ -227,20 +250,13 @@ class PPO(BaseController):
 
         steps = 0
         while len(ep_returns) < n_episodes:
-            with torch.no_grad():
-                obs = torch.FloatTensor(raw_obs).to(self.device)
-                if use_step:
-                    action, _, _ = self.agent.ac.step(obs)
-                else:
-                    action = self.agent.ac.act(obs)
-                if self.safety_filter:
-                    new_action, success = self.safety_filter.certify_action(raw_obs[:env.symbolic.nx], action)
-                    if success:
-                        action_diff = np.linalg.norm(new_action - action)
-                        self.results_dict['corrections'].append(action_diff)
-                        action = new_action
-                    else:
-                        self.results_dict['corrections'].append(0.0)
+            action = self.select_action(obs=raw_obs, step=steps)
+            if self.safety_filter:
+                new_action, success = self.safety_filter.certify_action(raw_obs[:env.symbolic.nx], action, iteration=steps)
+                if success:
+                    action_diff = np.linalg.norm(new_action - action)
+                    self.results_dict['corrections'].append(action_diff)
+                    action = new_action
                 else:
                     self.results_dict['corrections'].append(0.0)
 
@@ -263,6 +279,7 @@ class PPO(BaseController):
                 ep_returns.append(info["episode"]["r"])
                 ep_lengths.append(info["episode"]["l"])
                 raw_obs, _ = env.reset()
+                print(f'SUCCESS: Reached goal on step {steps}. Terminating...')
                 steps = 0
             if steps >= max_steps and not done:
                 ep_returns.append('INCOMPLETE')
@@ -296,7 +313,9 @@ class PPO(BaseController):
         self.results_dict['done'] = []
         self.results_dict['info'] = []
         self.results_dict['action'] = []
-        self.results_dict['corrections'] = []
+    
+        if self.safety_filter:
+            self.results_dict['corrections'] = []
     
     def close_results_dict(self):
         """Cleanup the results dict and munchify it.
@@ -307,8 +326,10 @@ class PPO(BaseController):
         self.results_dict['done'] = np.vstack(self.results_dict['done'])
         self.results_dict['info'] = np.vstack(self.results_dict['info'])
         self.results_dict['action'] = np.vstack(self.results_dict['action'])
-        self.results_dict['corrections'].append(0.0)
-        self.results_dict['corrections'] = np.hstack(self.results_dict['corrections'])
+    
+        if self.safety_filter:
+            self.results_dict['corrections'].append(0.0)
+            self.results_dict['corrections'] = np.hstack(self.results_dict['corrections'])
 
         self.results_dict = munchify(self.results_dict)
 
