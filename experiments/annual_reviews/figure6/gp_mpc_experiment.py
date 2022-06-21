@@ -49,6 +49,7 @@ def plot_2D_comparison_with_prior(state_inds,
     """
 
     """
+    init_ind = min(1, len(prior_run.horizon_states)-1)  # Temporary bugfix for ipopt failing to find a second solution
     horizon_cov = run.state_horizon_cov[init_ind]
     horizon_states = run.horizon_states[init_ind]
     prior_horizon_states = prior_run.horizon_states[init_ind]

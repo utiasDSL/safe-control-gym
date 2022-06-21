@@ -7,7 +7,7 @@ import casadi as cs
 from copy import deepcopy
 
 from safe_control_gym.controllers.base_controller import BaseController
-from safe_control_gym.controllers.mpc.mpc_utils import get_cost_weight_matrix
+from safe_control_gym.controllers.mpc.mpc_utils import get_cost_weight_matrix, compute_discrete_lqr_gain_from_cont_linear_system, rk_discrete, compute_state_rmse
 from safe_control_gym.envs.benchmark_env import Task
 from safe_control_gym.envs.constraints import ConstraintList, GENERAL_CONSTRAINTS, create_constraint_list
 
@@ -24,6 +24,10 @@ class MPC(BaseController):
             q_mpc=[1],
             r_mpc=[1],
             warmstart=True,
+            soft_constraints=False,
+            terminate_run_on_done=True,
+            # runner args
+            # shared/base args
             output_dir="results/temp",
             additional_constraints=None,
             **kwargs
@@ -36,6 +40,8 @@ class MPC(BaseController):
             q_mpc (list): diagonals of state cost weight.
             r_mpc (list): diagonals of input/action cost weight.
             warmstart (bool): if to initialize from previous iteration.
+            soft_constraints (bool): Formulate the constraints as soft constraints.
+            terminate_run_on_done (bool): Terminate the run when the environment returns done or not.
             output_dir (str): output directory to write logs and results.
             additional_constraints (list): List of additional constraints
 
@@ -60,6 +66,15 @@ class MPC(BaseController):
         self.T = horizon
         self.Q = get_cost_weight_matrix(self.q_mpc, self.model.nx)
         self.R = get_cost_weight_matrix(self.r_mpc, self.model.nu)
+
+        self.soft_constraints = soft_constraints
+        self.warmstart = warmstart
+        self.terminate_run_on_done = terminate_run_on_done
+
+        #self.X_EQ = self.env.X_EQ
+        #self.U_EQ = self.env.U_EQ
+        # logging
+        #self.logger = ExperimentLogger(output_dir)
 
     def reset_constraints(self,
                           constraints
@@ -136,13 +151,37 @@ class MPC(BaseController):
         """Updates symbolic dynamics with actual control frequency.
 
         """
-        self.dynamics_func = cs.integrator('fd', self.model.integration_algo,
-                                           {
-                                            'x': self.model.x_sym,
-                                            'p': self.model.u_sym,
-                                            'ode': self.model.x_dot
-                                            },
-                                           {'tf': self.dt})
+        #self.dynamics_func = cs.integrator('fd', 'rk',
+        #                                   {
+        #                                    'x': self.model.x_sym,
+        #                                    'p': self.model.u_sym,
+        #                                    'ode': self.model.x_dot
+        #                                    },
+        #                                   {'tf': self.dt})
+        self.dynamics_func = rk_discrete(self.model.fc_func,
+                                         self.model.nx,
+                                         self.model.nu,
+                                         self.dt)
+
+    def compute_initial_guess(self, init_state, goal_states, x_lin, u_lin):
+        """Use LQR to get an initial guess of the """
+        dfdxdfdu = self.model.df_func(x=x_lin, u=u_lin)
+        dfdx = dfdxdfdu['dfdx'].toarray()
+        dfdu = dfdxdfdu['dfdu'].toarray()
+        lqr_gain, Ad, Bd = compute_discrete_lqr_gain_from_cont_linear_system(dfdx, dfdu, self.Q, self.R, self.dt)
+
+        x_guess = np.zeros((self.model.nx, self.T+1))
+        u_guess = np.zeros((self.model.nu, self.T))
+        x_guess[:, 0] = init_state
+
+        for i in range(self.T):
+            u = lqr_gain @ (x_guess[:, i] - goal_states[:, i]) + u_lin
+            u_guess[:, i] = u
+            x_guess[:, i+1, None] = self.dynamics_func(x0=x_guess[:, i], p=u)['xf'].toarray()
+
+        return x_guess, u_guess
+
+
 
     def setup_optimizer(self):
         """Sets up nonlinear optimization problem.
@@ -160,7 +199,11 @@ class MPC(BaseController):
         x_init = opti.parameter(nx, 1)
         # Reference (equilibrium point or trajectory, last step for terminal cost).
         x_ref = opti.parameter(nx, T + 1)
-        # Cost (cumulative).
+        # Add slack variables
+        state_slack = opti.variable(len(self.state_constraints_sym))
+        input_slack = opti.variable(len(self.input_constraints_sym))
+
+        # cost (cumulative)
         cost = 0
         cost_func = self.model.loss
         for i in range(T):
@@ -178,23 +221,42 @@ class MPC(BaseController):
                           Ur=np.zeros((nu, 1)),
                           Q=self.Q,
                           R=self.R)["l"]
-        opti.minimize(cost)
         # Constraints
         for i in range(self.T):
             # Dynamics constraints.
             next_state = self.dynamics_func(x0=x_var[:, i], p=u_var[:, i])['xf']
             opti.subject_to(x_var[:, i + 1] == next_state)
-            for state_constraint in self.state_constraints_sym:
-                opti.subject_to(state_constraint(x_var[:,i]) < 0)
-            for input_constraint in self.input_constraints_sym:
-                opti.subject_to(input_constraint(u_var[:,i]) < 0)
+
+            for sc_i, state_constraint in enumerate(self.state_constraints_sym):
+                if self.soft_constraints:
+                    opti.subject_to(state_constraint(x_var[:, i]) <= state_slack[sc_i])
+                    cost += 10000*state_slack[sc_i]**2
+                    opti.subject_to(state_slack[sc_i] >= 0)
+                else:
+                    opti.subject_to(state_constraint(x_var[:, i]) < 0)
+            for ic_i, input_constraint in enumerate(self.input_constraints_sym):
+                if self.soft_constraints:
+                    opti.subject_to(input_constraint(u_var[:,i]) <= input_slack[ic_i])
+                    cost += 10000*input_slack[ic_i]**2
+                    opti.subject_to(input_slack[ic_i] >= 0)
+                else:
+                    opti.subject_to(input_constraint(u_var[:,i]) < 0)
+
         # Final state constraints.
-        for state_constraint in self.state_constraints_sym:
-            opti.subject_to(state_constraint(x_var[:, i]) < 0)
-        # Initial condition constraints.
+        for sc_i, state_constraint in enumerate(self.state_constraints_sym):
+            if self.soft_constraints:
+                opti.subject_to(state_constraint(x_var[:, -1]) <= state_slack[sc_i])
+                cost += 10000 * state_slack[sc_i] ** 2
+                opti.subject_to(state_slack[sc_i] >= 0)
+            else:
+                opti.subject_to(state_constraint(x_var[:, -1]) <= 0)
+        # initial condition constraints
         opti.subject_to(x_var[:, 0] == x_init)
+
+        opti.minimize(cost)
         # Create solver (IPOPT solver in this version)
-        opts = {"ipopt.print_level": 0, "ipopt.sb": "yes", "print_time": 0}
+        #opts = {"ipopt.print_level": 0, "ipopt.sb": "yes", "print_time": 0}
+        opts = {"expand": True}
         opti.solver('ipopt', opts)
         self.opti_dict = {
             "opti": opti,
@@ -231,7 +293,11 @@ class MPC(BaseController):
         opti.set_value(x_ref, goal_states)
         if self.mode == "tracking":
             self.traj_step += 1
-        # Initial guess for optimization problem.
+        #if self.warmstart and self.x_prev is None and self.u_prev is None:
+        #    x_guess, u_guess = self.compute_initial_guess(obs, goal_states, self.X_EQ, self.U_EQ)
+        #    opti.set_initial(x_var, x_guess)
+        #    opti.set_initial(u_var, u_guess) # Initial guess for optimization problem.
+        #elif self.warmstart and self.x_prev is not None and self.u_prev is not None:
         if self.warmstart and self.x_prev is not None and self.u_prev is not None:
             # shift previous solutions by 1 step
             x_guess = deepcopy(self.x_prev)
@@ -247,6 +313,7 @@ class MPC(BaseController):
         self.u_prev = u_val
         self.results_dict['horizon_states'].append(deepcopy(self.x_prev))
         self.results_dict['horizon_inputs'].append(deepcopy(self.u_prev))
+        self.results_dict['t_wall'].append(opti.stats()['t_wall_total'])
         # Take the first action from the solved action sequence.
         if u_val.ndim > 1:
             action = u_val[:, 0]
@@ -285,14 +352,21 @@ class MPC(BaseController):
                               'info': [],
                               'action': [],
                               'horizon_inputs': [],
-                              'horizon_states': []
+                              'horizon_states': [],
+                              'frames': [],
+                              'state_mse': [],
+                              'common_cost': [],
+                              'state': [],
+                              'state_error': [],
+                              't_wall': []
         }
 
     def run(self,
             env=None,
             render=False,
             logging=False,
-            max_steps=100
+            max_steps=None,
+            terminate_run_on_done=None
             ):
         """Runs evaluation with current policy.
         
@@ -306,24 +380,39 @@ class MPC(BaseController):
         """
         if env is None:
             env = self.env
+        if terminate_run_on_done is None:
+            terminate_run_on_done = self.terminate_run_on_done
+
         self.x_prev = None
         self.u_prev = None
-        obs, info = env.reset()
+        if not env.initial_reset:
+            env.set_cost_function_param(self.Q, self.R)
+        #obs, info = env.reset()
+        obs = env.reset()
         print("Init State:")
         print(obs)
         ep_returns, ep_lengths = [], []
         frames = []
         self.reset_results_dict()
         self.results_dict['obs'].append(obs)
+        self.results_dict['state'].append(env.state)
         i = 0
-        if self.env.TASK == Task.STABILIZATION:
-            MAX_STEPS = max_steps
-        elif self.env.TASK == Task.TRAJ_TRACKING:
-            MAX_STEPS = self.traj.shape[1]
+        if env.TASK == Task.STABILIZATION:
+            if max_steps is None:
+                MAX_STEPS = int(env.CTRL_FREQ*env.EPISODE_LEN_SEC)
+            else:
+                MAX_STEPS = max_steps
+        elif env.TASK == Task.TRAJ_TRACKING:
+            if max_steps is None:
+                MAX_STEPS = self.traj.shape[1]
+            else:
+                MAX_STEPS = max_steps
         else:
             raise("Undefined Task")
         self.terminate_loop = False
-        while np.linalg.norm(obs - env.X_GOAL) > 1e-3 and i < MAX_STEPS and not(self.terminate_loop):
+        done = False
+        common_metric = 0
+        while not(done and terminate_run_on_done) and i < MAX_STEPS and not (self.terminate_loop):
             action = self.select_action(obs)
             if self.terminate_loop:
                 print("Infeasible MPC Problem")
@@ -335,6 +424,11 @@ class MPC(BaseController):
             self.results_dict['done'].append(done)
             self.results_dict['info'].append(info)
             self.results_dict['action'].append(action)
+            self.results_dict['state'].append(env.state)
+            self.results_dict['state_mse'].append(info["mse"])
+            #self.results_dict['state_error'].append(env.state - env.X_GOAL[i,:])
+
+            common_metric += info["mse"]
             print(i, '-th step.')
             print(action)
             print(obs)
@@ -354,10 +448,16 @@ class MPC(BaseController):
             msg += "eval_ep_length {:.2f} +/- {:.2f} | eval_ep_return {:.3f} +/- {:.3f}\n".format(
                 ep_lengths.mean(), ep_lengths.std(), ep_returns.mean(),
                 ep_returns.std())
+        if len(frames) != 0:
+            self.results_dict['frames'] = frames
         self.results_dict['obs'] = np.vstack(self.results_dict['obs'])
+        self.results_dict['state'] = np.vstack(self.results_dict['state'])
         try:
             self.results_dict['reward'] = np.vstack(self.results_dict['reward'])
             self.results_dict['action'] = np.vstack(self.results_dict['action'])
+            self.results_dict['full_traj_common_cost'] = common_metric
+            self.results_dict['total_rmse_state_error'] = compute_state_rmse(self.results_dict['state'])
+            self.results_dict['total_rmse_obs_error'] = compute_state_rmse(self.results_dict['obs'])
         except ValueError:
             raise Exception("[ERROR] mpc.run().py: MPC could not find a solution for the first step given the initial conditions. "
                   "Check to make sure initial conditions are feasible.")

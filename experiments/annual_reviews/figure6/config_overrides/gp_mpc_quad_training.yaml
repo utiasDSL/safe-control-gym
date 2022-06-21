@@ -69,7 +69,7 @@ algo_config:
 task_config:
   ctrl_freq: 10
   pyb_freq: 240
-  info_in_reset: True
+  info_in_reset: False
   cost: quadratic
   constraints:
     - constraint_form: default_constraint

@@ -13,7 +13,6 @@ algo_config:
     - 1
     - 1
   gp_model_path: './trained_gp_model'
-  train_iterations: 150
   validation_iterations: 1
   optimization_iterations:
     - 2000
@@ -38,7 +37,9 @@ algo_config:
   initial_rollout_std: 0.001
   warmstart: True
   gp_approx: 'mean_eq'
-  sparse_gp: false
+  train_iterations: 500
+  sparse_gp: True
+  n_ind_points: 150
   online_learning: False
   additional_constraints:
     - constraint_form: linear_constraint
@@ -70,7 +71,7 @@ seed: 79123 #9078
 task_config:
   ctrl_freq: 10
   pyb_freq: 240
-  info_in_reset: True
+  info_in_reset: false
   cost: quadratic
   constraints:
     - constraint_form: default_constraint

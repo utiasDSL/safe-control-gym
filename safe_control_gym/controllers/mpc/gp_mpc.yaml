@@ -1,6 +1,3 @@
-# Seed for LHS sampling
-seed: 1337
-
 # MPC args
 horizon: 10
 r_mpc:
@@ -32,5 +29,3 @@ prior_param_coeff: 1.
 # Runner args
 deque_size: 10
 eval_batch_size: 10
-
-output_dir: reslts/temp-data/

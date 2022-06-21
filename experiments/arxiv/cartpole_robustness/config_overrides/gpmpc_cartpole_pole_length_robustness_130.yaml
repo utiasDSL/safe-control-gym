@@ -1,0 +1,96 @@
+output_dir: temp-data/
+tag: cartpole_pole_length_robust
+terminate_train_on_done: False
+terminate_test_on_done: False
+coeff:
+  - 0.3
+  - 0.5
+  - 1.0
+  - 1.5
+  - 3.3
+num_eval_episodes: 10
+parameters_to_vary:
+  - pole_length
+seed: 1
+algo_config:
+  horizon: 25
+  r_mpc:
+    - 1
+  q_mpc:
+    - 3
+    - 1
+    - 3
+    - 1
+  gp_model_path: ../cartpole_performance/trained_models/gpmpc/model_130
+  train_iterations: 400
+  test_data_ratio: 0.0
+  soft_constraints: null
+  optimization_iterations:
+    - 2000
+    - 2000
+    - 2000
+    - 2000
+  learning_rate:
+    - 0.01
+    - 0.01
+    - 0.01
+    - 0.01
+  normalize_training_data: False
+  use_gpu: False
+  inertial_prop:
+    pole_length: 0.5
+    pole_mass: 0.1
+    cart_mass: 1.0
+  initial_rollout_std: 0.0
+  prior_param_coeff: 1.3
+  prob: 0.95
+  warmstart: True
+  gp_approx: 'mean_eq' # 'taylor'
+  sparse_gp: true
+  n_ind_points: 50
+  inducing_point_selection_method: 'kmeans'
+  recalc_inducing_points_at_every_step: false
+  online_learning: False
+  additional_constraints: null
+  input_mask: null
+  target_mask: null
+task_config:
+  ctrl_freq: 10
+  pyb_freq: 1000
+  gui: False
+  info_in_reset: False
+  randomized_init: True
+  cost: quadratic
+  task: stabilization
+  inertial_prop: null
+  prior_prop: null
+  constraints:
+    - constraint_form: default_constraint
+      constrained_variable: input
+    - constraint_form: default_constraint
+      constrained_variable: state
+      upper_bounds:
+        - 100
+        - 100
+        - 100
+        - 100
+      lower_bounds:
+        - -100
+        - -100
+        - -100
+        - -100
+  done_on_violation: False
+  #disturbances: null
+  disturbances: null
+  init_state_randomization_info:
+    init_x:
+      distrib: uniform
+      low: -0.3
+      high: 0.3
+    init_theta:
+      distrib: uniform
+      low: -0.1
+      high: 0.1
+  stab_goal_tol: 0.005 # But not early term for test
+  episode_len_sec: 5
+  verbose: true

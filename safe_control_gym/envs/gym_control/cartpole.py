@@ -210,7 +210,6 @@ class CartPole(BenchmarkEnv):
             raise ValueError("[ERROR] in CartPole.__init__(), prior_prop incorrect format.")
         # Set prior/symbolic info.
         self._setup_symbolic()
-        
         # Create X_GOAL and U_GOAL references for the assigned task.
         self.U_GOAL = np.zeros(1)
         if self.TASK == Task.STABILIZATION:
@@ -232,6 +231,9 @@ class CartPole(BenchmarkEnv):
                 np.zeros(POS_REF.shape[0]),
                 np.zeros(VEL_REF.shape[0])
             ]).transpose()
+        # Define equilibrium point about the upright equilibrium for stabilization or first point in trajectory.
+        self.X_EQ = np.atleast_2d(self.X_GOAL)[0,:].T
+        self.U_EQ = np.atleast_2d(self.U_GOAL)[0,:]
 
     def step(self, action):
         """Advances the environment by one control step.
