@@ -14,6 +14,7 @@ from functools import partial
 
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
+from safe_control_gym.utils.utils import save_video
 
 def main():
     """The main function creating, running, and closing an environment.
@@ -46,6 +47,9 @@ def main():
                     )
                     
         reference_traj = ctrl.reference
+        env = env_func()
+        env.reset()
+        path = env.IMG_PATH
 
         # Plot trajectory.
         for i in range(0, reference_traj.shape[0], 10):
@@ -64,10 +68,11 @@ def main():
             
             # Print the last action and the information returned at each step.
             print(i, '-th step.')
-            print(action, '\n', obs, '\n', reward, '\n', done, '\n', info, '\n')    
-
-        ctrl.close()            
-
+            print(action, '\n', obs, '\n', reward, '\n', done, '\n', info, '\n') 
+            #frames.append(ctrl.render("rgb_array"))
+            
+        ctrl.close()          
+        save_video(path+"example video.mp4",results["frames"])
         elapsed_sec = time.time() - START
         print("\n{:d} iterations (@{:d}Hz) and {:d} episodes in {:.2f} seconds, i.e. {:.2f} steps/sec for a {:.2f}x speedup.\n"
               .format(ITERATIONS, config.quadrotor_config.ctrl_freq, 1, elapsed_sec, ITERATIONS/elapsed_sec, (ITERATIONS*(1. / config.quadrotor_config.ctrl_freq))/elapsed_sec))
