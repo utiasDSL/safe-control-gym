@@ -148,9 +148,10 @@ class PID(BaseController):
             self.results_dict['done'].append(done)
             self.results_dict['info'].append(info)
             self.results_dict['action'].append(action)
-
+            self.results_dict['frames'].append(self.env.render("rgb_array"))
+            print(len(self.results_dict['frames']))
         self.close_results_dict()
-
+        
         return self.results_dict
     
     def _dslPIDPositionControl(self,
@@ -264,7 +265,7 @@ class PID(BaseController):
         self.results_dict['done'] = np.vstack(self.results_dict['done'])
         self.results_dict['info'] = np.vstack(self.results_dict['info'])
         self.results_dict['action'] = np.vstack(self.results_dict['action'])
-
+        #self.results_dict['frames'] = np.vstack(self.results_dict['frames'])
         self.results_dict = munchify(self.results_dict)
 
     def reset(self):
@@ -294,4 +295,5 @@ class PID(BaseController):
                         'done': [],
                         'info': [],
                         'action': [],
+                        'frames' : []
                         }
