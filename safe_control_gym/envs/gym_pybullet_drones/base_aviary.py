@@ -169,16 +169,16 @@ class BaseAviary(BenchmarkEnv):
             #     p.setAdditionalSearchPath(pybullet_data.getDataPath())
             #     plugin = p.loadPlugin(egl.get_filename(), "_eglRendererPlugin")
             #     print("plugin=", plugin)
-        self.RENDER_WIDTH = int(640)
-        self.RENDER_HEIGHT = int(480)
+        self.RENDER_WIDTH = int(320)
+        self.RENDER_HEIGHT = int(240)
         self.FRAME_PER_SEC = 24
         self.CAPTURE_FREQ = int(self.PYB_FREQ / self.FRAME_PER_SEC)
         self.CAM_VIEW = p.computeViewMatrixFromYawPitchRoll(
-            distance=3,
-            yaw=-30,
-            pitch=-30,
+            distance=2,
+            yaw=-20,
+            pitch=-20,
             roll=0,
-            cameraTargetPosition=[0, 0, 0],
+            cameraTargetPosition=[0, -1, 1],
             upAxisIndex=2,
             physicsClientId=self.PYB_CLIENT)
         self.CAM_PRO = p.computeProjectionMatrixFOV(fov=60.0,
@@ -314,7 +314,7 @@ class BaseAviary(BenchmarkEnv):
             self.last_clipped_action = clipped_action
         # Update and store the drones kinematic information.
         self._update_and_store_kinematic_information()
-
+        
     def render(self, mode='human', close=False):
         """Prints a textual output of the environment.
 
@@ -383,6 +383,7 @@ class BaseAviary(BenchmarkEnv):
             self.FRAME_NUM = 0
             self.IMG_PATH = os.path.join(self.output_dir, "quadrotor_videos/video-{}/".format(datetime.now().strftime("%m.%d.%Y_%H.%M.%S")))
             os.makedirs(os.path.dirname(self.IMG_PATH), exist_ok=True)
+            
 
     def _get_drone_state_vector(self, nth_drone):
         """Returns the state vector of the n-th drone.
