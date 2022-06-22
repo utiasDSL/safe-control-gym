@@ -43,11 +43,10 @@ class RAP(BaseController):
                  training=True, 
                  checkpoint_path="model_latest.pt", 
                  output_dir="temp", 
-                 device="cpu", 
+                 use_gpu=False, 
                  seed=0, 
                  **kwargs):
-        super().__init__(env_func, training, checkpoint_path, output_dir, device, seed, **kwargs)
-
+        super().__init__(env_func, training, checkpoint_path, output_dir, use_gpu, seed, **kwargs)
         # task
         if self.training:
             # training (+ evaluation)
@@ -72,7 +71,7 @@ class RAP(BaseController):
                                  mini_batch_size=self.mini_batch_size)
 
         self.agent = PPOAgent(self.env.observation_space, self.env.action_space, **shared_agent_args)
-        self.agent.to(device)
+        self.agent.to(self.device)
 
         # fetch adversary specs from env 
         if self.training:
@@ -83,7 +82,7 @@ class RAP(BaseController):
             self.adv_act_space = self.env.adversary_action_space
         self.adversaries = [PPOAgent(self.adv_obs_space, self.adv_act_space, **shared_agent_args) for _ in range(self.num_adversaries)]
         for adv in self.adversaries:
-            adv.to(device)
+            adv.to(self.device)
 
         # pre-/post-processing
         self.obs_normalizer = BaseNormalizer()

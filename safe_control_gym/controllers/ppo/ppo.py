@@ -39,13 +39,10 @@ class PPO(BaseController):
                  training=True,
                  checkpoint_path="model_latest.pt",
                  output_dir="temp",
-                 device="cpu",
+                 use_gpu=False,
                  seed=0,
-                 safety_filter=None,
                  **kwargs):
-
-        super().__init__(env_func, training, checkpoint_path, output_dir, device, seed, safety_filter, **kwargs)
-        
+        super().__init__(env_func, training, checkpoint_path, output_dir, use_gpu, seed, **kwargs)
         # Task.
         if self.training:
             # Training and testing.
@@ -69,7 +66,7 @@ class PPO(BaseController):
                               critic_lr=self.critic_lr,
                               opt_epochs=self.opt_epochs,
                               mini_batch_size=self.mini_batch_size)
-        self.agent.to(device)
+        self.agent.to(self.device)
         # Pre-/post-processing.
         self.obs_normalizer = BaseNormalizer()
         if self.norm_obs:

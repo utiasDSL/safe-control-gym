@@ -40,11 +40,11 @@ class RARL(BaseController):
                  training=True, 
                  checkpoint_path="model_latest.pt", 
                  output_dir="temp", 
-                 device="cpu", 
+                 use_gpu=False, 
                  seed=0, 
                  **kwargs):
-        super().__init__(env_func, training, checkpoint_path, output_dir, device, seed, **kwargs)
-
+        super().__init__(env_func, training, checkpoint_path, output_dir, use_gpu, seed, **kwargs)
+        self.use_gpu = use_gpu
         # task
         if self.training:
             # training (+ evaluation)
@@ -69,7 +69,7 @@ class RARL(BaseController):
                                  mini_batch_size=self.mini_batch_size)
 
         self.agent = PPOAgent(self.env.observation_space, self.env.action_space, **shared_agent_args)
-        self.agent.to(device)
+        self.agent.to(self.device)
 
         # fetch adversary specs from env 
         if self.training:
@@ -79,7 +79,7 @@ class RARL(BaseController):
             self.adv_obs_space = self.env.adversary_observation_space
             self.adv_act_space = self.env.adversary_action_space
         self.adversary = PPOAgent(self.adv_obs_space, self.adv_act_space, **shared_agent_args)
-        self.adversary.to(device)
+        self.adversary.to(self.device)
 
         # pre-/post-processing
         self.obs_normalizer = BaseNormalizer()

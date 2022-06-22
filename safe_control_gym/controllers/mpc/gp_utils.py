@@ -9,9 +9,10 @@ import matplotlib.pyplot as plt
 import casadi as ca
 from copy import deepcopy
 from sklearn import preprocessing
+from sklearn.cluster import KMeans
 
 from safe_control_gym.utils.utils import mkdirs
-
+torch.manual_seed(0)
 
 def covSEard(x,
              z,
@@ -250,6 +251,8 @@ class GaussianProcessCollection:
         self._init_properties(train_x_raw, train_y_raw)
         self.model_paths = []
         mkdirs(dir)
+        gp_K_plus_noise_inv_list = []
+        gp_K_plus_noise_list = []
         for gp_ind, gp in enumerate(self.gp_list):
             lr = learning_rate[self.target_mask[gp_ind]]
             n_t = n_train[self.target_mask[gp_ind]]
@@ -258,7 +261,6 @@ class GaussianProcessCollection:
             print("#########################################")
             print("Train iterations: %s" % n_t)
             print("Learning Rate:: %s" % lr)
-            gp_K_plus_noise_list = []
             gp.train(train_x_raw,
                      train_y_raw[:,self.target_mask[gp_ind]],
                      test_x_raw,
@@ -269,8 +271,11 @@ class GaussianProcessCollection:
                      fname=os.path.join(dir, 'best_model_%s.pth' % self.target_mask[gp_ind]))
             self.model_paths.append(dir)
             gp_K_plus_noise_list.append(gp.model.K_plus_noise)
+            gp_K_plus_noise_inv_list.append(gp.model.K_plus_noise_inv)
         gp_K_plus_noise = torch.stack(gp_K_plus_noise_list)
+        gp_K_plus_noise_inv = torch.stack(gp_K_plus_noise_inv_list)
         self.K_plus_noise = gp_K_plus_noise
+        self.K_plus_noise_inv = gp_K_plus_noise_inv
         self.casadi_predict = self.make_casadi_predict_func()
 
 
@@ -488,6 +493,7 @@ class GaussianProcess:
         n_samples = train_x.shape[0]
         self.model.K_plus_noise = K_lazy_plus_noise.matmul(torch.eye(n_samples).double())
         self.model.K_plus_noise_inv = K_lazy_plus_noise.inv_matmul(torch.eye(n_samples).double())
+        #self.model.K_plus_noise_inv_2 = torch.inverse(self.model.K_plus_noise) # Equivalent to above but slower.
 
     def init_with_hyperparam(self,
                              train_inputs,
@@ -567,10 +573,11 @@ class GaussianProcess:
         loss = torch.tensor(0)
         i = 0
         while i < n_train and torch.abs(loss - last_loss) > 1e-2:
-            self.model.eval()
-            self.likelihood.eval()
-            test_output = self.model(test_x)
-            test_loss = -mll(test_output, test_y)
+            with torch.no_grad():
+                self.model.eval()
+                self.likelihood.eval()
+                test_output = self.model(test_x)
+                test_loss = -mll(test_output, test_y)
             self.model.train()
             self.likelihood.train()
             self.optimizer.zero_grad()
@@ -578,10 +585,16 @@ class GaussianProcess:
             loss = -mll(output, train_y)
             loss.backward()
             if i % 100 == 0:
-                print('Iter %d/%d - Train Loss: %.3f, Posterior loss on test data: %0.3f' % (i + 1, n_train, loss.item(), test_loss.item()))
+                print('Iter %d/%d - MLL trian Loss: %.3f, Posterior Test Loss: %0.3f' % (i + 1, n_train, loss.item(), test_loss.item()))
+
             self.optimizer.step()
-            if loss < best_loss:
-                best_loss = loss
+            #if test_loss < best_loss:
+            #    best_loss = test_loss
+            #    state_dict = self.model.state_dict()
+            #    torch.save(state_dict, fname)
+            #    best_epoch = i
+            if test_loss < best_loss:
+                best_loss = test_loss
                 state_dict = self.model.state_dict()
                 torch.save(state_dict, fname)
                 best_epoch = i
@@ -628,7 +641,7 @@ class GaussianProcess:
             mean = predictions.mean
             cov = predictions.covariance_matrix
         else:
-            with torch.no_grad(), gpytorch.settings.fast_pred_var(state=False):
+            with torch.no_grad(), gpytorch.settings.fast_pred_var(state=True), gpytorch.settings.fast_pred_samples(state=True):
                 predictions = self.likelihood(self.model(x))
                 mean = predictions.mean
                 cov = predictions.covariance_matrix
@@ -696,3 +709,17 @@ class GaussianProcess:
             plt.ylabel('v')
             plt.show()
         return fig_count
+
+def kmeans_centriods(n_cent, data, rand_state=0):
+    """kmeans clustering. Useful for finding reasonable inducing points.
+
+    Args:
+        n_cent (int): Number of centriods.
+        data (np.array): Data to find the centroids of n_samples X n_features.
+
+    Return:
+        centriods (np.array): Array of centriods (n_cent X n_features).
+
+    """
+    kmeans = KMeans(n_clusters=n_cent, random_state=rand_state).fit(data)
+    return kmeans.cluster_centers_

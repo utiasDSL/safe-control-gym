@@ -1,0 +1,143 @@
+algo_config:
+  additional_constraints: null
+  deque_size: 10
+  eval_batch_size: 10
+  gp_approx: mean_eq
+  gp_model_path: null
+  horizon: 15
+  inertial_prop:
+  - 0.027
+  - 1.4e-05
+  initial_rollout_std: 0.0
+  input_mask:
+  - 0
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  learing_rate: null
+  learning_rate:
+  - 0.01
+  - 0.01
+  - 0.01
+  - 0.01
+  - 0.01
+  - 0.01
+  normalize_training_data: false
+  online_learning: false
+  optimization_itarations: bull
+  optimization_iterations:
+  - 2500
+  - 3000
+  - 2500
+  - 3000
+  - 2000
+  - 2000
+  output_dir: temp-data/
+  overwrite_saved_data: false
+  prior_param_coeff: 1.5
+  prob: 0.99
+  q_mpc:
+  - 2
+  - 1
+  - 2
+  - 1
+  - 1
+  - 1
+  r_mpc:
+  - 1
+  - 1
+  soft_constraints:
+    gp_soft_constraints: false
+    gp_soft_constraints_coeff: 0
+    prior_soft_constraints: true
+    prior_soft_constraints_coeff: 10
+  sparse_gp: True
+  n_ind_points: 30
+  inducing_point_selection_method: 'kmeans'
+  target_mask:
+  - 0
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  train_iterations: null
+  use_gpu: true #false
+  use_prev_start: true
+  test_data_ratio: 0.25
+  warmstart: true
+device: cpu
+num_epochs: 10
+num_samples: 45
+num_test_episodes_per_epoch: 1
+num_train_episodes_per_epoch: 1
+terminate_train_on_done: True
+terminate_test_on_done: False
+output_dir: temp-data
+rand_kernel_selection: false
+restore: null
+seed: 5123 #0
+tag: quad_data_eff
+task_config:
+  constraints:
+    - constraint_form: default_constraint
+      constrained_variable: input
+    - constraint_form: default_constraint
+      constrained_variable: state
+      upper_bounds:
+        - 100
+        - 100
+        - 100
+        - 100
+        - 100
+        - 100
+      lower_bounds:
+        - -100
+        - -100
+        - -0.01
+        - -100
+        - -100
+        - -100
+  cost: quadratic
+  ctrl_freq: 10
+  disturbances:
+    observation:
+      - disturbance_func: white_noise
+        std: 0.0005
+  done_on_violation: false
+  episode_len_sec: 5
+  gui: false
+  inertial_prop:
+  - 0.027
+  - 1.4e-05
+  inertial_prop_randomization_info: null
+  info_in_reset: false
+  init_state:
+    init_theta: 0.0
+    init_theta_dot: 0.0
+    init_x: 0.0
+    init_x_dot: 0.0
+    init_z: 0.01
+    init_z_dot: 0.0
+  init_state_randomization_info: null
+  normalized_rl_action_space: false
+  physics: pyb
+  pyb_freq: 1000
+  quad_type: 2
+  randomized_inertial_prop: false
+  randomized_init: false
+  stab_goal_tol: 0.01
+  task: traj_tracking
+  task_info:
+    num_cycles: 1
+    trajectory_plane: zx
+    trajectory_position_offset:
+    - 0.5
+    - 0.0
+    trajectory_scale: -0.5
+    trajectory_type: circle
+  verbose: false

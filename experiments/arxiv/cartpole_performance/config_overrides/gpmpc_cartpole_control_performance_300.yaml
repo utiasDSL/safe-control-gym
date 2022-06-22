@@ -1,0 +1,127 @@
+algo: gp_mpc
+algo_config:
+  additional_constraints: null
+  deque_size: 10
+  eval_batch_size: 10
+  gp_approx: mean_eq
+  gp_model_path: trained_models/gpmpc/model_300
+  horizon: 25
+  inertial_prop:
+    cart_mass: 1.0
+    pole_length: 0.5
+    pole_mass: 0.1
+  initial_rollout_std: 0.0
+  input_mask: null
+  learing_rate: null
+  learning_rate:
+  - 0.01
+  - 0.01
+  - 0.01
+  - 0.01
+  normalize_training_data: false
+  online_learning: false
+  optimization_itarations: null
+  optimization_iterations:
+  - 2000
+  - 2000
+  - 2000
+  - 2000
+  output_dir: temp-data/cartpole_ctrl_perf/model_300
+  overwrite_saved_data: false
+  prior_param_coeff: 3.0
+  prob: 0.95
+  q_mpc:
+  - 1.0
+  - 1.0
+  - 1.0
+  - 1.0
+  r_mpc:
+  - 0.1
+  soft_constraints: null
+  sparse_gp: true
+  n_ind_points: 50
+  inducing_point_selection_method: 'kmeans'
+  recalc_inducing_points_at_every_step: false
+  target_mask: null
+  train_iterations: 500
+  test_data_ratio: 0.0
+  use_gpu: false
+  use_prev_start: true
+  warmstart: true
+device: cpu
+output_dir: temp-data
+restore: null
+seed: 1337
+tag: cartpole_ctrl_perf
+task: cartpole
+task_config:
+  adversary_disturbance: null
+  adversary_disturbance_scale: 0.01
+  constraint_penalty: -1
+  constraints:
+    - constraint_form: default_constraint
+      constrained_variable: input
+    - constraint_form: default_constraint
+      constrained_variable: state
+      upper_bounds:
+      - 100
+      - 100
+      - 100
+      - 100
+      lower_bounds:
+      - -100
+      - -100
+      - -100
+      - -100
+  cost: quadratic
+  ctrl_freq: 10
+  disturbances: null
+  done_on_violation: false
+  episode_len_sec: 5
+  gui: false
+  inertial_prop:
+    cart_mass: 1.0
+    pole_length: 0.5
+    pole_mass: 0.1
+  inertial_prop_randomization_info: null
+  info_in_reset: false
+  init_state:
+    init_x: -0.06839607
+    init_x_dot: -0.06486605
+    init_theta: -0.07790506
+    init_theta_dot: 0.03383949
+  init_state_randomization_info:
+    init_theta:
+      distrib: uniform
+      high: 0.1
+      low: -0.1
+    init_theta_dot:
+      distrib: uniform
+      high: 0.2
+      low: -0.2
+    init_x:
+      distrib: uniform
+      high: 0.3
+      low: -0.3
+    init_x_dot:
+      distrib: uniform
+      high: 0.3
+      low: -0.3
+  normalized_rl_action_space: false
+  prior_prop:
+    cart_mass: 1.0
+    pole_length: 0.5
+    pole_mass: 0.1
+  pyb_freq: 1000
+  randomized_inertial_prop: false
+  randomized_init: true
+  task: stabilization
+  task_info:
+    stabilization_goal:
+      - 0
+      - 0
+      - 0
+      - 0
+    stabilization_goal_tolerance: 0.000001
+  use_constraint_penalty: false
+  verbose: false

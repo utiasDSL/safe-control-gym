@@ -1,7 +1,7 @@
 """Base classes.
 
 """
-
+import torch
 
 class BaseController:
     """Template for controller/agent, implement the following methods as needed.
@@ -13,9 +13,8 @@ class BaseController:
                  training=True,
                  checkpoint_path="temp/model_latest.pt",
                  output_dir="temp",
-                 device="cpu",
+                 use_gpu=False,
                  seed=0,
-                 safety_filter=None,
                  **kwargs
                  ):
         """Initializes controller agent.
@@ -25,9 +24,8 @@ class BaseController:
             training (bool): training flag.
             checkpoint_path (str): file to save trained model & experiment state.
             output_dir (str): folder to write outputs.
-            device (str): cpu or cuda.
+            use_gpu (bool): False (use cpu) True (use cuda).
             seed (int): random seed.
-            safety_filter (SafetyFilter): a SafetyFilter object instantiation
         """
         
         # Base args.
@@ -35,9 +33,10 @@ class BaseController:
         self.training = training
         self.checkpoint_path = checkpoint_path
         self.output_dir = output_dir
-        self.device = device
+        self.use_gpu = use_gpu and torch.cuda.is_available()
+        self.device = 'cpu' if self.use_gpu == False else 'cuda'
         self.seed = seed
-        self.safety_filter = safety_filter
+        self.safety_filter = None
 
         # Algorithm specific args.
         for k, v in kwargs.items():

@@ -36,7 +36,6 @@ class LQR(BaseController):
             q_lqr=[1],
             r_lqr=[1],
             discrete_dynamics=True,
-            safety_filter=None,
             **kwargs):
         """Creates task and controller.
 
@@ -45,7 +44,6 @@ class LQR(BaseController):
             q_lqr (list): diagonals of state cost weight.
             r_lqr (list): diagonals of input/action cost weight.
             discrete_dynamics (bool): if to use discrete or continuous dynamics.
-            safety_filter (BaseSafetyFilter): a safety filter
         """
 
         super().__init__(env_func, **kwargs)

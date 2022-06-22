@@ -153,16 +153,15 @@ def set_seed_from_config(config):
 
     """
     seed = config.seed
-    use_cuda = True if "cuda" in config.device else False
     if seed is not None:
-        set_seed(seed, cuda=use_cuda)
+        set_seed(seed, cuda=config.use_gpu)
 
 
 def set_device_from_config(config):
     """Sets device, using GPU is set to `cuda` for now, no specific GPU yet.
 
     """
-    use_cuda = (config.device == "cuda") and torch.cuda.is_available()
+    use_cuda = config.use_gpu and torch.cuda.is_available()
     config.device = "cuda" if use_cuda else "cpu"
 
 

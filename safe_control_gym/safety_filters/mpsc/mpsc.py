@@ -80,13 +80,11 @@ class MPSC(BaseSafetyFilter):
         self.R = get_cost_weight_matrix(r_lin, self.model.nu)
 
         if self.env.NAME == Environment.CARTPOLE:
-            self.X_LIN = np.atleast_2d(self.env.X_GOAL)[0, :].T
-            self.X_LIN = np.array([self.X_LIN[0], 0, 0, 0])
+            self.X_EQ = np.array([self.env.X_EQ[0], 0, 0, 0])
         elif self.env.NAME == Environment.QUADROTOR:
-            self.X_LIN = np.atleast_2d(self.env.X_GOAL)[0, :].T
-            self.X_LIN = np.array([self.X_LIN[0], 0, self.X_LIN[2], 0, 0, 0])
+            self.X_EQ = np.array([self.env.X_EQ[0], 0, self.env.X_EQ[2], 0, 0, 0])
 
-        self.U_LIN = np.atleast_2d(self.env.U_GOAL)[0, :]
+        self.U_EQ = np.atleast_2d(self.env.U_GOAL)[0, :]
         self.linear_dynamics_func, self.discrete_dfdx, self.discrete_dfdu = self.set_linear_dynamics()
         self.compute_lqr_gain()
 
@@ -125,7 +123,7 @@ class MPSC(BaseSafetyFilter):
 
         """
         # Original version, used in shooting.
-        dfdxdfdu = self.model.df_func(x=self.X_LIN, u=self.U_LIN)
+        dfdxdfdu = self.model.df_func(x=self.X_EQ, u=self.U_EQ)
         dfdx = dfdxdfdu['dfdx'].toarray()
         dfdu = dfdxdfdu['dfdu'].toarray()
         delta_x = cs.MX.sym('delta_x', self.model.nx,1)
@@ -190,11 +188,11 @@ class MPSC(BaseSafetyFilter):
         for i in range(self.n_samples):
             init_state, _ = env.reset()
             if self.env.NAME == Environment.QUADROTOR:
-                u = np.random.rand(2)/20 - 1/40 + self.U_LIN
+                u = np.random.rand(2)/20 - 1/40 + self.U_EQ
             else:
                 u = env.action_space.sample() # Will yield a random action within action space.
             x_next_obs, _, _, _ = env.step(u)
-            x_next_linear = self.linear_dynamics_func(x0=init_state - self.X_LIN, p=u - self.U_LIN)['xf'].toarray() + self.X_LIN[:,None]
+            x_next_linear = self.linear_dynamics_func(x0=init_state - self.X_EQ, p=u - self.U_EQ)['xf'].toarray() + self.X_EQ[:,None]
             w[:,i] = x_next_obs - x_next_linear[:,0]
         A_cl = self.discrete_dfdx + self.discrete_dfdu @ self.lqr_gain
         P = compute_RPI_set(A_cl, w, self.tau)
@@ -219,7 +217,7 @@ class MPSC(BaseSafetyFilter):
             
             for i in range(self.n_samples_terminal_set):
                 if self.terminal_set is None:
-                    init_state = self.X_LIN
+                    init_state = self.X_EQ
                 else:
                     init_state = self.terminal_set.V[np.random.choice(self.terminal_set.V.shape[0], 1)]
 
@@ -227,7 +225,7 @@ class MPSC(BaseSafetyFilter):
                 init_state += (np.random.rand(self.model.nx, 1) - np.ones((self.model.nx, 1))/2)/2
                 
                 if self.env.NAME == Environment.QUADROTOR:
-                    u = np.random.rand(self.model.nu)/6 - 1/12 + self.U_LIN
+                    u = np.random.rand(self.model.nu)/6 - 1/12 + self.U_EQ
                 else:
                     u = env.action_space.sample() # Will yield a random action within action space.
 
@@ -327,7 +325,7 @@ class MPSC(BaseSafetyFilter):
         # Current observed state.
         x_init = opti.parameter(nx, 1)
         # Linearization point
-        X_LIN = opti.parameter(nx, 1)
+        X_EQ = opti.parameter(nx, 1)
 
         # Constraints (currently only handles a single constraint for state and input).
         state_constraints = self.tightened_state_constraint.get_symbolic_model()
@@ -339,9 +337,9 @@ class MPSC(BaseSafetyFilter):
             next_state = self.linear_dynamics_func(x0=z_var[:,i], p=v_var[:,i])['xf']
             opti.subject_to(z_var[:, i + 1] == next_state)
             # Input constraints (eqn 5.c).
-            opti.subject_to(input_constraints(v_var[:,i] + self.U_LIN) <= 0)
+            opti.subject_to(input_constraints(v_var[:,i] + self.U_EQ) <= 0)
             # State Constraints
-            opti.subject_to(state_constraints(z_var[:,i] + X_LIN) <= 0)
+            opti.subject_to(state_constraints(z_var[:,i] + X_EQ) <= 0)
 
         # Final state constraints (5.d).
         if self.use_terminal_set:
@@ -355,7 +353,7 @@ class MPSC(BaseSafetyFilter):
         # Initial state constraints (5.e).
         opti.subject_to(omega_constraint(x_init - z_var[:, 0]) <= 0)
         # Real input (5.f).
-        opti.subject_to(u_tilde == (v_var[:,0] + self.U_LIN) + self.lqr_gain @ (x_init - z_var[:,0]))
+        opti.subject_to(u_tilde == (v_var[:,0] + self.U_EQ) + self.lqr_gain @ (x_init - z_var[:,0]))
 
         # Cost (# eqn 5.a, note: using 2norm or sqrt makes this infeasible).
         cost = (u_L - u_tilde).T @ (u_L - u_tilde)  
@@ -376,7 +374,7 @@ class MPSC(BaseSafetyFilter):
             "u_tilde": u_tilde,
             "u_L": u_L,
             "x_init": x_init,
-            "X_LIN": X_LIN,
+            "X_EQ": X_EQ,
         }
 
     def solve_optimization(self,
@@ -388,7 +386,7 @@ class MPSC(BaseSafetyFilter):
 
         """
         if self.env.TASK == Task.TRAJ_TRACKING and self.linearize_about_trajectory:
-            self.X_LIN = np.atleast_2d(self.env.X_GOAL)[iteration, :].T
+            self.X_EQ = np.atleast_2d(self.env.X_GOAL)[iteration, :].T
 
         opti_dict = self.opti_dict
         opti = opti_dict["opti"]
@@ -397,10 +395,10 @@ class MPSC(BaseSafetyFilter):
         u_tilde = opti_dict["u_tilde"]
         u_L = opti_dict["u_L"]
         x_init = opti_dict["x_init"]
-        X_LIN = opti_dict["X_LIN"]
-        opti.set_value(x_init, obs - self.X_LIN)
+        X_EQ = opti_dict["X_EQ"]
+        opti.set_value(x_init, obs - self.X_EQ)
         opti.set_value(u_L, uncertified_input)
-        opti.set_value(X_LIN, self.X_LIN)
+        opti.set_value(X_EQ, self.X_EQ)
         
         # Initial guess for optimization problem.
         if (self.warmstart and
@@ -459,7 +457,7 @@ class MPSC(BaseSafetyFilter):
             if (self.kinf <= self.horizon-1 and
                 self.z_prev is not None and
                 self.v_prev is not None):
-                action = np.squeeze(self.v_prev[:, self.kinf] + self.U_LIN) + \
+                action = np.squeeze(self.v_prev[:, self.kinf] + self.U_EQ) + \
                          np.squeeze(self.lqr_gain @ (current_state.reshape((self.model.nx, 1)) - self.z_prev[:, self.kinf].reshape((self.model.nx, 1))))
                 action = np.squeeze(action)
                 clipped_action = np.clip(action, self.constraints.input_constraints[0].lower_bounds, self.constraints.input_constraints[0].upper_bounds)
@@ -471,7 +469,7 @@ class MPSC(BaseSafetyFilter):
                 self.results_dict['action'].append(action)
                 return action, success
             else:
-                action = np.squeeze(self.lqr_gain @ (current_state - self.X_LIN)) + self.U_LIN
+                action = np.squeeze(self.lqr_gain @ (current_state - self.X_EQ)) + self.U_EQ
                 action = np.squeeze(action)
                 clipped_action = np.clip(action, self.constraints.input_constraints[0].lower_bounds, self.constraints.input_constraints[0].upper_bounds)
                 
