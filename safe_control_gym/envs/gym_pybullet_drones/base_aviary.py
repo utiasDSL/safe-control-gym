@@ -377,11 +377,11 @@ class BaseAviary(BenchmarkEnv):
         if self.RECORD and self.GUI:
             self.VIDEO_ID = p.startStateLogging(
                 loggingType=p.STATE_LOGGING_VIDEO_MP4,
-                fileName=os.path.join(self.output_dir, "videos/video-{}.mp4".format(datetime.now().strftime("%m.%d.%Y_%H.%M.%S"))),
+                fileName=os.path.join(self.output_dir, "videos/video-{}.mp4"),
                 physicsClientId=self.PYB_CLIENT)
         if self.RECORD and not self.GUI:
             self.FRAME_NUM = 0
-            self.IMG_PATH = os.path.join(self.output_dir, "quadrotor_videos/video-{}/".format(datetime.now().strftime("%m.%d.%Y_%H.%M.%S")))
+            self.IMG_PATH = os.path.join(self.output_dir, "quadrotor_videos/")
             os.makedirs(os.path.dirname(self.IMG_PATH), exist_ok=True)
             
 
