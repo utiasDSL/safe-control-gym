@@ -37,7 +37,6 @@ class LQR(BaseController):
             r_lqr=[1],
             discrete_dynamics=True,
             safety_filter=None,
-            id='lqr',
             **kwargs):
         """Creates task and controller.
 
@@ -49,7 +48,7 @@ class LQR(BaseController):
             safety_filter (BaseSafetyFilter): a safety filter
         """
 
-        super().__init__(env_func, id=id, **kwargs)
+        super().__init__(env_func, **kwargs)
 
         self.env = env_func()
 

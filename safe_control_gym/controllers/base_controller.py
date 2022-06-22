@@ -16,7 +16,6 @@ class BaseController:
                  device="cpu",
                  seed=0,
                  safety_filter=None,
-                 id='',
                  **kwargs
                  ):
         """Initializes controller agent.
@@ -29,7 +28,6 @@ class BaseController:
             device (str): cpu or cuda.
             seed (int): random seed.
             safety_filter (SafetyFilter): a SafetyFilter object instantiation
-            id (str): the identifer of the controller
         """
         
         # Base args.
@@ -40,7 +38,6 @@ class BaseController:
         self.device = device
         self.seed = seed
         self.safety_filter = safety_filter
-        self.id = id
 
         # Algorithm specific args.
         for k, v in kwargs.items():

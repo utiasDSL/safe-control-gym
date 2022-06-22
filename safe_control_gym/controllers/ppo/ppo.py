@@ -42,10 +42,9 @@ class PPO(BaseController):
                  device="cpu",
                  seed=0,
                  safety_filter=None,
-                 id='ppo',
                  **kwargs):
 
-        super().__init__(env_func, training, checkpoint_path, output_dir, device, seed, safety_filter, id, **kwargs)
+        super().__init__(env_func, training, checkpoint_path, output_dir, device, seed, safety_filter, **kwargs)
         
         # Task.
         if self.training:

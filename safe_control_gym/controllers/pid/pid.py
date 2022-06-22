@@ -22,7 +22,7 @@ class PID(BaseController):
 
     def __init__(self,
                  env_func=None,
-                 g = 9.81,
+                 g = 9.8,
                  KF = 3.16e-10,
                  KM = 7.94e-12,
                  P_COEFF_FOR = np.array([.4, .4, 1.25]),
@@ -36,7 +36,6 @@ class PID(BaseController):
                  MIN_PWM = 20000,
                  MAX_PWM = 65535,
                  MIXER_MATRIX = np.array([ [.5, -.5,  -1], [.5, .5, 1], [-.5,  .5,  -1], [-.5, -.5, 1] ]),
-                 id='pid',
                  **kwargs
                  ):
         """Common control classes __init__ method.
@@ -46,7 +45,7 @@ class PID(BaseController):
 
         """
 
-        super().__init__(env_func, id=id, **kwargs)
+        super().__init__(env_func, **kwargs)
 
         self.env = env_func()
         self.GRAVITY = float(g) * 0.027

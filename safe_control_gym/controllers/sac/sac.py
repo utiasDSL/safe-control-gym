@@ -45,10 +45,9 @@ class SAC(BaseController):
                  device="cpu", 
                  seed=0, 
                  safety_filter=None,
-                 id='sac',
                  **kwargs):
 
-        super().__init__(env_func, training, checkpoint_path, output_dir, device, seed, safety_filter, id, **kwargs)
+        super().__init__(env_func, training, checkpoint_path, output_dir, device, seed, safety_filter, **kwargs)
 
         # task
         if self.training:
