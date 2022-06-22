@@ -18,7 +18,7 @@ from scipy.linalg import solve_discrete_are
 from pytope import Polytope
 
 from safe_control_gym.safety_filters.base_safety_filter import BaseSafetyFilter
-from safe_control_gym.controllers.mpc.mpc_utils import get_cost_weight_matrix, discretize_linear_system
+from safe_control_gym.controllers.mpc.mpc_utils import get_cost_weight_matrix, discretize_linear_system, rk_discrete
 from safe_control_gym.safety_filters.mpsc.mpsc_utils import compute_RPI_set, pontryagin_difference_AABB, ellipse_bounding_box
 from safe_control_gym.envs.constraints import LinearConstraint, QuadraticContstraint, ConstraintList, ConstrainedVariableType
 from safe_control_gym.envs.benchmark_env import Task, Environment
@@ -138,13 +138,10 @@ class MPSC(BaseSafetyFilter):
                                             ['x0', 'p'],
                                             ['xf'])
         elif self.integration_algo == 'rk4':
-            k1 = self.model.fc_func(delta_x, delta_u)
-            k2 = self.model.fc_func(delta_x+self.dt/2*k1, delta_u)
-            k3 = self.model.fc_func(delta_x+self.dt/2*k2, delta_u)
-            k4 = self.model.fc_func(delta_x+self.dt*k3, delta_u)
-            x_next = delta_x + self.dt/6*(k1+2*k2+2*k3+k4)
-
-            linear_dynamics_func = cs.Function('rk_f', [delta_x, delta_u], [x_next], ['x0', 'p'], ['xf'])
+            linear_dynamics_func = rk_discrete(self.model.fc_func,
+                                         self.model.nx,
+                                         self.model.nu,
+                                         self.dt)
         else:
             x_dot_lin_vec = dfdx @ delta_x + dfdu @ delta_u
             linear_dynamics_func = cs.integrator(
