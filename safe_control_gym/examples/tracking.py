@@ -11,7 +11,7 @@ Run as:
 import time
 import pybullet as p
 from functools import partial
-
+from datetime import datetime
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.utils import save_video
@@ -72,7 +72,7 @@ def main():
             #frames.append(ctrl.render("rgb_array"))
             
         ctrl.close()          
-        save_video(path+"example video.mp4",results["frames"])
+        save_video(path+str(config.quadrotor_config['task_info']['trajectory_type'])+'-'+datetime.now().strftime("%m.%d.%Y_%H.%M.%S")+".mp4",results["frames"])
         elapsed_sec = time.time() - START
         print("\n{:d} iterations (@{:d}Hz) and {:d} episodes in {:.2f} seconds, i.e. {:.2f} steps/sec for a {:.2f}x speedup.\n"
               .format(ITERATIONS, config.quadrotor_config.ctrl_freq, 1, elapsed_sec, ITERATIONS/elapsed_sec, (ITERATIONS*(1. / config.quadrotor_config.ctrl_freq))/elapsed_sec))
