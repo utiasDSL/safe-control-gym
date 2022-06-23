@@ -1,15 +1,16 @@
 #!/bin/bash
 
-# SYS="cartpole"
-SYS="quadrotor"
+SYS="cartpole"
+# SYS="quadrotor"
 
 TASK="stab"
 # TASK="track"
 
 # ALGO="lqr"
-ALGO="pid"
-# ALGO="ppo"
+# ALGO="pid"
+ALGO="ppo"
 # ALGO="sac"
+# ALGO="rarl"
 
 SAFETY_FILTER="mpsc"
 

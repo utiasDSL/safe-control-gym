@@ -21,6 +21,7 @@ import time
 import numpy as np
 import torch
 from collections import defaultdict
+from munch import munchify
 
 from safe_control_gym.utils.logging import ExperimentLogger
 from safe_control_gym.utils.utils import get_random_state, set_random_state, is_wrapped
@@ -44,7 +45,7 @@ class RARL(BaseController):
                  seed=0, 
                  **kwargs):
         super().__init__(env_func, training, checkpoint_path, output_dir, use_gpu, seed, **kwargs)
-        self.use_gpu = use_gpu
+
         # task
         if self.training:
             # training (+ evaluation)
@@ -198,7 +199,22 @@ class RARL(BaseController):
             if self.log_interval and self.total_steps % self.log_interval == 0:
                 self.log_step(results)
 
-    def run(self, env=None, render=False, n_episodes=10, verbose=False, use_adv=False, **kwargs):
+    def select_action(self, obs, step=0):
+        """Calculates control input.
+        Args:
+            obs (np.array): step-wise observation/input.
+            step (int): the current iteration for trajectory tracking purposes
+        Returns:
+           np.array: step-wise control input/action.
+        """
+
+        with torch.no_grad():
+            obs = torch.FloatTensor(obs).to(self.device)
+            action = self.agent.ac.act(obs)
+
+        return action
+
+    def run(self, env=None, render=False, n_episodes=10, max_steps=1000, verbose=False, use_adv=False, **kwargs):
         """Runs evaluation with current policy."""
         self.agent.eval()
         self.adversary.eval()
@@ -212,15 +228,35 @@ class RARL(BaseController):
                 env.add_tracker("constraint_values", 0, mode="queue")
                 env.add_tracker("mse", 0, mode="queue")
 
-        obs, _ = env.reset()
+        self.setup_results_dict()
+
+        obs, info = env.reset()
+        self.results_dict['obs'].append(obs)
         obs = self.obs_normalizer(obs)
-        ep_returns, ep_lengths = [], []
-        frames = []
+        ep_returns, ep_lengths, ep_results = [], [], []
+        frames = [] 
+
+        steps = 0
 
         while len(ep_returns) < n_episodes:
-            with torch.no_grad():
-                obs = torch.FloatTensor(obs).to(self.device)
-                action = self.agent.ac.act(obs)
+            action = self.select_action(obs=obs, step=steps)
+            if self.safety_filter:
+                new_action, success = self.safety_filter.certify_action(obs[:env.symbolic.nx], action, iteration=steps)
+                if success:
+                    action_diff = np.linalg.norm(new_action - action)
+                    self.results_dict['corrections'].append(action_diff)
+                    action = new_action
+                else:
+                    self.results_dict['corrections'].append(0.0)
+
+            obs, reward, done, info = env.step(action)
+            steps += 1
+
+            self.results_dict['obs'].append(obs)
+            self.results_dict['reward'].append(reward)
+            self.results_dict['done'].append(done)
+            self.results_dict['info'].append(info)
+            self.results_dict['action'].append(action)
 
             # no disturbance during testing
             if use_adv:
@@ -241,20 +277,64 @@ class RARL(BaseController):
                 assert "episode" in info
                 ep_returns.append(info["episode"]["r"])
                 ep_lengths.append(info["episode"]["l"])
+                self.close_results_dict()
+                ep_results.append(self.results_dict)
+                self.setup_results_dict()
                 obs, _ = env.reset()
+                self.results_dict['obs'].append(obs)
+                print(f'SUCCESS: Reached goal on step {steps}. Terminating...')
+                steps = 0
+            if steps >= max_steps and not done:
+                ep_returns.append('INCOMPLETE')
+                ep_lengths.append('INCOMPLETE')
+                self.close_results_dict()
+                ep_results.append(self.results_dict)
+                self.setup_results_dict()
+                obs, _ = env.reset()
+                self.results_dict['obs'].append(obs)
+                steps = 0
             obs = self.obs_normalizer(obs)
 
         # collect evaluation results
         ep_lengths = np.asarray(ep_lengths)
         ep_returns = np.asarray(ep_returns)
-        eval_results = {"ep_returns": ep_returns, "ep_lengths": ep_lengths}
+        eval_results = {"ep_returns": ep_returns, "ep_lengths": ep_lengths, "ep_results": ep_results}
         if len(frames) > 0:
             eval_results["frames"] = frames
         # Other episodic stats from evaluation env.
         if len(env.queued_stats) > 0:
             queued_stats = {k: np.asarray(v) for k, v in env.queued_stats.items()}
             eval_results.update(queued_stats)
+        
         return eval_results
+
+    def setup_results_dict(self):
+        """Setup the results dictionary to store run information.
+        """
+        self.results_dict = {}
+        self.results_dict['obs'] = []
+        self.results_dict['reward'] = []
+        self.results_dict['done'] = []
+        self.results_dict['info'] = []
+        self.results_dict['action'] = []
+
+        if self.safety_filter:
+            self.results_dict['corrections'] = []
+
+    def close_results_dict(self):
+        """Cleanup the results dict and munchify it.
+        """
+        self.results_dict['obs'] = np.vstack(self.results_dict['obs'])
+        self.results_dict['reward'] = np.vstack(self.results_dict['reward'])
+        self.results_dict['done'] = np.vstack(self.results_dict['done'])
+        self.results_dict['info'] = np.vstack(self.results_dict['info'])
+        self.results_dict['action'] = np.vstack(self.results_dict['action'])
+
+        if self.safety_filter:
+            self.results_dict['corrections'].append(0.0)
+            self.results_dict['corrections'] = np.hstack(self.results_dict['corrections'])
+
+        self.results_dict = munchify(self.results_dict)
 
     def train_step(self):
         """Performs a training/fine-tuning step."""

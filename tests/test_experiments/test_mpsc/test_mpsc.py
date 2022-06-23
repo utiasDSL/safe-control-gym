@@ -4,19 +4,19 @@ import pytest
 from experiments.mpsc.mpsc_single_experiment import run
 
 
-@pytest.mark.parametrize("SYS,TASK,ALGO", [
-    ('cartpole', 'stab', 'lqr'), 
-    ('cartpole', 'stab', 'ppo'), 
-    ('cartpole', 'stab', 'sac'), 
-    ('cartpole', 'track', 'lqr'), 
-    ('quadrotor', 'stab', 'pid'), 
-    ('quadrotor', 'track', 'pid')
+@pytest.mark.parametrize("SYS,TASK,ALGO,SAFETY_FILTER", [
+    ('cartpole', 'stab', 'lqr', 'mpsc'), 
+    ('cartpole', 'stab', 'ppo', 'mpsc'), 
+    ('cartpole', 'stab', 'sac', 'mpsc'), 
+    ('cartpole', 'track', 'lqr', 'mpsc'), 
+    ('quadrotor', 'stab', 'pid', 'mpsc'), 
+    ('quadrotor', 'track', 'pid', 'mpsc'),
 ])
-def test_mpsc(SYS, TASK, ALGO):
+def test_mpsc(SYS, TASK, ALGO, SAFETY_FILTER):
     sys.argv[1:] = [
         '--task', SYS, 
         '--algo', ALGO, 
-        '--safety_filter', 'mpsc', 
+        '--safety_filter', SAFETY_FILTER, 
         '--overrides', 
             f'./experiments/mpsc/config_overrides/{SYS}/{SYS}_{TASK}.yaml', 
             f'./experiments/mpsc/config_overrides/{SYS}/{ALGO}_{SYS}.yaml', 

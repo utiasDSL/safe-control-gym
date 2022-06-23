@@ -16,7 +16,6 @@ import os
 import time
 import numpy as np
 import torch
-from collections import defaultdict
 from munch import munchify
 
 from safe_control_gym.utils.logging import ExperimentLogger
@@ -238,17 +237,17 @@ class PPO(BaseController):
         self.use_step = use_step
         self.setup_results_dict()
 
-        raw_obs, info = env.reset()
-        self.results_dict['obs'].append(raw_obs)
-        obs = self.obs_normalizer(raw_obs)
+        obs, info = env.reset()
+        self.results_dict['obs'].append(obs)
+        obs = self.obs_normalizer(obs)
         ep_returns, ep_lengths, ep_results = [], [], []
         frames = [] 
 
         steps = 0
         while len(ep_returns) < n_episodes:
-            action = self.select_action(obs=raw_obs, step=steps)
+            action = self.select_action(obs=obs, step=steps)
             if self.safety_filter:
-                new_action, success = self.safety_filter.certify_action(raw_obs[:env.symbolic.nx], action, iteration=steps)
+                new_action, success = self.safety_filter.certify_action(obs[:env.symbolic.nx], action, iteration=steps)
                 if success:
                     action_diff = np.linalg.norm(new_action - action)
                     self.results_dict['corrections'].append(action_diff)
@@ -256,10 +255,10 @@ class PPO(BaseController):
                 else:
                     self.results_dict['corrections'].append(0.0)
 
-            raw_obs, reward, done, info = env.step(action)
+            obs, reward, done, info = env.step(action)
             steps += 1
 
-            self.results_dict['obs'].append(raw_obs)
+            self.results_dict['obs'].append(obs)
             self.results_dict['reward'].append(reward)
             self.results_dict['done'].append(done)
             self.results_dict['info'].append(info)
@@ -269,7 +268,7 @@ class PPO(BaseController):
                 env.render()
                 frames.append(env.render("rgb_array"))
             if verbose:
-                print("obs {} | act {}".format(raw_obs, action))
+                print("obs {} | act {}".format(obs, action))
             if done:
                 assert "episode" in info
                 ep_returns.append(info["episode"]["r"])
@@ -277,8 +276,8 @@ class PPO(BaseController):
                 self.close_results_dict()
                 ep_results.append(self.results_dict)
                 self.setup_results_dict()
-                raw_obs, _ = env.reset()
-                self.results_dict['obs'].append(raw_obs)
+                obs, _ = env.reset()
+                self.results_dict['obs'].append(obs)
                 print(f'SUCCESS: Reached goal on step {steps}. Terminating...')
                 steps = 0
             if steps >= max_steps and not done:
@@ -287,10 +286,10 @@ class PPO(BaseController):
                 self.close_results_dict()
                 ep_results.append(self.results_dict)
                 self.setup_results_dict()
-                raw_obs, _ = env.reset()
-                self.results_dict['obs'].append(raw_obs)
+                obs, _ = env.reset()
+                self.results_dict['obs'].append(obs)
                 steps = 0
-            obs = self.obs_normalizer(raw_obs)
+            obs = self.obs_normalizer(obs)
 
         # Collect evaluation results.
         ep_lengths = np.asarray(ep_lengths)

@@ -17,7 +17,6 @@ Todo:
 """
 import os
 import time
-import copy
 import numpy as np
 import torch
 from munch import munchify
@@ -42,7 +41,7 @@ class SAC(BaseController):
                  training=True, 
                  checkpoint_path="model_latest.pt", 
                  output_dir="temp", 
-                 use_gpu=False, 
+                 use_gpu=False,
                  seed=0, 
                  **kwargs):
         super().__init__(env_func, training, checkpoint_path, output_dir, use_gpu, seed, **kwargs)
@@ -228,9 +227,9 @@ class SAC(BaseController):
 
         self.setup_results_dict()
 
-        raw_obs, info = env.reset()
-        self.results_dict['obs'].append(raw_obs)
-        obs = self.obs_normalizer(raw_obs)
+        obs, info = env.reset()
+        self.results_dict['obs'].append(obs)
+        obs = self.obs_normalizer(obs)
         ep_returns, ep_lengths, ep_results = [], [], []
         frames = []
 
@@ -238,7 +237,7 @@ class SAC(BaseController):
         while len(ep_returns) < n_episodes:
             action = self.select_action(obs=obs, step=steps)
             if self.safety_filter:
-                new_action, success = self.safety_filter.certify_action(raw_obs[:env.symbolic.nx], action, iteration=steps)
+                new_action, success = self.safety_filter.certify_action(obs[:env.symbolic.nx], action, iteration=steps)
                 if success:
                     action_diff = np.linalg.norm(new_action - action)
                     self.results_dict['corrections'].append(action_diff)
@@ -246,10 +245,10 @@ class SAC(BaseController):
                 else:
                     self.results_dict['corrections'].append(0.0)
 
-            raw_obs, reward, done, info = env.step(action)
+            obs, reward, done, info = env.step(action)
             steps += 1
 
-            self.results_dict['obs'].append(raw_obs)
+            self.results_dict['obs'].append(obs)
             self.results_dict['reward'].append(reward)
             self.results_dict['done'].append(done)
             self.results_dict['info'].append(info)
@@ -267,8 +266,8 @@ class SAC(BaseController):
                 self.close_results_dict()
                 ep_results.append(self.results_dict)
                 self.setup_results_dict()
-                raw_obs, _ = env.reset()
-                self.results_dict['obs'].append(raw_obs)
+                obs, _ = env.reset()
+                self.results_dict['obs'].append(obs)
                 print(f'SUCCESS: Reached goal on step {steps}. Terminating...')
                 steps = 0
             if steps >= max_steps and not done:
@@ -277,10 +276,10 @@ class SAC(BaseController):
                 self.close_results_dict()
                 ep_results.append(self.results_dict)
                 self.setup_results_dict()
-                raw_obs, _ = env.reset()
-                self.results_dict['obs'].append(raw_obs)
+                obs, _ = env.reset()
+                self.results_dict['obs'].append(obs)
                 steps = 0
-            obs = self.obs_normalizer(raw_obs)
+            obs = self.obs_normalizer(obs)
 
         # collect evaluation results
         ep_lengths = np.asarray(ep_lengths)

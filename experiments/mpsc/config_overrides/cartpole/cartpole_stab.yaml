@@ -61,3 +61,7 @@ task_config:
   #   dynamics:
   #     - disturbance_func: white_noise
   #       std: 0.1
+
+  adversary_disturbance: dynamics 
+  adversary_disturbance_offset: 0.0
+  adversary_disturbance_scale: 0.01

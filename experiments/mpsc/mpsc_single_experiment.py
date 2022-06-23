@@ -17,7 +17,7 @@ def run(plot=True, max_steps=300, curr_path='.'):
     # Define arguments.
     fac = ConfigFactory()
     config = fac.merge()
-    if config.algo in ['ppo', 'sac']:
+    if config.algo in ['ppo', 'sac', 'rarl']:
         config.task_config['cost'] = Cost.RL_REWARD
     else:
         config.task_config['cost'] = Cost.QUADRATIC
@@ -28,9 +28,10 @@ def run(plot=True, max_steps=300, curr_path='.'):
     # Setup controller.
     ctrl = make(config.algo,
                     env_func,
-                    **config.algo_config)
+                    **config.algo_config,
+                    output_dir=curr_path+'/temp')
     
-    if config.algo in ['ppo', 'sac']:
+    if config.algo in ['ppo', 'sac', 'rarl']:
         # Load state_dict from trained.
         model_dir = os.path.dirname(os.path.abspath(__file__))+'/models'
         ctrl.load(os.path.join(model_dir, f'{config.algo}_model_{config.task}.pt'))
@@ -42,7 +43,7 @@ def run(plot=True, max_steps=300, curr_path='.'):
     START = time.time()
 
     # Run without safety filter
-    if config.algo in ['ppo', 'sac']:
+    if config.algo in ['ppo', 'sac', 'rarl']:
         results = ctrl.run(max_steps=max_steps, n_episodes=1)
         results = results['ep_results'][0]
     else:
@@ -63,18 +64,11 @@ def run(plot=True, max_steps=300, curr_path='.'):
     ctrl.safety_filter = safety_filter
     ctrl.reset()
 
-    if config.safety_filter == 'p_mpsc':
-        safety_filter.uncertified_controller = ctrl
-        if config.algo in ['ppo', 'sac']:
-            ctrl.save(f'./temp-data/saved_{config.algo}_prev.pt')
-        else:
-            ctrl.save(f'./temp-data/saved_{config.algo}_prev.npy')
-
     # Start a timer.
     START = time.time()
     
     # Run with safety filter
-    if config.algo in ['ppo', 'sac']:
+    if config.algo in ['ppo', 'sac', 'rarl']:
         certified_results = ctrl.run(max_steps=max_steps, n_episodes=1)
         certified_results = certified_results['ep_results'][0]
     else:
