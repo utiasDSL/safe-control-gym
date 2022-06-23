@@ -130,7 +130,7 @@ class BenchmarkEnv(gym.Env):
         self.__class__._count += 1
         # Directory to save any env output.
         if output_dir is None:
-            output_dir = os.getcwd()
+            output_dir = os.path.split(os.path.abspath(__file__))[0]
         self.output_dir = output_dir
         self.GUI = gui
         self.VERBOSE = verbose
