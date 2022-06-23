@@ -28,9 +28,8 @@ def main():
     
     # Set iterations and episode counter.
     ITERATIONS = int(config.quadrotor_config['episode_len_sec']*config.quadrotor_config['ctrl_freq'])
-    miche = True
     #detect if script is being run is a TTY or PTY
-    if not sys.stdout.isatty() or miche:
+    if not sys.stdout.isatty():
         config.quadrotor_config['gui'] = False
         config.quadrotor_config['record'] = True
 
