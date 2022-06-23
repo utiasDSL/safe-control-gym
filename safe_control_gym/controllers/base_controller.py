@@ -26,8 +26,8 @@ class BaseController:
             output_dir (str): folder to write outputs.
             use_gpu (bool): False (use cpu) True (use cuda).
             seed (int): random seed.
-        """
         
+        """
         # Base args.
         self.env_func = env_func
         self.training = training

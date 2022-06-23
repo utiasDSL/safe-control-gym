@@ -462,5 +462,4 @@ class MPC(BaseController):
             raise Exception("[ERROR] mpc.run().py: MPC could not find a solution for the first step given the initial conditions. "
                   "Check to make sure initial conditions are feasible.")
 
-        self.results_dict['frames'] = frames
         return deepcopy(self.results_dict)
