@@ -28,7 +28,12 @@ def main():
     
     # Set iterations and episode counter.
     ITERATIONS = int(config.quadrotor_config['episode_len_sec']*config.quadrotor_config['ctrl_freq'])
-    
+    miche = True
+    #detect if script is being run is a TTY or PTY
+    if not sys.stdout.isatty() or miche:
+        config.quadrotor_config['gui'] = False
+        config.quadrotor_config['record'] = True
+
     for i in range(3):
         # Start a timer.
         START = time.time()
@@ -52,10 +57,7 @@ def main():
         env.reset()
         path = env.IMG_PATH
 
-        #detect if script is being run is a TTY or PTY
-        if not sys.stdout.isatty():
-            env.GUI = False
-            env.RECORD = True
+        
 
 
         # Plot trajectory.
