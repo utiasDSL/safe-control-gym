@@ -241,7 +241,7 @@ class PPO(BaseController):
         raw_obs, info = env.reset()
         self.results_dict['obs'].append(raw_obs)
         obs = self.obs_normalizer(raw_obs)
-        ep_returns, ep_lengths = [], []
+        ep_returns, ep_lengths, ep_results = [], [], []
         frames = [] 
 
         steps = 0
@@ -274,20 +274,28 @@ class PPO(BaseController):
                 assert "episode" in info
                 ep_returns.append(info["episode"]["r"])
                 ep_lengths.append(info["episode"]["l"])
+                self.close_results_dict()
+                ep_results.append(self.results_dict)
+                self.setup_results_dict()
                 raw_obs, _ = env.reset()
+                self.results_dict['obs'].append(raw_obs)
                 print(f'SUCCESS: Reached goal on step {steps}. Terminating...')
                 steps = 0
             if steps >= max_steps and not done:
                 ep_returns.append('INCOMPLETE')
                 ep_lengths.append('INCOMPLETE')
+                self.close_results_dict()
+                ep_results.append(self.results_dict)
+                self.setup_results_dict()
                 raw_obs, _ = env.reset()
+                self.results_dict['obs'].append(raw_obs)
                 steps = 0
             obs = self.obs_normalizer(raw_obs)
 
         # Collect evaluation results.
         ep_lengths = np.asarray(ep_lengths)
         ep_returns = np.asarray(ep_returns)
-        eval_results = {"ep_returns": ep_returns, "ep_lengths": ep_lengths}
+        eval_results = {"ep_returns": ep_returns, "ep_lengths": ep_lengths, "ep_results": ep_results}
         if len(frames) > 0:
             eval_results["frames"] = frames
         # Other episodic stats from evaluation env.
@@ -295,9 +303,7 @@ class PPO(BaseController):
             queued_stats = {k: np.asarray(v) for k, v in env.queued_stats.items()}
             eval_results.update(queued_stats)
 
-        self.close_results_dict()
-
-        return eval_results, self.results_dict
+        return eval_results
 
     def setup_results_dict(self):
         """Setup the results dictionary to store run information.

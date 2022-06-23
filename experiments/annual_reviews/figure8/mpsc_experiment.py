@@ -41,7 +41,8 @@ def main():
     with open('./unsafe_ppo_model/state1.pkl', 'rb') as f:
         state1 = pickle.load(f)
     set_random_state(state1)
-    _, results = ctrl.run(env=uncertified_env, max_steps=max_steps, n_episodes=1, use_step=True)
+    results = ctrl.run(env=uncertified_env, max_steps=max_steps, n_episodes=1, use_step=True)
+    results = results['ep_results'][0]
     uncertified_env.close()
 
     # Setup MPSC.
@@ -60,7 +61,8 @@ def main():
     with open('./unsafe_ppo_model/state0.pkl', 'rb') as f:
         state0 = pickle.load(f)
     set_random_state(state0)
-    _, certified_results = ctrl.run(env=certified_env, max_steps=max_steps, n_episodes=1, use_step=True)
+    certified_results = ctrl.run(env=certified_env, max_steps=max_steps, n_episodes=1, use_step=True)
+    certified_results = certified_results['ep_results'][0]
     certified_env.close()
     ctrl.close()
     safety_filter.close_results_dict()

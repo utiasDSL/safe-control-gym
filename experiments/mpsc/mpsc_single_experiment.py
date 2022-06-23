@@ -43,7 +43,8 @@ def run(plot=True, max_steps=300, curr_path='.'):
 
     # Run without safety filter
     if config.algo in ['ppo', 'sac']:
-        _, results = ctrl.run(max_steps=max_steps, n_episodes=1)
+        results = ctrl.run(max_steps=max_steps, n_episodes=1)
+        results = results['ep_results'][0]
     else:
         results = ctrl.run(max_steps=max_steps)
     elapsed_time_uncert = time.time() - START
@@ -74,7 +75,8 @@ def run(plot=True, max_steps=300, curr_path='.'):
     
     # Run with safety filter
     if config.algo in ['ppo', 'sac']:
-        _, certified_results = ctrl.run(max_steps=max_steps, n_episodes=1)
+        certified_results = ctrl.run(max_steps=max_steps, n_episodes=1)
+        certified_results = certified_results['ep_results'][0]
     else:
         certified_results = ctrl.run(max_steps=max_steps)
     ctrl.close()
