@@ -9,6 +9,7 @@ Run as:
 
 """
 import time
+import sys
 import pybullet as p
 from functools import partial
 from datetime import datetime
@@ -50,6 +51,12 @@ def main():
         env = env_func()
         env.reset()
         path = env.IMG_PATH
+
+        #detect if script is being run is a TTY or PTY
+        if not sys.stdout.isatty():
+            env.GUI = False
+            env.RECORD = True
+
 
         # Plot trajectory.
         for i in range(0, reference_traj.shape[0], 10):
