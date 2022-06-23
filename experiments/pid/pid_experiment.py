@@ -55,7 +55,7 @@ def run(gui=True, max_steps=10000):
                                 physicsClientId=ctrl.env.PYB_CLIENT)
 
     # Run the experiment.
-    results = ctrl.run(iterations=ITERATIONS)
+    results = ctrl.run(max_steps=ITERATIONS)
     ctrl.close()
             
     # Plot the experiment.
