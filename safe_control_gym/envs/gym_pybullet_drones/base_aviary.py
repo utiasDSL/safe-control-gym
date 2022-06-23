@@ -382,8 +382,9 @@ class BaseAviary(BenchmarkEnv):
         if self.RECORD and not self.GUI:
             self.FRAME_NUM = 0
             #self.IMG_PATH = os.path.join(self.output_dir, "quadrotor_videos/")
+            #os.makedirs(os.path.dirname(self.IMG_PATH), exist_ok=True)
             self.IMG_PATH = self.output_dir.split("safe-control-gym")[0]
-            os.makedirs(os.path.dirname(self.IMG_PATH), exist_ok=True)
+           
             
 
     def _get_drone_state_vector(self, nth_drone):
