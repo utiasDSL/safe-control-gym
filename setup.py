@@ -21,6 +21,7 @@ setup(name='safe_control_gym',
         'cvxpy',
         'Mosek',
         'termcolor',
-        'imageio-ffmpeg'
+        'imageio-ffmpeg',
+        'pytope'
         ]
 )

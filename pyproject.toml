@@ -27,6 +27,7 @@ numpy = "^1.22.1"
 Mosek = "^9.3.14"
 termcolor = "^1.1.0"
 imageio-ffmpeg = "^0.4"
+pytope = "^0.0.4"
 
 [tool.poetry.dev-dependencies]
 
