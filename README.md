@@ -76,7 +76,7 @@ conda install -c anaconda gmp
 
 ### Option C: using Colab
 
-See [this notebook](https://colab.research.google.com/drive/1kDbC4-uZPWB5UGsJ99aI1Ft2PzBhy77T?usp=sharing) with `safe-control-gym` is pre-installed
+See [this notebook](https://colab.research.google.com/drive/1kDbC4-uZPWB5UGsJ99aI1Ft2PzBhy77T?usp=sharing) where `safe-control-gym` is pre-installed
 
 ## Architecture
 
