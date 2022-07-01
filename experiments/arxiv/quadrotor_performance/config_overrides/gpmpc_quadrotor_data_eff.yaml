@@ -80,7 +80,7 @@ terminate_test_on_done: False
 output_dir: temp-data
 rand_kernel_selection: false
 restore: null
-seed: 5123 #0
+seed: 0
 tag: quad_data_eff
 task_config:
   constraints:
