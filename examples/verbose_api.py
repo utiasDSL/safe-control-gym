@@ -2,22 +2,18 @@
 
 Example:
 
-    $ python3 verbose_api.py --overrides ./verbose_api.yaml --system quadrotor
+    $ python3 verbose_api.py --overrides ./verbose_api.yaml
 
 """
 import time
-import yaml
 import inspect
-import numpy as np
 import pybullet as p
-import casadi as cs
 
-from safe_control_gym.utils.utils import str2bool
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 
 
-def main():
+def run():
     """The main function creating, running, and closing an environment.
 
     """
@@ -158,4 +154,4 @@ def print_str_with_style(string: str='', style: int=0):
 
 
 if __name__ == "__main__":
-    main()
+    run()

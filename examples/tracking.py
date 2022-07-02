@@ -15,7 +15,7 @@ from functools import partial
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 
-def main():
+def run(gui=True, max_steps=10000):
     """The main function creating, running, and closing an environment.
 
     """
@@ -26,7 +26,10 @@ def main():
     
     # Set iterations and episode counter.
     ITERATIONS = int(config.quadrotor_config['episode_len_sec']*config.quadrotor_config['ctrl_freq'])
-    
+    ITERATIONS = min(ITERATIONS, max_steps)
+
+    config.quadrotor_config['gui'] = gui
+
     for i in range(3):
         # Start a timer.
         START = time.time()
@@ -48,11 +51,12 @@ def main():
         reference_traj = ctrl.reference
 
         # Plot trajectory.
-        for i in range(0, reference_traj.shape[0], 10):
-            p.addUserDebugLine(lineFromXYZ=[reference_traj[i-10,0], 0, reference_traj[i-10,2]],
-                               lineToXYZ=[reference_traj[i,0], 0, reference_traj[i,2]],
-                               lineColorRGB=[1, 0, 0],
-                               physicsClientId=ctrl.env.PYB_CLIENT)
+        if gui:
+            for i in range(0, reference_traj.shape[0], 10):
+                p.addUserDebugLine(lineFromXYZ=[reference_traj[i-10,0], 0, reference_traj[i-10,2]],
+                                lineToXYZ=[reference_traj[i,0], 0, reference_traj[i,2]],
+                                lineColorRGB=[1, 0, 0],
+                                physicsClientId=ctrl.env.PYB_CLIENT)
 
         # Run the experiment.
         results = ctrl.run(iterations=ITERATIONS)
@@ -74,4 +78,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run()

@@ -14,8 +14,10 @@ from functools import partial
 
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
+from safe_control_gym.envs.benchmark_env import Task
 
-def main():
+
+def run(gui=True, max_steps=10000):
     """The main function creating, running, and closing an environment.
 
     """
@@ -26,9 +28,12 @@ def main():
     
     # Set iterations and episode counter.
     ITERATIONS = int(config.quadrotor_config['episode_len_sec']*config.quadrotor_config['ctrl_freq'])
+    ITERATIONS = min(ITERATIONS, max_steps)
     
     # Start a timer.
     START = time.time()
+
+    config.quadrotor_config['gui'] = gui
     
     # Create controller.
     env_func = partial(make,
@@ -39,7 +44,7 @@ def main():
                 env_func,
                 )
                 
-    if config.quadrotor_config.task == 'traj_tracking':
+    if config.quadrotor_config.task == Task.TRAJ_TRACKING and gui:
         reference_traj = ctrl.reference
 
         # Plot trajectory.
@@ -50,7 +55,7 @@ def main():
                                 physicsClientId=ctrl.env.PYB_CLIENT)
 
     # Run the experiment.
-    results = ctrl.run( iterations=ITERATIONS)
+    results = ctrl.run(iterations=ITERATIONS)
     ctrl.close()
             
     # Plot the experiment.
@@ -68,4 +73,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run()
