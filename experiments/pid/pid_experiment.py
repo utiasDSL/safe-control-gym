@@ -17,7 +17,7 @@ from safe_control_gym.utils.registration import make
 from safe_control_gym.envs.benchmark_env import Task
 
 
-def run(gui=True, max_steps=10000):
+def run(gui=None, max_steps=None):
     """The main function creating, running, and closing an environment.
 
     """
@@ -28,12 +28,15 @@ def run(gui=True, max_steps=10000):
     
     # Set iterations and episode counter.
     ITERATIONS = int(config.quadrotor_config['episode_len_sec']*config.quadrotor_config['ctrl_freq'])
-    ITERATIONS = min(ITERATIONS, max_steps)
     
+    # Use function arguments for workflow testing
+    if gui is not None:
+        config.quadrotor_config['gui'] = gui
+    if max_steps is not None:
+        ITERATIONS = min(ITERATIONS, max_steps)
+
     # Start a timer.
     START = time.time()
-
-    config.quadrotor_config['gui'] = gui
     
     # Create controller.
     env_func = partial(make,
@@ -44,7 +47,7 @@ def run(gui=True, max_steps=10000):
                 env_func,
                 )
                 
-    if config.quadrotor_config.task == Task.TRAJ_TRACKING and gui:
+    if config.quadrotor_config.task == Task.TRAJ_TRACKING and config.quadrotor_config['gui']:
         reference_traj = ctrl.reference
 
         # Plot trajectory.
