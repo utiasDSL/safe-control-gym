@@ -2,7 +2,7 @@
 
 Example:
 
-    $ python3 verbose_api.py --overrides ./verbose_api.yaml
+    $ python3 verbose_api.py --system quadrotor --overrides verbose_api.yaml
 
 """
 import time

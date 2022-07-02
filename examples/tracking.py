@@ -15,7 +15,7 @@ from functools import partial
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 
-def run(gui=True, max_steps=10000):
+def run(gui=None, max_steps=None):
     """The main function creating, running, and closing an environment.
 
     """
@@ -26,9 +26,12 @@ def run(gui=True, max_steps=10000):
     
     # Set iterations and episode counter.
     ITERATIONS = int(config.quadrotor_config['episode_len_sec']*config.quadrotor_config['ctrl_freq'])
-    ITERATIONS = min(ITERATIONS, max_steps)
-
-    config.quadrotor_config['gui'] = gui
+    
+    # Use function arguments for workflow testing
+    if gui is not None:
+        config.quadrotor_config['gui'] = gui
+    if max_steps is not None:
+        ITERATIONS = min(ITERATIONS, max_steps)
 
     for i in range(3):
         # Start a timer.
@@ -51,7 +54,7 @@ def run(gui=True, max_steps=10000):
         reference_traj = ctrl.reference
 
         # Plot trajectory.
-        if gui:
+        if config.quadrotor_config['gui']:
             for i in range(0, reference_traj.shape[0], 10):
                 p.addUserDebugLine(lineFromXYZ=[reference_traj[i-10,0], 0, reference_traj[i-10,2]],
                                 lineToXYZ=[reference_traj[i,0], 0, reference_traj[i,2]],
