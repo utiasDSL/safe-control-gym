@@ -22,4 +22,4 @@ def test_mpsc(SYS, TASK, ALGO, SAFETY_FILTER):
             f'./experiments/mpsc/config_overrides/{SYS}/{ALGO}_{SYS}.yaml', 
             f'./experiments/mpsc/config_overrides/{SYS}/mpsc_{SYS}.yaml'
         ] 
-    run(plot=False, max_steps=10, curr_path='./experiments/mpsc')
+    run(plot=False, max_steps=5, curr_path='./experiments/mpsc')

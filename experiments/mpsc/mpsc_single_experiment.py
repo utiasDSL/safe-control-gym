@@ -21,6 +21,14 @@ def run(plot=True, max_steps=300, curr_path='.'):
         config.task_config['cost'] = Cost.RL_REWARD
     else:
         config.task_config['cost'] = Cost.QUADRATIC
+
+    # Set iterations and episode counter.
+    ITERATIONS = int(config.task_config['episode_len_sec']*config.task_config['ctrl_freq'])
+    
+    # Use function arguments for workflow testing
+    if max_steps is not None:
+        ITERATIONS = min(ITERATIONS, max_steps)
+
     env_func = partial(make,
                        config.task,
                        **config.task_config)
@@ -44,10 +52,10 @@ def run(plot=True, max_steps=300, curr_path='.'):
 
     # Run without safety filter
     if config.algo in ['ppo', 'sac', 'rarl']:
-        results = ctrl.run(max_steps=max_steps, n_episodes=1)
+        results = ctrl.run(max_steps=ITERATIONS, n_episodes=1)
         results = results['ep_results'][0]
     else:
-        results = ctrl.run(max_steps=max_steps)
+        results = ctrl.run(max_steps=ITERATIONS)
     elapsed_time_uncert = time.time() - START
 
     # Setup MPSC.
@@ -69,10 +77,10 @@ def run(plot=True, max_steps=300, curr_path='.'):
     
     # Run with safety filter
     if config.algo in ['ppo', 'sac', 'rarl']:
-        certified_results = ctrl.run(max_steps=max_steps, n_episodes=1)
+        certified_results = ctrl.run(max_steps=ITERATIONS, n_episodes=1)
         certified_results = certified_results['ep_results'][0]
     else:
-        certified_results = ctrl.run(max_steps=max_steps)
+        certified_results = ctrl.run(max_steps=ITERATIONS)
     ctrl.close()
     safety_filter.close()
     safety_filter.close_results_dict()
