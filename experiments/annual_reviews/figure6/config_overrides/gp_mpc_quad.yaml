@@ -81,6 +81,9 @@ task_config:
       upper_bounds:
         - 0.2
         - 0.2
+      lower_bounds:
+        - 0.0
+        - 0.0
   done_on_violation: True
   disturbances: null
   init_state_randomization_info:
