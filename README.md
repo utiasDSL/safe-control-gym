@@ -74,6 +74,9 @@ conda install -c anaconda gmp
  sudo apt-get install libgmp-dev
  ```
 
+### Option C: using Colab
+
+See [this notebook](https://colab.research.google.com/drive/1kDbC4-uZPWB5UGsJ99aI1Ft2PzBhy77T?usp=sharing) where `safe-control-gym` is pre-installed
 
 ## Architecture
 
@@ -104,30 +107,30 @@ We report performance results for open-loop, random action inputs.
 Note that the Bullet engine frequency reported for `safe-control-gym` is typically much finer grained for improved fidelity.
 `safe-control-gym` quadrotor environment is not as light-weight as [`gym-pybullet-drones`][3] but provides the same order of magnitude speed-up and several more safety features/symbolic models.
 
-| Environment              | GUI    | Control Freq.  | PyBullet Freq.  | Constraints & Disturbances^       | Speed-Up^^      |
-| :----------------------: | :----: | :------------: | :-------------: | :-------------------------------: | :-------------: |
-| [Gym cartpole][1]        | True   | 50Hz           | N/A             | No                                | 1.16x           |
-| [InvPenPyBulletEnv][2]   | False  | 60Hz           | 60Hz            | No                                | 158.29x         |
-| [cartpole][4]            | True   | 50Hz           | 50Hz            | No                                | 0.85x           |
-| [cartpole][4]            | False  | 50Hz           | 1000Hz          | No                                | 24.73x          |
-| [cartpole][4]            | False  | 50Hz           | 1000Hz          | Yes                               | 22.39x          |
+| Environment                | GUI    | Control Freq.  | PyBullet Freq.  | Constraints & Disturbances^       | Speed-Up^^      |
+| :------------------------: | :----: | :------------: | :-------------: | :-------------------------------: | :-------------: |
+| [Gym cartpole][001]        | True   | 50Hz           | N/A             | No                                | 1.16x           |
+| [InvPenPyBulletEnv][002]   | False  | 60Hz           | 60Hz            | No                                | 158.29x         |
+| [cartpole][004]            | True   | 50Hz           | 50Hz            | No                                | 0.85x           |
+| [cartpole][004]            | False  | 50Hz           | 1000Hz          | No                                | 24.73x          |
+| [cartpole][004]            | False  | 50Hz           | 1000Hz          | Yes                               | 22.39x          |
 | | | | | | |
-| [gym-pyb-drones][3]      | True   | 48Hz           | 240Hz           | No                                | 2.43x           |
-| [gym-pyb-drones][3]      | False  | 50Hz           | 1000Hz          | No                                | 21.50x          |
-| [quadrotor][5]           | True   | 60Hz           | 240Hz           | No                                | 0.74x           |
-| [quadrotor][5]           | False  | 50Hz           | 1000Hz          | No                                | 9.28x           |
-| [quadrotor][5]           | False  | 50Hz           | 1000Hz          | Yes                               | 7.62x           |
+| [gym-pyb-drones][003]      | True   | 48Hz           | 240Hz           | No                                | 2.43x           |
+| [gym-pyb-drones][003]      | False  | 50Hz           | 1000Hz          | No                                | 21.50x          |
+| [quadrotor][005]           | True   | 60Hz           | 240Hz           | No                                | 0.74x           |
+| [quadrotor][005]           | False  | 50Hz           | 1000Hz          | No                                | 9.28x           |
+| [quadrotor][005]           | False  | 50Hz           | 1000Hz          | Yes                               | 7.62x           |
 
 > ^ Whether the environment includes a default set of constraints and disturbances
 > 
 > ^^ Speed-up = Elapsed Simulation Time / Elapsed Wall Clock Time; on a 2.30GHz Quad-Core i7-1068NG7 with 32GB 3733MHz LPDDR4X; no GPU
 
-[1]: https://github.com/openai/gym/blob/master/gym/envs/classic_control/cartpole.py
-[2]: https://github.com/benelot/pybullet-gym/blob/master/pybulletgym/envs/mujoco/envs/pendulum/inverted_pendulum_env.py
-[3]: https://github.com/utiasDSL/gym-pybullet-drones
+[001]: https://github.com/openai/gym/blob/master/gym/envs/classic_control/cartpole.py
+[002]: https://github.com/benelot/pybullet-gym/blob/master/pybulletgym/envs/mujoco/envs/pendulum/inverted_pendulum_env.py
+[003]: https://github.com/utiasDSL/gym-pybullet-drones
 
-[4]: https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/envs/gym_control/cartpole.py
-[5]: https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/envs/gym_pybullet_drones/quadrotor.py
+[004]: https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/envs/gym_control/cartpole.py
+[005]: https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/envs/gym_pybullet_drones/quadrotor.py
 
 ## Getting Started
 Familiarize with APIs and environments with the scripts in [`examples/`](https://github.com/utiasDSL/safe-control-gym/tree/main/examples)
@@ -270,6 +273,7 @@ $ ./create_unsafe_ppo_model.sh                                     # Run the scr
 - Publish to [PyPI](https://realpython.com/pypi-publish-python-package/)
 - [Colab](https://colab.research.google.com/notebooks/intro.ipynb) examples
 - Create a list of FAQs from [Issues tagged as questions](https://github.com/utiasDSL/safe-control-gym/issues?q=is%3Aissue+is%3Aopen+label%3Aquestion)
+- Link [papers](https://www.semanticscholar.org/paper/safe-control-gym%3A-a-Unified-Benchmark-Suite-for-and-Yuan-Hall/66b4656ab7732dcdcf39c466e8ab948c2b4a042d#citingPapers), projects, blog posts (Cat's, etc.) using `safe-control-gym`
 
 -----
 > University of Toronto's [Dynamic Systems Lab](https://github.com/utiasDSL) / [Vector Institute for Artificial Intelligence](https://github.com/VectorInstitute)

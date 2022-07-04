@@ -64,8 +64,8 @@ class MPSC(BaseController):
         self.dt = self.model.dt
         self.Q = get_cost_weight_matrix(q_lin, self.model.nx)
         self.R = get_cost_weight_matrix(r_lin, self.model.nu)
-        self.X_LIN = np.atleast_2d(self.env.X_GOAL)[0, :].T
-        self.U_LIN = np.atleast_2d(self.env.U_GOAL)[0, :]
+        self.X_EQ = np.atleast_2d(self.env.X_GOAL)[0, :].T
+        self.U_EQ = np.atleast_2d(self.env.U_GOAL)[0, :]
         self.linear_dynamics_func, self.discrete_dfdx, self.discrete_dfdu = self.set_linear_dynamics()
         self.compute_lqr_gain()
         self.n_samples = n_samples
@@ -104,7 +104,7 @@ class MPSC(BaseController):
 
         """
         # Original version, used in shooting.
-        dfdxdfdu = self.model.df_func(x=self.X_LIN, u=self.U_LIN)
+        dfdxdfdu = self.model.df_func(x=self.X_EQ, u=self.U_EQ)
         dfdx = dfdxdfdu['dfdx'].toarray()
         dfdu = dfdxdfdu['dfdu'].toarray()
         delta_x = cs.MX.sym('delta_x', self.model.nx,1)
@@ -155,7 +155,7 @@ class MPSC(BaseController):
             u = env.action_space.sample() # Will yield a random action within action space.
             actions[:,i] = u
             x_next_obs, _, _, _ = env.step(u)
-            x_next_linear = self.linear_dynamics_func(x0=init_state - self.X_LIN, p=u - self.U_LIN)['xf'].toarray()
+            x_next_linear = self.linear_dynamics_func(x0=init_state - self.X_EQ, p=u - self.U_EQ)['xf'].toarray()
             next_true_states[:,i] = x_next_obs
             next_pred_states[:,i] = x_next_linear[:,0]
             w[:,i] = x_next_obs - x_next_linear[:,0]
