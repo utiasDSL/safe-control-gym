@@ -373,7 +373,10 @@ class Quadrotor(BaseAviary):
         INIT_XYZ = [init_values.get("init_"+k, 0.) for k in ["x", "y", "z"]]
         INIT_VEL = [init_values.get("init_"+k+"_dot", 0.) for k in ["x", "y", "z"]]
         INIT_RPY = [init_values.get("init_"+k, 0.) for k in ["phi", "theta", "psi"]]
-        INIT_ANG_VEL = [init_values.get("init_"+k, 0.) for k in ["p", "q", "r"]]  # TODO: transform from body rates.
+        if self.QUAD_TYPE == QuadType.TWO_D
+            INIT_ANG_VEL = [0, init_values.get("init_theta_dot", 0.), 0]
+        else:
+            INIT_ANG_VEL = [init_values.get("init_"+k, 0.) for k in ["p", "q", "r"]]  # TODO: transform from body rates.
         p.resetBasePositionAndOrientation(self.DRONE_IDS[0], INIT_XYZ,
                                           p.getQuaternionFromEuler(INIT_RPY),
                                           physicsClientId=self.PYB_CLIENT)
