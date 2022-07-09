@@ -86,6 +86,7 @@ def main():
 
     # Run an experiment.
     for i in range(ITERATIONS):
+
         # Step by keyboard input
         # _ = input('Press any key to continue.')
 
@@ -116,10 +117,11 @@ def main():
         print(out)
         out = '\tDone: ' + str(done)
         print(out)
-        # out = '\tConstraints evaluations: ' + str(info['constraint_values'])
-        # print(out)
-        # out = '\tConstraints violation: ' + str(bool(info['constraint_violation']))
-        # print(out)
+        if 'constraint_values' in info:
+            out = '\tConstraints evaluations: ' + str(info['constraint_values'])
+            print(out)
+            out = '\tConstraints violation: ' + str(bool(info['constraint_violation']))
+            print(out)
 
         # If an episode is complete, reset the environment.
         if done:
