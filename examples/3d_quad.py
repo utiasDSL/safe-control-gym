@@ -45,55 +45,50 @@ def main():
     print('\nInitial reset.')
     print('\tInitial observation: ' + str(initial_obs))
 
-    """Curve fitting for later use.
+    # Curve fitting with waypoints.
+    waypoints = np.array([(0, 0, 0), (0.2, 0.5, 0.5), (0.5, 0.1, 0.6), (1, 1, 1), (1.3, 1, 1.2)])
+    deg = 6
+    t = np.arange(waypoints.shape[0])
+    fit_x = np.polyfit(t, waypoints[:,0], deg)
+    fit_y = np.polyfit(t, waypoints[:,1], deg)
+    fit_z = np.polyfit(t, waypoints[:,2], deg)
+    fx = np.poly1d(fit_x)
+    fy = np.poly1d(fit_y)
+    fz = np.poly1d(fit_z)
+    t_scaled = np.linspace(t[0], t[-1], env.EPISODE_LEN_SEC*env.CTRL_FREQ)
+    ref_x = fx(t_scaled)
+    ref_y = fy(t_scaled)
+    ref_z = fz(t_scaled)
 
-    data = np.array([(1, 1, 0), (2, 4, 1), (3, 1, 1), (9, 3, 2)])
-    t = np.arange(data.shape[0])
+    # Plot each dimension.
+    # plt.plot(t_scaled, x_scaled)
+    # plt.plot(t_scaled, x_scaled)
+    # plt.plot(t_scaled, x_scaled)
+    # plt.show()
 
-    x = data[:,0]
-    y = data[:,1]
-    z = data[:,2]
-    fitx = np.polyfit(t, x, 4)
-    fity = np.polyfit(t, y, 4)
-    fitz = np.polyfit(t, z, 4)
-
-    fx = np.poly1d(fitx)
-    fy = np.poly1d(fity)
-    fz = np.poly1d(fitz)
-
-    t_new = np.linspace(t[0], t[-1], 50)
-    x_new = fx(t_new)
-    y_new = fy(t_new)
-    z_new = fz(t_new)
-
-    plt.plot(t_new, x_new)
-    plt.plot(t_new, y_new)
-    plt.plot(t_new, z_new)
+    # Plot in 3D.
+    ax = plt.axes(projection='3d')
+    ax.plot3D(ref_x, ref_y, ref_z)
+    ax.scatter3D(waypoints[:,0], waypoints[:,1], waypoints[:,2])
     plt.show()
-
-    """
-
-    ref_x = np.array([2*i/(env.EPISODE_LEN_SEC*env.CTRL_FREQ) for i in range(env.EPISODE_LEN_SEC*env.CTRL_FREQ)]).transpose()
-    ref_y = np.array([0.5*np.sin((6*np.pi*i)/(env.EPISODE_LEN_SEC*env.CTRL_FREQ)) for i in range(env.EPISODE_LEN_SEC*env.CTRL_FREQ)]).transpose()
-    ref_z = np.array([0.003*i**2/(env.EPISODE_LEN_SEC*env.CTRL_FREQ) for i in range(env.EPISODE_LEN_SEC*env.CTRL_FREQ)]).transpose()
 
     for i in range(10, ref_x.shape[0], 10):
         p.addUserDebugLine(lineFromXYZ=[ref_x[i-10], ref_y[i-10], ref_z[i-10]],
-                        lineToXYZ=[ref_x[i], ref_y[i], ref_z[i]],
-                        lineColorRGB=[1, 0, 0],
-                        physicsClientId=env.PYB_CLIENT)
+                           lineToXYZ=[ref_x[i], ref_y[i], ref_z[i]],
+                           lineColorRGB=[1, 0, 0],
+                           physicsClientId=env.PYB_CLIENT)
 
-    p.loadURDF(os.path.join(env.URDF_DIR, "gate.urdf"), [0.3, 0, 0], p.getQuaternionFromEuler([0,0,0]), physicsClientId=env.PYB_CLIENT)
-
-    p.loadURDF(os.path.join(env.URDF_DIR, "gate.urdf"), [1.275, -0.375, 0.5], p.getQuaternionFromEuler([0,0,np.pi/2]), physicsClientId=env.PYB_CLIENT)
-
-    p.loadURDF(os.path.join(env.URDF_DIR, "gate.urdf"), [1.65, 0, 1.125], p.getQuaternionFromEuler([0,0,0]), physicsClientId=env.PYB_CLIENT)
-
+    for point in waypoints:
+        p.loadURDF(os.path.join(env.URDF_DIR, "gate.urdf"),
+                   [point[0], point[1], point[2]-0.05],
+                   p.getQuaternionFromEuler([0,0,0]),
+                   physicsClientId=env.PYB_CLIENT)
 
     # Run an experiment.
     for i in range(ITERATIONS):
         # Step by keyboard input
         # _ = input('Press any key to continue.')
+
         # Sample a random action.
         if i == 0:
             action = env.action_space.sample()
@@ -103,12 +98,12 @@ def main():
                         cur_quat=np.array(p.getQuaternionFromEuler([obs[6],obs[7],obs[8]])),
                         cur_vel=np.array([obs[1],obs[3],obs[5]]),
                         cur_ang_vel=np.array([obs[9],obs[10],obs[11]]),
-                        # target_pos=np.array([0.1, 0.1, 0.5]),
                         target_pos=np.array([ref_x[i], ref_y[i], ref_z[i]]),
-                        # target_vel=np.zeros(3)
+                        target_vel=np.zeros(3)
                         )
             action = rpms
             action = env.KF * action**2
+
         # Step the environment and print all returned information.
         obs, reward, done, info = env.step(action)
         #
@@ -130,9 +125,9 @@ def main():
         if done:
             num_episodes += 1
             new_initial_obs, new_initial_info = env.reset()
-            # print(str(num_episodes)+'-th reset.', 7)
-            # print('Reset obs' + str(new_initial_obs), 2)
-            # print('Reset info' + str(new_initial_info), 0)
+            print(str(num_episodes)+'-th reset.', 7)
+            print('Reset obs' + str(new_initial_obs), 2)
+            print('Reset info' + str(new_initial_info), 0)
 
     # Close the environment and print timing statistics.
     env.close()
