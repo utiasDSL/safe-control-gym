@@ -5,7 +5,6 @@
       <rolling_friction value="0.03"/>
       <spinning_friction value="0.03"/>
     </contact>
-
     <inertial>
       <origin rpy="0 0 0" xyz="0 0 0"/>
        <mass value="0.0"/>
@@ -14,19 +13,12 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-				<!-- <mesh filename="textured_sphere_smooth.obj" scale="0.5 0.5 0.5"/>       -->
-                <sphere radius="0.03"/>
+        <sphere radius="0.03"/>
       </geometry>
       <material name="white">
         <color rgba="1 1 1 1"/>
         <specular rgb="11 1 1"/>
       </material>
     </visual>
-    <!-- <collision>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
-      <geometry>
-	 <sphere radius="0.5"/>
-      </geometry>
-    </collision> -->
   </link>
 </robot>
