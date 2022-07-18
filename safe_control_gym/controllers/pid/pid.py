@@ -3,8 +3,6 @@
 Based on work conducted at UTIAS' DSL by SiQi Zhou and James Xu.
 
 """
-
-
 import numpy as np
 import math
 import pybullet as p
