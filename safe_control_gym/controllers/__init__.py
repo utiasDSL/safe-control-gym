@@ -43,6 +43,10 @@ register(id="sac",
          entry_point="safe_control_gym.controllers.sac.sac:SAC",
          config_entry_point="safe_control_gym.controllers.sac:sac.yaml")
 
+register(id="ddpg",
+         entry_point="safe_control_gym.controllers.ddpg.ddpg:DDPG",
+         config_entry_point="safe_control_gym.controllers.ddpg:ddpg.yaml")
+
 register(id="safe_explorer_ppo",
          entry_point="safe_control_gym.controllers.safe_explorer.safe_ppo:SafeExplorerPPO",
          config_entry_point="safe_control_gym.controllers.safe_explorer:safe_ppo.yaml")

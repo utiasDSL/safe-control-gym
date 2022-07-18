@@ -1,0 +1,40 @@
+# model args
+hidden_dim: 256
+norm_obs: False
+norm_reward: False
+clip_obs: 10.
+clip_reward: 10.
+
+# loss args
+gamma: 0.99
+tau: 0.005
+
+# noise args 
+random_process: 
+  func: OrnsteinUhlenbeckProcess
+  std:
+    func: LinearSchedule
+    args: 0.2
+
+# optim args
+train_interval: 100
+train_batch_size: 64
+actor_lr: 0.001
+critic_lr: 0.001
+
+# runner args
+max_env_steps: 1000000
+warm_up_steps: 10000
+rollout_batch_size: 4
+num_workers: 1
+max_buffer_size: 1000000
+deque_size: 10
+eval_batch_size: 10
+
+# misc
+log_interval: 0
+save_interval: 0
+num_checkpoints: 0
+eval_interval: 0
+eval_save_best: False 
+tensorboard: False
