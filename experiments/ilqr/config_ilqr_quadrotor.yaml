@@ -1,0 +1,51 @@
+task_config:
+  info_in_reset: True
+  ctrl_freq: 60
+  pyb_freq: 240
+  gui: False
+  episode_len_sec: 5
+  # State initialization
+  init_state:
+    init_x: 0.3
+    init_x_dot: 0.
+    init_z: 0.
+    init_z_dot: 0.
+    init_theta: 0.
+    init_theta_dot: 0.
+
+  randomized_init: False
+  init_state_randomization_info: null
+
+  # Task 
+  task: stabilization
+  task_info: null
+  cost: quadratic
+  # Disturbances
+  disturbances:   
+    dynamics:
+      - disturbance_func: white_noise
+        std: .05
+  # Misc 
+  verbose: False
+
+
+algo_config:
+  q_lqr: [1]
+  r_lqr: [0.1]
+  ctrl_freq: 50
+  pyb_freq: 50
+  random_init: False
+  task: stabilization
+  # Runner args
+  deque_size: 10
+  eval_batch_size: 10
+  output_dir: ./results/ilqr_quad/
+  task_info: null
+  episode_len_sec: 5
+  # Plot
+  plot_traj: False
+  save_plot: True
+  plot_dir: ./results/ilqr_quad/
+  # Export csv files
+  save_data: True
+  data_dir: ./results/ilqr_quad/
