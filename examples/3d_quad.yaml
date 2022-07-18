@@ -1,0 +1,94 @@
+quadrotor_config:
+  seed: 1337
+  info_in_reset: True
+  ctrl_freq: 60
+  pyb_freq: 240
+  gui: True
+  physics: pyb
+  quad_type: 3
+  normalized_rl_action_space: False
+# #
+  init_state:
+    init_x: 0
+    init_x_dot: 0
+    init_z: 0
+    init_z_dot: 0
+    init_theta: 0
+    init_theta_dot: 0
+  randomized_init: False
+#   init_state_randomization_info:
+#     init_x: 
+#       distrib: "uniform"
+#       low: -0.5
+#       high: 0.5
+#     init_x_dot:
+#       distrib: "uniform"
+#       low: -0.01
+#       high: 0.01
+#     init_z:
+#       distrib: "uniform"
+#       low: 0.1
+#       high: 1.5
+#     init_z_dot:
+#       distrib: "uniform"
+#       low: -0.01
+#       high: 0.01
+#     init_theta:
+#       distrib: "uniform"
+#       low: -0.3
+#       high: 0.3
+#     init_theta_dot:
+#       distrib: "uniform"
+#       low: -0.01
+#       high: 0.01
+#   inertial_prop:
+#     mass: 0.027
+#     iyy: 1.4e-5
+  randomized_inertial_prop: False
+#   inertial_prop_randomization_info:
+#     M:
+#       distrib: "uniform"
+#       low: 0.022
+#       high: 0.032
+#     Iyy:
+#       distrib: "uniform"
+#       low: 1.3e-5
+#       high: 1.5e-5
+# #
+#   constraints:
+#     - constraint_form: default_constraint
+#       constrained_variable: input
+#     - constraint_form: default_constraint
+#       constrained_variable: state
+# #
+  task: traj_tracking
+  task_info:
+    stabilization_goal: [0, 1]
+    stabilization_goal_tolerance: 0.01
+    trajectory_type: figure8
+    num_cycles: 1
+    trajectory_plane: "xz"
+    trajectory_position_offset: [0, 1]
+    trajectory_scale: 1
+    proj_point: [0, 0, 0.5]
+    proj_normal: [0, 1, 1]
+  episode_len_sec: 10
+  cost: quadratic
+# #
+#   disturbances:
+#     observation:
+#       - disturbance_func: white_noise
+#         std: 0.01
+#     action:
+#       - disturbance_func: impulse
+#         magnitude: 10
+#         step_offset: 2
+#         duration: 1
+#         decary_rate: 1
+#     dynamics:
+#       - disturbance_func: white_noise
+#         std: 0.1
+# #
+  done_on_out_of_bound: False
+#   done_on_violation: True
+#   verbose: False
