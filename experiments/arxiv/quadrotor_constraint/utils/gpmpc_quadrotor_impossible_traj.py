@@ -133,6 +133,7 @@ def main(config):
         make_traking_plot(test_runs, trajectory, config.output_dir)
         make_quad_plots(test_runs, train_runs, trajectory,  train_envs[0].state_dim, config.output_dir)
 
+    plt.close('all')
     make_traking_plot(test_runs, trajectory, config.output_dir)
     plt.show()
     return train_runs, test_runs
