@@ -26,6 +26,7 @@ class MPC(BaseController):
             warmstart=True,
             soft_constraints=False,
             terminate_run_on_done=True,
+            constraint_tol: float=1e-6,
             # runner args
             # shared/base args
             output_dir="results/temp",
@@ -42,6 +43,7 @@ class MPC(BaseController):
             warmstart (bool): if to initialize from previous iteration.
             soft_constraints (bool): Formulate the constraints as soft constraints.
             terminate_run_on_done (bool): Terminate the run when the environment returns done or not.
+            constraint_tol (float): Tolerance to add the the constraint as sometimes solvers are not exact.
             output_dir (str): output directory to write logs and results.
             additional_constraints (list): List of additional constraints
 
@@ -233,14 +235,14 @@ class MPC(BaseController):
                     cost += 10000*state_slack[sc_i]**2
                     opti.subject_to(state_slack[sc_i] >= 0)
                 else:
-                    opti.subject_to(state_constraint(x_var[:, i]) < 0)
+                    opti.subject_to(state_constraint(x_var[:, i]) < -self.constraint_tol)
             for ic_i, input_constraint in enumerate(self.input_constraints_sym):
                 if self.soft_constraints:
                     opti.subject_to(input_constraint(u_var[:,i]) <= input_slack[ic_i])
                     cost += 10000*input_slack[ic_i]**2
                     opti.subject_to(input_slack[ic_i] >= 0)
                 else:
-                    opti.subject_to(input_constraint(u_var[:,i]) < 0)
+                    opti.subject_to(input_constraint(u_var[:,i]) < -self.constraint_tol)
 
         # Final state constraints.
         for sc_i, state_constraint in enumerate(self.state_constraints_sym):
@@ -249,7 +251,7 @@ class MPC(BaseController):
                 cost += 10000 * state_slack[sc_i] ** 2
                 opti.subject_to(state_slack[sc_i] >= 0)
             else:
-                opti.subject_to(state_constraint(x_var[:, -1]) <= 0)
+                opti.subject_to(state_constraint(x_var[:, -1]) <= -self.constraint_tol)
         # initial condition constraints
         opti.subject_to(x_var[:, 0] == x_init)
 

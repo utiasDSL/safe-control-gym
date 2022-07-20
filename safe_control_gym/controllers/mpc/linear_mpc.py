@@ -31,6 +31,7 @@ class LinearMPC(MPC):
             warmstart=True,
             soft_constraints=False,
             terminate_run_on_done=True,
+            constraint_tol: float=1e-8,
             # runner args
             # shared/base args
             output_dir="results/temp",
@@ -46,6 +47,7 @@ class LinearMPC(MPC):
             warmstart (bool): if to initialize from previous iteration.
             soft_constraints (bool): Formulate the constraints as soft constraints.
             terminate_run_on_done (bool): Terminate the run when the environment returns done or not.
+            constraint_tol (float): Tolerance to add the the constraint as sometimes solvers are not exact.
             output_dir (str): output directory to write logs and results.
             additional_constraints (list): list of constraints.
 
@@ -62,6 +64,7 @@ class LinearMPC(MPC):
             warmstart=warmstart,
             soft_constraints=soft_constraints,
             terminate_run_on_done=terminate_run_on_done,
+            constraint_tol=constraint_tol,
             output_dir=output_dir,
             additional_constraints=additional_constraints,
             **kwargs
@@ -174,7 +177,7 @@ class LinearMPC(MPC):
                     cost += soft_con_coeff*state_slack[sc_i]**2
                     opti.subject_to(state_slack[sc_i] >= 0)
                 else:
-                    opti.subject_to(state_constraint(x_var[:,i] + self.X_EQ.T) <= 0)
+                    opti.subject_to(state_constraint(x_var[:,i] + self.X_EQ.T) <= -self.constraint_tol)
 
             for ic_i, input_constraint in enumerate(self.input_constraints_sym):
                 if self.soft_constraints:
@@ -182,7 +185,7 @@ class LinearMPC(MPC):
                     cost += soft_con_coeff*input_slack[ic_i]**2
                     opti.subject_to(input_slack[ic_i] >= 0)
                 else:
-                    opti.subject_to(input_constraint(u_var[:,i] + self.U_EQ.T) <= 0)
+                    opti.subject_to(input_constraint(u_var[:,i] + self.U_EQ.T) <= -self.constraint_tol)
 
         # final state constraints
         for sc_i, state_constraint in enumerate(self.state_constraints_sym):
@@ -191,7 +194,7 @@ class LinearMPC(MPC):
                 cost += soft_con_coeff * state_slack[sc_i] ** 2
                 opti.subject_to(state_slack[sc_i] >= 0)
             else:
-                opti.subject_to(state_constraint(x_var[:,-1] + self.X_EQ.T) <= 0)
+                opti.subject_to(state_constraint(x_var[:,-1] + self.X_EQ.T) <= -self.constraint_tol)
 
         # initial condition constraints
         opti.subject_to(x_var[:, 0] == x_init)
