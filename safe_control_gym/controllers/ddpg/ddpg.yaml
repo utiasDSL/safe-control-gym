@@ -9,8 +9,8 @@ clip_reward: 10.
 gamma: 0.99
 tau: 0.005
 
-# noise args 
-random_process: 
+# noise args
+random_process:
   func: OrnsteinUhlenbeckProcess
   std:
     func: LinearSchedule
@@ -36,5 +36,5 @@ log_interval: 0
 save_interval: 0
 num_checkpoints: 0
 eval_interval: 0
-eval_save_best: False 
+eval_save_best: False
 tensorboard: False

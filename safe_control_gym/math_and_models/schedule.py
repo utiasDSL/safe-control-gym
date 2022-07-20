@@ -41,5 +41,3 @@ class LinearSchedule:
     
     def load_state_dict(self, state):
         self.current = state["current"] 
-
-    

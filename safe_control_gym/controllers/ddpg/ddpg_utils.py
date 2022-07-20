@@ -10,13 +10,13 @@ from safe_control_gym.math_and_models.distributions import Normal, Categorical
 from safe_control_gym.math_and_models.neural_networks import MLP, CNN, RNN, init_
 from safe_control_gym.math_and_models.normalization import BaseNormalizer, MeanStdNormalizer, RewardStdNormalizer
 from safe_control_gym.math_and_models.schedule import *
-from safe_control_gym.math_and_models.random_process import * 
+from safe_control_gym.math_and_models.random_processes import * 
 from safe_control_gym.controllers.sac.sac_utils import SACBuffer, soft_update
+
 
 # -----------------------------------------------------------------------------------
 #                   Agent
 # -----------------------------------------------------------------------------------
-
 
 class DDPGAgent:
     """A DDPG class that encapsulates model, optimizer and update functions."""
@@ -128,7 +128,6 @@ class DDPGAgent:
 #                   Models
 # -----------------------------------------------------------------------------------
 
-
 class MLPActor(nn.Module):
 
     def __init__(self, obs_dim, act_dim, hidden_dims, activation, postprocess_fn=lambda x: x):
@@ -181,7 +180,6 @@ class MLPActorCritic(nn.Module):
 # -----------------------------------------------------------------------------------
 #                   Storage
 # -----------------------------------------------------------------------------------
-
 
 class DDPGBuffer(SACBuffer):
     """Storage for replay buffer during training.

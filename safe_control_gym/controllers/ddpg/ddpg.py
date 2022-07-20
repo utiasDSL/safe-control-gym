@@ -1,4 +1,16 @@
 """Deep Deterministic Policy Gradient
+
+Reference paper & code:
+    * [Continuous Control with Deep Reinforcement Learning](https://arxiv.org/pdf/1509.02971.pdf)
+    * [openai spinning up - ddpg](https://github.com/openai/spinningup/tree/master/spinup/algos/pytorch/ddpg)
+    * [DeepRL - ddpg](https://github.com/ShangtongZhang/DeepRL/blob/master/deep_rl/agent/DDPG_agent.py)
+
+Example:
+    $ python experiments/main.py --algo ddpg --task cartpole --output_dir results --tag test/cartpole_ddpg --seed 6 
+    
+Todo
+    *
+
 """
 import os
 import time
