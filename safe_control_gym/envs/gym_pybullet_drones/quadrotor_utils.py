@@ -15,6 +15,7 @@ class QuadType(IntEnum):
 
     ONE_D = 1  # One-dimensional (along z) movement.
     TWO_D = 2  # Two-dimensional (in the x-z plane) movement.
+    THREE_D = 3  # Three-dimensional movement.
 
 
 def cmd2pwm(thrust, pwm2rpm_scale, pwm2rpm_const, ct, pwm_min, pwm_max):
@@ -42,6 +43,8 @@ def cmd2pwm(thrust, pwm2rpm_scale, pwm2rpm_const, ct, pwm_min, pwm_max):
         motor_pwm = np.repeat(motor_pwm, 4)
     elif thrust.size == 2:  # 2D case.
         motor_pwm = np.concatenate([motor_pwm, motor_pwm[::-1]], 0)
+    elif thrust.size == 4:  # 3D case.
+        motor_pwm = np.array(motor_pwm)
     else:
         raise ValueError("Input action shape not supported.")
     motor_pwm = np.clip(motor_pwm, pwm_min, pwm_max)
