@@ -101,7 +101,7 @@ def main(config):
             train_runs[epoch].update({episode: munch.munchify(run_results)})
 
         trajectory = test_envs[0].X_GOAL
-        make_traking_plot(test_runs, trajectory, config.output_dir)
+        make_traking_plot(test_runs, trajectory, config.output_dir, impossible=False)
 
 
     np.savez(os.path.join(config.output_dir, 'data'),
@@ -116,8 +116,10 @@ def main(config):
              data_inputs=ctrl.data_inputs,
              data_targets=ctrl.data_targets)
     make_quad_plots(test_runs, train_runs, trajectory, test_envs[0].state_dim, config.output_dir)
-    plt.close()
+    plt.close('all')
+    make_traking_plot(test_runs, trajectory, config.output_dir, impossible=False)
     fname = os.path.join(config.output_dir, 'figs', 'rmse_xz_error_learning_curve.csv')
+    plt.figure()
     plot_data_eff_from_csv(fname,
                            'Quadrotor Data Efficiency')
     return train_runs, test_runs

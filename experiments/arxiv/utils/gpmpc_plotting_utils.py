@@ -230,7 +230,7 @@ def gather_training_samples_from_all_data(all_runs, num_samples):
     return x_seq_int, actions_int, x_next_seq_int
 
 
-def make_traking_plot(runs, traj, dir):
+def make_traking_plot(runs, traj, dir, impossible=True):
     num_epochs = len(runs.keys())
     plt.figure()
     plt.plot(runs[0][0]['obs'][:, 0], runs[0][0]['obs'][:, 2], label='Linear MPC')
@@ -241,12 +241,16 @@ def make_traking_plot(runs, traj, dir):
         np.savetxt(os.path.join(dir, 'traj_%s.csv' % epoch), traj1, delimiter=',')
         plt.plot(runs[epoch][0]['obs'][:, 0], runs[epoch][0]['obs'][:, 2], label='GP-MPC %s' % epoch)
     plt.plot(traj[:,0], traj[:,2], 'k',label='Reference')
-    plt.plot([-0.4,-0.4],[0.0, 0.9], 'r', label='Limit')
-    plt.plot([0.4,0.4],[0.0, 0.9], 'r')
-    plt.plot([-0.4,0.4],[0.9, 0.9], 'r')
-    plt.plot([-0.4,0.4],[0.0, 0.0], 'r')
+    if impossible:
+        plt.plot([-0.4,-0.4],[0.0, 0.9], 'r', label='Limit')
+        plt.plot([0.4,0.4],[0.0, 0.9], 'r')
+        plt.plot([-0.4,0.4],[0.9, 0.9], 'r')
+        plt.plot([-0.4,0.4],[0.0, 0.0], 'r')
     plt.legend()
-    plt.title("Quadrotor Impossible Tracking")
+    if impossible:
+        plt.title("Quadrotor Impossible Tracking")
+    else:
+        plt.title("Quadrotor Tracking")
     plt.xlabel('X position (m)')
     plt.ylabel('Z position (m)')
     save_str = os.path.join(dir, 'quad_traj.png')
@@ -471,11 +475,12 @@ def plot_impossible_traj_from_csv(fnames):
     plt.ylabel('Z position (m)')
     plt.show()
 
-def plot_ctrl_perf(fname):
+def plot_ctrl_perf(fname, labels):
     data = np.genfromtxt(fname, delimiter=',')
     n = data.shape[1]
     fig, ax = plt.subplots(n-1,1)
     for i in range(1,n):
         ax[i-1].plot(data[:,0], data[:,i])
         ax[i-1].set_xlabel('Time (s)')
+        ax[i-1].set_ylabel(labels[i-1], fontsize=6)
     plt.show()
