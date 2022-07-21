@@ -394,7 +394,8 @@ class GPMPC(MPC):
             # If there is no previous solution. Choose T random training set points.
             if self.inducing_point_selection_method == 'kmeans':
                 centroids = kmeans_centriods(n_ind_points, inputs[:, self.input_mask], rand_state=self.seed)
-                inds, dist_mat = pairwise_distances_argmin_min(centroids, inputs[:, self.input_mask])
+                contiguous_masked_inputs = np.ascontiguousarray(inputs[:, self.input_mask]) # required for version sklearn later than 1.0.2
+                inds, dist_mat = pairwise_distances_argmin_min(centroids, contiguous_masked_inputs)
                 z_ind = inputs[inds][:, self.input_mask]
             elif self.inducing_point_selection_method == 'random':
                 inds = self.env.np_random.choice(range(n_data_points), size=n_ind_points, replace=False)
