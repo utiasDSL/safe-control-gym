@@ -176,10 +176,20 @@ if __name__ == "__main__":
                                         max_steps=30)
 
     # Learn the gp by collecting training points.
-    ctrl.learn()
-    if not config.train_only:
-        # Run with the learned gp model.
 
+    if config.train_only:
+        ctrl.learn()
+        data_inputs, data_targets = ctrl.data_inputs, ctrl.data_targets
+        np.savez('trained_gp_model/data.npz',
+                 data_inputs=data_inputs,
+                 data_targets=data_targets)
+    else:
+        # Run with the learned gp model.
+        data = np.load('trained_gp_model/data.npz')
+        #ctrl.learn(input_data=data['data_inputs'][:config.algo_config.train_iterations,:],
+        #           target_data=data['data_targets'][:config.algo_config.train_iterations,:])
+        ctrl.learn(input_data=data['data_inputs'],
+                   target_data=data['data_targets'])
         run_results = ctrl.run(env=test_env,
                                max_steps=50)
         ctrl.close()
