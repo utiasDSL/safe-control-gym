@@ -2,7 +2,7 @@
 
 """
 import numpy as np
-import scipy
+import scipy.linalg
 from termcolor import colored
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter

@@ -27,10 +27,6 @@ register(id="gp_mpc",
          entry_point="safe_control_gym.controllers.mpc.gp_mpc:GPMPC",
          config_entry_point="safe_control_gym.controllers.mpc:gp_mpc.yaml")
 
-register(id="mpsc",
-         entry_point="safe_control_gym.controllers.mpsc.mpsc:MPSC",
-         config_entry_point="safe_control_gym.controllers.mpsc:mpsc.yaml")
-
 register(id="pid",
          entry_point="safe_control_gym.controllers.pid.pid:PID",
          config_entry_point="safe_control_gym.controllers.pid:pid.yaml")

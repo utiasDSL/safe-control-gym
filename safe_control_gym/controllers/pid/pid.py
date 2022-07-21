@@ -45,6 +45,7 @@ class PID(BaseController):
 
         super().__init__(env_func, **kwargs)
 
+        self.env = env_func()
         self.GRAVITY = float(g) * 0.027
         self.KF = float(KF)
         self.KM = float(KM)
@@ -60,10 +61,72 @@ class PID(BaseController):
         self.MAX_PWM = float(MAX_PWM)
         self.MIXER_MATRIX = np.array(MIXER_MATRIX)
 
+        self.control_timestep = self.env.CTRL_TIMESTEP
+        self.reference = self.env.X_GOAL
+
         self.reset()
+    
+    def select_action(self, obs, step=0):
+        """Calculates control input.
+
+        Args:
+            obs (np.array): step-wise observation/input.
+            step (int): the current iteration for trajectory tracking purposes
+
+        Returns:
+           np.array: step-wise control input/action.
+        """
+
+        # Step the environment and print all returned information.
+        cur_pos=np.array([obs[0], 0, obs[2]])
+        cur_quat=np.array(p.getQuaternionFromEuler([0, obs[4], 0]))
+        cur_vel=np.array([obs[1], 0, obs[3]])
+        cur_ang_vel=np.array([0, obs[4], 0])
+
+        if self.env.TASK == Task.TRAJ_TRACKING:
+            target_pos=np.array([
+                                    self.reference[step-1,0],
+                                    0,
+                                    self.reference[step-1,2]
+                                ])
+            target_vel=np.array([
+                                    self.reference[step-1,1],
+                                    0,
+                                    self.reference[step-1,3]
+                                ])
+        elif self.env.TASK == Task.STABILIZATION:
+            target_pos=np.array([self.reference[0], 0, self.reference[2] ])
+            target_vel=np.array([0, 0, 0 ])
+        else:
+            raise NotImplementedError
+        
+        target_rpy = np.zeros(3)
+        target_rpy_rates = np.zeros(3)
+
+        # Compute the next action.
+        thrust, computed_target_rpy, pos_e = self._dslPIDPositionControl(   cur_pos,
+                                                                            cur_quat,
+                                                                            cur_vel,
+                                                                            target_pos,
+                                                                            target_rpy,
+                                                                            target_vel
+                                                                            )
+        rpm = self._dslPIDAttitudeControl(  thrust,
+                                            cur_quat,
+                                            computed_target_rpy,
+                                            target_rpy_rates
+                                            )
+        cur_rpy = p.getEulerFromQuaternion(cur_quat)
+        
+        action = rpm
+        action = self.KF * action**2
+        action = np.array([action[0]+action[3], action[1]+action[2]])
+
+        return action
 
     def run(self,
-            iterations,
+            env=None,
+            max_steps=500,
             **kwargs
             ):
         """Computes the PID control action (as RPMs) for a single drone.
@@ -72,87 +135,49 @@ class PID(BaseController):
         Parameter `cur_ang_vel` is unused.
 
         Args:
-            control_timestep (float): The time step at which control is computed.
-            cur_pos (ndarray): (3,1)-shaped array of floats containing the current position.
-            cur_quat (ndarray): (4,1)-shaped array of floats containing the current orientation as a quaternion.
-            cur_vel (ndarray): (3,1)-shaped array of floats containing the current velocity.
-            cur_ang_vel (ndarray): (3,1)-shaped array of floats containing the current angular velocity.
-            target_pos (ndarray): (3,1)-shaped array of floats containing the desired position.
-            target_rpy (ndarray, optional): (3,1)-shaped array of floats containing the desired orientation as roll, pitch, yaw.
-            target_vel (ndarray, optional): (3,1)-shaped array of floats containing the desired velocity.
-            target_rpy_rates (ndarray, optional): (3,1)-shaped array of floats containing the desired roll, pitch, and yaw rates.
-
+            env (gym.Env): environment for the task.
+            max_steps (int): maximum number of steps
         Returns:
-            ndarray: (4,1)-shaped array of integers containing the RPMs to apply to each of the 4 motors.
-            ndarray: (3,1)-shaped array of floats containing the current XYZ position error.
-            float: The current yaw error.
+            dict: evaluation results
 
         """
-        action = np.zeros(2)
 
-        for i in range(iterations):
-            # Step the environment and print all returned information.
-            obs, reward, done, info = self.env.step(action)
+        if env is None:
+            env = self.env
 
-            cur_pos=np.array([obs[0], 0, obs[2]])
-            cur_quat=np.array(p.getQuaternionFromEuler([0, obs[4], 0]))
-            cur_vel=np.array([obs[1], 0, obs[3]])
-            cur_ang_vel=np.array([0, obs[4], 0])
+        # Reseed for batch-wise consistency.
+        obs, _ = env.reset()
+        self.results_dict['obs'].append(obs)
 
-            if self.env.TASK == Task.TRAJ_TRACKING:
-                target_pos=np.array([
-                                        self.reference[i-1,0],
-                                        0,
-                                        self.reference[i-1,2]
-                                    ])
-                target_vel=np.array([
-                                        self.reference[i-1,1],
-                                        0,
-                                        self.reference[i-1,3]
-                                    ])
-            elif self.env.TASK == Task.STABILIZATION:
-                target_pos=np.array([self.reference[0], 0, self.reference[2] ])
-                target_vel=np.array([0, 0, 0 ])
-            else:
-                raise NotImplementedError
+        for step in range(max_steps):
+            # Select action.
+            action = self.select_action(obs=obs, step=step)
+            if self.safety_filter:
+                new_action, success = self.safety_filter.certify_action(current_state=obs, uncertified_action=action, iteration=step)
+                if success:
+                    action_diff = np.linalg.norm(new_action - action)
+                    self.results_dict['corrections'].append(action_diff)
+                    action = new_action
+                else:
+                    self.results_dict['corrections'].append(0.0)
             
-            target_rpy = np.zeros(3)
-            target_rpy_rates = np.zeros(3)
-
-            # Compute the next action.
-            self.control_counter += 1
-            thrust, computed_target_rpy, pos_e = self._dslPIDPositionControl(self.control_timestep,
-                                                                             cur_pos,
-                                                                             cur_quat,
-                                                                             cur_vel,
-                                                                             target_pos,
-                                                                             target_rpy,
-                                                                             target_vel
-                                                                             )
-            rpm = self._dslPIDAttitudeControl(self.control_timestep,
-                                             thrust,
-                                             cur_quat,
-                                             computed_target_rpy,
-                                             target_rpy_rates
-                                             )
-            cur_rpy = p.getEulerFromQuaternion(cur_quat)
-            
-            action = rpm
-            action = self.KF * action**2
-            action = np.array([action[0]+action[3], action[1]+action[2]])
-            
+            # Step forward.
+            obs, reward, done, info = env.step(action)
             self.results_dict['obs'].append(obs)
             self.results_dict['reward'].append(reward)
             self.results_dict['done'].append(done)
             self.results_dict['info'].append(info)
             self.results_dict['action'].append(action)
 
+            if done:
+                print(f'SUCCESS: Reached goal on step {step}. Terminating...')
+                break
+
         self.close_results_dict()
 
         return self.results_dict
     
     def _dslPIDPositionControl(self,
-                               control_timestep,
                                cur_pos,
                                cur_quat,
                                cur_vel,
@@ -163,7 +188,6 @@ class PID(BaseController):
         """DSL's CF2.x PID position control.
 
         Args:
-            control_timestep (float): The time step at which control is computed.
             cur_pos (ndarray): (3,1)-shaped array of floats containing the current position.
             cur_quat (ndarray): (4,1)-shaped array of floats containing the current orientation as a quaternion.
             cur_vel (ndarray): (3,1)-shaped array of floats containing the current velocity.
@@ -180,7 +204,7 @@ class PID(BaseController):
         cur_rotation = np.array(p.getMatrixFromQuaternion(cur_quat)).reshape(3, 3)
         pos_e = target_pos - cur_pos
         vel_e = target_vel - cur_vel
-        self.integral_pos_e = self.integral_pos_e + pos_e*control_timestep
+        self.integral_pos_e = self.integral_pos_e + pos_e*self.control_timestep
         self.integral_pos_e = np.clip(self.integral_pos_e, -2., 2.)
         self.integral_pos_e[2] = np.clip(self.integral_pos_e[2], -0.15, .15)
         
@@ -205,7 +229,6 @@ class PID(BaseController):
         return thrust, target_euler, pos_e
     
     def _dslPIDAttitudeControl(self,
-                               control_timestep,
                                thrust,
                                cur_quat,
                                target_euler,
@@ -214,7 +237,6 @@ class PID(BaseController):
         """DSL's CF2.x PID attitude control.
 
         Args:
-            control_timestep (float): The time step at which control is computed.
             thrust (float): The target thrust along the drone z-axis.
             cur_quat (ndarray): (4,1)-shaped array of floats containing the current orientation as a quaternion.
             target_euler (ndarray): (3,1)-shaped array of floats containing the computed target Euler angles.
@@ -231,9 +253,9 @@ class PID(BaseController):
         target_rotation = (Rotation.from_quat([w, x, y, z])).as_matrix()
         rot_matrix_e = np.dot((target_rotation.transpose()),cur_rotation) - np.dot(cur_rotation.transpose(),target_rotation)
         rot_e = np.array([rot_matrix_e[2, 1], rot_matrix_e[0, 2], rot_matrix_e[1, 0]]) 
-        rpy_rates_e = target_rpy_rates - (cur_rpy - self.last_rpy)/control_timestep
+        rpy_rates_e = target_rpy_rates - (cur_rpy - self.last_rpy)/self.control_timestep
         self.last_rpy = cur_rpy
-        self.integral_rpy_e = self.integral_rpy_e - rot_e*control_timestep
+        self.integral_rpy_e = self.integral_rpy_e - rot_e*self.control_timestep
         self.integral_rpy_e = np.clip(self.integral_rpy_e, -1500., 1500.)
         self.integral_rpy_e[0:2] = np.clip(self.integral_rpy_e[0:2], -1., 1.)
         
@@ -252,9 +274,23 @@ class PID(BaseController):
 
         """
         self.env.close()
+    
+    def setup_results_dict(self):
+        """Setup the results dictionary to store run information.
+
+        """
+        self.results_dict = {}
+        self.results_dict['obs'] = []
+        self.results_dict['reward'] = []
+        self.results_dict['done'] = []
+        self.results_dict['info'] = []
+        self.results_dict['action'] = []
+        
+        if self.safety_filter:
+            self.results_dict['corrections'] = []
 
     def close_results_dict(self):
-        """Cleanup the rtesults dict and munchify it.
+        """Cleanup the results dict and munchify it.
 
         """
         self.results_dict['obs'] = np.vstack(self.results_dict['obs'])
@@ -262,6 +298,10 @@ class PID(BaseController):
         self.results_dict['done'] = np.vstack(self.results_dict['done'])
         self.results_dict['info'] = np.vstack(self.results_dict['info'])
         self.results_dict['action'] = np.vstack(self.results_dict['action'])
+
+        if self.safety_filter:
+            self.results_dict['corrections'].append(0.0)
+            self.results_dict['corrections'] = np.hstack(self.results_dict['corrections'])
 
         self.results_dict = munchify(self.results_dict)
 
@@ -271,25 +311,17 @@ class PID(BaseController):
         The previous step's and integral errors for both position and attitude are set to zero.
 
         """
-        self.env = self.env_func()
-        initial_obs, initial_info = self.env.reset()
-        self.control_timestep = self.env.CTRL_TIMESTEP
-        self.reference = initial_info['x_reference']
-
-        self.control_counter = 0
-        
-        # Clear the last roll, pitch, and yaw.
-        self.last_rpy = np.zeros(3)
+        self.env.reset()
         
         # Clear PID control variables.
-        self.last_pos_e = np.zeros(3)
         self.integral_pos_e = np.zeros(3)
-        self.last_rpy_e = np.zeros(3)
+        self.last_rpy = np.zeros(3)
         self.integral_rpy_e = np.zeros(3)
 
-        self.results_dict = { 'obs': [],
-                        'reward': [],
-                        'done': [],
-                        'info': [],
-                        'action': [],
-                        }
+        self.setup_results_dict()
+
+    def load(self, path):
+        self.integral_pos_e, self.last_rpy, self.integral_rpy_e = np.load(path)
+    
+    def save(self, path):
+        np.save(path, (self.integral_pos_e, self.last_rpy, self.integral_rpy_e))

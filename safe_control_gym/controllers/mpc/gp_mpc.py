@@ -152,6 +152,7 @@ class GPMPC(MPC):
             constraint_tol=constraint_tol,
             # runner args
             # shared/base args
+            use_gpu=use_gpu,
             output_dir=output_dir,
             additional_constraints=additional_constraints,
             **kwargs)
@@ -175,7 +176,6 @@ class GPMPC(MPC):
         self.learning_rate = learning_rate
         self.gp_model_path = gp_model_path
         self.normalize_training_data = normalize_training_data
-        self.use_gpu = use_gpu and torch.cuda.is_available()
         self.seed = seed
         self.prob = prob
         self.sparse_gp = sparse_gp

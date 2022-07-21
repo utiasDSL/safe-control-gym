@@ -37,6 +37,8 @@ def run(gui=None, max_steps=None):
 
     # Start a timer.
     START = time.time()
+
+    config.quadrotor_config['gui'] = gui
     
     # Create controller.
     env_func = partial(make,
@@ -58,7 +60,7 @@ def run(gui=None, max_steps=None):
                                 physicsClientId=ctrl.env.PYB_CLIENT)
 
     # Run the experiment.
-    results = ctrl.run(iterations=ITERATIONS)
+    results = ctrl.run(max_steps=ITERATIONS)
     ctrl.close()
             
     # Plot the experiment.

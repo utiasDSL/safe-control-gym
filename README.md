@@ -137,7 +137,7 @@ Familiarize with APIs and environments with the scripts in [`examples/`](https:/
 ```
 $ cd ./examples/                                                                    # Navigate to the examples folder
 $ python3 tracking.py --overrides ./tracking.yaml                                   # PID trajectory tracking with the 2D quadcopter
-$ python3 verbose_api.py --system cartpole --overrides verbose_api.yaml             #  Printout of the extended safe-control-gym APIs
+$ python3 verbose_api.py --task cartpole --overrides verbose_api.yaml             #  Printout of the extended safe-control-gym APIs
 ```
 
 
@@ -167,9 +167,11 @@ $ python3 verbose_api.py --system cartpole --overrides verbose_api.yaml         
 - [Safety Layer](https://github.com/utiasDSL/safe-control-gym/tree/main/safe_control_gym/controllers/safe_explorer)
 - [RARL](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/rarl/rarl.py)
 - [RAP](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/rarl/rap.py)
-- [MPSC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpsc/mpsc.py)
-- [CBF](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/cbf/cbf_qp.py)
 
+
+## List of Implemented Safety Filters
+- [MPSC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/safety_filters/mpsc/mpsc.py)
+- [CBF](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/cbf/cbf_qp.py)
 
 
 

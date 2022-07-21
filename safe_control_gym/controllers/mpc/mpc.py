@@ -463,4 +463,5 @@ class MPC(BaseController):
         except ValueError:
             raise Exception("[ERROR] mpc.run().py: MPC could not find a solution for the first step given the initial conditions. "
                   "Check to make sure initial conditions are feasible.")
+
         return deepcopy(self.results_dict)
