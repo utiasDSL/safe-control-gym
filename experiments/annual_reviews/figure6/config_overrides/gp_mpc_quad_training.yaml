@@ -17,9 +17,9 @@ algo_config:
   train_iterations: 800
   validation_iterations: 200
   optimization_iterations:
-    - 1000
+    - 2000
     - 1500
-    - 1000
+    - 2000
     - 2000
     - 2000
     - 2000
@@ -83,7 +83,10 @@ task_config:
         - 0.0
         - 0.0
   done_on_violation: True
-  disturbances: null
+  disturbances:
+    observation:
+      - disturbance_func: white_noise
+        std: 0.003
   init_state_randomization_info:
     init_x:
       distrib: 'uniform'
@@ -107,5 +110,5 @@ task_config:
       high: 0.2
     init_theta_dot:
       distrib: 'uniform'
-      low: -0.1
-      high: 0.1
+      low: -1.7
+      high: 1.7

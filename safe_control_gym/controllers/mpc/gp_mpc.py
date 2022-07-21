@@ -48,6 +48,7 @@ class GPMPC(MPC):
             horizon: int = 5,
             q_mpc: list = [1],
             r_mpc: list = [1],
+            constraint_tol: float=1e-8,
             additional_constraints: list = None,
             soft_constraints: dict = None,
             warmstart: bool = True,
@@ -82,6 +83,7 @@ class GPMPC(MPC):
             seed (int): random seed.
             horizon (int): MPC planning horizon.
             Q, R (np.array): cost weight matrix.
+            constraint_tol (float): Tolerance to add the the constraint as sometimes solvers are not exact.
             use_prev_start (bool): Warmstart mpc with the previous solution.
             train_iterations (int): the number of training examples to use for each dimension of the GP.
             overwrite_saved_data (bool): Overwrite the input and target data to the already saved data if it exists.
@@ -147,6 +149,7 @@ class GPMPC(MPC):
             warmstart=warmstart,
             soft_constraints=self.soft_constraints_params['gp_soft_constraints'],
             terminate_run_on_done=terminate_run_on_done,
+            constraint_tol=constraint_tol,
             # runner args
             # shared/base args
             output_dir=output_dir,
@@ -391,7 +394,8 @@ class GPMPC(MPC):
             # If there is no previous solution. Choose T random training set points.
             if self.inducing_point_selection_method == 'kmeans':
                 centroids = kmeans_centriods(n_ind_points, inputs[:, self.input_mask], rand_state=self.seed)
-                inds, dist_mat = pairwise_distances_argmin_min(centroids, inputs[:, self.input_mask])
+                contiguous_masked_inputs = np.ascontiguousarray(inputs[:, self.input_mask]) # required for version sklearn later than 1.0.2
+                inds, dist_mat = pairwise_distances_argmin_min(centroids, contiguous_masked_inputs)
                 z_ind = inputs[inds][:, self.input_mask]
             elif self.inducing_point_selection_method == 'random':
                 inds = self.env.np_random.choice(range(n_data_points), size=n_ind_points, replace=False)
@@ -500,14 +504,14 @@ class GPMPC(MPC):
                     cost += soft_con_coeff*state_slack_list[s_i][:,i].T @ state_slack_list[s_i][:,i]
                     opti.subject_to(state_slack_list[s_i][:,i] >= 0)
                 else:
-                    opti.subject_to(state_constraint(x_var[:, i]) <= state_constraint_set[s_i][:,i])
+                    opti.subject_to(state_constraint(x_var[:, i]) <= state_constraint_set[s_i][:,i] - self.constraint_tol)
             for u_i, input_constraint in enumerate(self.input_constraints_sym):
                 if self.gp_soft_constraints:
                     opti.subject_to(input_constraint(u_var[:, i]) <= input_constraint_set[u_i][:,i] + input_slack_list[u_i][:, i])
                     cost += soft_con_coeff*input_slack_list[u_i][:,i].T @ input_slack_list[u_i][:,i]
                     opti.subject_to(input_slack_list[u_i][:,i] >= 0)
                 else:
-                    opti.subject_to(input_constraint(u_var[:, i]) <= input_constraint_set[u_i][:, i])
+                    opti.subject_to(input_constraint(u_var[:, i]) <= input_constraint_set[u_i][:, i] - self.constraint_tol)
 
         # Final state constraints.
         for s_i, state_constraint in enumerate(self.state_constraints_sym):
@@ -516,7 +520,7 @@ class GPMPC(MPC):
                 cost += soft_con_coeff*state_slack_list[s_i][:,-1].T @ state_slack_list[s_i][:,-1]
                 opti.subject_to(state_slack_list[s_i][:,-1] >= 0)
             else:
-                opti.subject_to(state_constraint(x_var[:, -1]) <= state_constraint_set[s_i][:,-1])
+                opti.subject_to(state_constraint(x_var[:, -1]) <= state_constraint_set[s_i][:,-1] - self.constraint_tol)
 
         # Bound constraints.
         upper_state_bounds = np.clip(self.prior_ctrl.env.observation_space.high, None, 10)
@@ -524,9 +528,15 @@ class GPMPC(MPC):
         upper_input_bounds = np.clip(self.prior_ctrl.env.action_space.high, None, 10)
         lower_input_bounds = np.clip(self.prior_ctrl.env.action_space.low, -10, None)
         for i in range(self.T):
-            opti.subject_to(opti.bounded(lower_state_bounds, x_var[:,i], upper_state_bounds ))
-            opti.subject_to(opti.bounded(lower_input_bounds, u_var[:,i], upper_input_bounds ))
-        opti.subject_to(opti.bounded(lower_state_bounds, x_var[:,-1], upper_state_bounds ))
+            opti.subject_to(opti.bounded(lower_state_bounds + self.constraint_tol,
+                                         x_var[:,i],
+                                         upper_state_bounds - self.constraint_tol ))
+            opti.subject_to(opti.bounded(lower_input_bounds + self.constraint_tol,
+                                         u_var[:,i],
+                                         upper_input_bounds - self.constraint_tol))
+        opti.subject_to(opti.bounded(lower_state_bounds + self.constraint_tol,
+                                     x_var[:,-1],
+                                     upper_state_bounds - self.constraint_tol))
 
         opti.minimize(cost)
         # Initial condition constraints.
