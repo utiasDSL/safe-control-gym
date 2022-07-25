@@ -350,7 +350,7 @@ class BenchmarkEnv(gym.Env):
         self.initial_reset = True
         self.pyb_step_counter = 0
         self.ctrl_step_counter = 0
-        self.current_unnormalized_action = None
+        self.current_normalized_action = None
         self.current_raw_action = None
         self.current_preprocessed_action = None
         # Reset the disturbances.
@@ -384,7 +384,7 @@ class BenchmarkEnv(gym.Env):
         # Sanity check (reset at least once).
         self._check_initial_reset()
         # Save the raw input action.
-        self.current_unnormalized_action = action
+        self.current_normalized_action = action
         # Pre-process/clip the action
         processed_action = self._preprocess_control(action)
         return processed_action
