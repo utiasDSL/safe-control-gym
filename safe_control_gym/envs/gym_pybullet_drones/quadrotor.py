@@ -559,6 +559,13 @@ class Quadrotor(BaseAviary):
             self.ACTION_LABELS = ['T1', 'T2', 'T3', 'T4']
             self.ACTION_UNITS = ['N', 'N', 'N', 'N'] if not self.NORMALIZED_RL_ACTION_SPACE else ['-', '-', '-', '-']
 
+        n_mot = 4 / action_dim
+        a_low = self.KF * n_mot * (self.PWM2RPM_SCALE * self.MIN_PWM + self.PWM2RPM_CONST)**2
+        a_high = self.KF * n_mot * (self.PWM2RPM_SCALE * self.MAX_PWM + self.PWM2RPM_CONST)**2
+        self.physical_action_space = spaces.Box(low=np.full(action_dim, a_low, np.float32), 
+                                        high=np.full(action_dim, a_high, np.float32), 
+                                        dtype=np.float32)
+
         if self.NORMALIZED_RL_ACTION_SPACE:
             # Normalized thrust (around hover thrust).
             self.hover_thrust = self.GRAVITY_ACC * self.MASS / action_dim
@@ -566,13 +573,8 @@ class Quadrotor(BaseAviary):
                                            high=np.ones(action_dim), 
                                            dtype=np.float32)
         else:
-            # Direct thrust control .
-            n_motors = 4 / action_dim
-            a_low = self.KF * n_motors * (self.PWM2RPM_SCALE * self.MIN_PWM + self.PWM2RPM_CONST)**2
-            a_high = self.KF * n_motors * (self.PWM2RPM_SCALE * self.MAX_PWM + self.PWM2RPM_CONST)**2
-            self.action_space = spaces.Box(low=np.full(action_dim, a_low, np.float32), 
-                                           high=np.full(action_dim, a_high, np.float32), 
-                                           dtype=np.float32)
+            # Direct thrust control.
+            self.action_space = self.physical_action_space
 
     def _set_observation_space(self):
         """Returns the observation space of the environment.
@@ -632,14 +634,14 @@ class Quadrotor(BaseAviary):
         # Define the state space for the dynamics.
         self.state_space = spaces.Box(low=low, high=high, dtype=np.float32)
 
-        # Concatenate reference for RL .
-        if self.COST == Cost.RL_REWARD and self.TASK == Task.TRAJ_TRACKING:
+        # Concatenate reference for RL.
+        if self.COST == Cost.RL_REWARD and self.TASK == Task.TRAJ_TRACKING and self.obs_goal_horizon > 0:
             # Include future goal state(s).
             # e.g. horizon=1, obs = {state, state_target}
             mul = 1 + self.obs_goal_horizon
             low = np.concatenate([low] * mul)
             high = np.concatenate([high] * mul)
-        elif self.COST == Cost.RL_REWARD and self.TASK == Task.STABILIZATION:
+        elif self.COST == Cost.RL_REWARD and self.TASK == Task.STABILIZATION and self.obs_goal_horizon > 0:
             low = np.concatenate([low] * 2)
             high = np.concatenate([high] * 2)
 
@@ -666,10 +668,9 @@ class Quadrotor(BaseAviary):
         """
         if self.NORMALIZED_RL_ACTION_SPACE:
             # rescale action to around hover thrust
-            action = np.clip(action, self.action_space.low, self.action_space.high)
-            thrust = (1 + self.norm_act_scale * action) * self.hover_thrust
-        else:
-            thrust = np.clip(action, self.action_space.low, self.action_space.high)
+            action = (1 + self.norm_act_scale * action) * self.hover_thrust
+            self.current_raw_action = action
+        thrust = np.clip(action, self.physical_action_space.low, self.physical_action_space.high)
         if not np.array_equal(thrust, np.array(action)) and self.VERBOSE:
             print("[WARNING]: action was clipped in Quadrotor._preprocess_control().")
         self.current_preprocessed_action = thrust
@@ -716,21 +717,8 @@ class Quadrotor(BaseAviary):
         obs = deepcopy(self.state)
         if "observation" in self.disturbances:
             obs = self.disturbances["observation"].apply(obs, self) 
-
-        # Concatenate goal info (references state(s)) for RL.
-        if self.COST == Cost.RL_REWARD and self.TASK == Task.TRAJ_TRACKING:            
-            # Increment by 1 since counter is post-updated after _get_observation(),
-            # obs should contain goal state desired for the next state
-            next_step = self.ctrl_step_counter + 1 
-            wp_idx = [
-                min(next_step + i, self.X_GOAL.shape[0]-1) 
-                for i in range(self.obs_goal_horizon)
-            ]
-            goal_state = self.X_GOAL[wp_idx].flatten()
-            obs = np.concatenate([obs, goal_state])
-        elif self.COST == Cost.RL_REWARD and self.TASK == Task.STABILIZATION:
-            goal_state = self.X_GOAL.flatten()
-            obs = np.concatenate([obs, goal_state])
+        # Concatenate goal info (goal state(s)) for RL 
+        obs = self.extend_obs(obs, self.ctrl_step_counter+1)
         return obs
 
     def _get_reward(self):
@@ -743,7 +731,7 @@ class Quadrotor(BaseAviary):
         # RL cost.
         if self.COST == Cost.RL_REWARD:
             state = self.state
-            act = np.asarray(self.current_preprocessed_action)
+            act = np.asarray(self.current_raw_action)
             act_error = act - self.U_GOAL
             # Quadratic costs w.r.t state and action
             # TODO: consider using multiple future goal states for cost in tracking

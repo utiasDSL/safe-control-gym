@@ -98,7 +98,7 @@ class Constraint:
             obj: The symbolic form of the constraint.
 
         """
-        return NotImplementedError
+        raise NotImplementedError
 
     def get_value(self,
                   env
@@ -162,9 +162,9 @@ class Constraint:
         if self.constrained_variable == ConstrainedVariableType.STATE:
             return env.state
         elif self.constrained_variable == ConstrainedVariableType.INPUT:
-            return env.current_raw_input_action
+            return env.current_raw_action
         elif self.constrained_variable == ConstrainedVariableType.INPUT_AND_STATE:
-            return (env.state, env.current_raw_input_action)
+            return (env.state, env.current_raw_action)
         else:
             raise NotImplementedError("Constraint input type not implemented.")
 
@@ -340,7 +340,7 @@ class DefaultConstraint(BoundedConstraint):
             else:
                 default_constraint_space = env.observation_space
         elif constrained_variable == ConstrainedVariableType.INPUT:
-            default_constraint_space = env.action_space
+            default_constraint_space = env.physical_action_space
         else:
             raise NotImplementedError('[ERROR] DefaultConstraint can only be of type STATE or INPUT')
         # extract bounds from the space
