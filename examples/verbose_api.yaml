@@ -41,16 +41,16 @@ cartpole_config:
   inertial_prop_randomization_info:
     pole_length:
       distrib: "uniform"
-      low: -0.25
-      high: 0.0
+      low: 0.75
+      high: 1.0
     cart_mass:
       distrib: "uniform"
-      low: 0.5
-      high: 1.5
+      low: 1.5
+      high: 2.5
     pole_mass:
       distrib: "uniform"
-      low: 0.05
-      high: 0.15
+      low: 0.15
+      high: 0.25
 #
   constraints:
     - constraint_form: default_constraint

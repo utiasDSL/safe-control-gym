@@ -484,7 +484,7 @@ class CartPole(BenchmarkEnv):
         """
         if self.NORMALIZED_RL_ACTION_SPACE:
             action = self.action_scale * action
-            self.current_raw_action = action
+        self.current_raw_action = action
         force = np.clip(action, self.physical_action_space.low, self.physical_action_space.high)
         if not np.array_equal(force, np.array(action)) and self.VERBOSE:
             print("[WARNING]: action was clipped in CartPole._preprocess_control().")

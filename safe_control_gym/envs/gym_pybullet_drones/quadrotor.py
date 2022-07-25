@@ -669,7 +669,7 @@ class Quadrotor(BaseAviary):
         if self.NORMALIZED_RL_ACTION_SPACE:
             # rescale action to around hover thrust
             action = (1 + self.norm_act_scale * action) * self.hover_thrust
-            self.current_raw_action = action
+        self.current_raw_action = action
         thrust = np.clip(action, self.physical_action_space.low, self.physical_action_space.high)
         if not np.array_equal(thrust, np.array(action)) and self.VERBOSE:
             print("[WARNING]: action was clipped in Quadrotor._preprocess_control().")
