@@ -1,13 +1,20 @@
-import warnings
 import numpy as np 
 import torch 
-
 
 
 def compute_cvar(data, alpha, lower_range=True):
     """CVaR as mean of the lower-alpha-percentile of data.
         adapted from https://github.com/nuria95/O-RAAC/blob/57347bc682798ff9f5600131c606517832efe864/oraaclib/util/utilities.py
+    
+    Args:
+        data (np.array): the trajectory data collected by the Experiment class
+        alpha (float): the percentile upper bound to use
+        lower_range (bool): ???
+    
+    Returns:
+        cvar (float): the resulting CVaR
     """
+
     if not isinstance(data, torch.Tensor):
         data = torch.Tensor(data)
     if len(data.size()) < 2:
