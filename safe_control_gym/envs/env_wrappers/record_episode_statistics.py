@@ -90,7 +90,7 @@ class RecordEpisodeStatistics(gym.Wrapper):
 
 
 class VecRecordEpisodeStatistics(VecEnvWrapper):
-    """ A vectorized wrapper that records eposodic statistics.
+    """ A vectorized wrapper that records episodic statistics.
 
     E.g. episode lengths, returns, constraint violations.
 

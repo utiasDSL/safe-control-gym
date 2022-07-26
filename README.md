@@ -137,7 +137,7 @@ Familiarize with APIs and environments with the scripts in [`examples/`](https:/
 ```
 $ cd ./examples/                                                                    # Navigate to the examples folder
 $ python3 tracking.py --overrides ./tracking.yaml                                   # PID trajectory tracking with the 2D quadcopter
-$ python3 verbose_api.py --system cartpole --overrides verbose_api.yaml             #  Printout of the extended safe-control-gym APIs
+$ python3 verbose_api.py --task cartpole --overrides verbose_api.yaml             #  Printout of the extended safe-control-gym APIs
 ```
 
 
