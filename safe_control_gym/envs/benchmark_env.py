@@ -379,6 +379,22 @@ class BenchmarkEnv(gym.Env):
         processed_action = self._preprocess_control(action)
         return processed_action
     
+    def extend_obs(self, obs, next_step):
+        if self.COST == Cost.RL_REWARD and self.TASK == Task.TRAJ_TRACKING and self.obs_goal_horizon > 0:            
+            wp_idx = [
+                min(next_step + i, self.X_GOAL.shape[0]-1) 
+                for i in range(self.obs_goal_horizon)
+            ]
+            goal_state = self.X_GOAL[wp_idx].flatten()
+            extended_obs = np.concatenate([obs, goal_state])
+        elif self.COST == Cost.RL_REWARD and self.TASK == Task.STABILIZATION and self.obs_goal_horizon > 0:
+            goal_state = self.X_GOAL.flatten()
+            extended_obs = np.concatenate([obs, goal_state])
+        else:
+            extended_obs = obs
+        
+        return extended_obs
+    
     def after_step(self, obs, rew, done, info):
         """Post-processing after calling `.step()`.
 
