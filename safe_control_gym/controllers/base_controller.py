@@ -88,3 +88,15 @@ class BaseController:
 
         """
         pass
+    
+    def reset_before_run(self, obs, info, env=None):
+        """"""
+        pass 
+    
+    def select_action(obs, info=None):
+        """"""
+        return 
+    
+    def get_eval_result_dict(self):
+        """"""
+        return {}
