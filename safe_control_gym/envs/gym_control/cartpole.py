@@ -568,7 +568,6 @@ class CartPole(BenchmarkEnv):
             # TODO: should use angle wrapping 
             # state[2] = normalize_angle(state[2])
             act = np.asarray(self.current_noisy_physical_action)
-            # act = np.asarray(self.current_preprocessed_action)
             dist = np.sum(self.rew_state_weight * state * state)
             dist += np.sum(self.rew_act_weight * act * act)
             rew = -dist
