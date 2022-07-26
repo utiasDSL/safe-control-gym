@@ -469,19 +469,19 @@ class CartPole(BenchmarkEnv):
         if self.NORMALIZED_RL_ACTION_SPACE:
             action = self.action_scale * action
         self.current_physical_action = action
-        force = np.clip(action, self.physical_action_space.low, self.physical_action_space.high)
-        if not np.array_equal(force, np.array(action)) and self.VERBOSE:
-            print("[WARNING]: action was clipped in CartPole._preprocess_control().")
+        
         # Apply disturbances.
         if "action" in self.disturbances:
-            force = self.disturbances["action"].apply(force, self)
+            action = self.disturbances["action"].apply(action, self)
         if self.adversary_disturbance == "action" and self.adv_action is not None:
-            force = force + self.adv_action
+            action = action + self.adv_action
+        self.current_noisy_physical_action = action
+        
         # Save the actual input.
+        force = np.clip(action, self.physical_action_space.low, self.physical_action_space.high)
         self.current_clipped_action = force
-        # Only use the scalar value.
-        force = force[0]
-        return force
+
+        return force[0] # Only use the scalar value.
 
     def _advance_simulation(self, force):
         """Apply the commanded forces and adversarial actions to the cartpole.
@@ -567,7 +567,7 @@ class CartPole(BenchmarkEnv):
             state = deepcopy(self.state)
             # TODO: should use angle wrapping 
             # state[2] = normalize_angle(state[2])
-            act = np.asarray(self.current_physical_action)
+            act = np.asarray(self.current_noisy_physical_action)
             # act = np.asarray(self.current_preprocessed_action)
             dist = np.sum(self.rew_state_weight * state * state)
             dist += np.sum(self.rew_act_weight * act * act)

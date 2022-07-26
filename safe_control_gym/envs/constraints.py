@@ -162,9 +162,9 @@ class Constraint:
         if self.constrained_variable == ConstrainedVariableType.STATE:
             return env.state
         elif self.constrained_variable == ConstrainedVariableType.INPUT:
-            return env.current_physical_action
+            return env.current_noisy_physical_action
         elif self.constrained_variable == ConstrainedVariableType.INPUT_AND_STATE:
-            return (env.state, env.current_physical_action)
+            return (env.state, env.current_noisy_physical_action)
         else:
             raise NotImplementedError("Constraint input type not implemented.")
 

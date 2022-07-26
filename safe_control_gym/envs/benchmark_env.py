@@ -343,6 +343,7 @@ class BenchmarkEnv(gym.Env):
         self.ctrl_step_counter = 0
         self.current_raw_action = None
         self.current_physical_action = None
+        self.current_noisy_physical_action = None
         self.current_clipped_action = None
         # Reset the disturbances.
         for mode in self.disturbances.keys():
