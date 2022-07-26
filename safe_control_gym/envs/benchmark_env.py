@@ -34,6 +34,15 @@ class Task(str, Enum):
     TRAJ_TRACKING = "traj_tracking"  # Trajectory tracking task.
 
 
+class Environment(str, Enum):
+    """Environment enumeration class.
+
+    """
+
+    CARTPOLE = "cartpole"  # Cartpole system
+    QUADROTOR = "quadrotor"  # Quadrotor, both 1D and 2D
+
+
 class BenchmarkEnv(gym.Env):
     """Benchmark environment base class.
     
@@ -102,7 +111,7 @@ class BenchmarkEnv(gym.Env):
             pyb_freq (int, optional): The frequency at which PyBullet steps (a multiple of ctrl_freq).
             ctrl_freq (int, optional): The frequency at which the environment steps.
             episode_len_sec (int, optional): Maximum episode duration in seconds.
-            init_state  (ndarray/dict, optional): The initial state of the environment 
+            init_state (ndarray/dict, optional): The initial state of the environment 
             randomized_init (bool, optional): Whether to randomize the initial state.
             init_state_randomization_info (dict, optional): A dictionary with information used to 
                 randomize the initial state.
