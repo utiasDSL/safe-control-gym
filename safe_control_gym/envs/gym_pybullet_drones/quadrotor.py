@@ -669,11 +669,11 @@ class Quadrotor(BaseAviary):
         if self.NORMALIZED_RL_ACTION_SPACE:
             # rescale action to around hover thrust
             action = (1 + self.norm_act_scale * action) * self.hover_thrust
-        self.current_raw_action = action
+        self.current_physical_action = action
         thrust = np.clip(action, self.physical_action_space.low, self.physical_action_space.high)
         if not np.array_equal(thrust, np.array(action)) and self.VERBOSE:
             print("[WARNING]: action was clipped in Quadrotor._preprocess_control().")
-        self.current_preprocessed_action = thrust
+        self.current_clipped_action = thrust
         # Apply disturbances.
         if "action" in self.disturbances:
             thrust = self.disturbances["action"].apply(thrust, self)
@@ -731,7 +731,7 @@ class Quadrotor(BaseAviary):
         # RL cost.
         if self.COST == Cost.RL_REWARD:
             state = self.state
-            act = np.asarray(self.current_raw_action)
+            act = np.asarray(self.current_physical_action)
             act_error = act - self.U_GOAL
             # Quadratic costs w.r.t state and action
             # TODO: consider using multiple future goal states for cost in tracking
@@ -757,14 +757,14 @@ class Quadrotor(BaseAviary):
             if self.TASK == Task.STABILIZATION:
                 return float(-1 * self.symbolic.loss(x=self.state,
                                                      Xr=self.X_GOAL,
-                                                     u=self.current_preprocessed_action,
+                                                     u=self.current_clipped_action,
                                                      Ur=self.U_GOAL,
                                                      Q=self.Q,
                                                      R=self.R)["l"])
             if self.TASK == Task.TRAJ_TRACKING:
                 return float(-1 * self.symbolic.loss(x=self.state,
                                                      Xr=self.X_GOAL[self.ctrl_step_counter,:],
-                                                     u=self.current_preprocessed_action,
+                                                     u=self.current_clipped_action,
                                                      Ur=self.U_GOAL,
                                                      Q=self.Q,
                                                      R=self.R)["l"])

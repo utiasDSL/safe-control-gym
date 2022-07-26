@@ -484,7 +484,7 @@ class CartPole(BenchmarkEnv):
         """
         if self.NORMALIZED_RL_ACTION_SPACE:
             action = self.action_scale * action
-        self.current_raw_action = action
+        self.current_physical_action = action
         force = np.clip(action, self.physical_action_space.low, self.physical_action_space.high)
         if not np.array_equal(force, np.array(action)) and self.VERBOSE:
             print("[WARNING]: action was clipped in CartPole._preprocess_control().")
@@ -494,7 +494,7 @@ class CartPole(BenchmarkEnv):
         if self.adversary_disturbance == "action" and self.adv_action is not None:
             force = force + self.adv_action
         # Save the actual input.
-        self.current_preprocessed_action = force
+        self.current_clipped_action = force
         # Only use the scalar value.
         force = force[0]
         return force
@@ -585,7 +585,7 @@ class CartPole(BenchmarkEnv):
             state = deepcopy(self.state)
             # TODO: should use angle wrapping 
             # state[2] = normalize_angle(state[2])
-            act = np.asarray(self.current_raw_action)
+            act = np.asarray(self.current_physical_action)
             if self.TASK == Task.STABILIZATION:
                 state_error = state - self.X_GOAL
                 dist = np.sum(self.rew_state_weight * state_error * state_error)
@@ -610,7 +610,7 @@ class CartPole(BenchmarkEnv):
                 return float(
                     -1 * self.symbolic.loss(x=self.state,
                                             Xr=self.X_GOAL,
-                                            u=self.current_preprocessed_action,
+                                            u=self.current_clipped_action,
                                             Ur=self.U_GOAL,
                                             Q=self.Q,
                                             R=self.R)["l"])
@@ -618,7 +618,7 @@ class CartPole(BenchmarkEnv):
                 return float(
                     -1 * self.symbolic.loss(x=self.state,
                                             Xr=self.X_GOAL[self.ctrl_step_counter,:],
-                                            u=self.current_preprocessed_action,
+                                            u=self.current_clipped_action,
                                             Ur=self.U_GOAL,
                                             Q=self.Q,
                                             R=self.R)["l"])
