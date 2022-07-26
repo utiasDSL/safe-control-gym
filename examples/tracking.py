@@ -14,7 +14,7 @@ from safe_control_gym.experiment import Experiment
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 
-def run(gui=True, max_steps=None):
+def run(gui=True, n_episodes=1, n_steps=None):
     """The main function creating, running, and closing an environment. """
 
     # Create an environment
@@ -42,7 +42,7 @@ def run(gui=True, max_steps=None):
 
         # Run the experiment.
         experiment = Experiment(env, ctrl)
-        trajs_data, metrics = experiment.run_evaluation(n_episodes=1, n_steps=max_steps)
+        trajs_data, metrics = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
         experiment.close()
                 
         iterations = len(trajs_data['action'][0])

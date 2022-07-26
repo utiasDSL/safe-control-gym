@@ -236,7 +236,6 @@ class PID(BaseController):
         errors for both position and attitude are set to zero.
         """
         self.env.reset()
-        self.GRAVITY = self.g * self.env.OVERRIDDEN_QUAD_MASS
         self.reset_before_run()
     
     def reset_before_run(self, obs=None, info=None, env=None):
@@ -245,6 +244,11 @@ class PID(BaseController):
         self.integral_pos_e = np.zeros(3)
         self.last_rpy = np.zeros(3)
         self.integral_rpy_e = np.zeros(3)
+
+        if env is None:
+            self.GRAVITY = self.g * self.env.OVERRIDDEN_QUAD_MASS
+        else:
+            self.GRAVITY = self.g * env.OVERRIDDEN_QUAD_MASS
 
         self.setup_results_dict()
 

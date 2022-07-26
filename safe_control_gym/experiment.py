@@ -27,6 +27,8 @@ class Experiment:
         """
         
         self.env = env
+        if not is_wrapped(self.env, RecordDataWrapper):
+            self.env = RecordDataWrapper(self.env)
         self.ctrl = ctrl
         self.safety_filter = safety_filter
     
@@ -65,47 +67,63 @@ class Experiment:
             trajs_data (defaultdict(list)): the raw data from the executed runs
         """
 
-        if not is_wrapped(self.env, RecordDataWrapper):
-            env = RecordDataWrapper(self.env)
+        if n_episodes is None and n_steps is None:
+            raise ValueError('One of n_episodes or n_steps must be defined.')
+        elif n_episodes is not None and n_steps is not None:
+            raise ValueError('Only one of n_episodes or n_steps can be defined.')
         
         # initialize
-        sim_steps = log_freq // env.CTRL_FREQ if log_freq else 1 
+        sim_steps = log_freq // self.env.CTRL_FREQ if log_freq else 1 
         steps, trajs = 0, 0
         ctrl_data = defaultdict(list)
-        if env.INFO_IN_RESET:
-            obs, info = env.reset()
+        if self.env.INFO_IN_RESET:
+            obs, info = self.env.reset()
         else:
-            obs = env.reset()
+            obs = self.env.reset()
             info = None
 
-        self.ctrl.reset_before_run(obs, info, env=env)
-            
-        # collect data 
-        while (trajs < n_episodes) and (not n_steps or steps < n_steps): 
-            action = self.ctrl.select_action(obs, info)
-            
-            # inner sim loop to accomodate different control frequencies
-            for _ in range(sim_steps):
-                obs, reward, done, info = env.step(action)
-                steps += 1 
-                if done:
-                    trajs += 1
-                    done = False
-                    if env.INFO_IN_RESET:
-                        obs, info = env.reset()
-                    else:
-                        obs = env.reset()
-                        info = None
-                    for data_key, data_val in self.ctrl.results_dict:
-                        ctrl_data[data_key].append(data_val)
-                    self.ctrl.reset_before_run(obs, info, env=env)
-                    break
+        self.ctrl.reset_before_run(obs, info, env=self.env)
 
-        # compile collected data 
-        env.save_data()
-        trajs_data = env.data 
+        if n_episodes is not None:
+            while trajs < n_episodes:
+                action = self.ctrl.select_action(obs, info)
+                # inner sim loop to accomodate different control frequencies
+                for _ in range(sim_steps):
+                    obs, reward, done, info = self.env.step(action)
+                    if done:
+                        trajs += 1
+                        self._evaluation_reset(ctrl_data=ctrl_data)
+                        break
+        elif n_steps is not None:
+            while steps < n_steps: 
+                action = self.ctrl.select_action(obs, info)
+                # inner sim loop to accomodate different control frequencies
+                for _ in range(sim_steps):
+                    obs, reward, done, info = self.env.step(action)
+                    steps += 1 
+                    if steps >= n_steps:
+                        self.env.save_data()
+                        for data_key, data_val in self.ctrl.results_dict:
+                            ctrl_data[data_key].append(data_val)
+                        break
+                    if done:
+                        self._evaluation_reset(ctrl_data=ctrl_data)
+                        break
+
+        trajs_data = self.env.data 
         trajs_data.update(ctrl_data)
         return trajs_data
+    
+    def _evaluation_reset(self, ctrl_data):
+        if self.env.INFO_IN_RESET:
+            obs, info = self.env.reset()
+        else:
+            obs = self.env.reset()
+            info = None
+        for data_key, data_val in self.ctrl.results_dict:
+            ctrl_data[data_key].append(data_val)
+        self.ctrl.reset_before_run(obs, info, env=self.env)
+        return obs, info
     
     def launch_training(self, **kwargs):
         """Since the learning loop varies among controllers, can only delegate to its own `learn()` method.
@@ -215,8 +233,6 @@ class RecordDataWrapper(gym.Wrapper):
     def reset(self):
         """Wrapper for the gym.env reset function. """
 
-        self.save_data()
-
         if self.env.INFO_IN_RESET:
             obs, info = self.env.reset()
             step_data = dict(
@@ -252,6 +268,10 @@ class RecordDataWrapper(gym.Wrapper):
         )
         for key, val in step_data.items():
             self.episode_data[key].append(val)
+        
+        if done:
+            self.save_data()
+
         return obs, reward, done, info
     
     
