@@ -341,8 +341,9 @@ class BenchmarkEnv(gym.Env):
         self.initial_reset = True
         self.pyb_step_counter = 0
         self.ctrl_step_counter = 0
-        self.current_raw_input_action = None
-        self.current_preprocessed_action = None
+        self.current_raw_action = None
+        self.current_physical_action = None
+        self.current_clipped_action = None
         # Reset the disturbances.
         for mode in self.disturbances.keys():
             self.disturbances[mode].reset(self) 
@@ -361,7 +362,7 @@ class BenchmarkEnv(gym.Env):
     def _preprocess_control(self, action):
         """Pre-processes the action passed to `.step()`, default is identity.
 
-        It's suggested that you set `self.current_preprocessed_action` here,
+        It's suggested that you set `self.current_clipped_action` here,
         if you ever need to use it later on (e.g. to compute reward/cost).
         
         """
@@ -374,7 +375,7 @@ class BenchmarkEnv(gym.Env):
         # Sanity check (reset at least once).
         self._check_initial_reset()
         # Save the raw input action.
-        self.current_raw_input_action = action
+        self.current_raw_action = action
         # Pre-process/clip the action
         processed_action = self._preprocess_control(action)
         return processed_action
