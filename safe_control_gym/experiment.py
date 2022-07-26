@@ -1,14 +1,9 @@
-"""To standardize training/evaluation interface.
-
-Todo:
-    * 
-    
-"""
+"""To standardize training/evaluation interface. """
 
 import gym
 import numpy as np 
 from copy import deepcopy
-from collections import defaultdict, deque
+from collections import defaultdict
 from termcolor import colored
 
 from safe_control_gym.utils.utils import is_wrapped
@@ -16,9 +11,7 @@ from safe_control_gym.math_and_models.metrics import compute_cvar
 
 
 class Experiment:
-    """Generic Experiment Class
-
-    """
+    """Generic Experiment Class. """
 
     def __init__(self, 
                  env, 
@@ -37,43 +30,6 @@ class Experiment:
         self.ctrl = ctrl
         self.safety_filter = safety_filter
     
-    def reset(self):
-        """Resets the environments, controller, and safety filter to prepare for training or evaluation. """
-
-        self.env.reset()
-        self.ctrl.reset()
-
-        if self.safety_filter is not None:
-            self.safety_filter.reset()
-    
-    def load(self, ctrl_path=None, safety_filter_path=None):
-        """Restores model of the controller and/or safety filter given checkpoint paths. 
-        
-        Args:
-            ctrl_path (str): the path used to load the controller's model
-            safety_filter_path (str): the path used to load the safety_filter's model
-        """
-
-        if ctrl_path is not None:
-            self.ctrl.load(ctrl_path)
-        if safety_filter_path is not None:
-            self.safety_filter.load(safety_filter_path)
-
-    def launch_training(self, **kwargs):
-        """Since the learning loop varies among controllers, can only delegate to its own `learn()` method.
-
-        Note ctrl should have its own training env as attribute, which is constructed upon creating the ctrl. 
-        We do not standarize on the training env as input to this method since different controllers use it differently. 
-        """
-
-        self.reset()
-        self.ctrl.learn(**kwargs)
-
-        if self.safety_filter:
-            self.safety_filter.learn(**kwargs)
-    
-        print("Training done.")
-    
     def run_evaluation(self, n_episodes=10, log_freq=None, n_steps=None, **kwargs):
         """Evaluate a trained controller. 
         
@@ -88,7 +44,7 @@ class Experiment:
         """
 
         self.reset()
-        trajs_data = self.execute_evaluations(log_freq=log_freq, n_episodes=n_episodes, n_steps=n_steps, **kwargs)
+        trajs_data = self._execute_evaluations(log_freq=log_freq, n_episodes=n_episodes, n_steps=n_steps, **kwargs)
         metrics = self.compute_metrics(trajs_data)
         
         # terminal printouts
@@ -97,7 +53,7 @@ class Experiment:
         print("Evaluation done.")
         return trajs_data, metrics
     
-    def execute_evaluations(self, n_episodes=10, n_steps=None, log_freq=None, **kwargs):
+    def _execute_evaluations(self, n_episodes=10, n_steps=None, log_freq=None, **kwargs):
         """Runs the experiments and collects all the required data.
 
         Args:     
@@ -126,11 +82,11 @@ class Experiment:
             
         # collect data 
         while (trajs < n_episodes) and (not n_steps or steps < n_steps): 
-            act = self.ctrl.select_action(obs, info)
+            action = self.ctrl.select_action(obs, info)
             
             # inner sim loop to accomodate different control frequencies
             for _ in range(sim_steps):
-                obs, rew, done, info = env.step(act)
+                obs, reward, done, info = env.step(action)
                 steps += 1 
                 if done:
                     trajs += 1
@@ -140,15 +96,31 @@ class Experiment:
                     else:
                         obs = env.reset()
                         info = None
-                    for data_key, data_val in self.ctrl.get_eval_result_dict():
+                    for data_key, data_val in self.ctrl.results_dict:
                         ctrl_data[data_key].append(data_val)
                     self.ctrl.reset_before_run(obs, info, env=env)
                     break
-        
+
         # compile collected data 
+        env.save_data()
         trajs_data = env.data 
         trajs_data.update(ctrl_data)
         return trajs_data
+    
+    def launch_training(self, **kwargs):
+        """Since the learning loop varies among controllers, can only delegate to its own `learn()` method.
+
+        Note ctrl should have its own training env as attribute, which is constructed upon creating the ctrl. 
+        We do not standarize on the training env as input to this method since different controllers use it differently. 
+        """
+
+        self.reset()
+        self.ctrl.learn(**kwargs)
+
+        if self.safety_filter:
+            self.safety_filter.learn(**kwargs)
+    
+        print("Training done.")
     
     def compute_metrics(self, trajs_data):
         """Compute all standard metrics on the given trajectory data.
@@ -163,35 +135,88 @@ class Experiment:
         met = MetricExtractor(trajs_data)
         # collect & compute all sorts of metrics here
         metrics = {
-            "average_length": np.asarray(met.get_episode_lengths).mean(),
-            "average_return": np.asarray(met.get_episode_returns).mean(),
-            "average_rmse": np.asarray(met.get_episode_rmse).mean(),
-            "rmse_std": np.asarray(met.get_episode_rmse).std(),
-            "worst_case_rmse_at_0.5": compute_cvar(np.asarray(met.get_episode_rmse), 0.5, lower_range=False),
-            "failure_rate":  np.asarray(met.get_episode_constraint_violations).mean(),       
-            "average_constraint_violation": np.asarray(met.get_episode_constraint_violation_steps).mean(),
+            "average_length": np.asarray(met.get_episode_lengths()).mean(),
+            "average_return": np.asarray(met.get_episode_returns()).mean(),
+            "average_rmse": np.asarray(met.get_episode_rmse()).mean(),
+            "rmse_std": np.asarray(met.get_episode_rmse()).std(),
+            "worst_case_rmse_at_0.5": compute_cvar(np.asarray(met.get_episode_rmse()), 0.5, lower_range=False),
+            "failure_rate":  np.asarray(met.get_episode_constraint_violations()).mean(),       
+            "average_constraint_violation": np.asarray(met.get_episode_constraint_violation_steps()).mean(),
             # others ???
         }
         return metrics
+    
+    def reset(self):
+        """Resets the environments, controller, and safety filter to prepare for training or evaluation. """
+
+        self.env.reset()
+        self.ctrl.reset()
+
+        if self.safety_filter is not None:
+            self.safety_filter.reset()
+    
+    def close(self):
+        """Closes the environments, controller, and safety filter. """
+
+        self.env.close()
+        self.ctrl.close()
+
+        if self.safety_filter is not None:
+            self.safety_filter.close()
+    
+    def load(self, ctrl_path=None, safety_filter_path=None):
+        """Restores model of the controller and/or safety filter given checkpoint paths. 
+        
+        Args:
+            ctrl_path (str): the path used to load the controller's model
+            safety_filter_path (str): the path used to load the safety_filter's model
+        """
+
+        if ctrl_path is not None:
+            self.ctrl.load(ctrl_path)
+        if safety_filter_path is not None:
+            self.safety_filter.load(safety_filter_path)
+    
+    def save(self, ctrl_path=None, safety_filter_path=None):
+        """Saves the model of the controller and/or safety filter given checkpoint paths. 
+        
+        Args:
+            ctrl_path (str): the path used to save the controller's model
+            safety_filter_path (str): the path used to save the safety_filter's model
+        """
+
+        if ctrl_path is not None:
+            self.ctrl.save(ctrl_path)
+        if safety_filter_path is not None:
+            self.safety_filter.save(safety_filter_path)
     
 
 class RecordDataWrapper(gym.Wrapper):
     """A wrapper to standardizes logging for benchmark envs.
     
     currently saved info
-    * obs, rew, done, info, act
-    * env.state, env.current_preprocessed_action
+    * obs, reward, done, info, action
+    * env.state, env.current_raw_input_action, env.current_preprocessed_action
     """
 
     def __init__(self, env, deque_size=None, **kwargs):
         super().__init__(env)
         self.episode_data = defaultdict(list)
-        self.data = defaultdict(lambda: deque(deque_size))
+        self.data = defaultdict(list)
+    
+    def save_data(self):
+        if self.episode_data:
+            # save to data container
+            for key, ep_val in self.episode_data.items():
+                self.data[key].append(deepcopy(ep_val))
+            # re-initialize episode data container 
+            self.episode_data = defaultdict(list)
         
     def reset(self):
         """Wrapper for the gym.env reset function. """
 
-        self.episode_data = defaultdict(list)
+        self.save_data()
+
         if self.env.INFO_IN_RESET:
             obs, info = self.env.reset()
             step_data = dict(
@@ -209,24 +234,25 @@ class RecordDataWrapper(gym.Wrapper):
                 self.episode_data[key].append(val)
             return obs 
     
-    def step(self, act):
+    def step(self, action):
         """Wrapper for the gym.env step function. """
 
-        obs, rew, done, info = self.env.step(act)
+        obs, reward, done, info = self.env.step(action)
         # save to episode data container
         step_data = dict(
-            obs=obs, act=act, done=float(done), info=info, rew=rew, length=1,
-            state=self.env.state, current_preprocessed_action=self.env.current_preprocessed_action
+            obs=obs, 
+            action=action, 
+            done=float(done), 
+            info=info, 
+            reward=reward, 
+            length=1,
+            state=self.env.state, 
+            current_raw_action=self.env.current_raw_input_action,
+            current_preprocessed_action=self.env.current_preprocessed_action, 
         )
         for key, val in step_data.items():
             self.episode_data[key].append(val)
-        # save to data container
-        if done:
-            for key, ep_val in self.episode_data.items():
-                self.data[key].append(deepcopy(ep_val))
-            # re-initialize episode data container 
-            self.episode_data = defaultdict(list)
-        return obs, rew, done, info
+        return obs, reward, done, info
     
     
 class MetricExtractor:
@@ -267,7 +293,7 @@ class MetricExtractor:
             episode_data = [postprocess_func([info.get(key, 0.) for info in ep_info]) 
                             for ep_info in self.data["info"]]
         else:
-            raise KeyError("Given data key does not exist in recorded trajectory data.")
+            raise KeyError(f"Given data key '{key}' does not exist in recorded trajectory data.")
         return episode_data
     
     def get_episode_lengths(self):
@@ -276,7 +302,7 @@ class MetricExtractor:
     
     def get_episode_returns(self):
         """Total reward/return of episodes."""
-        return self.get_episode_data("rew", postprocess_func=sum)
+        return self.get_episode_data("reward", postprocess_func=sum)
 
     def get_episode_rmse(self):
         """Root mean square error of episodes."""
