@@ -37,7 +37,7 @@ def cbf_cartpole(X, x_pos_max, x_vel_max, theta_max, theta_dot_max):
 
 def cbf_quadrotor():
     # TODO: Implementation missing
-    return NotImplementedError
+    raise NotImplementedError
 
 
 def linear_function(slope):
