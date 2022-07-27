@@ -126,6 +126,7 @@ class CartPole(BenchmarkEnv):
                  prior_prop=None,
                  inertial_prop=None,
                  # custom args 
+                 obs_goal_horizon=0,
                  obs_wrap_angle=False,
                  rew_state_weight=1.0,
                  rew_act_weight=0.0001,
@@ -140,12 +141,14 @@ class CartPole(BenchmarkEnv):
                 (x, x_dot, theta, theta_dot).
             prior_prop (dict, optional): The prior inertial properties of the environment.
             inertial_prop (dict, optional): The ground truth inertial properties of the environment.
+            obs_goal_horizon (int): how many future goal states to append to obervation.
             obs_wrap_angle (bool): if to wrap angle to [-pi, pi] when used in observation.
             rew_state_weight (list/ndarray): quadratic weights for state in rl reward.
             rew_act_weight (list/ndarray): quadratic weights for action in rl reward.
             rew_exponential (bool): if to exponentiate negative quadratic cost to positive, bounded [0,1] reward.
             done_on_out_of_bound (bool): if to termiante when state is out of bound.
         """
+        self.obs_goal_horizon = obs_goal_horizon
         self.obs_wrap_angle = obs_wrap_angle
         self.rew_state_weight = np.array(rew_state_weight, ndmin=1, dtype=float)
         self.rew_act_weight = np.array(rew_act_weight, ndmin=1, dtype=float)
@@ -450,7 +453,20 @@ class CartPole(BenchmarkEnv):
         self.x_threshold = 2.4
         # Limit set to 2x: i.e. a failing observation is still within bounds.
         obs_bound = np.array([self.x_threshold * 2, np.finfo(np.float32).max, self.theta_threshold_radians * 2, np.finfo(np.float32).max])
-        self.observation_space = spaces.Box(-obs_bound, obs_bound, dtype=np.float32)
+        self.state_space = spaces.Box(low=-obs_bound, high=obs_bound, dtype=np.float32)
+
+        # Concatenate goal info for RL 
+        if self.COST == Cost.RL_REWARD and self.TASK == Task.TRAJ_TRACKING and self.obs_goal_horizon > 0:
+            # include future goal state(s) 
+            # e.g. horizon=1, obs = {state, state_target}
+            mul = 1 + self.obs_goal_horizon
+            obs_bound = np.concatenate([obs_bound] * mul)
+        elif self.COST == Cost.RL_REWARD and self.TASK == Task.STABILIZATION and self.obs_goal_horizon > 0:
+            obs_bound = np.concatenate([obs_bound] * 2)
+        # Define obs space exposed to the controller 
+        # Note obs space is often different to state space for RL (with additional task info)
+        self.observation_space = spaces.Box(low=-obs_bound, high=obs_bound, dtype=np.float32)
+
         # Define obs/state labels and units.
         self.STATE_LABELS = ['x', 'x_dot', 'theta', 'theta_dot']
         self.STATE_UNITS = ['m', 'm/s', 'rad', 'rad/s']
@@ -542,7 +558,7 @@ class CartPole(BenchmarkEnv):
             ndarray: The state (x, x_dot, theta, theta_dot) of the cartpole.
 
         """
-        if not np.array_equal(self.state, np.clip(self.state, self.observation_space.low, self.observation_space.high)) and self.VERBOSE:
+        if not np.array_equal(self.state, np.clip(self.state, self.state_space.low, self.state_space.high)) and self.VERBOSE:
             print("[WARNING]: observation was clipped in CartPole._get_observation().")
         # Apply observation disturbance.
         obs = deepcopy(self.state)
@@ -551,6 +567,8 @@ class CartPole(BenchmarkEnv):
         # Wrap angle to constrain state space, useful in swing-up task.
         if self.obs_wrap_angle:
             obs[2] = normalize_angle(obs[2])
+        # Concatenate goal info (goal state(s)) for RL 
+        obs = self.extend_obs(obs, self.ctrl_step_counter+1)
         return obs
 
     def _get_reward(self):
@@ -569,8 +587,15 @@ class CartPole(BenchmarkEnv):
             act = np.asarray(self.current_raw_input_action)
             act = np.clip(act, self.action_space.low, self.action_space.high)
             # act = np.asarray(self.current_preprocessed_action)
-            dist = np.sum(self.rew_state_weight * state * state)
-            dist += np.sum(self.rew_act_weight * act * act)
+            if self.TASK == Task.STABILIZATION:
+                state_error = state - self.X_GOAL
+                dist = np.sum(self.rew_state_weight * state_error * state_error)
+                dist += np.sum(self.rew_act_weight * act * act)
+            if self.TASK == Task.TRAJ_TRACKING:
+                wp_idx = min(self.ctrl_step_counter, self.X_GOAL.shape[0]-1)
+                state_error = state - self.X_GOAL[wp_idx]
+                dist = np.sum(self.rew_state_weight * state_error * state_error)
+                dist += np.sum(self.rew_act_weight * act * act)
             rew = -dist
             # convert rew to be positive and bounded [0,1]
             if self.rew_exponential:

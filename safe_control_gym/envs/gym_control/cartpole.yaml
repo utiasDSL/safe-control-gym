@@ -31,6 +31,7 @@ constraint_penalty: -1
 verbose: False
 # RL Hyper-parameters
 obs_wrap_angle: False
+obs_goal_horizon: 0
 rew_state_weight: 1.0
 rew_act_weight: 0.0001
 rew_exponential: True
