@@ -2,7 +2,7 @@
 
 Example:
 
-    $ python3 verbose_api.py --system quadrotor --overrides verbose_api.yaml
+    $ python3 verbose_api.py --task quadrotor --overrides verbose_api.yaml
 
 """
 import time
@@ -24,20 +24,19 @@ def run():
     START = time.time()
     # Create an environment
     CONFIG_FACTORY = ConfigFactory()
-    CONFIG_FACTORY.add_argument('--system', type=str, default='cartpole', choices=['cartpole', 'quadrotor'])
     config = CONFIG_FACTORY.merge()
-    if config.system == 'cartpole':
-        env = make(config.system, **config.cartpole_config)
-    elif config.system == 'quadrotor':
-        env = make(config.system, **config.quadrotor_config)
+    if config.task == 'cartpole':
+        env = make(config.task, **config.cartpole_config)
+    elif config.task == 'quadrotor':
+        env = make(config.task, **config.quadrotor_config)
     # Reset the environment, obtain and print the initial observations.
     initial_obs, initial_info = env.reset()
     print('\n\n')
     # Dynamics info
     print_str_with_style('PyBullet dynamics info:', 7)
-    if config.system == 'cartpole':
+    if config.task == 'cartpole':
         print('\t' + str(p.getDynamicsInfo(bodyUniqueId=env.CARTPOLE_ID, linkIndex=-1, physicsClientId=env.PYB_CLIENT)))
-    elif config.system == 'quadrotor':
+    elif config.task == 'quadrotor':
         print('\t' + str(p.getDynamicsInfo(bodyUniqueId=env.DRONE_IDS[0], linkIndex=-1, physicsClientId=env.PYB_CLIENT)))
     print('\n\n')
     print_str_with_style('Initial reset.\n', 7)

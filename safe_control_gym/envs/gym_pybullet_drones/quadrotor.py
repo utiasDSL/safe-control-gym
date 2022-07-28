@@ -150,7 +150,7 @@ class Quadrotor(BaseAviary):
                  # custom args
                  quad_type: QuadType = QuadType.TWO_D,
                  norm_act_scale=0.1,
-                 obs_goal_horizon=1,
+                 obs_goal_horizon=0,
                  rew_state_weight=1.0,
                  rew_act_weight=0.0001,
                  rew_exponential=True,
@@ -632,14 +632,14 @@ class Quadrotor(BaseAviary):
         # Define the state space for the dynamics.
         self.state_space = spaces.Box(low=low, high=high, dtype=np.float32)
 
-        # Concatenate reference for RL .
-        if self.COST == Cost.RL_REWARD and self.TASK == Task.TRAJ_TRACKING:
+        # Concatenate reference for RL.
+        if self.COST == Cost.RL_REWARD and self.TASK == Task.TRAJ_TRACKING and self.obs_goal_horizon > 0:
             # Include future goal state(s).
             # e.g. horizon=1, obs = {state, state_target}
             mul = 1 + self.obs_goal_horizon
             low = np.concatenate([low] * mul)
             high = np.concatenate([high] * mul)
-        elif self.COST == Cost.RL_REWARD and self.TASK == Task.STABILIZATION:
+        elif self.COST == Cost.RL_REWARD and self.TASK == Task.STABILIZATION and self.obs_goal_horizon > 0:
             low = np.concatenate([low] * 2)
             high = np.concatenate([high] * 2)
 
@@ -718,19 +718,7 @@ class Quadrotor(BaseAviary):
             obs = self.disturbances["observation"].apply(obs, self) 
 
         # Concatenate goal info (references state(s)) for RL.
-        if self.COST == Cost.RL_REWARD and self.TASK == Task.TRAJ_TRACKING:            
-            # Increment by 1 since counter is post-updated after _get_observation(),
-            # obs should contain goal state desired for the next state
-            next_step = self.ctrl_step_counter + 1 
-            wp_idx = [
-                min(next_step + i, self.X_GOAL.shape[0]-1) 
-                for i in range(self.obs_goal_horizon)
-            ]
-            goal_state = self.X_GOAL[wp_idx].flatten()
-            obs = np.concatenate([obs, goal_state])
-        elif self.COST == Cost.RL_REWARD and self.TASK == Task.STABILIZATION:
-            goal_state = self.X_GOAL.flatten()
-            obs = np.concatenate([obs, goal_state])
+        obs = self.extend_obs(obs, self.ctrl_step_counter+1)
         return obs
 
     def _get_reward(self):
