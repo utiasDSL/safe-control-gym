@@ -46,9 +46,54 @@ def main():
     print('\nInitial reset.')
     print('\tInitial observation: ' + str(initial_obs))
 
+    # Create maze.
+    p.loadURDF(os.path.join(env.URDF_DIR, "portal.urdf"),
+                   [1.5, 0.5, 1.3],
+                   p.getQuaternionFromEuler([0,0,np.pi/2]),
+                   physicsClientId=env.PYB_CLIENT)
+    p.loadURDF(os.path.join(env.URDF_DIR, "portal.urdf"),
+                   [3, 1.5, 1.3],
+                   p.getQuaternionFromEuler([0,0,0]),
+                   physicsClientId=env.PYB_CLIENT)
+    p.loadURDF(os.path.join(env.URDF_DIR, "portal.urdf"),
+                   [1, 3, 1.3],
+                   p.getQuaternionFromEuler([0,0,np.pi/2]),
+                   physicsClientId=env.PYB_CLIENT)
+    p.loadURDF(os.path.join(env.URDF_DIR, "portal.urdf"),
+                   [0.5, 4.5, 1.3],
+                   p.getQuaternionFromEuler([0,0,0]),
+                   physicsClientId=env.PYB_CLIENT)
+    #
+    p.loadURDF(os.path.join(env.URDF_DIR, "obstacle.urdf"),
+                   [2.5, 0.5, 0.8],
+                   p.getQuaternionFromEuler([0,0,0]),
+                   physicsClientId=env.PYB_CLIENT)
+    p.loadURDF(os.path.join(env.URDF_DIR, "obstacle.urdf"),
+                   [1.5, 2, 0.8],
+                   p.getQuaternionFromEuler([0,0,0]),
+                   physicsClientId=env.PYB_CLIENT)
+    p.loadURDF(os.path.join(env.URDF_DIR, "obstacle.urdf"),
+                   [2.5, 3, 0.8],
+                   p.getQuaternionFromEuler([0,0,0]),
+                   physicsClientId=env.PYB_CLIENT)
+    p.loadURDF(os.path.join(env.URDF_DIR, "obstacle.urdf"),
+                   [0, 3, 0.8],
+                   p.getQuaternionFromEuler([0,0,0]),
+                   physicsClientId=env.PYB_CLIENT)
+
     # Curve fitting with waypoints.
-    waypoints = np.array([(0, 0, 0), (0.2, 0.5, 0.5), (0.5, 0.1, 0.6), (1, 1, 1), (1.3, 1, 1.2)])
-    deg = 6
+    waypoints = np.array([
+                            (0, 0, 0),
+                            (1, 0.5, 1.25),
+                            (1.5, 0.5, 1.25),
+                            (2, 1, 1.25), 
+                            (3, 1, 1.25), 
+                            (3, 2, 1.25),
+                            (1.5, 3, 1.25),
+                            (0.5, 3, 1.25),
+                            (0.5, 5, 1.25),
+                        ])
+    deg = 12
     t = np.arange(waypoints.shape[0])
     fit_x = np.polyfit(t, waypoints[:,0], deg)
     fit_y = np.polyfit(t, waypoints[:,1], deg)
@@ -73,27 +118,24 @@ def main():
     ax.scatter3D(waypoints[:,0], waypoints[:,1], waypoints[:,2])
     plt.show()
 
-    p.loadURDF(os.path.join(env.URDF_DIR, "portal.urdf"),
-                   [-1, -1, 0],
+    # Draw trajectory.
+    for point in waypoints:
+        p.loadURDF(os.path.join(env.URDF_DIR, "sphere.urdf"),
+                   [point[0], point[1], point[2]],
                    p.getQuaternionFromEuler([0,0,0]),
                    physicsClientId=env.PYB_CLIENT)
-
-    p.loadURDF(os.path.join(env.URDF_DIR, "obstacle.urdf"),
-                   [-1, 0, 0],
-                   p.getQuaternionFromEuler([0,0,0]),
-                   physicsClientId=env.PYB_CLIENT)
-
-    for i in range(10, ref_x.shape[0], 10):
-        p.addUserDebugLine(lineFromXYZ=[ref_x[i-10], ref_y[i-10], ref_z[i-10]],
+    step = 10
+    for i in range(step, ref_x.shape[0], step):
+        p.addUserDebugLine(lineFromXYZ=[ref_x[i-step], ref_y[i-step], ref_z[i-step]],
                            lineToXYZ=[ref_x[i], ref_y[i], ref_z[i]],
                            lineColorRGB=[1, 0, 0],
                            physicsClientId=env.PYB_CLIENT)
+    p.addUserDebugLine(lineFromXYZ=[ref_x[i], ref_y[i], ref_z[i]],
+                       lineToXYZ=[ref_x[-1], ref_y[-1], ref_z[-1]],
+                       lineColorRGB=[1, 0, 0],
+                       physicsClientId=env.PYB_CLIENT)
 
-    for point in waypoints:
-        p.loadURDF(os.path.join(env.URDF_DIR, "gate.urdf"),
-                   [point[0], point[1], point[2]-0.05],
-                   p.getQuaternionFromEuler([0,0,0]),
-                   physicsClientId=env.PYB_CLIENT)
+
 
     # Create a logger.
     logger = Logger(logging_freq_hz=env.CTRL_FREQ)
@@ -139,10 +181,10 @@ def main():
             print(out)
 
         # Log data
-        pos = obs[0:3]
-        rpy = obs[3:6]
-        vel = obs[6:9]
-        ang_vel = obs[9:12]
+        pos = [obs[0],obs[2],obs[4]]
+        rpy = [obs[6],obs[7],obs[8]]
+        vel = [obs[1],obs[3],obs[5]]
+        ang_vel = [obs[9],obs[10],obs[11]]
         logger.log(drone=0,
                    timestamp=i/env.CTRL_FREQ,
                    state=np.hstack([pos, np.zeros(4), rpy, vel, ang_vel, rpms]),

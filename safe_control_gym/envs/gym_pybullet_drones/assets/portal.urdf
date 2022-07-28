@@ -4,9 +4,9 @@
 
   <link name="base_link"> 
     <visual>
-      <origin rpy="0 0 0" xyz="0 0.5 0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <sphere radius="0.03"/>
+        <sphere radius="0.01"/>
       </geometry> 
       <material name="grey">
         <color rgba=".5 .5 .5 1"/>
@@ -18,23 +18,23 @@
 
   <link name="grey_edge"> 
     <inertial>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
-      <mass value="0.3"/>
+      <origin rpy="0 0 0" xyz="0 0 -0.225"/>
+      <mass value="0.25"/>
       <inertia ixx="0" ixy="0.0" ixz="0.0" iyy="0" iyz="0.0" izz="0"/>
     </inertial>
     <visual>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0 -0.225"/>
       <geometry>
-        <box size=".4 .05 .05" />
+        <box size=".5 .05 .05" />
       </geometry> 
       <material name="grey">
         <color rgba=".5 .5 .5 1"/>
       </material> 
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0 -0.225"/>
       <geometry>
-        <box size=".4 .05 .05" />
+        <box size=".5 .05 .05" />
       </geometry>
     </collision>  
   </link>
@@ -47,23 +47,23 @@
 
   <link name="blue_edge"> 
     <inertial>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
-      <mass value="0.3"/>
+      <origin rpy="0 0 0" xyz="0 0 0.225"/>
+      <mass value="0.25"/>
       <inertia ixx="0" ixy="0.0" ixz="0.0" iyy="0" iyz="0.0" izz="0"/>
     </inertial>
     <visual>
-      <origin rpy="0 0 0" xyz="0 0 0.1"/>
+      <origin rpy="0 0 0" xyz="0 0 0.225"/>
       <geometry>
-        <box size=".4 .05 .05" />
+        <box size=".5 .05 .05" />
       </geometry> 
       <material name="blue">
         <color rgba=".0 .0 .9 1"/>
       </material> 
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0 0.225"/>
       <geometry>
-        <box size=".4 .05 .05" />
+        <box size=".5 .05 .05" />
       </geometry>
     </collision>  
   </link>
@@ -76,23 +76,23 @@
 
   <link name="green_edge"> 
     <inertial>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
-      <mass value="0.3"/>
+      <origin rpy="0 1.57 0" xyz="0.225 0 0"/>
+      <mass value="0.25"/>
       <inertia ixx="0" ixy="0.0" ixz="0.0" iyy="0" iyz="0.0" izz="0"/>
     </inertial>
     <visual>
-      <origin rpy="0 0 0" xyz="0 0 0.2"/>
+      <origin rpy="0 1.57 0" xyz="0.225 0 0"/>
       <geometry>
-        <box size=".4 .05 .05" />
+        <box size=".5 .05 .05" />
       </geometry> 
       <material name="green">
         <color rgba=".0 .9 .0 1"/>
       </material> 
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 1.57 0" xyz="0.225 0 0"/>
       <geometry>
-        <box size=".4 .05 .05" />
+        <box size=".5 .05 .05" />
       </geometry>
     </collision>  
   </link>
@@ -105,23 +105,23 @@
 
   <link name="red_edge"> 
     <inertial>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
-      <mass value="0.3"/>
+      <origin rpy="0 1.57 0" xyz="-0.225 0 0"/>
+      <mass value="0.25"/>
       <inertia ixx="0" ixy="0.0" ixz="0.0" iyy="0" iyz="0.0" izz="0"/>
     </inertial>
     <visual>
-      <origin rpy="0 0 0" xyz="0 0 0.3"/>
+      <origin rpy="0 1.57 0" xyz="-0.225 0 0"/>
       <geometry>
-        <box size=".4 .05 .05" />
+        <box size=".5 .05 .05" />
       </geometry> 
       <material name="red">
         <color rgba=".9 .0 .0 1"/>
       </material> 
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 1.57 0" xyz="-0.225 0 0"/>
       <geometry>
-        <box size=".4 .05 .05" />
+        <box size=".5 .05 .05" />
       </geometry>
     </collision>  
   </link>
@@ -130,6 +130,37 @@
     <child link="red_edge"/>
   </joint>
 
+
+  <link name="support"> 
+
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 -0.75"/>
+      <mass value="1.0"/>
+      <inertia ixx="0" ixy="0.0" ixz="0.0" iyy="0" iyz="0.0" izz="0"/>
+    </inertial>
+
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 -0.75"/>
+      <geometry>
+        <cylinder length="1.0" radius="0.05" />
+      </geometry> 
+      <material name="kindablue">
+        <color rgba=".1 .5 .7 0.8"/>
+      </material> 
+    </visual>
+
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.75"/>
+      <geometry>
+        <cylinder length="1.0" radius="0.05" />
+      </geometry>
+    </collision>  
+
+  </link>
+    <joint name="support_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="support"/>
+  </joint>
 
 
 </robot>
