@@ -1,7 +1,7 @@
 # safe-control-gym: IROS 2022 Safe Robot Learning Competition
 
-Official Webpage: https://www.dynsyslab.org/iros-2022-safe-robot-learning-competition/
-IROS Competition Page: https://iros2022.org/program/competition/#toggle-id-8
+- Official Webpage: https://www.dynsyslab.org/iros-2022-safe-robot-learning-competition/
+- IROS Competition Page: https://iros2022.org/program/competition/#toggle-id-8
 
 ## Install on Ubuntu/macOS
 
