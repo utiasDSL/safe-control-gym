@@ -136,8 +136,8 @@ Note that the Bullet engine frequency reported for `safe-control-gym` is typical
 Familiarize with APIs and environments with the scripts in [`examples/`](https://github.com/utiasDSL/safe-control-gym/tree/main/examples)
 ```
 $ cd ./examples/                                                                    # Navigate to the examples folder
-$ python3 tracking.py --overrides ./tracking.yaml                                   # PID trajectory tracking with the 2D quadcopter
-$ python3 verbose_api.py --task cartpole --overrides verbose_api.yaml             #  Printout of the extended safe-control-gym APIs
+$ python3 tracking.py --algo pid --task quadrotor --overrides ./tracking.yaml       # PID trajectory tracking with the 2D quadcopter
+$ python3 verbose_api.py --task cartpole --overrides verbose_api.yaml               #  Printout of the extended safe-control-gym APIs
 ```
 
 

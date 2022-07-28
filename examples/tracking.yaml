@@ -3,7 +3,7 @@ quadrotor_config:
   info_in_reset: True
   ctrl_freq: 60
   pyb_freq: 240
-  gui: True
+  gui: False
   physics: pyb
   quad_type: 2
   init_state:
