@@ -39,7 +39,7 @@ conda install -c anaconda gmp
 Familiarize with APIs and environments with the scripts in [`examples/`](https://github.com/utiasDSL/safe-control-gym/tree/main/examples)
 ```
 $ cd ./examples/                                                                    # Navigate to the examples folder
-$ python3 3d_quad.py --overrides ./3d_quad.yaml
+$ python3 getting_started.py --overrides ./getting_started.yaml
 ```
 
 See also
