@@ -39,12 +39,47 @@ class BaseController:
         # Algorithm specific args.
         for k, v in kwargs.items():
             self.__dict__[k] = v
+        
+        self.setup_results_dict()
+
+    def select_action(self, obs, info=None):
+        """Determine the action to take at the current timestep.
+
+        Args:
+            obs (np.array): the observation at this timestep
+            info (list): the info at this timestep
+        
+        Returns:
+            action (np.array): the action chosen by the controller
+        """
+        return 
+
+    def learn(self,
+              env=None,
+              **kwargs
+              ):
+        """Performs learning (pre-training, training, fine-tuning, etc).
+
+        Args:
+            env (gym.Env): the environment to be used for training
+        """
+        pass
 
     def reset(self):
         """Do initializations for training or evaluation.
 
         """
         pass
+
+    def reset_before_run(self, obs, info=None, env=None):
+        """Reinitialize just the controller before a new run.
+
+        Args:
+            obs (np.array): the initial observation for the new run
+            info (list): the first info of the new run
+            env (gym.Env): the environment to be used for the new run
+        """
+        self.setup_results_dict() 
 
     def close(self):
         """Shuts down and cleans up lingering resources.
@@ -57,6 +92,8 @@ class BaseController:
              ):
         """Saves model params and experiment state to checkpoint path.
 
+        Args:
+            path (str): the path where to the saved model params/experiment state
         """
         pass
 
@@ -65,38 +102,11 @@ class BaseController:
              ):
         """Restores model and experiment given checkpoint path.
 
-        """
-        pass
-
-    def learn(self,
-              env=None,
-              **kwargs
-              ):
-        """Performs learning (pre-training, training, fine-tuning, etc).
-
-        """
-        pass
-
-    def run(self,
-            env=None,
-            render=False,
-            n_episodes=10,
-            verbose=False,
-            **kwargs
-            ):
-        """Runs evaluation with current policy.
-
+        Args:
+            path (str): the path where the model params/experiment state are saved
         """
         pass
     
-    def reset_before_run(self, obs, info, env=None):
-        """"""
-        pass 
-    
-    def select_action(obs, info=None):
-        """"""
-        return 
-    
-    def get_eval_result_dict(self):
-        """"""
-        return {}
+    def setup_results_dict(self):
+        """Setup the results dictionary to store run information. """
+        self.results_dict = {}

@@ -363,6 +363,7 @@ class BenchmarkEnv(gym.Env):
 
         """
         # Add initial constraint info (no action/input yet, so only state-based constraints)
+        info['current_step'] = 0
         if self.constraints is not None:
             info["constraint_values"] = self.constraints.get_values(self, only_state=True)
         return obs, info
@@ -411,6 +412,8 @@ class BenchmarkEnv(gym.Env):
         # Increment counters 
         self.pyb_step_counter += self.PYB_STEPS_PER_CTRL
         self.ctrl_step_counter += 1
+
+        info['current_step'] = self.ctrl_step_counter
                 
         # Terminate when (any) constraint is violated.
         # here we cache the constraint values `c_value`, so we only evaluate the constraints once,
@@ -426,6 +429,8 @@ class BenchmarkEnv(gym.Env):
                     done = True
             else:
                 info["constraint_violation"] = 0
+        else:
+            info["constraint_violation"] = 0
 
         # Apply penalized reward when close to constraint violation
         if self.COST == Cost.RL_REWARD:

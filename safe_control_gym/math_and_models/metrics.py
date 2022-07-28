@@ -1,19 +1,22 @@
-import warnings
 import numpy as np 
-import torch 
-
 
 
 def compute_cvar(data, alpha, lower_range=True):
     """CVaR as mean of the lower-alpha-percentile of data.
         adapted from https://github.com/nuria95/O-RAAC/blob/57347bc682798ff9f5600131c606517832efe864/oraaclib/util/utilities.py
+    
+    Args:
+        data (np.array): the trajectory RMSE collected by the Experiment class
+        alpha (float): the percentile upper bound to use
+        lower_range (bool): ???
+    
+    Returns:
+        cvar (float): the resulting CVaR
     """
-    if not isinstance(data, torch.Tensor):
-        data = torch.Tensor(data)
-    if len(data.size()) < 2:
-        data.unsqueeze_(0)
-    batch_size, N = data.size()
-    sorted_data, _ = torch.sort(data)
+
+    data = np.atleast_2d(data)
+    batch_size, N = data.shape
+    sorted_data = np.sort(data)
 
     # NOTE: what does it do?
     # if alpha == 1 or alpha <= 0.5:
@@ -21,13 +24,11 @@ def compute_cvar(data, alpha, lower_range=True):
     # else:
     #     cvar = sorted_data[:, int(alpha * N)::].mean(1)
     if lower_range:
-        cvar = sorted_data[:, :int(alpha * N)].mean(1)
+        cvar = sorted_data[:, :int(alpha * N)].mean()
     else:
-        cvar = sorted_data[:, -int(alpha * N):].mean(1)
-    if all(torch.isnan(cvar)):
+        cvar = sorted_data[:, -int(alpha * N):].mean()
+    if np.all(np.isnan(cvar)):
         raise ValueError(f'Not enough samples to compute {alpha} '
                          f'CVaR from {data}')
     else:
-        if len(data.size()) < 2:
-            cvar = cvar.squeeze(0)
-        return cvar.numpy()
+        return cvar
