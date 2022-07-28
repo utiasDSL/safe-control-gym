@@ -18,6 +18,7 @@ from safe_control_gym.utils.utils import str2bool
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 from safe_control_gym.envs.gym_pybullet_drones.quadrotor_utils import PIDController
+from safe_control_gym.envs.gym_pybullet_drones.Logger import Logger
 
 def main():
     """The main function creating, running, and closing an environment.
@@ -72,6 +73,16 @@ def main():
     ax.scatter3D(waypoints[:,0], waypoints[:,1], waypoints[:,2])
     plt.show()
 
+    p.loadURDF(os.path.join(env.URDF_DIR, "portal.urdf"),
+                   [-1, -1, 0],
+                   p.getQuaternionFromEuler([0,0,0]),
+                   physicsClientId=env.PYB_CLIENT)
+
+    p.loadURDF(os.path.join(env.URDF_DIR, "obstacle.urdf"),
+                   [-1, 0, 0],
+                   p.getQuaternionFromEuler([0,0,0]),
+                   physicsClientId=env.PYB_CLIENT)
+
     for i in range(10, ref_x.shape[0], 10):
         p.addUserDebugLine(lineFromXYZ=[ref_x[i-10], ref_y[i-10], ref_z[i-10]],
                            lineToXYZ=[ref_x[i], ref_y[i], ref_z[i]],
@@ -84,15 +95,19 @@ def main():
                    p.getQuaternionFromEuler([0,0,0]),
                    physicsClientId=env.PYB_CLIENT)
 
+    # Create a logger.
+    logger = Logger(logging_freq_hz=env.CTRL_FREQ)
+
     # Run an experiment.
     for i in range(ITERATIONS):
 
         # Step by keyboard input
         # _ = input('Press any key to continue.')
 
-        # Sample a random action.
+        # Initial action.
         if i == 0:
-            action = env.action_space.sample()
+            rpms = np.array([0,0,0,0])
+            action = env.KF * rpms**2 # action = env.action_space.sample()
         else:
             rpms, _, _ = ctrl.compute_control(control_timestep=env.CTRL_TIMESTEP,
                         cur_pos=np.array([obs[0],obs[2],obs[4]]),
@@ -123,6 +138,17 @@ def main():
             out = '\tConstraints violation: ' + str(bool(info['constraint_violation']))
             print(out)
 
+        # Log data
+        pos = obs[0:3]
+        rpy = obs[3:6]
+        vel = obs[6:9]
+        ang_vel = obs[9:12]
+        logger.log(drone=0,
+                   timestamp=i/env.CTRL_FREQ,
+                   state=np.hstack([pos, np.zeros(4), rpy, vel, ang_vel, rpms]),
+                   control=np.hstack([ref_x[i], ref_y[i], ref_z[i], np.zeros(9)])
+                   )
+
         # If an episode is complete, reset the environment.
         if done:
             num_episodes += 1
@@ -130,6 +156,12 @@ def main():
             print(str(num_episodes)+'-th reset.', 7)
             print('Reset obs' + str(new_initial_obs), 2)
             print('Reset info' + str(new_initial_info), 0)
+
+            # Plot logging.
+            logger.plot()
+
+            # Create a new logger.
+            logger = Logger(logging_freq_hz=env.CTRL_FREQ)
 
     # Close the environment and print timing statistics.
     env.close()

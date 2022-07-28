@@ -13,17 +13,17 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <box size=".8 .05 .05" />
+        <cylinder length=".8" radius="0.1" />
       </geometry> 
-      <material name="grey">
-        <color rgba=".5 .5 .5 1"/>
+      <material name="kindablue">
+        <color rgba=".1 .1 .7 1"/>
       </material> 
     </visual>
 
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <box size=".8 .05 .05" />
+        <cylinder length=".8" radius="0.1" />
       </geometry>
     </collision>  
 
