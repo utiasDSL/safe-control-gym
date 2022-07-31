@@ -36,18 +36,11 @@ conda install -c anaconda gmp
  ```
 
 ## Getting Started
-Familiarize with APIs and environments with the scripts in [`examples/`](https://github.com/utiasDSL/safe-control-gym/tree/main/examples)
+Familiarize with APIs and environments with the scripts in [`competition/`](https://github.com/utiasDSL/safe-control-gym/tree/main/competition)
 ```
-$ cd ./examples/                                                                    # Navigate to the examples folder
+$ cd ./competition/                                                                    # Navigate to the competition folder
 $ python3 getting_started.py --overrides ./getting_started.yaml
 ```
-
-See also
-```
-$ python3 tracking.py --overrides ./tracking.yaml                                   # PID trajectory tracking with the 2D quadcopter
-$ python3 verbose_api.py --task cartpole --overrides verbose_api.yaml               #  Printout of the extended safe-control-gym APIs
-```
-
 
 -----
 > University of Toronto's [Dynamic Systems Lab](https://github.com/utiasDSL) / [Vector Institute for Artificial Intelligence](https://github.com/VectorInstitute)
