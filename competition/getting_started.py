@@ -203,7 +203,7 @@ def main():
             logger.plot()
 
             # # CSV safe
-            # logger.save_as_csv("pid-episode-"+str(num_episodes-1))
+            logger.save_as_csv("pid-episode-"+str(num_episodes-1))
 
             # Create a new logger.
             logger = Logger(logging_freq_hz=env.CTRL_FREQ)
