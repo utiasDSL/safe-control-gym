@@ -202,6 +202,9 @@ def main():
             # Plot logging.
             logger.plot()
 
+            # # CSV safe
+            # logger.save_as_csv("pid-episode-"+str(num_episodes-1))
+
             # Create a new logger.
             logger = Logger(logging_freq_hz=env.CTRL_FREQ)
 
@@ -211,7 +214,6 @@ def main():
     out = str("\n{:d} iterations (@{:d}Hz) and {:d} episodes in {:.2f} seconds, i.e. {:.2f} steps/sec for a {:.2f}x speedup.\n\n"
           .format(ITERATIONS, env.CTRL_FREQ, num_episodes, elapsed_sec, ITERATIONS/elapsed_sec, (ITERATIONS*env.CTRL_TIMESTEP)/elapsed_sec))
     print(out)
-
 
 if __name__ == "__main__":
     main()
