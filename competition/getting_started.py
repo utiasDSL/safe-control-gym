@@ -17,8 +17,9 @@ import matplotlib.pyplot as plt
 from safe_control_gym.utils.utils import str2bool
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
-from safe_control_gym.envs.gym_pybullet_drones.quadrotor_utils import PIDController
 from safe_control_gym.envs.gym_pybullet_drones.Logger import Logger
+
+from edit_this import Controller
 
 def main():
     """The main function creating, running, and closing an environment.
@@ -35,9 +36,6 @@ def main():
     config = CONFIG_FACTORY.merge()
     env = make('quadrotor', **config.quadrotor_config)
 
-    # Controller
-    ctrl = PIDController()
-
     # Reset the environment, obtain and print the initial observations.
     initial_obs, initial_info = env.reset()
     # Dynamics info
@@ -47,120 +45,31 @@ def main():
     print('\tInitial observation: ' + str(initial_obs))
 
     # Create maze.
-    p.loadURDF(os.path.join(env.URDF_DIR, "portal.urdf"),
-                   [1.5, 0.5, 1.3],
-                   p.getQuaternionFromEuler([0,0,np.pi/2]),
+    for obstacle in config.obstacles:
+        p.loadURDF(os.path.join(env.URDF_DIR, "obstacle.urdf"),
+                   obstacle[0:3],
+                   p.getQuaternionFromEuler(obstacle[3:6]),
                    physicsClientId=env.PYB_CLIENT)
-    p.loadURDF(os.path.join(env.URDF_DIR, "portal.urdf"),
-                   [3, 1.5, 1.3],
-                   p.getQuaternionFromEuler([0,0,0]),
-                   physicsClientId=env.PYB_CLIENT)
-    p.loadURDF(os.path.join(env.URDF_DIR, "portal.urdf"),
-                   [1, 3, 1.3],
-                   p.getQuaternionFromEuler([0,0,np.pi/2]),
-                   physicsClientId=env.PYB_CLIENT)
-    p.loadURDF(os.path.join(env.URDF_DIR, "portal.urdf"),
-                   [0.5, 4.5, 1.3],
-                   p.getQuaternionFromEuler([0,0,0]),
-                   physicsClientId=env.PYB_CLIENT)
-    #
-    p.loadURDF(os.path.join(env.URDF_DIR, "obstacle.urdf"),
-                   [2.5, 0.5, 0.8],
-                   p.getQuaternionFromEuler([0,0,0]),
-                   physicsClientId=env.PYB_CLIENT)
-    p.loadURDF(os.path.join(env.URDF_DIR, "obstacle.urdf"),
-                   [1.5, 2, 0.8],
-                   p.getQuaternionFromEuler([0,0,0]),
-                   physicsClientId=env.PYB_CLIENT)
-    p.loadURDF(os.path.join(env.URDF_DIR, "obstacle.urdf"),
-                   [2.5, 3, 0.8],
-                   p.getQuaternionFromEuler([0,0,0]),
-                   physicsClientId=env.PYB_CLIENT)
-    p.loadURDF(os.path.join(env.URDF_DIR, "obstacle.urdf"),
-                   [0, 3, 0.8],
-                   p.getQuaternionFromEuler([0,0,0]),
+    for gate in config.gates:
+        p.loadURDF(os.path.join(env.URDF_DIR, "portal.urdf"),
+                   gate[0:3],
+                   p.getQuaternionFromEuler(gate[3:6]),
                    physicsClientId=env.PYB_CLIENT)
 
-    # Curve fitting with waypoints.
-    waypoints = np.array([
-                            (0, 0, 0),
-                            (1, 0.5, 1.25),
-                            (1.5, 0.5, 1.25),
-                            (2, 1, 1.25), 
-                            (2.5, 1, 1.25), 
-                            (3, 2, 1.25),
-                            (1.5, 3, 1.25),
-                            (0.5, 3, 1.25),
-                            (0.5, 5, 1.25),
-                        ])
-    deg = 12
-    t = np.arange(waypoints.shape[0])
-    fit_x = np.polyfit(t, waypoints[:,0], deg)
-    fit_y = np.polyfit(t, waypoints[:,1], deg)
-    fit_z = np.polyfit(t, waypoints[:,2], deg)
-    fx = np.poly1d(fit_x)
-    fy = np.poly1d(fit_y)
-    fz = np.poly1d(fit_z)
-    t_scaled = np.linspace(t[0], t[-1], env.EPISODE_LEN_SEC*env.CTRL_FREQ)
-    ref_x = fx(t_scaled)
-    ref_y = fy(t_scaled)
-    ref_z = fz(t_scaled)
-
-    # Plot each dimension.
-    # plt.plot(t_scaled, x_scaled)
-    # plt.plot(t_scaled, x_scaled)
-    # plt.plot(t_scaled, x_scaled)
-    # plt.show()
-
-    # Plot in 3D.
-    ax = plt.axes(projection='3d')
-    ax.plot3D(ref_x, ref_y, ref_z)
-    ax.scatter3D(waypoints[:,0], waypoints[:,1], waypoints[:,2])
-    plt.show()
-
-    # Draw trajectory.
-    for point in waypoints:
-        p.loadURDF(os.path.join(env.URDF_DIR, "sphere.urdf"),
-                   [point[0], point[1], point[2]],
-                   p.getQuaternionFromEuler([0,0,0]),
-                   physicsClientId=env.PYB_CLIENT)
-    step = 10
-    for i in range(step, ref_x.shape[0], step):
-        p.addUserDebugLine(lineFromXYZ=[ref_x[i-step], ref_y[i-step], ref_z[i-step]],
-                           lineToXYZ=[ref_x[i], ref_y[i], ref_z[i]],
-                           lineColorRGB=[1, 0, 0],
-                           physicsClientId=env.PYB_CLIENT)
-    p.addUserDebugLine(lineFromXYZ=[ref_x[i], ref_y[i], ref_z[i]],
-                       lineToXYZ=[ref_x[-1], ref_y[-1], ref_z[-1]],
-                       lineColorRGB=[1, 0, 0],
-                       physicsClientId=env.PYB_CLIENT)
-
-
+    # Create a controller.
+    ctrl = Controller(env)
 
     # Create a logger.
     logger = Logger(logging_freq_hz=env.CTRL_FREQ)
 
     # Run an experiment.
+    obs = initial_obs
     for i in range(ITERATIONS):
 
         # Step by keyboard input
         # _ = input('Press any key to continue.')
 
-        # Initial action.
-        if i == 0:
-            rpms = np.array([0,0,0,0])
-            action = env.KF * rpms**2 # action = env.action_space.sample()
-        else:
-            rpms, _, _ = ctrl.compute_control(control_timestep=env.CTRL_TIMESTEP,
-                        cur_pos=np.array([obs[0],obs[2],obs[4]]),
-                        cur_quat=np.array(p.getQuaternionFromEuler([obs[6],obs[7],obs[8]])),
-                        cur_vel=np.array([obs[1],obs[3],obs[5]]),
-                        cur_ang_vel=np.array([obs[9],obs[10],obs[11]]),
-                        target_pos=np.array([ref_x[i], ref_y[i], ref_z[i]]),
-                        target_vel=np.zeros(3)
-                        )
-            action = rpms
-            action = env.KF * action**2
+        action = ctrl.cmdFullState(i, obs)
 
         # Step the environment and print all returned information.
         obs, reward, done, info = env.step(action)
@@ -187,8 +96,8 @@ def main():
         ang_vel = [obs[9],obs[10],obs[11]]
         logger.log(drone=0,
                    timestamp=i/env.CTRL_FREQ,
-                   state=np.hstack([pos, np.zeros(4), rpy, vel, ang_vel, rpms]),
-                   control=np.hstack([ref_x[i], ref_y[i], ref_z[i], np.zeros(9)])
+                   state=np.hstack([pos, np.zeros(4), rpy, vel, ang_vel, np.sqrt(action/env.KF)]),
+                   # control=np.hstack([ref_x[i], ref_y[i], ref_z[i], np.zeros(9)])
                    )
 
         # If an episode is complete, reset the environment.

@@ -70,6 +70,7 @@ class BaseAviary(BenchmarkEnv):
                  record=False,
                  gui=False,
                  verbose=False,
+                 camera_view = [5, -40, -55, 1.5, 2, 0.5],
                  **kwargs):
         """Initialization of a generic aviary environment.
 
@@ -151,10 +152,10 @@ class BaseAviary(BenchmarkEnv):
         if gui:
             # With debug GUI.
             self.PYB_CLIENT = p.connect(p.GUI)  # p.connect(p.GUI, options="--opengl2")
-            p.resetDebugVisualizerCamera(cameraDistance=3,
-                                         cameraYaw=-30,
-                                         cameraPitch=-30,
-                                         cameraTargetPosition=[0, 0, 0],
+            p.resetDebugVisualizerCamera(cameraDistance=camera_view[0],
+                                         cameraYaw=camera_view[1],
+                                         cameraPitch=camera_view[2],
+                                         cameraTargetPosition=[camera_view[3], camera_view[4], camera_view[5]],
                                          physicsClientId=self.PYB_CLIENT)
             ret = p.getDebugVisualizerCamera(physicsClientId=self.PYB_CLIENT)
             if verbose:
