@@ -1,10 +1,13 @@
-# safe-control-gym: IROS 2022 Safe Robot Learning Competition
+# IROS 2022 Safe Robot Learning Competition
 
-- Official Webpage: https://www.dynsyslab.org/iros-2022-safe-robot-learning-competition/
-- IROS Competition Page: https://iros2022.org/program/competition/#toggle-id-8
-- GitHub Discussions: https://github.com/utiasDSL/safe-control-gym/discussions/categories/iros-2022-competition
+Links:
+- [Official Webpage](https://www.dynsyslab.org/iros-2022-safe-robot-learning-competition/)
+- [IROS Competition Page](https://iros2022.org/program/competition/#toggle-id-8)
+- [GitHub Discussions](https://github.com/utiasDSL/safe-control-gym/discussions/categories/iros-2022-competition)
 
 ## Registration Form
+
+*Disclaimer: alpha release subject to change throughout the month of August, 2022; register for updates*
 
 Complete this [Google Form](https://forms.gle/vEmVK99n1SyaE4Zw9) to register you interest and receive e-mail updates
 
@@ -43,10 +46,10 @@ conda install -c anaconda gmp
 ## Getting Started
 Familiarize with the scripts in [`competition/`](https://github.com/utiasDSL/safe-control-gym/tree/main/competition)
 ```
-$ cd ./competition/                                                                    # Navigate to the competition folder
+$ cd ./competition/
 $ python3 getting_started.py --overrides ./getting_started.yaml
 ```
-**Modify file `edit_this.py` to customize planning and control**
+**Modify file [`edit_this.py`](https://github.com/utiasDSL/safe-control-gym/blob/alpha-iros-competition/competition/edit_this.py) to customize planning and control**
 
 -----
 > University of Toronto's [Dynamic Systems Lab](https://github.com/utiasDSL) / [Vector Institute for Artificial Intelligence](https://github.com/VectorInstitute)
