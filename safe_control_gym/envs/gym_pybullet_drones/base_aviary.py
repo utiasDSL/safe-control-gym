@@ -249,6 +249,8 @@ class BaseAviary(BenchmarkEnv):
                        physicsClientId=self.PYB_CLIENT)
             for i in range(self.NUM_DRONES)
         ])
+        # for i in range(self.NUM_DRONES):
+         #     p.changeDynamics(self.DRONE_IDS[i], -1, linearDamping=0, angularDamping=0)
         # Remove default damping.
         for i in range(self.NUM_DRONES):
             p.changeDynamics(self.DRONE_IDS[i], -1, linearDamping=0, angularDamping=0)
