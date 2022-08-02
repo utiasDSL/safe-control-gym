@@ -557,7 +557,7 @@ class Quadrotor(BaseAviary):
             pos_dot = cs.vertcat(x_dot, y_dot, z_dot)
             Mb = cs.vertcat(l/cs.sqrt(2.0)*(f1+f2-f3-f4),
                             l/cs.sqrt(2.0)*(-f1+f2+f3-f4),
-                            gamma*(-f1+f2-f3+f4))
+                            ggamma*(f1-f2+f3-f4))
             rate_dot = Jinv @ (Mb - (cs.skew(cs.vertcat(p,q,r)) @ J @ cs.vertcat(p,q,r)))
             ang_dot = cs.blockcat([[1, cs.sin(phi)*cs.tan(theta), cs.cos(phi)*cs.tan(theta)],
                                    [0, cs.cos(phi), -cs.sin(phi)],
