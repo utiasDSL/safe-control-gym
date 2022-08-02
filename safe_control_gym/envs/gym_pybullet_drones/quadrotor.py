@@ -533,13 +533,13 @@ class Quadrotor(BaseAviary):
             p = cs.MX.sym('p')  # Body frame roll rate
             q = cs.MX.sym('q')  # body frame pith rate
             r = cs.MX.sym('r')  # body frame yaw rate
-            # Pybullet euler angles use the SDFormat for rotation matrices.
+            # PyBullet Euler angles use the SDFormat for rotation matrices.
             Rob = csRotXYZ(phi, theta, psi)  # rotation matrix transforming a vector in the body frame to the world frame.
 
-            # Define state variable
+            # Define state variables.
             X = cs.vertcat(x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r)
 
-            # Defone inputs.
+            # Define inputs.
             f1 = cs.MX.sym('f1')
             f2 = cs.MX.sym('f2')
             f3 = cs.MX.sym('f3')
@@ -550,8 +550,8 @@ class Quadrotor(BaseAviary):
             # nanoquadcopter." arXiv preprint arXiv:1608.05786 (2016).
 
             # Defining the dynamics function.
-            # We are using the velocity of the base wrt to the world frame expressed in the world frame. Note that
-            # the reference expresses this in the body frame.
+            # We are using the velocity of the base wrt to the world frame expressed in the world frame.
+            # Note that the reference expresses this in the body frame.
             oVdot_cg_o = Rob @ cs.vertcat(0, 0, f1+f2+f3+f4)/m - cs.vertcat(0, 0, g)
             pos_ddot = oVdot_cg_o
             pos_dot = cs.vertcat(x_dot, y_dot, z_dot)
@@ -756,8 +756,8 @@ class Quadrotor(BaseAviary):
             ang_v_body_frame = Rbo @ ang_v
             # {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
             self.state = np.hstack(
-                #[pos[0], vel[0], pos[1], vel[1], pos[2], vel[2], rpy, ang_v]  # TODO ang_v is NOT pqr
-                [pos[0], vel[0], pos[1], vel[1], pos[2], vel[2], rpy, ang_v_body_frame]  # TODO ang_v is NOT pqr
+                # [pos[0], vel[0], pos[1], vel[1], pos[2], vel[2], rpy, ang_v]  # Note: world ang_v != body frame pqr
+                [pos[0], vel[0], pos[1], vel[1], pos[2], vel[2], rpy, ang_v_body_frame]
             ).reshape((12,))
         # if not np.array_equal(self.state,
         #                       np.clip(self.state, self.observation_space.low, self.observation_space.high)):
