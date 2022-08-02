@@ -120,7 +120,7 @@ class PIDController():
         self.PWM2RPM_CONST = pwm2rpm_const
         self.MIN_PWM = min_pwm
         self.MAX_PWM = max_pwm
-        self.MIXER_MATRIX = np.array([[.5, -.5, -1], [.5, .5, 1], [-.5, .5, -1], [-.5, -.5, 1]])
+        self.MIXER_MATRIX = np.array([[.5, -.5, 1], [.5, .5, -1], [-.5, .5, 1], [-.5, -.5, -1]])
         self.reset()
 
     def reset(self):
