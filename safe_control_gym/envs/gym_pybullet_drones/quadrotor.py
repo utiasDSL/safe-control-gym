@@ -750,7 +750,6 @@ class Quadrotor(BaseAviary):
                 [pos[0], vel[0], pos[2], vel[2], rpy[1], ang_v[1]]
             ).reshape((6,))
         elif self.QUAD_TYPE == QuadType.THREE_D:
-
             Rob = np.array(p.getMatrixFromQuaternion(self.quat[0])).reshape((3,3))
             Rbo = Rob.T
             ang_v_body_frame = Rbo @ ang_v
