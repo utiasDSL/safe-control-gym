@@ -2,12 +2,20 @@
 
 """
 import os
+from enum import Enum
 import numpy as np
 import pybullet as p
 import matplotlib.pyplot as plt
 
 from safe_control_gym.envs.gym_pybullet_drones.quadrotor_utils import PIDController
 
+class Command(Enum):
+    NONE = 0 # Args: Empty
+    FULLSTATE = 1 # Args: [pos, vel, acc, rpy, rpy_rate, iteration]
+    TAKEOFF = 2 # Args: [height, duration]
+    LAND = 3 # Args: [height, duration]
+    STOP = 4 # Args: Empty
+    GOTO = 5 # Args: [x, y, z, yaw, duration, relative (bool)]
 
 class Controller():
     """Editable controller class.
@@ -49,6 +57,7 @@ class Controller():
         fy = np.poly1d(fit_y)
         fz = np.poly1d(fit_z)
         t_scaled = np.linspace(t[0], t[-1], env.EPISODE_LEN_SEC*env.CTRL_FREQ)
+        self.CTRL_FREQ = env.CTRL_FREQ
         self.ref_x = fx(t_scaled)
         self.ref_y = fy(t_scaled)
         self.ref_z = fz(t_scaled)
@@ -81,6 +90,31 @@ class Controller():
                            lineToXYZ=[self.ref_x[-1], self.ref_y[-1], self.ref_z[-1]],
                            lineColorRGB=[1, 0, 0],
                            physicsClientId=env.PYB_CLIENT)
+
+    def getCmd(self, time, vicon_pos=None, est_vel=None, est_acc=None, est_rpy=None, est_rpy_rates=None):
+        '''
+        This function should return the target position, velocity, acceleration, attitude, and attitude rates to be sent 
+        from crazyswarm to the crazyflie using a cmdFullState call. 
+
+        Arguments 
+        * time (s) 
+        * vicon_pos - contains feedback from the vicon tracking system about where your drone marker is (mm) 
+        * est_vel - estimation of drone velocity from vicon system 
+        * est_acc - estimation of drone acceleration from vicon system 
+        * est_rpy - estimation of drone attitude from vicon system 
+        * est_rpy_rates - estimation of drone body rates from vicon system 
+        '''
+        iteration = int(time*self.CTRL_FREQ)
+        
+        # Your code goes here 
+
+        target_pos = np.array([self.ref_x[iteration], self.ref_y[iteration], self.ref_z[iteration]])
+        target_vel = np.zeros(3)
+        target_acc = np.zeros(3)
+        target_rpy = np.zeros(3)
+        target_rpy_rates = np.zeros(3)
+
+        return Command(1), [target_pos, target_vel, target_acc, target_rpy, target_rpy_rates, iteration]
 
     def cmdFullState(self,
                      iteration,
