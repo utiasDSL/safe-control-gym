@@ -436,7 +436,7 @@ class CartPole(BenchmarkEnv):
 
         """
         self.action_scale = 10
-        self.physical_action_space = spaces.Box(low=-self.action_scale, high=self.action_scale, shape=(1,))
+        self.physical_action_bounds = (-np.asarray(self.action_scale), np.asarray(self.action_scale))
         self.action_threshold = 1 if self.NORMALIZED_RL_ACTION_SPACE else self.action_scale
         self.action_space = spaces.Box(low=-self.action_threshold, high=self.action_threshold, shape=(1,))
         # Define action/input labels and units.
@@ -494,7 +494,7 @@ class CartPole(BenchmarkEnv):
         self.current_noisy_physical_action = action
         
         # Save the actual input.
-        force = np.clip(action, self.physical_action_space.low, self.physical_action_space.high)
+        force = np.clip(action, self.physical_action_bounds[0], self.physical_action_bounds[1])
         self.current_clipped_action = force
 
         return force[0] # Only use the scalar value.

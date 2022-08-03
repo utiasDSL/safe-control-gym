@@ -611,9 +611,8 @@ class Quadrotor(BaseAviary):
         n_mot = 4 / action_dim
         a_low = self.KF * n_mot * (self.PWM2RPM_SCALE * self.MIN_PWM + self.PWM2RPM_CONST)**2
         a_high = self.KF * n_mot * (self.PWM2RPM_SCALE * self.MAX_PWM + self.PWM2RPM_CONST)**2
-        self.physical_action_space = spaces.Box(low=np.full(action_dim, a_low, np.float32), 
-                                        high=np.full(action_dim, a_high, np.float32), 
-                                        dtype=np.float32)
+        self.physical_action_bounds = (np.full(action_dim, a_low, np.float32), 
+                                       np.full(action_dim, a_high, np.float32))
 
         if self.NORMALIZED_RL_ACTION_SPACE:
             # Normalized thrust (around hover thrust).
@@ -623,7 +622,9 @@ class Quadrotor(BaseAviary):
                                            dtype=np.float32)
         else:
             # Direct thrust control.
-            self.action_space = self.physical_action_space
+            self.action_space = spaces.Box(low=self.physical_action_bounds[0], 
+                                            high=self.physical_action_bounds[1], 
+                                            dtype=np.float32)
 
     def _set_observation_space(self):
         """Returns the observation space of the environment.
@@ -727,7 +728,7 @@ class Quadrotor(BaseAviary):
             action = action + self.adv_action
         self.current_noisy_physical_action = action
 
-        thrust = np.clip(action, self.physical_action_space.low, self.physical_action_space.high)
+        thrust = np.clip(action, self.physical_action_bounds[0], self.physical_action_bounds[1])
         self.current_clipped_action = thrust
 
         # convert to quad motor rpm commands
