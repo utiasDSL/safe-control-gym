@@ -217,8 +217,10 @@ class RecordDataWrapper(gym.Wrapper):
     """A wrapper to standardizes logging for benchmark envs.
     
     currently saved info
-    * obs, reward, done, info, action
-    * env.state, env.current_raw_input_action, env.current_preprocessed_action
+    * obs, rew, done, info, act
+    * env.state, env.current_physical_action, 
+    env.current_noisy_physical_action, env.current_clipped_action
+    
     """
 
     def __init__(self, env, deque_size=None, **kwargs):
@@ -270,8 +272,9 @@ class RecordDataWrapper(gym.Wrapper):
             reward=reward, 
             length=1,
             state=self.env.state, 
-            current_raw_action=self.env.current_raw_input_action,
-            current_preprocessed_action=self.env.current_preprocessed_action, 
+            current_physical_action=self.env.current_physical_action, 
+            current_noisy_physical_action=self.env.current_noisy_physical_action,
+            current_clipped_action=self.env.current_clipped_action
         )
         for key, val in step_data.items():
             self.episode_data[key].append(val)
