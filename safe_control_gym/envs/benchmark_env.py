@@ -350,10 +350,10 @@ class BenchmarkEnv(gym.Env):
         self.initial_reset = True
         self.pyb_step_counter = 0
         self.ctrl_step_counter = 0
-        self.current_raw_action = None
-        self.current_physical_action = None
-        self.current_noisy_physical_action = None
-        self.current_clipped_action = None
+        self.current_raw_action = None  # Action sent by controller, possibly normalized and unclipped
+        self.current_physical_action = None  # current_raw_action unnormalized if it was normalized
+        self.current_noisy_physical_action = None  # current_physical_action with noise added
+        self.current_clipped_action = None  # current_noisy_physical_action clipped to physical action bounds
         # Reset the disturbances.
         for mode in self.disturbances.keys():
             self.disturbances[mode].reset(self) 
