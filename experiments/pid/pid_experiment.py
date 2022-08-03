@@ -8,6 +8,7 @@ Run as:
     $ python3 ./pid_experiment.py --algo pid --task quadrotor --overrides ./config_overrides/quadrotor_tracking.yaml
 """
 
+import os
 import time
 import pickle
 from functools import partial
@@ -43,6 +44,8 @@ def run(gui=True, n_episodes=2, n_steps=None, save_data=True):
     
     if save_data:
         results = {'trajs_data': trajs_data, 'metrics': metrics}
+        path_dir = os.path.dirname('./temp-data/')
+        os.makedirs(path_dir, exist_ok=True)
         with open(f'./temp-data/pid_data_{config.task_config.task}.pkl', "wb") as f:
             pickle.dump(results, f)
 
