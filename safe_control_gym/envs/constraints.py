@@ -6,6 +6,7 @@ Classes for constraints and lists of constraints.
 import casadi as cs
 from enum import Enum
 import numpy as np
+from gym import spaces
 
 
 class ConstrainedVariableType(str, Enum):
@@ -162,9 +163,9 @@ class Constraint:
         if self.constrained_variable == ConstrainedVariableType.STATE:
             return env.state
         elif self.constrained_variable == ConstrainedVariableType.INPUT:
-            return env.current_raw_input_action
+            return env.current_noisy_physical_action
         elif self.constrained_variable == ConstrainedVariableType.INPUT_AND_STATE:
-            return (env.state, env.current_raw_input_action)
+            return (env.state, env.current_noisy_physical_action)
         else:
             raise NotImplementedError("Constraint input type not implemented.")
 
@@ -340,7 +341,9 @@ class DefaultConstraint(BoundedConstraint):
             else:
                 default_constraint_space = env.observation_space
         elif constrained_variable == ConstrainedVariableType.INPUT:
-            default_constraint_space = env.action_space
+            default_constraint_space = spaces.Box(low=env.physical_action_bounds[0], 
+                                            high=env.physical_action_bounds[1], 
+                                            dtype=np.float32)
         else:
             raise NotImplementedError('[ERROR] DefaultConstraint can only be of type STATE or INPUT')
         # extract bounds from the space

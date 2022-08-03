@@ -608,6 +608,12 @@ class Quadrotor(BaseAviary):
             self.ACTION_LABELS = ['T1', 'T2', 'T3', 'T4']
             self.ACTION_UNITS = ['N', 'N', 'N', 'N'] if not self.NORMALIZED_RL_ACTION_SPACE else ['-', '-', '-', '-']
 
+        n_mot = 4 / action_dim
+        a_low = self.KF * n_mot * (self.PWM2RPM_SCALE * self.MIN_PWM + self.PWM2RPM_CONST)**2
+        a_high = self.KF * n_mot * (self.PWM2RPM_SCALE * self.MAX_PWM + self.PWM2RPM_CONST)**2
+        self.physical_action_bounds = (np.full(action_dim, a_low, np.float32), 
+                                       np.full(action_dim, a_high, np.float32))
+
         if self.NORMALIZED_RL_ACTION_SPACE:
             # Normalized thrust (around hover thrust).
             self.hover_thrust = self.GRAVITY_ACC * self.MASS / action_dim
@@ -615,13 +621,10 @@ class Quadrotor(BaseAviary):
                                            high=np.ones(action_dim), 
                                            dtype=np.float32)
         else:
-            # Direct thrust control .
-            n_motors = 4 / action_dim
-            a_low = self.KF * n_motors * (self.PWM2RPM_SCALE * self.MIN_PWM + self.PWM2RPM_CONST)**2
-            a_high = self.KF * n_motors * (self.PWM2RPM_SCALE * self.MAX_PWM + self.PWM2RPM_CONST)**2
-            self.action_space = spaces.Box(low=np.full(action_dim, a_low, np.float32), 
-                                           high=np.full(action_dim, a_high, np.float32), 
-                                           dtype=np.float32)
+            # Direct thrust control.
+            self.action_space = spaces.Box(low=self.physical_action_bounds[0], 
+                                            high=self.physical_action_bounds[1], 
+                                            dtype=np.float32)
 
     def _set_observation_space(self):
         """Returns the observation space of the environment.
@@ -715,18 +718,19 @@ class Quadrotor(BaseAviary):
         """
         if self.NORMALIZED_RL_ACTION_SPACE:
             # rescale action to around hover thrust
-            action = np.clip(action, self.action_space.low, self.action_space.high)
-            thrust = (1 + self.norm_act_scale * action) * self.hover_thrust
-        else:
-            thrust = np.clip(action, self.action_space.low, self.action_space.high)
-        if not np.array_equal(thrust, np.array(action)) and self.VERBOSE:
-            print("[WARNING]: action was clipped in Quadrotor._preprocess_control().")
-        self.current_preprocessed_action = thrust
+            action = (1 + self.norm_act_scale * action) * self.hover_thrust
+        self.current_physical_action = action
+        
         # Apply disturbances.
         if "action" in self.disturbances:
-            thrust = self.disturbances["action"].apply(thrust, self)
+            action = self.disturbances["action"].apply(action, self)
         if self.adversary_disturbance == "action":
-            thrust = thrust + self.adv_action
+            action = action + self.adv_action
+        self.current_noisy_physical_action = action
+
+        thrust = np.clip(action, self.physical_action_bounds[0], self.physical_action_bounds[1])
+        self.current_clipped_action = thrust
+
         # convert to quad motor rpm commands
         pwm = cmd2pwm(thrust, self.PWM2RPM_SCALE, self.PWM2RPM_CONST, self.KF, self.MIN_PWM, self.MAX_PWM)
         rpm = pwm2rpm(pwm, self.PWM2RPM_SCALE, self.PWM2RPM_CONST)
@@ -784,7 +788,7 @@ class Quadrotor(BaseAviary):
         # RL cost.
         if self.COST == Cost.RL_REWARD:
             state = self.state
-            act = np.asarray(self.current_preprocessed_action)
+            act = np.asarray(self.current_noisy_physical_action)
             act_error = act - self.U_GOAL
             # Quadratic costs w.r.t state and action
             # TODO: consider using multiple future goal states for cost in tracking
@@ -810,14 +814,14 @@ class Quadrotor(BaseAviary):
             if self.TASK == Task.STABILIZATION:
                 return float(-1 * self.symbolic.loss(x=self.state,
                                                      Xr=self.X_GOAL,
-                                                     u=self.current_preprocessed_action,
+                                                     u=self.current_clipped_action,
                                                      Ur=self.U_GOAL,
                                                      Q=self.Q,
                                                      R=self.R)["l"])
             if self.TASK == Task.TRAJ_TRACKING:
                 return float(-1 * self.symbolic.loss(x=self.state,
                                                      Xr=self.X_GOAL[self.ctrl_step_counter,:],
-                                                     u=self.current_preprocessed_action,
+                                                     u=self.current_clipped_action,
                                                      Ur=self.U_GOAL,
                                                      Q=self.Q,
                                                      R=self.R)["l"])
