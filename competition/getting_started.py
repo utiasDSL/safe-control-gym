@@ -1,4 +1,4 @@
-"""3D quadrotor example script.
+"""Demo script.
 
 Example:
 
@@ -29,6 +29,7 @@ def main():
     # Set iterations and episode counter.
     num_episodes = 1
     ITERATIONS = int(15000)
+
     # Start a timer.
     START = time.time()
 
@@ -50,6 +51,7 @@ def main():
     
     # Reset the environment, obtain and print the initial observations.
     initial_obs, initial_info = env.reset()
+
     # Dynamics info
     print('\nPyBullet dynamics info:')
     print('\t' + str(p.getDynamicsInfo(bodyUniqueId=env.DRONE_IDS[0], linkIndex=-1, physicsClientId=env.PYB_CLIENT)))
@@ -69,9 +71,7 @@ def main():
                    physicsClientId=env.PYB_CLIENT)
 
     # Create a controller.
-    
     ctrl = Controller(env)
-    
 
     # Create a logger.
     logger = Logger(logging_freq_hz=env.CTRL_FREQ)
@@ -82,11 +82,11 @@ def main():
         firmware_wrapper.update_initial_state(obs)
     action = np.zeros(4)
     for i in range(ITERATIONS):
-        # time.sleep(0.4)
 
-        # Step by keyboard input
+        # Step by keyboard input.
         # _ = input('Press any key to continue.')
 
+        # Compute control input.
         if firmware_exists:
             command_type, args = ctrl.getCmd(i*(1/env.CTRL_FREQ), obs)
 
@@ -109,21 +109,22 @@ def main():
             action = ctrl.cmdFullState(i, obs)
             obs, reward, done, info = env.step(action)
 
-        #
-        # print('\n'+str(i)+'-th step.')
-        out = '\tApplied action: ' + str(action)
-        print(out)
-        out = '\tObservation: ' + str(obs)
-        # print(out)
-        out = '\tReward: ' + str(reward)
-        # print(out)
-        out = '\tDone: ' + str(done)
-        # print(out)
-        if 'constraint_values' in info:
-            out = '\tConstraints evaluations: ' + str(info['constraint_values'])
-            # print(out)
-            out = '\tConstraints violation: ' + str(bool(info['constraint_violation']))
-            # print(out)
+        # Print outs.
+        if i%100 == 0:
+            print('\n'+str(i)+'-th step.')
+            out = '\tApplied action: ' + str(action)
+            print(out)
+            out = '\tObservation: ' + str(obs)
+            print(out)
+            out = '\tReward: ' + str(reward)
+            print(out)
+            out = '\tDone: ' + str(done)
+            print(out)
+            if 'constraint_values' in info:
+                out = '\tConstraints evaluations: ' + str(info['constraint_values'])
+                print(out)
+                out = '\tConstraints violation: ' + str(bool(info['constraint_violation']))
+                print(out)
 
         # Log data
         pos = [obs[0],obs[2],obs[4]]
@@ -133,7 +134,6 @@ def main():
         logger.log(drone=0,
                    timestamp=i/env.CTRL_FREQ,
                    state=np.hstack([pos, np.zeros(4), rpy, vel, ang_vel, np.sqrt(action/env.KF)]),
-                   # control=np.hstack([ref_x[i], ref_y[i], ref_z[i], np.zeros(9)])
                    )
 
         # If an episode is complete, reset the environment.
