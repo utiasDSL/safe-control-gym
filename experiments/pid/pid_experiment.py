@@ -9,6 +9,7 @@ Run as:
 """
 
 import time
+import pickle
 from functools import partial
 
 from safe_control_gym.experiment import Experiment
@@ -16,7 +17,7 @@ from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 
 
-def run(gui=True, n_episodes=2, n_steps=None):
+def run(gui=True, n_episodes=2, n_steps=None, save_data=True):
     """The main function creating, running, and closing an environment. """
 
     # Create an environment
@@ -29,7 +30,7 @@ def run(gui=True, n_episodes=2, n_steps=None):
     # Create controller.
     env_func = partial(make,
                     config.task,
-                    **config.quadrotor_config
+                    **config.task_config
                     )
     env = env_func(gui=gui)
     ctrl = make(config.algo,
@@ -39,6 +40,12 @@ def run(gui=True, n_episodes=2, n_steps=None):
     # Run the experiment.
     experiment = Experiment(env, ctrl)
     trajs_data, metrics = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
+    
+    if save_data:
+        results = {'trajs_data': trajs_data, 'metrics': metrics}
+        with open(f'./temp-data/pid_data_{config.task_config.task}.pkl', "wb") as f:
+            pickle.dump(results, f)
+
     experiment.close()
             
     iterations = len(trajs_data['action'][0])
@@ -52,7 +59,7 @@ def run(gui=True, n_episodes=2, n_steps=None):
 
     elapsed_sec = time.time() - START
     print("\n{:d} iterations (@{:d}Hz) and {:d} episodes in {:.2f} seconds, i.e. {:.2f} steps/sec for a {:.2f}x speedup.\n"
-            .format(iterations, config.quadrotor_config.ctrl_freq, 1, elapsed_sec, iterations/elapsed_sec, (iterations*(1. / config.quadrotor_config.ctrl_freq))/elapsed_sec))
+            .format(iterations, config.task_config.ctrl_freq, 1, elapsed_sec, iterations/elapsed_sec, (iterations*(1. / config.task_config.ctrl_freq))/elapsed_sec))
 
 
 if __name__ == "__main__":
