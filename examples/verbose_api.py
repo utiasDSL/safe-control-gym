@@ -1,10 +1,10 @@
 """A simple script to demonstrate safe-control-gym API.
 
 Example:
-
+    $ python3 verbose_api.py --task cartpole --overrides verbose_api.yaml
     $ python3 verbose_api.py --task quadrotor --overrides verbose_api.yaml
-
 """
+
 import time
 import inspect
 import pybullet as p

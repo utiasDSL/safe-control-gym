@@ -4,34 +4,22 @@ Notes:
     Includes and uses PID control.
 
 Run as:
-
-    $ python3 tracking.py --overrides ./tracking.yaml
-
+    $ python3 tracking.py --algo pid --task quadrotor --overrides ./tracking.yaml
 """
+
 import time
-import pybullet as p
 from functools import partial
 
+from safe_control_gym.experiment import Experiment
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 
-def run(gui=None, max_steps=None):
-    """The main function creating, running, and closing an environment.
-
-    """
+def run(gui=True, n_episodes=1, n_steps=None):
+    """The main function creating, running, and closing an environment. """
 
     # Create an environment
     CONFIG_FACTORY = ConfigFactory()               
     config = CONFIG_FACTORY.merge()
-    
-    # Set iterations and episode counter.
-    ITERATIONS = int(config.quadrotor_config['episode_len_sec']*config.quadrotor_config['ctrl_freq'])
-    
-    # Use function arguments for workflow testing
-    if gui is not None:
-        config.quadrotor_config['gui'] = gui
-    if max_steps is not None:
-        ITERATIONS = min(ITERATIONS, max_steps)
 
     for i in range(3):
         # Start a timer.
@@ -44,41 +32,31 @@ def run(gui=None, max_steps=None):
                 
         # Create controller.
         env_func = partial(make,
-                           'quadrotor',
-                           **config.quadrotor_config
-                           )
-        ctrl = make('pid',
+                        config.task,
+                        **config.quadrotor_config
+                        )
+        env = env_func(gui=gui)
+        ctrl = make(config.algo,
                     env_func,
                     )
-                    
-        reference_traj = ctrl.reference
-
-        # Plot trajectory.
-        if config.quadrotor_config['gui']:
-            for i in range(0, reference_traj.shape[0], 10):
-                p.addUserDebugLine(lineFromXYZ=[reference_traj[i-10,0], 0, reference_traj[i-10,2]],
-                                lineToXYZ=[reference_traj[i,0], 0, reference_traj[i,2]],
-                                lineColorRGB=[1, 0, 0],
-                                physicsClientId=ctrl.env.PYB_CLIENT)
 
         # Run the experiment.
-        results = ctrl.run(iterations=ITERATIONS)
+        experiment = Experiment(env, ctrl)
+        trajs_data, metrics = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
+        experiment.close()
                 
-        # Plot the experiment.
-        for i in range(ITERATIONS):
+        iterations = len(trajs_data['action'][0])
+        for i in range(iterations):
             # Step the environment and print all returned information.
-            obs, reward, done, info, action = results['obs'][i], results['reward'][i], results['done'][i], results['info'][i], results['action'][i]
-            
+            obs, reward, done, info, action = trajs_data['obs'][0][i], trajs_data['reward'][0][i], trajs_data['done'][0][i], trajs_data['info'][0][i], trajs_data['action'][0][i]
+
             # Print the last action and the information returned at each step.
             print(i, '-th step.')
-            print(action, '\n', obs, '\n', reward, '\n', done, '\n', info, '\n')    
-
-        ctrl.close()            
+            print(action, '\n', obs, '\n', reward, '\n', done, '\n', info, '\n')
 
         elapsed_sec = time.time() - START
         print("\n{:d} iterations (@{:d}Hz) and {:d} episodes in {:.2f} seconds, i.e. {:.2f} steps/sec for a {:.2f}x speedup.\n"
-              .format(ITERATIONS, config.quadrotor_config.ctrl_freq, 1, elapsed_sec, ITERATIONS/elapsed_sec, (ITERATIONS*(1. / config.quadrotor_config.ctrl_freq))/elapsed_sec))
-
+            .format(iterations, config.quadrotor_config.ctrl_freq, 1, elapsed_sec, iterations/elapsed_sec, (iterations*(1. / config.quadrotor_config.ctrl_freq))/elapsed_sec))
 
 if __name__ == "__main__":
     run()

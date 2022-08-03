@@ -48,7 +48,7 @@ class Experiment:
             log_freq (int): the frequency with which to log information
         
         Returns:
-            trajs_data (defaultdict(list)): the raw data from the executed runs 
+            trajs_data (dict): the raw data from the executed runs 
             metrics (dict): the metrics calculated from the raw data
         """
 
@@ -61,7 +61,7 @@ class Experiment:
         for metric_key, metric_val in metrics.items():
             print("{}: {:.3f}".format(colored(metric_key,"yellow"), metric_val))
         print("Evaluation done.")
-        return trajs_data, metrics
+        return dict(trajs_data), metrics
     
     def _execute_evaluations(self, n_episodes=None, n_steps=None, log_freq=None, **kwargs):
         """Runs the experiments and collects all the required data.
@@ -238,12 +238,15 @@ class RecordDataWrapper(gym.Wrapper):
         
     def clear_data(self):
         self.data = defaultdict(list)
+        self.episode_data = defaultdict(list)
         
     def reset(self):
         """Wrapper for the gym.env reset function. """
 
         if self.env.INFO_IN_RESET:
             obs, info = self.env.reset()
+            if 'symbolic_model' in info:
+                info.pop('symbolic_model')
             step_data = dict(
                 obs=obs, info=info, state=self.env.state
             )
