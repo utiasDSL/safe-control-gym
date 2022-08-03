@@ -98,7 +98,7 @@ class Constraint:
             obj: The symbolic form of the constraint.
 
         """
-        return NotImplementedError
+        raise NotImplementedError
 
     def get_value(self,
                   env

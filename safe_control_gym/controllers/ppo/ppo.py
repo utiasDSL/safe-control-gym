@@ -207,7 +207,7 @@ class PPO(BaseController):
         else:
             if not is_wrapped(env, RecordEpisodeStatistics):
                 env = RecordEpisodeStatistics(env, n_episodes)
-                # Add eposodic stats to be tracked.
+                # Add episodic stats to be tracked.
                 env.add_tracker("constraint_violation", 0, mode="queue")
                 env.add_tracker("constraint_values", 0, mode="queue")
                 env.add_tracker("mse", 0, mode="queue")
