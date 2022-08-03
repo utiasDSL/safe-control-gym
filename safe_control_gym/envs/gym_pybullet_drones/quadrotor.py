@@ -17,7 +17,7 @@ from safe_control_gym.math_and_models.symbolic_systems import SymbolicModel
 from safe_control_gym.envs.gym_pybullet_drones.base_aviary import BaseAviary
 from safe_control_gym.envs.gym_pybullet_drones.quadrotor_utils import QuadType, cmd2pwm, pwm2rpm
 from safe_control_gym.math_and_models.normalization import normalize_angle
-from safe_control_gym.math_and_models.transformations import projection_matrix, transform_trajectory
+from safe_control_gym.math_and_models.transformations import projection_matrix, transform_trajectory, csRotXYZ
 
 class Quadrotor(BaseAviary):
     """1D and 2D quadrotor environment task.
@@ -513,9 +513,58 @@ class Quadrotor(BaseAviary):
             # Define observation.
             Y = cs.vertcat(x, x_dot, z, z_dot, theta, theta_dot)
         elif self.QUAD_TYPE == QuadType.THREE_D:
-            self.symbolic = None
-            print('\n\n\nTODO: 3D QUADROTOR SYMBOLIC DYNAMICS\n\n')
-            return 
+            nx, nu = 12, 4
+            Ixx = self.J[0, 0]
+            Izz = self.J[2, 2]
+            J = cs.blockcat([[Ixx, 0.0, 0.0],
+                             [0.0, Iyy, 0.0],
+                             [0.0, 0.0, Izz]])
+            Jinv = cs.blockcat([[1.0/Ixx, 0.0, 0.0],
+                                [0.0, 1.0/Iyy, 0.0],
+                                [0.0, 0.0, 1.0/Izz]])
+            gamma = self.KM/self.KF
+            x = cs.MX.sym('x')
+            y = cs.MX.sym('y')
+            phi = cs.MX.sym('phi')  # Roll
+            theta = cs.MX.sym('theta')  # Pitch
+            psi = cs.MX.sym('psi')  # Yaw
+            x_dot = cs.MX.sym('x_dot')
+            y_dot = cs.MX.sym('y_dot')
+            p = cs.MX.sym('p')  # Body frame roll rate
+            q = cs.MX.sym('q')  # body frame pith rate
+            r = cs.MX.sym('r')  # body frame yaw rate
+            # PyBullet Euler angles use the SDFormat for rotation matrices.
+            Rob = csRotXYZ(phi, theta, psi)  # rotation matrix transforming a vector in the body frame to the world frame.
+
+            # Define state variables.
+            X = cs.vertcat(x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r)
+
+            # Define inputs.
+            f1 = cs.MX.sym('f1')
+            f2 = cs.MX.sym('f2')
+            f3 = cs.MX.sym('f3')
+            f4 = cs.MX.sym('f4')
+            U = cs.vertcat(f1, f2, f3, f4)
+
+            # From Ch. 2 of Luis, Carlos, and Jérôme Le Ny. "Design of a trajectory tracking controller for a
+            # nanoquadcopter." arXiv preprint arXiv:1608.05786 (2016).
+
+            # Defining the dynamics function.
+            # We are using the velocity of the base wrt to the world frame expressed in the world frame.
+            # Note that the reference expresses this in the body frame.
+            oVdot_cg_o = Rob @ cs.vertcat(0, 0, f1+f2+f3+f4)/m - cs.vertcat(0, 0, g)
+            pos_ddot = oVdot_cg_o
+            pos_dot = cs.vertcat(x_dot, y_dot, z_dot)
+            Mb = cs.vertcat(l/cs.sqrt(2.0)*(f1+f2-f3-f4),
+                            l/cs.sqrt(2.0)*(-f1+f2+f3-f4),
+                            gamma*(-f1+f2-f3+f4))
+            rate_dot = Jinv @ (Mb - (cs.skew(cs.vertcat(p,q,r)) @ J @ cs.vertcat(p,q,r)))
+            ang_dot = cs.blockcat([[1, cs.sin(phi)*cs.tan(theta), cs.cos(phi)*cs.tan(theta)],
+                                   [0, cs.cos(phi), -cs.sin(phi)],
+                                   [0, cs.sin(phi)/cs.cos(theta), cs.cos(phi)/cs.cos(theta)]]) @ cs.vertcat(p, q, r)
+            X_dot = cs.vertcat(pos_dot[0], pos_ddot[0], pos_dot[1], pos_ddot[1], pos_dot[2], pos_ddot[2], ang_dot, rate_dot)
+
+            Y = cs.vertcat(x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r)
         # Define cost (quadratic form).
         Q = cs.MX.sym('Q', nx, nx)
         R = cs.MX.sym('R', nu, nu)
@@ -559,6 +608,12 @@ class Quadrotor(BaseAviary):
             self.ACTION_LABELS = ['T1', 'T2', 'T3', 'T4']
             self.ACTION_UNITS = ['N', 'N', 'N', 'N'] if not self.NORMALIZED_RL_ACTION_SPACE else ['-', '-', '-', '-']
 
+        n_mot = 4 / action_dim
+        a_low = self.KF * n_mot * (self.PWM2RPM_SCALE * self.MIN_PWM + self.PWM2RPM_CONST)**2
+        a_high = self.KF * n_mot * (self.PWM2RPM_SCALE * self.MAX_PWM + self.PWM2RPM_CONST)**2
+        self.physical_action_bounds = (np.full(action_dim, a_low, np.float32), 
+                                       np.full(action_dim, a_high, np.float32))
+
         if self.NORMALIZED_RL_ACTION_SPACE:
             # Normalized thrust (around hover thrust).
             self.hover_thrust = self.GRAVITY_ACC * self.MASS / action_dim
@@ -566,13 +621,10 @@ class Quadrotor(BaseAviary):
                                            high=np.ones(action_dim), 
                                            dtype=np.float32)
         else:
-            # Direct thrust control .
-            n_motors = 4 / action_dim
-            a_low = self.KF * n_motors * (self.PWM2RPM_SCALE * self.MIN_PWM + self.PWM2RPM_CONST)**2
-            a_high = self.KF * n_motors * (self.PWM2RPM_SCALE * self.MAX_PWM + self.PWM2RPM_CONST)**2
-            self.action_space = spaces.Box(low=np.full(action_dim, a_low, np.float32), 
-                                           high=np.full(action_dim, a_high, np.float32), 
-                                           dtype=np.float32)
+            # Direct thrust control.
+            self.action_space = spaces.Box(low=self.physical_action_bounds[0], 
+                                            high=self.physical_action_bounds[1], 
+                                            dtype=np.float32)
 
     def _set_observation_space(self):
         """Returns the observation space of the environment.
@@ -666,18 +718,19 @@ class Quadrotor(BaseAviary):
         """
         if self.NORMALIZED_RL_ACTION_SPACE:
             # rescale action to around hover thrust
-            action = np.clip(action, self.action_space.low, self.action_space.high)
-            thrust = (1 + self.norm_act_scale * action) * self.hover_thrust
-        else:
-            thrust = np.clip(action, self.action_space.low, self.action_space.high)
-        if not np.array_equal(thrust, np.array(action)) and self.VERBOSE:
-            print("[WARNING]: action was clipped in Quadrotor._preprocess_control().")
-        self.current_preprocessed_action = thrust
+            action = (1 + self.norm_act_scale * action) * self.hover_thrust
+        self.current_physical_action = action
+        
         # Apply disturbances.
         if "action" in self.disturbances:
-            thrust = self.disturbances["action"].apply(thrust, self)
+            action = self.disturbances["action"].apply(action, self)
         if self.adversary_disturbance == "action":
-            thrust = thrust + self.adv_action
+            action = action + self.adv_action
+        self.current_noisy_physical_action = action
+
+        thrust = np.clip(action, self.physical_action_bounds[0], self.physical_action_bounds[1])
+        self.current_clipped_action = thrust
+
         # convert to quad motor rpm commands
         pwm = cmd2pwm(thrust, self.PWM2RPM_SCALE, self.PWM2RPM_CONST, self.KF, self.MIN_PWM, self.MAX_PWM)
         rpm = pwm2rpm(pwm, self.PWM2RPM_SCALE, self.PWM2RPM_CONST)
@@ -701,9 +754,13 @@ class Quadrotor(BaseAviary):
                 [pos[0], vel[0], pos[2], vel[2], rpy[1], ang_v[1]]
             ).reshape((6,))
         elif self.QUAD_TYPE == QuadType.THREE_D:
+            Rob = np.array(p.getMatrixFromQuaternion(self.quat[0])).reshape((3,3))
+            Rbo = Rob.T
+            ang_v_body_frame = Rbo @ ang_v
             # {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
             self.state = np.hstack(
-                [pos[0], vel[0], pos[1], vel[1], pos[2], vel[2], rpy, ang_v]  # TODO ang_v is NOT pqr
+                # [pos[0], vel[0], pos[1], vel[1], pos[2], vel[2], rpy, ang_v]  # Note: world ang_v != body frame pqr
+                [pos[0], vel[0], pos[1], vel[1], pos[2], vel[2], rpy, ang_v_body_frame]
             ).reshape((12,))
         # if not np.array_equal(self.state,
         #                       np.clip(self.state, self.observation_space.low, self.observation_space.high)):
@@ -731,7 +788,7 @@ class Quadrotor(BaseAviary):
         # RL cost.
         if self.COST == Cost.RL_REWARD:
             state = self.state
-            act = np.asarray(self.current_preprocessed_action)
+            act = np.asarray(self.current_noisy_physical_action)
             act_error = act - self.U_GOAL
             # Quadratic costs w.r.t state and action
             # TODO: consider using multiple future goal states for cost in tracking
@@ -757,14 +814,14 @@ class Quadrotor(BaseAviary):
             if self.TASK == Task.STABILIZATION:
                 return float(-1 * self.symbolic.loss(x=self.state,
                                                      Xr=self.X_GOAL,
-                                                     u=self.current_preprocessed_action,
+                                                     u=self.current_clipped_action,
                                                      Ur=self.U_GOAL,
                                                      Q=self.Q,
                                                      R=self.R)["l"])
             if self.TASK == Task.TRAJ_TRACKING:
                 return float(-1 * self.symbolic.loss(x=self.state,
                                                      Xr=self.X_GOAL[self.ctrl_step_counter,:],
-                                                     u=self.current_preprocessed_action,
+                                                     u=self.current_clipped_action,
                                                      Ur=self.U_GOAL,
                                                      Q=self.Q,
                                                      R=self.R)["l"])

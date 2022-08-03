@@ -436,6 +436,7 @@ class CartPole(BenchmarkEnv):
 
         """
         self.action_scale = 10
+        self.physical_action_bounds = (-np.asarray(self.action_scale), np.asarray(self.action_scale))
         self.action_threshold = 1 if self.NORMALIZED_RL_ACTION_SPACE else self.action_scale
         self.action_space = spaces.Box(low=-self.action_threshold, high=self.action_threshold, shape=(1,))
         # Define action/input labels and units.
@@ -481,21 +482,22 @@ class CartPole(BenchmarkEnv):
             float: The scalar, clipped force to apply to the cart.
 
         """
-        force = np.clip(action, self.action_space.low, self.action_space.high)
-        if not np.array_equal(force, np.array(action)) and self.VERBOSE:
-            print("[WARNING]: action was clipped in CartPole._preprocess_control().")
         if self.NORMALIZED_RL_ACTION_SPACE:
-            force = self.action_scale * force
+            action = self.action_scale * action
+        self.current_physical_action = action
+        
         # Apply disturbances.
         if "action" in self.disturbances:
-            force = self.disturbances["action"].apply(force, self)
+            action = self.disturbances["action"].apply(action, self)
         if self.adversary_disturbance == "action" and self.adv_action is not None:
-            force = force + self.adv_action
+            action = action + self.adv_action
+        self.current_noisy_physical_action = action
+        
         # Save the actual input.
-        self.current_preprocessed_action = force
-        # Only use the scalar value.
-        force = force[0]
-        return force
+        force = np.clip(action, self.physical_action_bounds[0], self.physical_action_bounds[1])
+        self.current_clipped_action = force
+
+        return force[0] # Only use the scalar value.
 
     def _advance_simulation(self, force):
         """Apply the commanded forces and adversarial actions to the cartpole.
@@ -582,11 +584,8 @@ class CartPole(BenchmarkEnv):
             # negative quadratic reward with angle wrapped around 
             state = deepcopy(self.state)
             # TODO: should use angle wrapping 
-            # TODO: should use `current_preprocessed_action` 
             # state[2] = normalize_angle(state[2])
-            act = np.asarray(self.current_raw_input_action)
-            act = np.clip(act, self.action_space.low, self.action_space.high)
-            # act = np.asarray(self.current_preprocessed_action)
+            act = np.asarray(self.current_noisy_physical_action)
             if self.TASK == Task.STABILIZATION:
                 state_error = state - self.X_GOAL
                 dist = np.sum(self.rew_state_weight * state_error * state_error)
@@ -611,7 +610,7 @@ class CartPole(BenchmarkEnv):
                 return float(
                     -1 * self.symbolic.loss(x=self.state,
                                             Xr=self.X_GOAL,
-                                            u=self.current_preprocessed_action,
+                                            u=self.current_clipped_action,
                                             Ur=self.U_GOAL,
                                             Q=self.Q,
                                             R=self.R)["l"])
@@ -619,7 +618,7 @@ class CartPole(BenchmarkEnv):
                 return float(
                     -1 * self.symbolic.loss(x=self.state,
                                             Xr=self.X_GOAL[self.ctrl_step_counter,:],
-                                            u=self.current_preprocessed_action,
+                                            u=self.current_clipped_action,
                                             Ur=self.U_GOAL,
                                             Q=self.Q,
                                             R=self.R)["l"])

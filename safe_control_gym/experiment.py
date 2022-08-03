@@ -16,6 +16,7 @@ class Experiment:
     def __init__(self, 
                  env, 
                  ctrl, 
+                 train_env = None,
                  safety_filter = None,
                 ):
         """Creates a generic experiment class to run evaluations and collect standard metrics.
@@ -23,6 +24,7 @@ class Experiment:
         Args:
             env (gym.Env): the environment for the task.
             ctrl (BaseController): the controller for the task
+            train_env (gym.Env): the environment used for training.
             safety_filter (BaseSafetyFilter): the safety filter to filter the controller
         """
         
@@ -30,12 +32,17 @@ class Experiment:
         if not is_wrapped(self.env, RecordDataWrapper):
             self.env = RecordDataWrapper(self.env)
         self.ctrl = ctrl
+        
+        self.train_env = train_env
+        if train_env is not None and not is_wrapped(self.train_env, RecordDataWrapper):
+            self.train_env = RecordDataWrapper(self.train_env)
         self.safety_filter = safety_filter
     
-    def run_evaluation(self, n_episodes=10, log_freq=None, n_steps=None, **kwargs):
+    def run_evaluation(self, training=False, n_episodes=None, n_steps=None, log_freq=None, **kwargs):
         """Evaluate a trained controller. 
         
         Args:
+            training (bool): whether run_evaluation is being run as part of a training loop or not
             n_episodes (int): number of runs to execute
             n_steps (int): the number of steps to collect in total
             log_freq (int): the frequency with which to log information
@@ -45,7 +52,8 @@ class Experiment:
             metrics (dict): the metrics calculated from the raw data
         """
 
-        self.reset()
+        if not training:
+            self.reset()
         trajs_data = self._execute_evaluations(log_freq=log_freq, n_episodes=n_episodes, n_steps=n_steps, **kwargs)
         metrics = self.compute_metrics(trajs_data)
         
@@ -55,7 +63,7 @@ class Experiment:
         print("Evaluation done.")
         return trajs_data, metrics
     
-    def _execute_evaluations(self, n_episodes=10, n_steps=None, log_freq=None, **kwargs):
+    def _execute_evaluations(self, n_episodes=None, n_steps=None, log_freq=None, **kwargs):
         """Runs the experiments and collects all the required data.
 
         Args:     
@@ -75,14 +83,8 @@ class Experiment:
         # initialize
         sim_steps = log_freq // self.env.CTRL_FREQ if log_freq else 1 
         steps, trajs = 0, 0
+        obs, info = self._evaluation_reset(ctrl_data=None)
         ctrl_data = defaultdict(list)
-        if self.env.INFO_IN_RESET:
-            obs, info = self.env.reset()
-        else:
-            obs = self.env.reset()
-            info = None
-
-        self.ctrl.reset_before_run(obs, info, env=self.env)
 
         if n_episodes is not None:
             while trajs < n_episodes:
@@ -103,7 +105,7 @@ class Experiment:
                     steps += 1 
                     if steps >= n_steps:
                         self.env.save_data()
-                        for data_key, data_val in self.ctrl.results_dict:
+                        for data_key, data_val in self.ctrl.results_dict.items():
                             ctrl_data[data_key].append(data_val)
                         break
                     if done:
@@ -120,8 +122,9 @@ class Experiment:
         else:
             obs = self.env.reset()
             info = None
-        for data_key, data_val in self.ctrl.results_dict:
-            ctrl_data[data_key].append(data_val)
+        if ctrl_data is not None:
+            for data_key, data_val in self.ctrl.results_dict.items():
+                ctrl_data[data_key].append(data_val)
         self.ctrl.reset_before_run(obs, info, env=self.env)
         return obs, info
     
@@ -133,10 +136,10 @@ class Experiment:
         """
 
         self.reset()
-        self.ctrl.learn(**kwargs)
+        self.ctrl.learn(env=self.train_env, **kwargs)
 
         if self.safety_filter:
-            self.safety_filter.learn(**kwargs)
+            self.safety_filter.learn(env=self.train_env, **kwargs)
     
         print("Training done.")
     
@@ -168,6 +171,7 @@ class Experiment:
         """Resets the environments, controller, and safety filter to prepare for training or evaluation. """
 
         self.env.reset()
+        self.env.clear_data()
         self.ctrl.reset()
 
         if self.safety_filter is not None:
@@ -213,14 +217,16 @@ class RecordDataWrapper(gym.Wrapper):
     """A wrapper to standardizes logging for benchmark envs.
     
     currently saved info
-    * obs, reward, done, info, action
-    * env.state, env.current_raw_input_action, env.current_preprocessed_action
+    * obs, rew, done, info, act
+    * env.state, env.current_physical_action, 
+    env.current_noisy_physical_action, env.current_clipped_action
+    
     """
 
     def __init__(self, env, deque_size=None, **kwargs):
         super().__init__(env)
         self.episode_data = defaultdict(list)
-        self.data = defaultdict(list)
+        self.clear_data()
     
     def save_data(self):
         if self.episode_data:
@@ -229,6 +235,9 @@ class RecordDataWrapper(gym.Wrapper):
                 self.data[key].append(deepcopy(ep_val))
             # re-initialize episode data container 
             self.episode_data = defaultdict(list)
+        
+    def clear_data(self):
+        self.data = defaultdict(list)
         
     def reset(self):
         """Wrapper for the gym.env reset function. """
@@ -263,8 +272,9 @@ class RecordDataWrapper(gym.Wrapper):
             reward=reward, 
             length=1,
             state=self.env.state, 
-            current_raw_action=self.env.current_raw_input_action,
-            current_preprocessed_action=self.env.current_preprocessed_action, 
+            current_physical_action=self.env.current_physical_action, 
+            current_noisy_physical_action=self.env.current_noisy_physical_action,
+            current_clipped_action=self.env.current_clipped_action
         )
         for key, val in step_data.items():
             self.episode_data[key].append(val)
