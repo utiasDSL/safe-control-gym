@@ -13,7 +13,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <cylinder length="1.5" radius="0.075" />
+        <cylinder length="0.8" radius="0.05" />
       </geometry> 
       <material name="kindablue">
         <color rgba=".1 .5 .7 0.8"/>
@@ -23,7 +23,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <cylinder length="1.5" radius="0.075" />
+        <cylinder length="0.8" radius="0.05" />
       </geometry>
     </collision>  
 
