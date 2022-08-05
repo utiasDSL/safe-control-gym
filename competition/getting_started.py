@@ -26,9 +26,6 @@ def main():
     """The main function creating, running, and closing an environment.
 
     """
-    # Set iterations and episode counter.
-    num_episodes = 1
-    ITERATIONS = int(15000)
 
     # Start a timer.
     START = time.time()
@@ -51,6 +48,7 @@ def main():
     
     # Reset the environment, obtain and print the initial observations.
     initial_obs, initial_info = env.reset()
+    obs = initial_obs
 
     # Dynamics info
     print('\nPyBullet dynamics info:')
@@ -73,15 +71,19 @@ def main():
     # Create a controller.
     ctrl = Controller(env)
 
+    if firmware_exists:
+        firmware_wrapper.update_initial_state(obs)
+    action = np.zeros(4)
+
+    # Set episode counters.
+    num_episodes = 2
+    episodes_count = 1
+
     # Create a logger.
     logger = Logger(logging_freq_hz=env.CTRL_FREQ)
 
     # Run an experiment.
-    obs = initial_obs
-    if firmware_exists:
-        firmware_wrapper.update_initial_state(obs)
-    action = np.zeros(4)
-    for i in range(ITERATIONS):
+    for i in range(num_episodes*env.CTRL_FREQ*env.EPISODE_LEN_SEC):
 
         # Step by keyboard input.
         # _ = input('Press any key to continue.')
@@ -106,11 +108,11 @@ def main():
             # Step the environment and print all returned information.
             obs, reward, done, info, action = firmware_wrapper.step(i, action)
         else:
-            action = ctrl.cmdFullState(i, obs)
+            action = ctrl.cmdFullState(i%(env.CTRL_FREQ*env.EPISODE_LEN_SEC), obs)
             obs, reward, done, info = env.step(action)
 
         # Print outs.
-        if i%100 == 0:
+        if i%10 == 0:
             print('\n'+str(i)+'-th step.')
             out = '\tApplied action: ' + str(action)
             print(out)
@@ -138,26 +140,39 @@ def main():
 
         # If an episode is complete, reset the environment.
         if done:
-            num_episodes += 1
-            new_initial_obs, new_initial_info = env.reset()
-            print(str(num_episodes)+'-th reset.', 7)
-            print('Reset obs' + str(new_initial_obs), 2)
-            print('Reset info' + str(new_initial_info), 0)
-
             # Plot logging.
             logger.plot()
 
             # # CSV safe
-            logger.save_as_csv("pid-episode-"+str(num_episodes-1))
+            logger.save_as_csv("pid-episode-"+str(episodes_count))
 
             # Create a new logger.
             logger = Logger(logging_freq_hz=env.CTRL_FREQ)
+
+            # Reset the environment
+            episodes_count += 1
+            new_initial_obs, new_initial_info = env.reset()
+            print(str(episodes_count)+'-th reset.')
+            print('Reset obs' + str(new_initial_obs))
+            print('Reset info' + str(new_initial_info))
+
+            # Create maze.
+            for obstacle in config.obstacles:
+                p.loadURDF(os.path.join(env.URDF_DIR, "obstacle.urdf"),
+                           obstacle[0:3],
+                           p.getQuaternionFromEuler(obstacle[3:6]),
+                           physicsClientId=env.PYB_CLIENT)
+            for gate in config.gates:
+                p.loadURDF(os.path.join(env.URDF_DIR, "portal.urdf"),
+                           gate[0:3],
+                           p.getQuaternionFromEuler(gate[3:6]),
+                           physicsClientId=env.PYB_CLIENT)
 
     # Close the environment and print timing statistics.
     env.close()
     elapsed_sec = time.time() - START
     out = str("\n{:d} iterations (@{:d}Hz) and {:d} episodes in {:.2f} seconds, i.e. {:.2f} steps/sec for a {:.2f}x speedup.\n\n"
-          .format(ITERATIONS, env.CTRL_FREQ, num_episodes, elapsed_sec, ITERATIONS/elapsed_sec, (ITERATIONS*env.CTRL_TIMESTEP)/elapsed_sec))
+          .format(i, env.CTRL_FREQ, num_episodes, elapsed_sec, i/elapsed_sec, (i*env.CTRL_TIMESTEP)/elapsed_sec))
     print(out)
 
 if __name__ == "__main__":
