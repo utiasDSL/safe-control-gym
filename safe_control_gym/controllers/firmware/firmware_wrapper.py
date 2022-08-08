@@ -78,12 +78,12 @@ class FirmwareWrapper(BaseController):
         ret += f"  {'Acc':>6}: {round(self.state.acc.x, 5):>8}x, {round(self.state.acc.y, 5):>8}y, {round(self.state.acc.z, 5):>8}z\n"
         ret += f"  {'RPY':>6}: {round(self.state.attitude.roll, 5):>8}, {round(self.state.attitude.pitch, 5):>8}, {round(self.state.attitude.yaw, 5):>8}\n"
         ret += f"  \n"
-        ret += f"  PWMs\n"
+        ret += f"  Action\n"
         ret += f"  -------------------------------\n"
-        ret += f"  {'M1':>6}: {round(self.pwms[0]):>8}\n"
-        ret += f"  {'M2':>6}: {round(self.pwms[1]):>8}\n"
-        ret += f"  {'M3':>6}: {round(self.pwms[2]):>8}\n"
-        ret += f"  {'M4':>6}: {round(self.pwms[3]):>8}\n"
+        ret += f"  {'M1':>6}: {round(self.action[0], 3):>8}\n"
+        ret += f"  {'M2':>6}: {round(self.action[1], 3):>8}\n"
+        ret += f"  {'M3':>6}: {round(self.action[2], 3):>8}\n"
+        ret += f"  {'M4':>6}: {round(self.action[3], 3):>8}\n"
         ret += f"  \n"
         ret += f"===============================\n"
         return ret
@@ -115,6 +115,7 @@ class FirmwareWrapper(BaseController):
         self.state = firm.state_t()
         self.tick = 0
         self.pwms = [0, 0, 0, 0]
+        self.action = [0, 0, 0, 0]
 
         self.sensorData_set = False
         self.state_set = False
@@ -152,7 +153,7 @@ class FirmwareWrapper(BaseController):
         # self.sendFullStateCmd([0, 0, 1], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], 0)
 
         self.dt = 1 / self.env.CTRL_FREQ
-        
+
 
     def close(self):
         self.env.close()
@@ -178,7 +179,7 @@ class FirmwareWrapper(BaseController):
         # cur_rotation_rates = np.array([0, 0, 0])
         # cur_rotation_rates = cur_rotation_rates[[0, 2, 1]]
         self.prev_rpy = cur_rpy
-        cur_acc = (cur_vel - self.prev_vel) / self.dt / 9.81  + np.array([0, 0, 1]) # global coord
+        cur_acc = (cur_vel - self.prev_vel) / self.dt / 9.81 + np.array([0, 0, 1]) # global coord
         # print(cur_acc, cur_vel, self.prev_vel)
         self.prev_vel = cur_vel
         
@@ -188,11 +189,12 @@ class FirmwareWrapper(BaseController):
         '''
         Kalman init: 
         - call estimatorKalmanInit()
+        - call estimatorKalmanUpdateFreq()
 
         Kalman steps: 
         - update kalman time using estimatorKalmanUpdateTime(time (s)) every step 
-        - update kalman data / state estimate using estimatorKalman(state, sensorData, control, tick) every step 
-        - call kalman update kalmanTask() at whatever rate this is supposed to run at 
+        - update kalman data / state estimate using estimatorKalman(state, sensorData, control, tick) at 1000hz
+        - call kalman update kalmanTask() at 100hz
         - call kalmanCoreUpdateWithPosition() / kalmanCoreUpdateWithPose() at 60Hz? with gt pose 
         
         Notes: 
@@ -239,6 +241,8 @@ class FirmwareWrapper(BaseController):
             action = np.zeros(4)
             print("Drone firmware error. Motors are killed.")
 
+        
+        self.action = action 
         return obs, reward, done, info, action
 
     def update_initial_state(self, obs):
@@ -251,8 +255,6 @@ class FirmwareWrapper(BaseController):
             **kwargs):
 
 
-        # firm.estimatorKalmanInit()
-        # raise
 
         action = np.zeros(4)
         # action = np.array([38727, 38727, 38727, 38727]) # hover to start 
@@ -343,8 +345,7 @@ class FirmwareWrapper(BaseController):
             #endif
             uint64_t interruptTimestamp;   // microseconds 
         '''
-        ## ONLY USES ACC AND GYRO IN CONTROLLER --- REST IS USED IN STATE ESTIMATION 
-        # print(self.gyro_axis_vals, self.acc_axis_vals)
+        ## ONLY USES ACC AND GYRO IN CONTROLLER --- REST IS USED IN STATE ESTIMATION
         self._update_acc(self.sensorData.acc, *acc_vals)
         self._update_gyro(self.sensorData.gyro, *gyro_vals)
         # self._update_gyro(self.sensorData.mag, *mag_vals)
@@ -358,21 +359,9 @@ class FirmwareWrapper(BaseController):
         self.sensorData_set = True
     
     def _update_gyro(self, axis3f, x, y, z):
-        axis3f.x = x #* self.SENSORS_BMI088_DEG_PER_LSB_CFG
-        axis3f.y = y #* self.SENSORS_BMI088_DEG_PER_LSB_CFG
-        axis3f.z = z #* self.SENSORS_BMI088_DEG_PER_LSB_CFG
-        
-        self.gyro_axis_vals[0] = firm.lpf2pApply(self.gyrolpf[0], self.gyro_axis_vals[0])
-        self.gyro_axis_vals[1] = firm.lpf2pApply(self.gyrolpf[1], self.gyro_axis_vals[1])
-        self.gyro_axis_vals[2] = firm.lpf2pApply(self.gyrolpf[2], self.gyro_axis_vals[2])
-        _axis = firm.floatArray(3)
-        for i in range(3):
-            _axis[i] = self.gyro_axis_vals[i]
-        axis3f.axis = _axis
-
-        # axis3f.x = firm.lpf2pApply(self.gyrolpf[0], axis3f.x)
-        # axis3f.y = firm.lpf2pApply(self.gyrolpf[1], axis3f.y)
-        # axis3f.z = firm.lpf2pApply(self.gyrolpf[2], axis3f.z)
+        axis3f.x = firm.lpf2pApply(self.gyrolpf[0], x)
+        axis3f.y = firm.lpf2pApply(self.gyrolpf[1], y)
+        axis3f.z = firm.lpf2pApply(self.gyrolpf[2], z)
         # _axis = firm.floatArray(3)
         # _axis[0] = axis3f.x
         # _axis[1] = axis3f.y
@@ -380,21 +369,9 @@ class FirmwareWrapper(BaseController):
         # axis3f.axis = _axis
         
     def _update_acc(self, axis3f, x, y, z):
-        axis3f.x = x #* self.SENSORS_BMI088_G_PER_LSB_CFG
-        axis3f.y = y #* self.SENSORS_BMI088_G_PER_LSB_CFG
-        axis3f.z = z #* self.SENSORS_BMI088_G_PER_LSB_CFG
-
-        self.acc_axis_vals[0] = firm.lpf2pApply(self.acclpf[0], self.acc_axis_vals[0])
-        self.acc_axis_vals[1] = firm.lpf2pApply(self.acclpf[1], self.acc_axis_vals[1])
-        self.acc_axis_vals[2] = firm.lpf2pApply(self.acclpf[2], self.acc_axis_vals[2])
-        _axis = firm.floatArray(3)
-        for i in range(3):
-            _axis[i] = self.acc_axis_vals[i]
-        axis3f.axis = _axis
-
-        # axis3f.x = firm.lpf2pApply(self.acclpf[0], axis3f.x)
-        # axis3f.y = firm.lpf2pApply(self.acclpf[1], axis3f.y)
-        # axis3f.z = firm.lpf2pApply(self.acclpf[2], axis3f.z)
+        axis3f.x = firm.lpf2pApply(self.acclpf[0], x)
+        axis3f.y = firm.lpf2pApply(self.acclpf[1], y)
+        axis3f.z = firm.lpf2pApply(self.acclpf[2], z)
         # _axis = firm.floatArray(3)
         # _axis[0] = axis3f.x
         # _axis[1] = axis3f.y
@@ -493,8 +470,8 @@ class FirmwareWrapper(BaseController):
 
         if self.state.acc.z < 0: 
             # Implementation of sitaw.c tumble check 
-            print('WARNING: CrazyFlie is Tumbling. Killing motors to save propellers.')
-            self.pwms = [0, 0, 0, 0]
+            # print('WARNING: CrazyFlie is Tumbling. Killing motors to save propellers.')
+            # self.pwms = [0, 0, 0, 0]
             self.tick += 1
             self._error = True
             return 
