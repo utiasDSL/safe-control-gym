@@ -386,6 +386,7 @@ class BenchmarkEnv(gym.Env):
         # Sanity check (reset at least once).
         self._check_initial_reset()
         # Save the raw input action.
+        action = np.array([action]).flatten()
         self.current_raw_action = action
         # Pre-process/clip the action
         processed_action = self._preprocess_control(action)
