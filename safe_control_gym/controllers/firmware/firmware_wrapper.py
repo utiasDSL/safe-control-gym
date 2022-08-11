@@ -116,6 +116,7 @@ class FirmwareWrapper(BaseController):
         self.tick = 0
         self.pwms = [0, 0, 0, 0]
         self.action = [0, 0, 0, 0]
+        self.command_queue = []
 
         self.sensorData_set = False
         self.state_set = False
@@ -136,7 +137,8 @@ class FirmwareWrapper(BaseController):
 
         self.env = self.env_func()
         self.env.reset()
-        self.dt = 1 / self.env.CTRL_FREQ
+        self.ctrl_dt = 1 / self.env.CTRL_FREQ
+        self.firmware_dt = 0.001
         # initialize emulator state objects 
         if self.env.NUM_DRONES > 1: 
             raise NotImplementedError("Firmware controller wrapper does not support multiple drones.")
@@ -152,7 +154,6 @@ class FirmwareWrapper(BaseController):
         # self.sendTakeoffCmd(0.5, 4)
         # self.sendFullStateCmd([0, 0, 1], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], 0)
 
-        self.dt = 1 / self.env.CTRL_FREQ
 
 
     def close(self):
@@ -160,89 +161,83 @@ class FirmwareWrapper(BaseController):
 
 
     def step(self, i, action):
-        sim_time = i*self.dt
-        # Step the environment and print all returned information.
-        obs, reward, done, info = self.env.step(action)
-
-        
-        # Get state values from pybullet
-        # # obs [pos[0], vel[0], pos[1], vel[1], pos[2], vel[2], rpy (euler), ang_v] shape is 12 # NOTE ang_v != body rates 
-        cur_pos=np.array([obs[0], obs[2], obs[4]]) # global coord, m
-        # cur_quat=np.array(p.getQuaternionFromEuler([obs[6], obs[7], obs[8]])) # global coord --- not used 
-        cur_vel=np.array([obs[1], obs[3], obs[5]]) # global coord, m/s
-        cur_rpy = np.array([obs[6], obs[7], obs[8]]) # body coord?, rad 
-        body_rot = R.from_euler('XYZ', cur_rpy).inv()
-
-
-        # Estimate rates 
-        cur_rotation_rates = (cur_rpy - self.prev_rpy) / self.dt # body coord, rad/s
-        # cur_rotation_rates = np.array([0, 0, 0])
-        # cur_rotation_rates = cur_rotation_rates[[0, 2, 1]]
-        self.prev_rpy = cur_rpy
-        cur_acc = (cur_vel - self.prev_vel) / self.dt / 9.81 + np.array([0, 0, 1]) # global coord
-        # print(cur_acc, cur_vel, self.prev_vel)
-        self.prev_vel = cur_vel
-        
-
-        # Update state 
-
         '''
-        Kalman init: 
-        - call estimatorKalmanInit()
-        - call estimatorKalmanUpdateFreq()
-
-        Kalman steps: 
-        - update kalman time using estimatorKalmanUpdateTime(time (s)) every step 
-        - update kalman data / state estimate using estimatorKalman(state, sensorData, control, tick) at 1000hz
-        - call kalman update kalmanTask() at 100hz
-        - call kalmanCoreUpdateWithPosition() / kalmanCoreUpdateWithPose() at 60Hz? with gt pose 
-        
-        Notes: 
-        - undecided between pose and pos
+        Step is to be called at a rate of env.CTRL_FREQ. This corresponds to the rate we can send commands through 
+        the CF radio, typically below 60Hz. 
         '''
-        state_timestamp = int(sim_time * 1e3)
-        if self.STATE_DELAY:
-            self._update_state(state_timestamp, *self.state_history[0])#, quat=cur_quat)
-            self.state_history = self.state_history[1:] + [[cur_pos, cur_vel, cur_acc, cur_rpy * self.RAD_TO_DEG]]
-        else:
-            self._update_state(state_timestamp, cur_pos, cur_vel, cur_acc, cur_rpy * self.RAD_TO_DEG)#, quat=cur_quat)
+        # Runs at rate of self.env.CTRL_FREQ --- need to make sure different actions are called appropriate number of times 
+        sim_time = i*self.ctrl_dt
+        self.process_command_queue()
+
+        count = 0
+        while self.tick / 1000 < sim_time + self.ctrl_dt:
+            count += 1
+            # Step the environment and print all returned information.
+            obs, reward, done, info = self.env.step(action)
+            
+            # Get state values from pybullet
+            # # obs [pos[0], vel[0], pos[1], vel[1], pos[2], vel[2], rpy (euler), ang_v] shape is 12 # NOTE ang_v != body rates 
+            cur_pos=np.array([obs[0], obs[2], obs[4]]) # global coord, m
+            # cur_quat=np.array(p.getQuaternionFromEuler([obs[6], obs[7], obs[8]])) # global coord --- not used 
+            cur_vel=np.array([obs[1], obs[3], obs[5]]) # global coord, m/s
+            cur_rpy = np.array([obs[6], obs[7], obs[8]]) # body coord?, rad 
+            body_rot = R.from_euler('XYZ', cur_rpy).inv()
 
 
-        # Update sensor data 
-        sensor_timestamp = int(sim_time * 1e6)
-        if self.SENSOR_DELAY:
-            self._update_sensorData(sensor_timestamp, *self.sensor_history[0])
-            self.sensor_history = self.sensor_history[1:] + [[body_rot.apply(cur_acc), cur_rotation_rates * self.RAD_TO_DEG]]
-        else:
-            self._update_sensorData(sensor_timestamp, body_rot.apply(cur_acc), cur_rotation_rates * self.RAD_TO_DEG)
+            # Estimate rates 
+            cur_rotation_rates = (cur_rpy - self.prev_rpy) / self.firmware_dt # body coord, rad/s
+            # cur_rotation_rates = np.array([0, 0, 0])
+            # cur_rotation_rates = cur_rotation_rates[[0, 2, 1]]
+            self.prev_rpy = cur_rpy
+            cur_acc = (cur_vel - self.prev_vel) / self.firmware_dt / 9.81 + np.array([0, 0, 1]) # global coord
+            # print(cur_acc, cur_vel, self.prev_vel)
+            self.prev_vel = cur_vel
+            
+
+            # Update state 
+            state_timestamp = int(self.tick / 1000 * 1e3)
+            if self.STATE_DELAY:
+                self._update_state(state_timestamp, *self.state_history[0])#, quat=cur_quat)
+                self.state_history = self.state_history[1:] + [[cur_pos, cur_vel, cur_acc, cur_rpy * self.RAD_TO_DEG]]
+            else:
+                self._update_state(state_timestamp, cur_pos, cur_vel, cur_acc, cur_rpy * self.RAD_TO_DEG)#, quat=cur_quat)
 
 
-        # Update setpoint 
-        self._updateSetpoint(sim_time) # setpoint looks right 
+            # Update sensor data 
+            sensor_timestamp = int(self.tick / 1000 * 1e6)
+            if self.SENSOR_DELAY:
+                self._update_sensorData(sensor_timestamp, *self.sensor_history[0])
+                self.sensor_history = self.sensor_history[1:] + [[body_rot.apply(cur_acc), cur_rotation_rates * self.RAD_TO_DEG]]
+            else:
+                self._update_sensorData(sensor_timestamp, body_rot.apply(cur_acc), cur_rotation_rates * self.RAD_TO_DEG)
 
 
-        # Step controller 
-        self.step_controller()
+            # Update setpoint 
+            self._updateSetpoint(self.tick / 1000) # setpoint looks right 
 
 
-        # Get action 
-        # front left, back left, back right, front right 
-        new_action = self.KF * (self.PWM2RPM_SCALE * np.clip(np.array(self.pwms), self.MIN_PWM, self.MAX_PWM) + self.PWM2RPM_CONST)**2
-        new_action = new_action[[3, 2, 1, 0]]
+            # Step controller 
+            self.step_controller()
 
-        if self.ACTION_DELAY:
-            # Delays action commands to mimic real life hardware response delay 
-            action = self.action_history[0]
-            self.action_history = self.action_history[1:] + [new_action]
-        else:
-            action = new_action
 
-        if self._error:
-            action = np.zeros(4)
-            print("Drone firmware error. Motors are killed.")
+            # Get action 
+            # front left, back left, back right, front right 
+            new_action = self.KF * (self.PWM2RPM_SCALE * np.clip(np.array(self.pwms), self.MIN_PWM, self.MAX_PWM) + self.PWM2RPM_CONST)**2
+            new_action = new_action[[3, 2, 1, 0]]
 
-        
-        self.action = action 
+            if self.ACTION_DELAY:
+                # Delays action commands to mimic real life hardware response delay 
+                action = self.action_history[0]
+                self.action_history = self.action_history[1:] + [new_action]
+            else:
+                action = new_action
+
+            if self._error:
+                action = np.zeros(4)
+                print("Drone firmware error. Motors are killed.")
+
+            self.action = action 
+        print("COUNT", count)
         return obs, reward, done, info, action
 
     def update_initial_state(self, obs):
@@ -500,9 +495,14 @@ class FirmwareWrapper(BaseController):
             firm.crtpCommanderHighLevelUpdateTime(timestep) # Sets commander time variable --- this is time in s from start of flight 
             firm.crtpCommanderHighLevelGetSetpoint(self.setpoint, self.state)
 
+    def process_command_queue(self):
+        if len(self.command_queue) > 0:
+            command, args = self.command_queue.pop(0)
+            getattr(self, command)(*args)
+
     def sendFullStateCmd(self, pos, vel, acc, rpy, rpy_rate, timestep):
         '''
-        Sets the setpoint for the emulator. 
+        Adds a fullstate command to processing queue
 
         Arguments:
         pos -- (list) position of the CF (m) 
@@ -512,7 +512,12 @@ class FirmwareWrapper(BaseController):
         rpy_rate -- (list) roll, pitch, yaw rates (deg/s)
         timestep -- (s)
         '''
+        self.command_queue += [['_sendFullStateCmd', [pos, vel, acc, rpy, rpy_rate, timestep]]]
+
+    def _sendFullStateCmd(self, pos, vel, acc, rpy, rpy_rate, timestep):
         # print(f"INFO_{self.tick}: Full state command sent.")
+        self.queued_full_state_command = None
+
         self.setpoint.position.x = pos[0]
         self.setpoint.position.y = pos[1]
         self.setpoint.position.z = pos[2]
@@ -547,43 +552,59 @@ class FirmwareWrapper(BaseController):
 
         self.setpoint.timestamp = int(timestep*1000) # TODO: This may end up skipping control loops 
         self.full_state_cmd_override = True
-    
+
     def sendTakeoffCmd(self, height, duration):
+        self.command_queue += [['_sendTakeoffCmd', [height, duration]]]
+    def _sendTakeoffCmd(self, height, duration):
         print(f"INFO_{self.tick}: Takeoff command sent.")
         firm.crtpCommanderHighLevelTakeoff(height, duration)
         self.full_state_cmd_override = False
 
     def sendTakeoffYawCmd(self, height, duration, yaw):
+        self.command_queue += [['_sendTakeoffYawCmd', [height, duration, yaw]]]
+    def _sendTakeoffYawCmd(self, height, duration, yaw):
         print(f"INFO_{self.tick}: Takeoff command sent.")
         firm.crtpCommanderHighLevelTakeoffYaw(height, duration, yaw)
         self.full_state_cmd_override = False
 
     def sendTakeoffVelCmd(self, height, vel, relative):
+        self.command_queue += [['_sendTakeoffVelCmd', [height, vel, relative]]]
+    def _sendTakeoffVelCmd(self, height, vel, relative):
         print(f"INFO_{self.tick}: Takeoff command sent.")
         firm.crtpCommanderHighLevelTakeoffWithVelocity(height, vel, relative)
         self.full_state_cmd_override = False
 
     def sendLandCmd(self, height, duration):
+        self.command_queue += [['_sendLandCmd', [height, duration]]]
+    def _sendLandCmd(self, height, duration):
         print(f"INFO_{self.tick}: Land command sent.")
         firm.crtpCommanderHighLevelLand(height, duration)
         self.full_state_cmd_override = False
 
     def sendLandYawCmd(self, height, duration, yaw):
+        self.command_queue += [['_sendLandYawCmd', [height, duration, yaw]]]
+    def _sendLandYawCmd(self, height, duration, yaw):
         print(f"INFO_{self.tick}: Land command sent.")
         firm.crtpCommanderHighLevelLandYaw(height, duration, yaw)
         self.full_state_cmd_override = False
 
     def sendLandVelCmd(self, height, vel, relative):
+        self.command_queue += [['_sendLandVelCmd', [height, vel, relative]]]
+    def _sendLandVelCmd(self, height, vel, relative):
         print(f"INFO_{self.tick}: Land command sent.")
         firm.crtpCommanderHighLevelLandWithVelocity(height, vel, relative)
         self.full_state_cmd_override = False
 
     def sendStopCmd(self):
+        self.command_queue += [['_sendStopCmd', []]]
+    def _sendStopCmd(self):
         print(f"INFO_{self.tick}: Stop command sent.")
         firm.crtpCommanderHighLevelStop()
         self.full_state_cmd_override = False
         
     def sendGotoCmd(self, x, y, z, yaw, duration_s, relative):
+        self.command_queue += [['_sendGotoCmd', [x, y, z, yaw, duration_s, relative]]]
+    def _sendGotoCmd(self, x, y, z, yaw, duration_s, relative):
         print(f"INFO_{self.tick}: Go to command sent.")
         firm.crtpCommanderHighLevelGoTo(x, y, z, yaw, duration_s, relative)
         self.full_state_cmd_override = False
