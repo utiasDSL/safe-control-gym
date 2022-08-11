@@ -270,7 +270,7 @@ $ ./create_unsafe_ppo_model.sh                                     # Run the scr
 
 
 
-# Desiderata/WIP/Summer 2022 Internships TODOs
+# TODOs (August 2022)
 - Publish to [PyPI](https://realpython.com/pypi-publish-python-package/)
 - Create resource list with [papers](https://www.semanticscholar.org/paper/safe-control-gym%3A-a-Unified-Benchmark-Suite-for-and-Yuan-Hall/66b4656ab7732dcdcf39c466e8ab948c2b4a042d#citingPapers), projects, blog posts (Cat's, etc.) using `safe-control-gym`
 
