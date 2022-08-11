@@ -5,6 +5,7 @@ import numpy as np
 from copy import deepcopy
 from collections import defaultdict
 from termcolor import colored
+from time import time
 
 from safe_control_gym.utils.utils import is_wrapped
 from safe_control_gym.math_and_models.metrics import compute_cvar
@@ -277,7 +278,8 @@ class RecordDataWrapper(gym.Wrapper):
             state=self.env.state, 
             current_physical_action=self.env.current_physical_action, 
             current_noisy_physical_action=self.env.current_noisy_physical_action,
-            current_clipped_action=self.env.current_clipped_action
+            current_clipped_action=self.env.current_clipped_action,
+            timestamp=time(),
         )
         for key, val in step_data.items():
             self.episode_data[key].append(val)
