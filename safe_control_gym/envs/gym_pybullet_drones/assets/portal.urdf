@@ -134,15 +134,15 @@
   <link name="support"> 
 
     <inertial>
-      <origin rpy="0 0 0" xyz="0 0 -0.75"/>
+      <origin rpy="0 0 0" xyz="0 0 -0.5"/>
       <mass value="1.0"/>
       <inertia ixx="0" ixy="0.0" ixz="0.0" iyy="0" iyz="0.0" izz="0"/>
     </inertial>
 
     <visual>
-      <origin rpy="0 0 0" xyz="0 0 -0.75"/>
+      <origin rpy="0 0 0" xyz="0 0 -0.5"/>
       <geometry>
-        <cylinder length="1.0" radius="0.05" />
+        <cylinder length=".5" radius="0.05" />
       </geometry> 
       <material name="kindablue">
         <color rgba=".1 .5 .7 0.8"/>
@@ -150,9 +150,9 @@
     </visual>
 
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 -0.75"/>
+      <origin rpy="0 0 0" xyz="0 0 -0.5"/>
       <geometry>
-        <cylinder length="1.0" radius="0.05" />
+        <cylinder length=".5" radius="0.05" />
       </geometry>
     </collision>  
 
