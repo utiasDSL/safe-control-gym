@@ -10,7 +10,7 @@ import pybullet as p
 from scipy.spatial.transform import Rotation
 
 from safe_control_gym.controllers.base_controller import BaseController
-from safe_control_gym.envs.benchmark_env import Task
+from safe_control_gym.envs.benchmark_env import Task, Environment
 
 
 class PID(BaseController):
@@ -54,6 +54,10 @@ class PID(BaseController):
         super().__init__(env_func, **kwargs)
 
         self.env = env_func()
+
+        if self.env.NAME != Environment.QUADROTOR:
+            raise NotImplementedError('[ERROR] PID not implemented for any system other than Quadrotor (2D and 3D).')
+
         self.env.reset()
         self.g = g
         self.GRAVITY = g * self.env.OVERRIDDEN_QUAD_MASS # The gravitational force (g*M) acting on each drone.
@@ -89,31 +93,45 @@ class PID(BaseController):
 
         if info is not None:
             step = info['current_step']
+            if self.env.TASK == Task.TRAJ_TRACKING:
+                step = min(step, self.env.X_GOAL.shape[0]-1)
         else:
             step = 0
 
         # Step the environment and print all returned information.
-        cur_pos=np.array([obs[0], 0, obs[2]])
-        cur_quat=np.array(p.getQuaternionFromEuler([0, obs[4], 0]))
-        cur_vel=np.array([obs[1], 0, obs[3]])
-        cur_ang_vel=np.array([0, obs[4], 0])
+        if self.env.QUAD_TYPE == 2:
+            cur_pos=np.array([obs[0], 0, obs[2]])
+            cur_quat=np.array(p.getQuaternionFromEuler([0, obs[4], 0]))
+            cur_vel=np.array([obs[1], 0, obs[3]])
+            cur_ang_vel=np.array([0, obs[4], 0])
+        elif self.env.QUAD_TYPE == 3:
+            cur_pos=np.array([obs[0],obs[2],obs[4]])
+            cur_quat=np.array(p.getQuaternionFromEuler([obs[6],obs[7],obs[8]]))
+            cur_vel=np.array([obs[1],obs[3],obs[5]])
+            cur_ang_vel=np.array([obs[9],obs[10],obs[11]])
 
-        if self.env.TASK == Task.TRAJ_TRACKING:
-            target_pos=np.array([
-                                    self.reference[step-1,0],
-                                    0,
-                                    self.reference[step-1,2]
-                                ])
-            target_vel=np.array([
-                                    self.reference[step-1,1],
-                                    0,
-                                    self.reference[step-1,3]
-                                ])
-        elif self.env.TASK == Task.STABILIZATION:
-            target_pos=np.array([self.reference[0], 0, self.reference[2] ])
-            target_vel=np.array([0, 0, 0 ])
-        else:
-            raise NotImplementedError
+        if self.env.QUAD_TYPE == 2:
+            if self.env.TASK == Task.TRAJ_TRACKING:
+                target_pos=np.array([   self.reference[step,0],
+                                        0,
+                                        self.reference[step,2]])
+                target_vel=np.array([   self.reference[step,1],
+                                        0,
+                                        self.reference[step,3]])
+            elif self.env.TASK == Task.STABILIZATION:
+                target_pos=np.array([self.reference[0], 0, self.reference[2] ])
+                target_vel=np.array([0, 0, 0 ])
+        elif self.env.QUAD_TYPE == 3:
+            if self.env.TASK == Task.TRAJ_TRACKING:
+                target_pos=np.array([   self.reference[step,0],
+                                        self.reference[step,2],
+                                        self.reference[step,4]])
+                target_vel=np.array([   self.reference[step,1],
+                                        self.reference[step,3],
+                                        self.reference[step,5]])
+            elif self.env.TASK == Task.STABILIZATION:
+                target_pos=np.array([self.reference[0], self.reference[2], self.reference[4]])
+                target_vel=np.array([0, 0, 0 ])
         
         target_rpy = np.zeros(3)
         target_rpy_rates = np.zeros(3)
@@ -135,7 +153,8 @@ class PID(BaseController):
         
         action = rpm
         action = self.KF * action**2
-        action = np.array([action[0]+action[3], action[1]+action[2]])
+        if self.env.QUAD_TYPE == 2:
+            action = np.array([action[0]+action[3], action[1]+action[2]])
 
         return action
     
@@ -186,7 +205,7 @@ class PID(BaseController):
         target_euler = (Rotation.from_matrix(target_rotation)).as_euler('XYZ', degrees=False)
         
         if np.any(np.abs(target_euler) > math.pi):
-            print("\n[ERROR] ctrl it", self.control_counter, "in Control._dslPIDPositionControl(), values outside range [-pi,pi]")
+            raise ValueError('\n[ERROR] ctrl it', self.control_counter, 'in Control._dslPIDPositionControl(), values outside range [-pi,pi]')
         
         return thrust, target_euler, pos_e
     
@@ -237,7 +256,7 @@ class PID(BaseController):
         """
         self.env.reset()
         self.reset_before_run()
-    
+
     def reset_before_run(self, obs=None, info=None, env=None):
         """Reinitialize just the controller before a new run. """
         # Clear PID control variables.
