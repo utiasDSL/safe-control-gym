@@ -72,8 +72,6 @@ class BaseController(ABC):
         
         if info is not None:
             step = info['current_step']
-            if self.env.TASK == Task.TRAJ_TRACKING:
-                step = min(step, self.env.X_GOAL.shape[0]-1)
         else:
             step = 0
         

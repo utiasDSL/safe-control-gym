@@ -95,7 +95,7 @@ class Experiment:
                     obs, reward, done, info = self.env.step(action)
                     if done:
                         trajs += 1
-                        self._evaluation_reset(ctrl_data=ctrl_data)
+                        obs, info = self._evaluation_reset(ctrl_data=ctrl_data)
                         break
         elif n_steps is not None:
             while steps < n_steps: 
@@ -110,7 +110,7 @@ class Experiment:
                             ctrl_data[data_key].append(data_val)
                         break
                     if done:
-                        self._evaluation_reset(ctrl_data=ctrl_data)
+                        obs, info = self._evaluation_reset(ctrl_data=ctrl_data)
                         break
 
         trajs_data = self.env.data 
