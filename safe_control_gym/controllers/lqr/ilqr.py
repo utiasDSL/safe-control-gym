@@ -2,13 +2,6 @@
 
 [1] https://studywolf.wordpress.com/2016/02/03/the-iterative-linear-quadratic-regulator-method/
 [2] https://arxiv.org/pdf/1708.09342.pdf
-
-Example:
-    run ilqr on cartpole balance:
-        python3 experiments/main.py --func test --tag ilqr_pendulum --algo ilqr --task cartpole
-        
-    run ilqr on quadrotor stabilization:
-        python3 experiments/main.py --func test --tag ilqr_quad --algo ilqr --task quadrotor --q_lqr 0.1
 """
 
 import numpy as np
@@ -17,6 +10,7 @@ from safe_control_gym.envs.env_wrappers.record_episode_statistics import RecordE
 from safe_control_gym.controllers.base_controller import BaseController
 from safe_control_gym.controllers.lqr.lqr_utils import get_cost_weight_matrix, compute_lqr_gain, discretize_linear_system
 from safe_control_gym.envs.benchmark_env import Task
+from safe_control_gym.utils.utils import is_wrapped
 
 
 class iLQR(BaseController):
@@ -76,13 +70,20 @@ class iLQR(BaseController):
         """Cleans up resources. """
         self.env.close()
 
-    def learn(self):
+    def learn(self, env=None):
         """Run iLQR to iteratively update policy for each time step k
 
         Returns:
             ilqr_eval_results (dict): Dictionary containing the results from
             each iLQR iteration.
         """
+
+        if env is None:
+            env = self.env
+        else:
+            if not is_wrapped(env, RecordEpisodeStatistics):
+                env = RecordEpisodeStatistics(env)
+
         # Initialize iteration logging variables.
         ite_returns, ite_lengths, ite_data = [], [], {}
 
@@ -107,7 +108,7 @@ class iLQR(BaseController):
             ite_data["ite%d_input" % self.ite_counter] = self.input_stack
 
             # Break if the first iteration is not successful
-            if self.env.TASK == Task.STABILIZATION:
+            if env.TASK == Task.STABILIZATION:
                 if self.ite_counter == 0 and not self.final_info["goal_reached"]:
                     break
 
@@ -124,7 +125,7 @@ class iLQR(BaseController):
                 self.gains_fb_best = np.copy(self.gains_fb)
 
                 # Update controller gains
-                self.update_policy(self.state_stack, self.input_stack)
+                self.update_policy(env)
 
                 # Initialize improved flag.
                 self.prev_ite_improved = False
@@ -146,7 +147,6 @@ class iLQR(BaseController):
 
                 # Reset update_unstable flag to False.
                 self.update_unstable = False
-
             elif delta_reward >= 0.0:
                 # Save feedforward term and gain and state and input stacks.
                 self.best_iteration = self.ite_counter
@@ -162,8 +162,8 @@ class iLQR(BaseController):
                 self.prev_ite_improved = True
 
                 # Update controller gains
-                self.update_policy(self.state_stack, self.input_stack)
-
+                self.update_policy(env)
+            self.ite_counter += 1
         # Collect evaluation results.
         ite_lengths = np.asarray(ite_lengths)
         ite_returns = np.asarray(ite_returns)
@@ -176,7 +176,7 @@ class iLQR(BaseController):
 
         return ilqr_eval_results
 
-    def update_policy(self):
+    def update_policy(self, env):
         """Updates policy. """
 
         # Get symbolic loss function which also contains the necessary Jacobian
@@ -185,16 +185,16 @@ class iLQR(BaseController):
 
         # Initialize backward pass.
         state_k = self.state_stack[-1]
-        input_k = self.env.U_GOAL
+        input_k = env.U_GOAL
 
-        if self.env.TASK == Task.STABILIZATION:
+        if env.TASK == Task.STABILIZATION:
             x_goal = self.x_0
-        elif self.env.TASK == Task.TRAJ_TRACKING:
+        elif env.TASK == Task.TRAJ_TRACKING:
             x_goal = self.x_0[-1]
         loss_k = loss(x=state_k,
                       u=input_k,
                       Xr=x_goal,
-                      Ur=self.env.U_GOAL,
+                      Ur=env.U_GOAL,
                       Q=self.Q,
                       R=self.R)
         s = loss_k["l"].toarray()
@@ -214,14 +214,14 @@ class iLQR(BaseController):
 
             # Get symbolic loss function that includes the necessary Jacobian
             # and Hessian of the loss w.r.t. state and input.
-            if self.env.TASK == Task.STABILIZATION:
+            if env.TASK == Task.STABILIZATION:
                 x_goal = self.x_0
-            elif self.env.TASK == Task.TRAJ_TRACKING:
+            elif env.TASK == Task.TRAJ_TRACKING:
                 x_goal = self.x_0[k]
             loss_k = loss(x=state_k,
                           u=input_k,
                           Xr=x_goal,
-                          Ur=self.env.U_GOAL,
+                          Ur=env.U_GOAL,
                           Q=self.Q,
                           R=self.R)
 
