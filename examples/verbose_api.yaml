@@ -137,8 +137,8 @@ quadrotor_config:
       low: -0.01
       high: 0.01
   inertial_prop:
-    mass: 0.027
-    iyy: 1.4e-5
+    M: 0.027
+    Iyy: 1.4e-5
   randomized_inertial_prop: True
   inertial_prop_randomization_info:
     M:

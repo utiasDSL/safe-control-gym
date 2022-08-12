@@ -162,7 +162,7 @@ class Quadrotor(BaseAviary):
 
         Args:
             init_state (ndarray, optional): The initial state of the environment, (z, z_dot) or (x, x_dot, z, z_dot theta, theta_dot).
-            inertial_prop (ndarray, optional): The inertial properties of the environment (mass, Iyy).
+            inertial_prop (ndarray, optional): The inertial properties of the environment (M, Ixx, Iyy, Izz).
             quad_type (QuadType, optional): The choice of motion type (1D along z or 2D in the x-z plane).
             norm_act_scale (float): scaling the [-1,1] action space around hover thrust when `normalized_action_space` is True.
             obs_goal_horizon (int): how many future goal states to append to obervation.
