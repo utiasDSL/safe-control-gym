@@ -154,9 +154,10 @@ class GPMPC(MPC):
             # shared/base args
             output_dir=output_dir,
             additional_constraints=additional_constraints,
+            use_gpu=use_gpu,
+            seed=seed,
             **kwargs)
         # Setup environments.
-        self.env_func = env_func
         self.env = env_func(randomized_init=False, seed=seed)
         self.env_training = env_func(randomized_init=True, seed=seed)
         # No training data accumulated yet so keep the dynamics function as linear prior.
@@ -175,8 +176,6 @@ class GPMPC(MPC):
         self.learning_rate = learning_rate
         self.gp_model_path = gp_model_path
         self.normalize_training_data = normalize_training_data
-        self.use_gpu = use_gpu and torch.cuda.is_available()
-        self.seed = seed
         self.prob = prob
         self.sparse_gp = sparse_gp
         if input_mask is None:

@@ -157,6 +157,7 @@ $ python3 verbose_api.py --task cartpole --overrides verbose_api.yaml           
 
 ## List of Implemented Controllers
 
+- [PID](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/pid/pid.py)
 - [LQR](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/lqr/lqr.py)
 - [iLQR](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/lqr/ilqr.py)
 - [Linear MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/linear_mpc.py)

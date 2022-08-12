@@ -20,17 +20,19 @@ class MPC(BaseController):
     def __init__(
             self,
             env_func,
-            horizon=5,
-            q_mpc=[1],
-            r_mpc=[1],
-            warmstart=True,
-            soft_constraints=False,
-            terminate_run_on_done=True,
-            constraint_tol: float=1e-6,
+            horizon: int = 5,
+            q_mpc: list = [1],
+            r_mpc: list = [1],
+            warmstart: bool = True,
+            soft_constraints: bool = False,
+            terminate_run_on_done: bool = True,
+            constraint_tol: float = 1e-6,
             # runner args
             # shared/base args
-            output_dir="results/temp",
-            additional_constraints=None,
+            output_dir: str = "results/temp",
+            additional_constraints: list = None,
+            use_gpu: bool = False,
+            seed: int = 0,
             **kwargs
             ):
         """Creates task and controller.
@@ -46,8 +48,12 @@ class MPC(BaseController):
             constraint_tol (float): Tolerance to add the the constraint as sometimes solvers are not exact.
             output_dir (str): output directory to write logs and results.
             additional_constraints (list): List of additional constraints
+            use_gpu (bool): False (use cpu) True (use cuda).
+            seed (int): random seed.
 
         """
+        super().__init__(env_func, output_dir, use_gpu, seed, **kwargs)
+
         for k, v in locals().items():
             if k != "self" and k != "kwargs" and "__" not in k:
                 self.__dict__.update({k: v})

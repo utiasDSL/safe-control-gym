@@ -239,6 +239,7 @@ For more information on some common utilities in this repo, refer to `safe-contr
 
 | Approach | id | Location | 
 | -------- | --- | ----------- |
+|  PID Controller    | 'pid' |   [PID](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/pid/pid.py)   |
 |  Linear Quadratic Regulator    | 'lqr' |   coming soon   |
 |  Iterative Linear Quadratic Regulator   | 'ilqr' |   coming soon  |
 
@@ -265,7 +266,7 @@ For more information on some common utilities in this repo, refer to `safe-contr
 | Approach | id | Location | 
 | -------- | --- | ----------- |
 |  Model Predictive Safety Certification | 'mpsc' | [MPSC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpsc/mpsc.py) |
-|  Control Barrier Functions  | 'cbf'  |  coming soon |
+|  Control Barrier Functions  | 'cbf'  |  [CBF](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/cbf/cbf_qp.py) |
 
 #### Safe Exploration 
 | Approach | id | Location | 
