@@ -1,11 +1,8 @@
-'''A quadrotor trajectory tracking example.
-
-Notes:
-    Includes and uses PID control.
+'''A LQR and iLQR example.
 
 Run as:
-    $ python3 ./pid_experiment.py --algo pid --task quadrotor --overrides ./config_overrides/quadrotor_stabilization.yaml
-    $ python3 ./pid_experiment.py --algo pid --task quadrotor --overrides ./config_overrides/quadrotor_tracking.yaml
+    python3 ./lqr_experiment.py --task quadrotor --algo lqr --overrides ./config_overrides/quadrotor_config.yaml ./config_overrides/lqr_config.yaml
+    python3 ./lqr_experiment.py --task quadrotor --algo ilqr --overrides ./config_overrides/quadrotor_config.yaml ./config_overrides/ilqr_config.yaml
 '''
 
 import os
@@ -17,7 +14,7 @@ from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 
 
-def run(gui=True, n_episodes=2, n_steps=None, save_data=True):
+def run(gui=True, training=True, n_episodes=2, n_steps=None, save_data=True):
     '''The main function creating, running, and closing an environment. '''
 
     # Create an environment
@@ -36,6 +33,8 @@ def run(gui=True, n_episodes=2, n_steps=None, save_data=True):
 
     # Run the experiment.
     experiment = Experiment(env, ctrl)
+    if training:
+        experiment.launch_training()
     trajs_data, metrics = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
     experiment.close()
 

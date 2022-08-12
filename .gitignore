@@ -7,6 +7,8 @@ experiments/annual_reviews/figure8/unsafe_ppo_temp_data/
 experiments/arxiv/cartpole_*/*data/
 experiments/arxiv/quadrotor_*/*data/
 #
+experiments/lqr/*data/
+#
 experiments/pid/*data/
 #
 results/

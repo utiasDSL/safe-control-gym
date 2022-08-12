@@ -6,7 +6,7 @@ task_config:
   gui: False
   physics: pyb
   quad_type: 2
-  
+
   init_state_randomization_info:
     init_x:
       distrib: 'uniform'
@@ -35,15 +35,10 @@ task_config:
   randomized_init: True
   randomized_inertial_prop: False
 
-  task: traj_tracking
+  task: stabilization
   task_info:
-    stabilization_goal: [0, 1]
-    stabilization_goal_tolerance: 0.01
-    trajectory_type: figure8
-    num_cycles: 1
-    trajectory_plane: 'xz'
-    trajectory_position_offset: [0, 1]
-    trajectory_scale: 1
+    stabilization_goal: [0, 0.5]
+    stabilization_goal_tolerance: 0.0
     
   episode_len_sec: 6
   cost: quadratic
