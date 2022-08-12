@@ -386,7 +386,11 @@ class BenchmarkEnv(gym.Env):
         # Sanity check (reset at least once).
         self._check_initial_reset()
         # Save the raw input action.
-        action = np.array([action]).flatten()
+        action = np.atleast_1d(action)
+
+        if action.ndim != 1:
+            raise ValueError('[ERROR]: The action returned by the controller must be 1 dimensional.')
+
         self.current_raw_action = action
         # Pre-process/clip the action
         processed_action = self._preprocess_control(action)
