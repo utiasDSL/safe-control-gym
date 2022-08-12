@@ -6,11 +6,9 @@
 
 import numpy as np
 
-from safe_control_gym.envs.env_wrappers.record_episode_statistics import RecordEpisodeStatistics
 from safe_control_gym.controllers.base_controller import BaseController
 from safe_control_gym.controllers.lqr.lqr_utils import get_cost_weight_matrix, compute_lqr_gain, discretize_linear_system
 from safe_control_gym.envs.benchmark_env import Task
-from safe_control_gym.utils.utils import is_wrapped
 
 
 class iLQR(BaseController):
@@ -46,7 +44,7 @@ class iLQR(BaseController):
             if k != "self" and k != "kwargs" and "__" not in k:
                 self.__dict__[k] = v
 
-        self.env = RecordEpisodeStatistics(env_func(info_in_reset=True))
+        self.env = env_func(info_in_reset=True)
 
         # Controller params.
         self.model = self.env.symbolic
@@ -80,12 +78,6 @@ class iLQR(BaseController):
 
         if env is None:
             env = self.env
-        else:
-            if not is_wrapped(env, RecordEpisodeStatistics):
-                env = RecordEpisodeStatistics(env)
-
-        # Initialize iteration logging variables.
-        ite_returns, ite_lengths, ite_data = [], [], {}
 
         # Initialize step size
         self.lamb = 1.0
@@ -93,19 +85,15 @@ class iLQR(BaseController):
         # Set update unstable flag to False
         self.update_unstable = False
 
+        # Initialize previous reward
+        self.previous_total_reward = -float('inf')
+
         # Loop through iLQR iterations
         while self.ite_counter < self.max_iterations:
             self.run()
 
             # Save data and update policy if iteration is finished.
             self.state_stack = np.vstack((self.state_stack, self.final_obs))
-
-            # Update iteration return and length lists.
-            assert "episode" in self.final_info
-            ite_returns.append(self.final_info["episode"]["r"])
-            ite_lengths.append(self.final_info["episode"]["l"])
-            ite_data["ite%d_state" % self.ite_counter] = self.state_stack
-            ite_data["ite%d_input" % self.ite_counter] = self.input_stack
 
             # Break if the first iteration is not successful
             if env.TASK == Task.STABILIZATION:
@@ -117,7 +105,7 @@ class iLQR(BaseController):
             self.episode_len_sec = self.num_steps * self.stepsize
 
             # Check if cost is increased and update lambda correspondingly
-            delta_reward = np.diff(ite_returns[-2:])
+            delta_reward = np.abs(self.previous_total_reward - self.total_reward)
             if self.ite_counter == 0:
                 # Save best iteration.
                 self.best_iteration = self.ite_counter
@@ -164,17 +152,7 @@ class iLQR(BaseController):
                 # Update controller gains
                 self.update_policy(env)
             self.ite_counter += 1
-        # Collect evaluation results.
-        ite_lengths = np.asarray(ite_lengths)
-        ite_returns = np.asarray(ite_returns)
-
-        ilqr_eval_results = {
-            "ite_returns": ite_returns,
-            "ite_lengths": ite_lengths,
-            "ite_data": ite_data
-        }
-
-        return ilqr_eval_results
+            self.previous_total_reward = self.total_reward
 
     def update_policy(self, env):
         """Updates policy. """
@@ -329,6 +307,7 @@ class iLQR(BaseController):
 
         # Reseed for batch-wise consistency.
         obs, info = env.reset()
+        total_reward = 0.0
 
         for step in range(max_steps):
             # Select action.
@@ -346,6 +325,7 @@ class iLQR(BaseController):
 
             # Step forward.
             obs, reward, done, info = env.step(action)
+            total_reward += reward
 
             if done:
                 print(f'SUCCESS: Reached goal on step {step}. Terminating...')
@@ -353,3 +333,4 @@ class iLQR(BaseController):
         
         self.final_obs = obs
         self.final_info = info
+        self.total_reward = total_reward

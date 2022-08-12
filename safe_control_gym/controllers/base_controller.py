@@ -92,7 +92,7 @@ class BaseController(ABC):
         """Do initializations for training or evaluation. """
         pass
 
-    def reset_before_run(self, obs, info=None, env=None):
+    def reset_before_run(self, obs=None, info=None, env=None):
         """Reinitialize just the controller before a new run.
 
         Args:
