@@ -2,8 +2,12 @@
 
 """
 import torch
+from abc import ABC, abstractmethod
 
-class BaseController:
+from safe_control_gym.envs.benchmark_env import Task
+
+
+class BaseController(ABC):
     """Template for controller/agent, implement the following methods as needed.
 
     """
@@ -36,12 +40,15 @@ class BaseController:
         self.use_gpu = use_gpu and torch.cuda.is_available()
         self.device = 'cpu' if self.use_gpu == False else 'cuda'
         self.seed = seed
+        self.safety_filter = None
+
         # Algorithm specific args.
         for k, v in kwargs.items():
             self.__dict__[k] = v
         
         self.setup_results_dict()
 
+    @abstractmethod
     def select_action(self, obs, info=None):
         """Determine the action to take at the current timestep.
 
@@ -53,6 +60,25 @@ class BaseController:
             action (np.array): the action chosen by the controller
         """
         return 
+
+    def extract_step(self, info=None):
+        """Extracts the current step from the info.
+
+        Args:
+            info (list): the info list returned from the environment.
+        
+        Returns:
+            step (int): the current step/iteration of the environment.
+        """
+        
+        if info is not None:
+            step = info['current_step']
+            if self.env.TASK == Task.TRAJ_TRACKING:
+                step = min(step, self.env.X_GOAL.shape[0]-1)
+        else:
+            step = 0
+        
+        return step
 
     def learn(self,
               env=None,
@@ -66,9 +92,7 @@ class BaseController:
         pass
 
     def reset(self):
-        """Do initializations for training or evaluation.
-
-        """
+        """Do initializations for training or evaluation. """
         pass
 
     def reset_before_run(self, obs, info=None, env=None):
@@ -82,9 +106,7 @@ class BaseController:
         self.setup_results_dict() 
 
     def close(self):
-        """Shuts down and cleans up lingering resources.
-
-        """
+        """Shuts down and cleans up lingering resources. """
         pass
 
     def save(self,

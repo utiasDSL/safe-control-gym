@@ -835,12 +835,14 @@ class GPMPC(MPC):
         return training_results
 
     def select_action(self,
-                      obs
+                      obs,
+                      info=None,
                       ):
         """Select the action based on the given observation.
 
         Args:
             obs (np.array): current observed state.
+            info (list): current info
 
         Returns:
             action (np.array): desired policy action.

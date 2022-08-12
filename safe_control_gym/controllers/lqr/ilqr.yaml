@@ -1,58 +1,14 @@
-# Model arguments
-# Note: Higher simulation frequency is required if using controller designed
-# based on the continuous-time model
-discrete_dynamics: 1
-
-# Runner arguments
-deque_size: 10
-eval_batch_size: 1
-
 # Cost parameters
 q_lqr: [1]
 r_lqr: [0.1]
+
+# Model arguments
+# Note: Higher simulation frequency is required if using controller designed
+#       based on the continuous-time model
+discrete_dynamics: True
 
 # iLQR arguments
 max_iterations: 15
 lamb_factor: 10
 lamb_max: 1000
 epsilon: 0.001
-
-# Shared/base arguments
-verbose: False
-
-# Plot
-plot_traj: False
-save_plot: True
-plot_dir: "./results/ilqr_baseline/"
-
-# Export csv files
-save_data: True
-data_dir: "./results/ilqr_baseline/"
-
-
-
-
-
-
-
-
-
-
-# Task (options: stabilization, traj_tracking)
-task: traj_tracking
-episode_len_sec: 5 # episode maximum length in seconds
-task_info: {
-        "stabilization_goal": [0, 1],
-        "trajectory_type": "circle",
-        "num_cycles": 1,
-        "trajectory_plane": "zx",
-        "trajectory_position_offset": [0.5, 0],
-        "trajectory_scale": -0.5
-}
-
-# Use random initial state
-random_init: False
-
-# Control and simulation frequency
-ctrl_freq: 100
-pyb_freq: 1000

@@ -114,7 +114,7 @@ class Experiment:
                         break
 
         trajs_data = self.env.data 
-        trajs_data.update(ctrl_data)
+        trajs_data['controller_data'] = dict(ctrl_data)
         return trajs_data
     
     def _evaluation_reset(self, ctrl_data):

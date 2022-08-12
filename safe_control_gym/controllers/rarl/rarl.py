@@ -11,11 +11,8 @@ Example:
     train on cartpole with disturbance::
     
         $ python mains/main.py --algo rarl --task cartpole --overrides benchmark/configs/overrides/rarl_cartpole.yaml
-
-Todo:
-    *
-
 """
+
 import os
 import time
 import numpy as np
@@ -41,10 +38,10 @@ class RARL(BaseController):
                  checkpoint_path="model_latest.pt", 
                  output_dir="temp", 
                  use_gpu=False, 
-                 seed=0, 
+                 seed=0,
                  **kwargs):
         super().__init__(env_func, training, checkpoint_path, output_dir, use_gpu, seed, **kwargs)
-        self.use_gpu = use_gpu
+
         # task
         if self.training:
             # training (+ evaluation)
@@ -198,7 +195,23 @@ class RARL(BaseController):
             if self.log_interval and self.total_steps % self.log_interval == 0:
                 self.log_step(results)
 
-    def run(self, env=None, render=False, n_episodes=10, verbose=False, use_adv=False, **kwargs):
+    def select_action(self, obs, info=None):
+        """Determine the action to take at the current timestep.
+        Args:
+            obs (np.array): the observation at this timestep
+            info (list): the info at this timestep
+        
+        Returns:
+            action (np.array): the action chosen by the controller
+        """
+
+        with torch.no_grad():
+            obs = torch.FloatTensor(obs).to(self.device)
+            action = self.agent.ac.act(obs)
+
+        return action
+
+    def run(self, env=None, render=False, n_episodes=10, max_steps=1000, verbose=False, use_adv=False, **kwargs):
         """Runs evaluation with current policy."""
         self.agent.eval()
         self.adversary.eval()
@@ -218,9 +231,7 @@ class RARL(BaseController):
         frames = []
 
         while len(ep_returns) < n_episodes:
-            with torch.no_grad():
-                obs = torch.FloatTensor(obs).to(self.device)
-                action = self.agent.ac.act(obs)
+            action = self.select_action(obs=obs, info=info)
 
             # no disturbance during testing
             if use_adv:

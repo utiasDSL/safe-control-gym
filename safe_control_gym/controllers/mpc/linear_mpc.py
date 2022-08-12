@@ -220,12 +220,14 @@ class LinearMPC(MPC):
         }
 
     def select_action(self,
-                      obs
+                      obs, 
+                      info=None
                       ):
         """Solve nonlinear mpc problem to get next action.
         
         Args:
             obs (np.array): current state/observation. 
+            info (list): current info
         
         Returns:
             action (np.array): input/action to the task/env.
