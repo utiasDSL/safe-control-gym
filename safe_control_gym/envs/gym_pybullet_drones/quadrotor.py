@@ -270,12 +270,12 @@ class Quadrotor(BaseAviary):
                     self.TASK_INFO["stabilization_goal"][1], 0.0, 0.0, 0.0
                 ])  # x = {x, x_dot, z, z_dot, theta, theta_dot}.
             elif self.QUAD_TYPE == QuadType.THREE_D:
-                self.X_GOAL = np.hstack(
+                self.X_GOAL = np.hstack([
                     self.TASK_INFO["stabilization_goal"][0], 0.0,
                     self.TASK_INFO["stabilization_goal"][1], 0.0,
                     self.TASK_INFO["stabilization_goal"][2], 0.0,
                     0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-                )  # x = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
+                ])  # x = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
         elif self.TASK == Task.TRAJ_TRACKING:
             POS_REF, \
             VEL_REF, \
