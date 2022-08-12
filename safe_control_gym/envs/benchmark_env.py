@@ -34,6 +34,15 @@ class Task(str, Enum):
     TRAJ_TRACKING = "traj_tracking"  # Trajectory tracking task.
 
 
+class Environment(str, Enum):
+    """Environment enumeration class.
+
+    """
+
+    CARTPOLE = "cartpole"  # Cartpole system
+    QUADROTOR = "quadrotor"  # Quadrotor, both 1D and 2D
+
+
 class BenchmarkEnv(gym.Env):
     """Benchmark environment base class.
     
@@ -102,7 +111,7 @@ class BenchmarkEnv(gym.Env):
             pyb_freq (int, optional): The frequency at which PyBullet steps (a multiple of ctrl_freq).
             ctrl_freq (int, optional): The frequency at which the environment steps.
             episode_len_sec (int, optional): Maximum episode duration in seconds.
-            init_state  (ndarray/dict, optional): The initial state of the environment 
+            init_state (ndarray/dict, optional): The initial state of the environment 
             randomized_init (bool, optional): Whether to randomize the initial state.
             init_state_randomization_info (dict, optional): A dictionary with information used to 
                 randomize the initial state.
@@ -378,6 +387,22 @@ class BenchmarkEnv(gym.Env):
         # Pre-process/clip the action
         processed_action = self._preprocess_control(action)
         return processed_action
+    
+    def extend_obs(self, obs, next_step):
+        if self.COST == Cost.RL_REWARD and self.TASK == Task.TRAJ_TRACKING and self.obs_goal_horizon > 0:            
+            wp_idx = [
+                min(next_step + i, self.X_GOAL.shape[0]-1) 
+                for i in range(self.obs_goal_horizon)
+            ]
+            goal_state = self.X_GOAL[wp_idx].flatten()
+            extended_obs = np.concatenate([obs, goal_state])
+        elif self.COST == Cost.RL_REWARD and self.TASK == Task.STABILIZATION and self.obs_goal_horizon > 0:
+            goal_state = self.X_GOAL.flatten()
+            extended_obs = np.concatenate([obs, goal_state])
+        else:
+            extended_obs = obs
+        
+        return extended_obs
     
     def after_step(self, obs, rew, done, info):
         """Post-processing after calling `.step()`.

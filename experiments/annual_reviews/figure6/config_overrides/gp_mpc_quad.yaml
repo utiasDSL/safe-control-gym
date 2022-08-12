@@ -64,10 +64,9 @@ algo_config:
     - 3
     - 4
     - 5
-
   output_dir: temp-data/figure6
 
-seed: 79123 #9078
+seed: 1234 #79123 #9078
 task_config:
   ctrl_freq: 10
   pyb_freq: 240
@@ -111,3 +110,6 @@ task_config:
       distrib: 'uniform'
       low: -1.7
       high: 1.7
+  task_info:
+    stabilization_goal: [0, 1]
+    stabilization_goal_tolerance: 0.01

@@ -43,7 +43,8 @@ def trajectory_plot_csv(traj_data, action, dir, ref=None):
     i += 1
     for j in range(action.shape[1]):
         ax[i+j].plot(action[:,j])
-
+        ax[i+j].set_ylabel('u%s' % j)
+        ax[i+j].set_xlabel('Time (s)')
     action = np.vstack((action, np.zeros((1,action.shape[1]))))
 
     plt.savefig(os.path.join(dir,'trajectory_plot.png'))
@@ -125,4 +126,5 @@ if __name__ == "__main__":
         test_runs = main(config)
     else:
         fname = config.plot_dir
-        plot_ctrl_perf(fname)
+        labels = ['x (m)', 'x_dot (m/s)', 'z (m)', 'z_dot (m/s)', 'theta (rad)', 'theta_dot (rad/s)', 'T1 (N)', 'T2 (N)']
+        plot_ctrl_perf(fname, labels)

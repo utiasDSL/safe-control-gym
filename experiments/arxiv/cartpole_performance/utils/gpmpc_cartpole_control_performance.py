@@ -116,4 +116,5 @@ if __name__ == "__main__":
         test_runs = main(config)
     else:
         fname = config.plot_dir
-        plot_ctrl_perf(fname)
+        labels = ['x (m)', 'x_dot (m/s)', 'theta (rad)', 'theta_dot (rad/s)', 'Input (N)']
+        plot_ctrl_perf(fname, labels)

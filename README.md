@@ -137,7 +137,7 @@ Familiarize with APIs and environments with the scripts in [`examples/`](https:/
 ```
 $ cd ./examples/                                                                    # Navigate to the examples folder
 $ python3 tracking.py --overrides ./tracking.yaml                                   # PID trajectory tracking with the 2D quadcopter
-$ python3 verbose_api.py --system cartpole --overrides verbose_api.yaml             #  Printout of the extended safe-control-gym APIs
+$ python3 verbose_api.py --task cartpole --overrides verbose_api.yaml             #  Printout of the extended safe-control-gym APIs
 ```
 
 
@@ -270,11 +270,9 @@ $ ./create_unsafe_ppo_model.sh                                     # Run the scr
 
 
 
-# Desiderata/WIP/Summer 2022 Internships TODOs
+# TODOs (August 2022)
 - Publish to [PyPI](https://realpython.com/pypi-publish-python-package/)
-- [Colab](https://colab.research.google.com/notebooks/intro.ipynb) examples
-- Create a list of FAQs from [Issues tagged as questions](https://github.com/utiasDSL/safe-control-gym/issues?q=is%3Aissue+is%3Aopen+label%3Aquestion)
-- Link [papers](https://www.semanticscholar.org/paper/safe-control-gym%3A-a-Unified-Benchmark-Suite-for-and-Yuan-Hall/66b4656ab7732dcdcf39c466e8ab948c2b4a042d#citingPapers), projects, blog posts (Cat's, etc.) using `safe-control-gym`
+- Create resource list with [papers](https://www.semanticscholar.org/paper/safe-control-gym%3A-a-Unified-Benchmark-Suite-for-and-Yuan-Hall/66b4656ab7732dcdcf39c466e8ab948c2b4a042d#citingPapers), projects, blog posts (Cat's, etc.) using `safe-control-gym`
 
 -----
 > University of Toronto's [Dynamic Systems Lab](https://github.com/utiasDSL) / [Vector Institute for Artificial Intelligence](https://github.com/VectorInstitute)
