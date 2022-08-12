@@ -9,7 +9,6 @@ Run as:
 """
 
 import os
-import time
 import pickle
 from functools import partial
 
@@ -25,9 +24,6 @@ def run(gui=True, n_episodes=2, n_steps=None, save_data=True):
     CONFIG_FACTORY = ConfigFactory()               
     config = CONFIG_FACTORY.merge()
 
-    # Start a timer.
-    START = time.time()
-    
     # Create controller.
     env_func = partial(make,
                     config.task,
@@ -41,16 +37,15 @@ def run(gui=True, n_episodes=2, n_steps=None, save_data=True):
     # Run the experiment.
     experiment = Experiment(env, ctrl)
     trajs_data, metrics = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
-    
+    experiment.close()
+
     if save_data:
         results = {'trajs_data': trajs_data, 'metrics': metrics}
         path_dir = os.path.dirname('./temp-data/')
         os.makedirs(path_dir, exist_ok=True)
-        with open(f'./temp-data/pid_data_{config.task_config.task}.pkl', "wb") as f:
+        with open(f'./temp-data/pid_data_{config.task_config.task}.pkl', 'wb') as f:
             pickle.dump(results, f)
 
-    experiment.close()
-            
     iterations = len(trajs_data['action'][0])
     for i in range(iterations):
         # Step the environment and print all returned information.
@@ -60,10 +55,10 @@ def run(gui=True, n_episodes=2, n_steps=None, save_data=True):
         print(i, '-th step.')
         print(action, '\n', obs, '\n', reward, '\n', done, '\n', info, '\n')
 
-    elapsed_sec = time.time() - START
-    print("\n{:d} iterations (@{:d}Hz) and {:d} episodes in {:.2f} seconds, i.e. {:.2f} steps/sec for a {:.2f}x speedup.\n"
+    elapsed_sec = trajs_data['timestamp'][0][-1] - trajs_data['timestamp'][0][0]
+    print('\n{:d} iterations (@{:d}Hz) and {:d} episodes in {:.2f} seconds, i.e. {:.2f} steps/sec for a {:.2f}x speedup.\n'
             .format(iterations, config.task_config.ctrl_freq, 1, elapsed_sec, iterations/elapsed_sec, (iterations*(1. / config.task_config.ctrl_freq))/elapsed_sec))
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     run()

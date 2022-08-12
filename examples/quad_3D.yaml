@@ -3,27 +3,33 @@ task_config:
   info_in_reset: True
   ctrl_freq: 60
   pyb_freq: 240
-  gui: False
+  gui: True
   physics: pyb
-  quad_type: 2
+  quad_type: 3
+  normalized_rl_action_space: False
+
   init_state:
     init_x: 0
     init_x_dot: 0
-    init_z: 1
+    init_z: 0
     init_z_dot: 0
     init_theta: 0
     init_theta_dot: 0
   randomized_init: False
   randomized_inertial_prop: False
+
   task: traj_tracking
   task_info:
     stabilization_goal: [0, 1]
     stabilization_goal_tolerance: 0.01
     trajectory_type: figure8
     num_cycles: 1
-    trajectory_plane: "xz"
+    trajectory_plane: 'xz'
     trajectory_position_offset: [0, 1]
     trajectory_scale: 1
-  episode_len_sec: 6
+    proj_point: [0, 0, 0.5]
+    proj_normal: [0, 1, 1]
+  episode_len_sec: 10
   cost: quadratic
+
   done_on_out_of_bound: False
