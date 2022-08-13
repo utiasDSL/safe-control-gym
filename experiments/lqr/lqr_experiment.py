@@ -3,6 +3,7 @@
 import os
 import pickle
 from functools import partial
+from collections import defaultdict
 
 from safe_control_gym.experiment import Experiment
 from safe_control_gym.utils.configuration import ConfigFactory
@@ -26,27 +27,36 @@ def run(gui=True, training=True, n_episodes=2, n_steps=None, save_data=True):
                 env_func,
                 )
 
-    all_trajs = None
+    all_trajs = defaultdict(list)
+    n_episodes = 1 if n_episodes is None else n_episodes
 
     # Run the experiment.
     for n in range(n_episodes):
+        # Get initial state and create environments
         init_state, _ = random_env.reset()
         static_env = env_func(gui=gui, randomized_init=False, init_state=init_state)
         static_train_env = env_func(gui=False, randomized_init=False, init_state=init_state)
+        
+        # Create experiment, train, and run evaluation
         experiment = Experiment(env=static_env, ctrl=ctrl, train_env=static_train_env)
         if training:
             experiment.launch_training()
-        trajs_data, _ = experiment.run_evaluation(training=True, n_episodes=1, n_steps=n_steps)
+        if n_steps is None:
+            trajs_data, _ = experiment.run_evaluation(training=True, n_episodes=1)
+        else:
+            trajs_data, _ = experiment.run_evaluation(training=True, n_steps=n_steps)
+        
+        # Close environments
         static_env.close()
         static_train_env.close()
-        if all_trajs is None:
-            all_trajs = trajs_data
-        else:
-            for key in all_trajs.keys():
-                all_trajs[key] += trajs_data[key]
-    random_env.close()
 
+        # Merge in new trajectory data
+        for key in trajs_data.keys():
+            all_trajs[key] += trajs_data[key]
+    
+    random_env.close()
     metrics = experiment.compute_metrics(all_trajs)
+    all_trajs = dict(all_trajs)
 
     if save_data:
         results = {'trajs_data': all_trajs, 'metrics': metrics}
