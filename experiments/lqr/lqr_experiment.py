@@ -1,9 +1,4 @@
-'''A LQR and iLQR example.
-
-Run as:
-    python3 ./lqr_experiment.py --task quadrotor --algo lqr --overrides ./config_overrides/quadrotor_config.yaml ./config_overrides/lqr_config.yaml
-    python3 ./lqr_experiment.py --task quadrotor --algo ilqr --overrides ./config_overrides/quadrotor_config.yaml ./config_overrides/ilqr_config.yaml
-'''
+'''A LQR and iLQR example. '''
 
 import os
 import pickle
@@ -26,20 +21,35 @@ def run(gui=True, training=True, n_episodes=2, n_steps=None, save_data=True):
                     config.task,
                     **config.task_config
                     )
-    env = env_func(gui=gui)
+    random_env = env_func(gui=False)
     ctrl = make(config.algo,
                 env_func,
                 )
 
+    all_trajs = None
+
     # Run the experiment.
-    experiment = Experiment(env, ctrl)
-    if training:
-        experiment.launch_training()
-    trajs_data, metrics = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
-    experiment.close()
+    for n in range(n_episodes):
+        init_state, _ = random_env.reset()
+        static_env = env_func(gui=gui, randomized_init=False, init_state=init_state)
+        static_train_env = env_func(gui=False, randomized_init=False, init_state=init_state)
+        experiment = Experiment(env=static_env, ctrl=ctrl, train_env=static_train_env)
+        if training:
+            experiment.launch_training()
+        trajs_data, _ = experiment.run_evaluation(training=True, n_episodes=1, n_steps=n_steps)
+        static_env.close()
+        static_train_env.close()
+        if all_trajs is None:
+            all_trajs = trajs_data
+        else:
+            for key in all_trajs.keys():
+                all_trajs[key] += trajs_data[key]
+    random_env.close()
+
+    metrics = experiment.compute_metrics(all_trajs)
 
     if save_data:
-        results = {'trajs_data': trajs_data, 'metrics': metrics}
+        results = {'trajs_data': all_trajs, 'metrics': metrics}
         path_dir = os.path.dirname('./temp-data/')
         os.makedirs(path_dir, exist_ok=True)
         with open(f'./temp-data/{config.algo}_data_{config.task_config.task}.pkl', 'wb') as f:
@@ -57,6 +67,8 @@ def run(gui=True, training=True, n_episodes=2, n_steps=None, save_data=True):
     elapsed_sec = trajs_data['timestamp'][0][-1] - trajs_data['timestamp'][0][0]
     print('\n{:d} iterations (@{:d}Hz) and {:d} episodes in {:.2f} seconds, i.e. {:.2f} steps/sec for a {:.2f}x speedup.\n'
             .format(iterations, config.task_config.ctrl_freq, 1, elapsed_sec, iterations/elapsed_sec, (iterations*(1. / config.task_config.ctrl_freq))/elapsed_sec))
+
+    print('FINAL METRICS - ' + ''.join([f'{key}: {value}' for key, value in metrics.items()]))
 
 
 if __name__ == '__main__':

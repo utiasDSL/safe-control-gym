@@ -38,7 +38,9 @@ class Experiment:
         if train_env is not None and not is_wrapped(self.train_env, RecordDataWrapper):
             self.train_env = RecordDataWrapper(self.train_env)
         self.safety_filter = safety_filter
-    
+
+        self.reset()
+
     def run_evaluation(self, training=False, n_episodes=None, n_steps=None, log_freq=None, **kwargs):
         """Evaluate a trained controller. 
         
@@ -114,7 +116,7 @@ class Experiment:
                         break
 
         trajs_data = self.env.data 
-        trajs_data['controller_data'] = dict(ctrl_data)
+        trajs_data['controller_data'].append(dict(ctrl_data))
         return trajs_data
     
     def _evaluation_reset(self, ctrl_data):
@@ -143,6 +145,11 @@ class Experiment:
             self.safety_filter.learn(env=self.train_env, **kwargs)
     
         print("Training done.")
+
+        trajs_data = {}
+        if self.train_env is not None:
+            trajs_data = self.train_env.data 
+        return dict(trajs_data)
     
     def compute_metrics(self, trajs_data):
         """Compute all standard metrics on the given trajectory data.
@@ -177,6 +184,10 @@ class Experiment:
 
         if self.safety_filter is not None:
             self.safety_filter.reset()
+        
+        if self.train_env is not None:
+            self.train_env.reset()
+            self.train_env.clear_data()
     
     def close(self):
         """Closes the environments, controller, and safety filter. """
@@ -186,6 +197,9 @@ class Experiment:
 
         if self.safety_filter is not None:
             self.safety_filter.close()
+        
+        if self.train_env is not None:
+            self.train_env.close()
     
     def load(self, ctrl_path=None, safety_filter_path=None):
         """Restores model of the controller and/or safety filter given checkpoint paths. 
