@@ -51,7 +51,7 @@ def run(gui=True, n_episodes=2, n_steps=None, save_data=True):
     print('\n{:d} iterations (@{:d}Hz) and {:d} episodes in {:.2f} seconds, i.e. {:.2f} steps/sec for a {:.2f}x speedup.\n'
             .format(iterations, config.task_config.ctrl_freq, 1, elapsed_sec, iterations/elapsed_sec, (iterations*(1. / config.task_config.ctrl_freq))/elapsed_sec))
 
-    print('FINAL METRICS - ' + ''.join([f'{key}: {value}' for key, value in metrics.items()]))
+    print('FINAL METRICS - ' + ', '.join([f'{key}: {value}' for key, value in metrics.items()]))
 
 
 if __name__ == '__main__':
