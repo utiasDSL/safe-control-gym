@@ -232,7 +232,7 @@ class RecordDataWrapper(gym.Wrapper):
     """A wrapper to standardizes logging for benchmark envs.
     
     currently saved info
-    * obs, rew, done, info, act
+    * obs, reward, done, info, action
     * env.state, env.current_physical_action, 
     env.current_noisy_physical_action, env.current_clipped_action
     
