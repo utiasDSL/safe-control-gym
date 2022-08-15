@@ -68,7 +68,11 @@ class iLQR(BaseController):
 
         # Control stepsize.
         self.stepsize = self.model.dt
+
         self.ite_counter = 0
+        self.input_ff_best = None
+        self.gains_fb_best = None
+
         self.reset()
 
     def close(self):
@@ -91,34 +95,33 @@ class iLQR(BaseController):
         # Set update unstable flag to False
         self.update_unstable = False
 
-        # Initialize previous reward
-        self.previous_total_reward = -float('inf')
+        # Initialize previous cost
+        self.previous_total_cost = -float('inf')
 
         # Loop through iLQR iterations
         while self.ite_counter < self.max_iterations:
-            self.run()
+            self.run(env=env, training=True)
 
             # Save data and update policy if iteration is finished.
             self.state_stack = np.vstack((self.state_stack, self.final_obs))
 
-            print(colored(f'Iteration: {self.ite_counter}, Reward: {self.total_reward}', 'green'))
+            print(colored(f'Iteration: {self.ite_counter}, Cost: {self.total_cost}', 'green'))
             print(colored('--------------------------', 'green'))
 
-            # Break if the first iteration is not successful
-            if env.TASK == Task.STABILIZATION:
-                if self.ite_counter == 0 and not self.final_info['goal_reached']:
-                    print(colored('The initial policy might be unstable. '
-                                  + 'Break from iLQR updates.', 'red'))
-                    break
+            if self.ite_counter == 0 and self.final_info['out_of_bounds']:
+                print(colored('[ERROR] The initial policy might be unstable. '
+                                + 'Break from iLQR updates.', 'red'))
+                break
 
             # Maximum episode length.
             self.num_steps = np.shape(self.input_stack)[0]
 
             # Check if cost is increased and update lambda correspondingly
-            delta_reward = self.total_reward - self.previous_total_reward
+            delta_cost = self.total_cost - self.previous_total_cost
             if self.ite_counter == 0:
                 # Save best iteration.
                 self.best_iteration = self.ite_counter
+                self.previous_total_cost = self.total_cost
                 self.input_ff_best = np.copy(self.input_ff)
                 self.gains_fb_best = np.copy(self.gains_fb)
 
@@ -127,13 +130,11 @@ class iLQR(BaseController):
 
                 # Initialize improved flag.
                 self.prev_ite_improved = False
-            elif delta_reward < 0.0 or self.update_unstable:
+            elif delta_cost > 0.0 or self.update_unstable:
                 # If cost is increased, increase lambda
                 self.lamb *= self.lamb_factor
 
-                # Reset feedforward term and controller gain to that from
-                # the previous iteration.
-                print(f'Cost increased by {-delta_reward}. '
+                print(f'Cost increased by {-delta_cost}. '
                       + 'Set feedforward term and controller gain to that '
                       'from the previous iteration. '
                       f'Increased lambda to {self.lamb}.')
@@ -154,14 +155,15 @@ class iLQR(BaseController):
 
                 # Reset update_unstable flag to False.
                 self.update_unstable = False
-            elif delta_reward >= 0.0:
+            elif delta_cost <= 0.0:
                 # Save feedforward term and gain and state and input stacks.
                 self.best_iteration = self.ite_counter
+                self.previous_total_cost = self.total_cost
                 self.input_ff_best = np.copy(self.input_ff)
                 self.gains_fb_best = np.copy(self.gains_fb)
 
-                # Check consecutive reward increment (cost decrement).
-                if delta_reward < self.epsilon and self.prev_ite_improved:
+                # Check consecutive cost increment (cost decrement).
+                if abs(delta_cost) < self.epsilon and self.prev_ite_improved:
                     # Cost converged.
                     print(colored('iLQR cost converged with a tolerance '
                                   + f'of {self.epsilon}.', 'yellow'))
@@ -174,7 +176,8 @@ class iLQR(BaseController):
                 self.update_policy(env)
 
             self.ite_counter += 1
-            self.previous_total_reward = self.total_reward
+
+        print(colored(f'Best iteration: {self.best_iteration}', 'green'))
 
     def update_policy(self, env):
         '''Updates policy.
@@ -271,58 +274,78 @@ class iLQR(BaseController):
             else:
                 self.update_unstable = True
 
-    def select_action(self, obs, info=None):
+    def select_action(self, obs, info=None, training=False):
         '''Determine the action to take at the current timestep.
+
         Args:
-            obs (np.array): the observation at this timestep
-            info (list): the info at this timestep
+            obs (np.array): the observation at this timestep.
+            info (list): the info at this timestep.
 
         Returns:
-            action (np.array): the action chosen by the controller
+            action (np.array): the action chosen by the controller.
         '''
 
         step = self.extract_step(info)
 
-        if self.ite_counter == 0:
-            # Compute gain for the first iteration.
-            # action = -self.gain @ (x - self.x_0) + self.u_0
-            if self.env.TASK == Task.STABILIZATION:
-                gains_fb = -self.gain
-                input_ff = self.gain @ self.x_0 + self.u_0
-
-            elif self.env.TASK == Task.TRAJ_TRACKING:
-                self.gain = compute_lqr_gain(self.model, self.x_0[step],
-                                             self.u_0, self.Q, self.R,
-                                             self.discrete_dynamics)
-                gains_fb = -self.gain
-                input_ff = self.gain @ self.x_0[step] + self.u_0
-
-            # Compute action
-            action = gains_fb.dot(obs) + input_ff
-
-            # Save gains and feedforward term
-            if step == 0:
-                self.gains_fb = gains_fb.reshape((1, self.model.nu, self.model.nx))
-                self.input_ff = input_ff.reshape(self.model.nu, 1)
+        if training:
+            if self.ite_counter == 0:
+                action, gains_fb, input_ff = self.calculate_lqr_action(obs, step)
+                # Save gains and feedforward term
+                if step == 0:
+                    self.gains_fb = gains_fb.reshape((1, self.model.nu, self.model.nx))
+                    self.input_ff = input_ff.reshape(self.model.nu, 1)
+                else:
+                    self.gains_fb = np.append(self.gains_fb, gains_fb.reshape((1, self.model.nu, self.model.nx)), axis=0)
+                    self.input_ff = np.append(self.input_ff, input_ff.reshape(self.model.nu, 1), axis=1)
             else:
-                self.gains_fb = np.append(self.gains_fb, gains_fb.reshape((1, self.model.nu, self.model.nx)), axis=0)
-                self.input_ff = np.append(self.input_ff, input_ff.reshape(self.model.nu, 1), axis=1)
+                action = self.gains_fb[step].dot(obs) + self.input_ff[:, step]
+        elif self.gains_fb_best is not None:
+            action = self.gains_fb_best[step].dot(obs) + self.input_ff_best[:, step]
         else:
-            action = self.gains_fb[step].dot(obs) + self.input_ff[:, step]
+            action, _, _ = self.calculate_lqr_action(obs, step)
 
         return action
+
+    def calculate_lqr_action(self, obs, step):
+        '''Compute gain for the first iteration.
+           action = -self.gain @ (x - self.x_0) + self.u_0
+
+        Args:
+            obs (ndarray): the observation at this timestep.
+            step (int): the timestep.
+
+        Returns:
+            action (ndarray): The calculated action.
+            gains_fb (ndarray): the feedback gains.
+            input_ff (ndarray): the feedforward term.
+        '''
+        if self.env.TASK == Task.STABILIZATION:
+            gains_fb = -self.gain
+            input_ff = self.gain @ self.x_0 + self.u_0
+        elif self.env.TASK == Task.TRAJ_TRACKING:
+            self.gain = compute_lqr_gain(self.model, self.x_0[step],
+                                        self.u_0, self.Q, self.R,
+                                        self.discrete_dynamics)
+            gains_fb = -self.gain
+            input_ff = self.gain @ self.x_0[step] + self.u_0
+
+        # Compute action
+        action = gains_fb.dot(obs) + input_ff
+
+        return action, gains_fb, input_ff
 
     def reset(self):
         '''Prepares for evaluation. '''
         self.env.reset()
         self.ite_counter = 0
 
-    def run(self, env=None, max_steps=500):
+    def run(self, env=None, max_steps=500, training=True):
         '''Runs evaluation with current policy.
 
         Args:
             env (gym.Env): environment for the task.
             max_steps (int): maximum number of steps
+            training (bool): whether the algorithm is training or evaluating
         '''
 
         if env is None:
@@ -330,11 +353,11 @@ class iLQR(BaseController):
 
         # Reseed for batch-wise consistency.
         obs, info = env.reset()
-        total_reward = 0.0
+        total_cost = 0.0
 
         for step in range(max_steps):
             # Select action.
-            action = self.select_action(obs=obs, info=info)
+            action = self.select_action(obs=obs, info=info, training=training)
 
             # Save rollout data.
             if step == 0:
@@ -347,8 +370,8 @@ class iLQR(BaseController):
                 self.input_stack = np.vstack((self.input_stack, action))
 
             # Step forward.
-            obs, reward, done, info = env.step(action)
-            total_reward += reward
+            obs, cost, done, info = env.step(action)
+            total_cost -= cost
 
             if done:
                 print(f'SUCCESS: Reached goal on step {step}. Terminating...')
@@ -356,4 +379,4 @@ class iLQR(BaseController):
 
         self.final_obs = obs
         self.final_info = info
-        self.total_reward = total_reward
+        self.total_cost = total_cost

@@ -8,8 +8,8 @@ task_config:
   init_state_randomization_info:
     init_x:
       distrib: 'uniform'
-      low: -3
-      high: 3
+      low: -2
+      high: 2
     init_x_dot:
       distrib: 'uniform'
       low: -0.1

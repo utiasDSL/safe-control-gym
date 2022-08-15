@@ -80,7 +80,7 @@ def run(gui=True, training=True, n_episodes=2, n_steps=None, save_data=True):
         results = {'trajs_data': all_trajs, 'metrics': metrics}
         path_dir = os.path.dirname('./temp-data/')
         os.makedirs(path_dir, exist_ok=True)
-        with open(f'./temp-data/{config.algo}_data_{config.task_config.task}.pkl', 'wb') as file:
+        with open(f'./temp-data/{config.algo}_data_{config.task}_{config.task_config.task}.pkl', 'wb') as file:
             pickle.dump(results, file)
 
     print('FINAL METRICS - ' + ', '.join([f'{key}: {value}' for key, value in metrics.items()]))
