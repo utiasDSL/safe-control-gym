@@ -1,10 +1,7 @@
-"""Base classes.
+"""Base controller. """
 
-"""
 import torch
 from abc import ABC, abstractmethod
-
-from safe_control_gym.envs.benchmark_env import Task
 
 
 class BaseController(ABC):
@@ -30,8 +27,8 @@ class BaseController(ABC):
             output_dir (str): folder to write outputs.
             use_gpu (bool): False (use cpu) True (use cuda).
             seed (int): random seed.
-
         """
+
         # Base args.
         self.env_func = env_func
         self.training = training
@@ -52,11 +49,11 @@ class BaseController(ABC):
         """Determine the action to take at the current timestep.
 
         Args:
-            obs (np.array): the observation at this timestep
-            info (list): the info at this timestep
+            obs (ndarray): the observation at this timestep.
+            info (list): the info at this timestep.
         
         Returns:
-            action (np.array): the action chosen by the controller
+            action (ndarray): the action chosen by the controller.
         """
         return 
 
@@ -96,7 +93,7 @@ class BaseController(ABC):
         """Reinitialize just the controller before a new run.
 
         Args:
-            obs (np.array): the initial observation for the new run
+            obs (ndarray): the initial observation for the new run
             info (list): the first info of the new run
             env (gym.Env): the environment to be used for the new run
         """

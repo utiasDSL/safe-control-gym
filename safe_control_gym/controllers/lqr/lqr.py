@@ -51,11 +51,11 @@ class LQR(BaseController):
     def select_action(self, obs, info=None):
         '''Determine the action to take at the current timestep.
         Args:
-            obs (np.array): the observation at this timestep
-            info (list): the info at this timestep
+            obs (ndarray): the observation at this timestep.
+            info (list): the info at this timestep.
 
         Returns:
-            action (np.array): the action chosen by the controller
+            action (ndarray): the action chosen by the controller.
         '''
 
         step = self.extract_step(info)
@@ -73,10 +73,7 @@ class LQR(BaseController):
 
         Args:
             env (gym.Env): environment for the task.
-            max_steps (int): maximum number of steps
-
-        Returns:
-            dict: evaluation results
+            max_steps (int): maximum number of steps.
         '''
 
         if env is None:
