@@ -15,12 +15,11 @@ from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 
 
-def run(gui=True, training=True, n_episodes=2, n_steps=None, save_data=True):
+def run(gui=True, n_episodes=2, n_steps=None, save_data=True):
     '''The main function running LQR and iLQR experiments.
 
     Args:
         gui (bool): Whether to display the gui and plot graphs.
-        training (bool): Whether to train the algorithms before execution.
         n_episodes (int): The number of episodes to execute.
         n_steps (int): The total number of steps to execute.
         save_data (bool): Whether to save the collected experiment data.
@@ -53,8 +52,8 @@ def run(gui=True, training=True, n_episodes=2, n_steps=None, save_data=True):
 
         # Create experiment, train, and run evaluation
         experiment = Experiment(env=static_env, ctrl=ctrl, train_env=static_train_env)
-        if training:
-            experiment.launch_training()
+        experiment.launch_training()
+
         if n_steps is None:
             trajs_data, _ = experiment.run_evaluation(training=True, n_episodes=1)
         else:
