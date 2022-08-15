@@ -864,7 +864,7 @@ class Quadrotor(BaseAviary):
             # Early terminate if needed.
             if self.out_of_bounds:
                 return True 
-        self.out_of_bounds
+        self.out_of_bounds = False
 
         return False 
 

@@ -36,4 +36,3 @@ task_config:
   episode_len_sec: 6
   cost: quadratic
   done_on_out_of_bound: True
-  done_on_violation: False

@@ -51,7 +51,7 @@ class iLQR(BaseController):
         self.lamb_max = lamb_max
         self.epsilon = epsilon
 
-        self.env = env_func(info_in_reset=True)
+        self.env = env_func(info_in_reset=True, done_on_out_of_bound=True)
 
         # Controller params.
         self.model = self.env.symbolic
@@ -108,7 +108,7 @@ class iLQR(BaseController):
             print(colored(f'Iteration: {self.ite_counter}, Cost: {self.total_cost}', 'green'))
             print(colored('--------------------------', 'green'))
 
-            if self.ite_counter == 0 and self.final_info['out_of_bounds']:
+            if self.ite_counter == 0 and env.done_on_out_of_bound and self.final_info['out_of_bounds']:
                 print(colored('[ERROR] The initial policy might be unstable. '
                                 + 'Break from iLQR updates.', 'red'))
                 break
