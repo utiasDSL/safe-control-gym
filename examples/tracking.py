@@ -1,11 +1,11 @@
-"""A quadrotor trajectory tracking example.
+'''A quadrotor trajectory tracking example.
 
 Notes:
     Includes and uses PID control.
 
 Run as:
     $ python3 tracking.py --algo pid --task quadrotor --overrides ./tracking.yaml
-"""
+'''
 
 from functools import partial
 
@@ -14,10 +14,10 @@ from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 
 def run(gui=True, n_episodes=1, n_steps=None):
-    """The main function creating, running, and closing an environment. """
+    '''The main function creating, running, and closing an environment. '''
 
     # Create an environment
-    CONFIG_FACTORY = ConfigFactory()               
+    CONFIG_FACTORY = ConfigFactory()
     config = CONFIG_FACTORY.merge()
 
     for i in range(3):
@@ -25,7 +25,7 @@ def run(gui=True, n_episodes=1, n_steps=None):
             config.task_config['task_info']['trajectory_type'] = 'circle'
         elif i == 2:
             config.task_config['task_info']['trajectory_type'] = 'square'
-                
+
         # Create controller.
         env_func = partial(make,
                         config.task,
@@ -38,9 +38,9 @@ def run(gui=True, n_episodes=1, n_steps=None):
 
         # Run the experiment.
         experiment = Experiment(env, ctrl)
-        trajs_data, metrics = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
+        trajs_data, _ = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
         experiment.close()
-                
+
         iterations = len(trajs_data['action'][0])
         for i in range(iterations):
             # Step the environment and print all returned information.

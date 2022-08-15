@@ -1,4 +1,4 @@
-"""A quadrotor trajectory tracking example.
+'''A quadrotor trajectory tracking example.
 
 Notes:
     Includes and uses PID control.
@@ -6,7 +6,7 @@ Notes:
 Run as:
     $ python3 ./pid_experiment.py --algo pid --task quadrotor --overrides ./config_overrides/quadrotor_stabilization.yaml
     $ python3 ./pid_experiment.py --algo pid --task quadrotor --overrides ./config_overrides/quadrotor_tracking.yaml
-"""
+'''
 
 import os
 import pickle
@@ -18,10 +18,10 @@ from safe_control_gym.utils.registration import make
 
 
 def run(gui=True, n_episodes=2, n_steps=None, save_data=True):
-    """The main function creating, running, and closing an environment. """
+    '''The main function creating, running, and closing an environment. '''
 
     # Create an environment
-    CONFIG_FACTORY = ConfigFactory()               
+    CONFIG_FACTORY = ConfigFactory()
     config = CONFIG_FACTORY.merge()
 
     # Create controller.
@@ -43,8 +43,8 @@ def run(gui=True, n_episodes=2, n_steps=None, save_data=True):
         results = {'trajs_data': trajs_data, 'metrics': metrics}
         path_dir = os.path.dirname('./temp-data/')
         os.makedirs(path_dir, exist_ok=True)
-        with open(f'./temp-data/pid_data_{config.task_config.task}.pkl', 'wb') as f:
-            pickle.dump(results, f)
+        with open(f'./temp-data/pid_data_{config.task_config.task}.pkl', 'wb') as file:
+            pickle.dump(results, file)
 
     iterations = len(trajs_data['action'][0])
     for i in range(iterations):
