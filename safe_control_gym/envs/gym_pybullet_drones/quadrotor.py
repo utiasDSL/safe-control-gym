@@ -4,6 +4,7 @@ Based on UTIAS Dynamic Systems Lab's gym-pybullet-drones:
     * https://github.com/utiasDSL/gym-pybullet-drones
 
 """
+import os
 import math
 from copy import deepcopy
 import casadi as cs
@@ -327,6 +328,9 @@ class Quadrotor(BaseAviary):
         self.X_EQ = np.zeros(self.state_dim)
         self.U_EQ = self.U_GOAL
 
+        # IROS 2022 - Load maze.
+        self.OBSTACLES = kwargs['obstacles']
+        self.GATES = kwargs['gates']
 
     def reset(self):
         """(Re-)initializes the environment to start an episode.
@@ -339,8 +343,20 @@ class Quadrotor(BaseAviary):
 
         """
         super().before_reset()
-        # PyBullet simulation reset.  
+        # PyBullet simulation reset.
         super()._reset_simulation()
+
+        # IROS 2022 - Create maze.
+        for obstacle in self.OBSTACLES:
+            p.loadURDF(os.path.join(self.URDF_DIR, "obstacle.urdf"),
+                       np.array(obstacle[0:3]) + np.array([0.1*np.random.rand(), 0.1*np.random.rand(), 0]), # TODO - Parametrize distribution
+                       p.getQuaternionFromEuler(obstacle[3:6]),
+                       physicsClientId=self.PYB_CLIENT)
+        for gate in self.GATES:
+            p.loadURDF(os.path.join(self.URDF_DIR, "portal.urdf"),
+                       np.array(gate[0:3]) + np.array([0.1*np.random.rand(), 0.1*np.random.rand(), 0]), # TODO - Parametrize distribution
+                       p.getQuaternionFromEuler(gate[3:6]),
+                       physicsClientId=self.PYB_CLIENT)
         
         # Choose randomized or deterministic inertial properties.
         prop_values = {
@@ -885,9 +901,13 @@ class Quadrotor(BaseAviary):
         # Filter only relevant dimensions.
         state_error = state_error * self.info_mse_metric_state_weight
         info["mse"] = np.sum(state_error ** 2)
-        # if self.constraints is not None:
-        #     info["constraint_values"] = self.constraints.get_values(self)
-        #     info["constraint_violations"] = self.constraints.get_violations(self)
+
+        # Note: constraint_values and constraint_violations populated in benchmark_env.
+
+        # IROS 2022 - Reset info.
+        # Collisions - TODO
+        # Gates progress - TODO
+
         return info
 
     def _get_reset_info(self):
@@ -899,12 +919,36 @@ class Quadrotor(BaseAviary):
         """
         info = {}
         info["symbolic_model"] = self.symbolic
-        info["physical_parameters"] = {
+        info["nominal_physical_parameters"] = {
             "quadrotor_mass": self.MASS,
-            "quadrotor_iyy_inertia": self.J[1, 1]
+            "quadrotor_ixx_inertia": self.J[0, 0],
+            "quadrotor_iyy_inertia": self.J[1, 1],
+            "quadrotor_izz_inertia": self.J[2, 2]
         }
-        info["x_reference"] = self.X_GOAL
-        info["u_reference"] = self.U_GOAL
         if self.constraints is not None:
             info["symbolic_constraints"] = self.constraints.get_all_symbolic_models()
+        
+        # IROS 2022 - Reset info.
+        info["ctrl_timestep"] = self.CTRL_TIMESTEP
+        info["ctrl_freq"] = self.CTRL_FREQ
+        info["episode_len_sec"] = self.EPISODE_LEN_SEC
+        info["quadrotor_kf"] = self.KF
+        info["quadrotor_km"] = self.KM
+        info["gate_dimensions"] = {
+            "shape": "square",
+            "height": 0.75,
+            "edge": 0.45
+        }
+        info["obstacle_dimensions"] = {
+            "shape": "cylinder",
+            "height": 0.8,
+            "radius": 0.05
+        }
+        info["nominal_gates_pos"] = self.GATES
+        info["nominal_obstacles_pos"] = self.OBSTACLES
+
+        # INFO 2022 - Debugging.
+        info["urdf_dir"] = self.URDF_DIR
+        info["pyb_client"] = self.PYB_CLIENT
+
         return info

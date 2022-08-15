@@ -7,9 +7,19 @@ Links:
 
 ## Registration Form
 
-*Disclaimer: alpha release subject to change throughout the month of August, 2022; register for updates*
+*Note: alpha release subject to change throughout the month of August, 2022; register for updates*
 
 Complete this [Google Form](https://forms.gle/vEmVK99n1SyaE4Zw9) to register you interest and receive e-mail updates
+
+## Latest Update: August 14
+- Configurable (via YAML) obstacles and gates
+- Randomized initial position and inertial properties
+- Constraint evaluations
+
+## Next Update: August 18 (approx.)
+- Reward function (collisions count, gate progress, goal position reached)
+- Training script template
+- `cffirmare` Python module
 
 ## Install on Ubuntu/macOS
 
@@ -22,7 +32,7 @@ Create and access a Python 3.8 environment using
 [`conda`](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
 
 ```bash
-conda create -n safe python=3.8.10
+conda create -n safe python=3.8
 conda activate safe
 ```
 
@@ -33,23 +43,13 @@ pip install --upgrade pip
 pip install -e .
 ```
 
-### Note:
-You may need to separately install `gmp`, a dependency of `pycddlib`:
- ```bash
-conda install -c anaconda gmp
- ```
- or 
-  ```bash
- sudo apt-get install libgmp-dev
- ```
-
 ## Getting Started
-Familiarize with the scripts in [`competition/`](https://github.com/utiasDSL/safe-control-gym/tree/main/competition)
+Run the scripts in [`competition/`](https://github.com/utiasDSL/safe-control-gym/tree/main/competition)
 ```
 $ cd ./competition/
 $ python3 getting_started.py --overrides ./getting_started.yaml
 ```
-**Modify file [`edit_this.py`](https://github.com/utiasDSL/safe-control-gym/blob/alpha-iros-competition/competition/edit_this.py) to customize planning and control**
+**Modify file [`edit_this.py`](https://github.com/utiasDSL/safe-control-gym/blob/alpha-iros-competition/competition/edit_this.py) to customize your planning and control**
 
 -----
 > University of Toronto's [Dynamic Systems Lab](https://github.com/utiasDSL) / [Vector Institute for Artificial Intelligence](https://github.com/VectorInstitute)
