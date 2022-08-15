@@ -58,7 +58,7 @@ def run():
         out = '\t' + str(inspect.getsource(fun)).strip('\n')
         print_str_with_style(out, 0)
     print_str_with_style('\tA priori parameters:', 0)
-    out = '\t\t' + str(initial_info['physical_parameters'])
+    out = '\t\t' + str(initial_info['nominal_physical_parameters'])
     print_str_with_style(out, 0)
     print_str_with_style('\tX reference:', 0)
     out = '\t\t' + str(initial_info['x_reference'])

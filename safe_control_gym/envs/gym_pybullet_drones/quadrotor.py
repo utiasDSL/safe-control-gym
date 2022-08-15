@@ -329,8 +329,12 @@ class Quadrotor(BaseAviary):
         self.U_EQ = self.U_GOAL
 
         # IROS 2022 - Load maze.
-        self.OBSTACLES = kwargs['obstacles']
-        self.GATES = kwargs['gates']
+        self.OBSTACLES = []
+        self.GATES = []
+        if 'obstacles' in kwargs:
+            self.OBSTACLES = kwargs['obstacles']
+        if 'gates' in kwargs:
+            self.GATES = kwargs['gates']
 
     def reset(self):
         """(Re-)initializes the environment to start an episode.
@@ -925,6 +929,8 @@ class Quadrotor(BaseAviary):
             "quadrotor_iyy_inertia": self.J[1, 1],
             "quadrotor_izz_inertia": self.J[2, 2]
         }
+        info["x_reference"] = self.X_GOAL
+        info["u_reference"] = self.U_GOAL
         if self.constraints is not None:
             info["symbolic_constraints"] = self.constraints.get_all_symbolic_models()
         
