@@ -11,4 +11,4 @@ discrete_dynamics: True
 max_iterations: 15
 lamb_factor: 10
 lamb_max: 1000
-epsilon: 0.001
+epsilon: 0.01

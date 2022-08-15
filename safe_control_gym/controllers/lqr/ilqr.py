@@ -1,10 +1,11 @@
-"""Linear Quadratic Regulator (LQR)
+'''Linear Quadratic Regulator (LQR)
 
 [1] https://studywolf.wordpress.com/2016/02/03/the-iterative-linear-quadratic-regulator-method/
 [2] https://arxiv.org/pdf/1708.09342.pdf
-"""
+'''
 
 import numpy as np
+from termcolor import colored
 
 from safe_control_gym.controllers.base_controller import BaseController
 from safe_control_gym.controllers.lqr.lqr_utils import get_cost_weight_matrix, compute_lqr_gain, discretize_linear_system
@@ -12,14 +13,14 @@ from safe_control_gym.envs.benchmark_env import Task
 
 
 class iLQR(BaseController):
-    """Linear quadratic regulator. """
+    '''Linear quadratic regulator. '''
 
     def __init__(
             self,
             env_func,
-            # model args
-            q_lqr: list = [1],
-            r_lqr: list = [1],
+            # Model args
+            q_lqr: list = None,
+            r_lqr: list = None,
             discrete_dynamics: bool = True,
             # iLQR args
             max_iterations: int = 15,
@@ -27,7 +28,7 @@ class iLQR(BaseController):
             lamb_max: float = 1000,
             epsilon: float = 0.01,
             **kwargs):
-        """Creates task and controller.
+        '''Creates task and controller.
 
         Args:
             env_func (Callable): function to instantiate task/environment.
@@ -35,14 +36,20 @@ class iLQR(BaseController):
             r_lqr (list): diagonals of input/action cost weight.
             discrete_dynamics (bool): if to use discrete or continuous dynamics.
             max_iterations, lamb_factor, lamb_max, epsilon: iLQR parameters.
-        """
-        
+        '''
+
         super().__init__(env_func, **kwargs)
 
-        # All params/args (lazy hack).
-        for k, v in locals().items():
-            if k != "self" and k != "kwargs" and "__" not in k:
-                self.__dict__[k] = v
+        # Model parameters
+        self.q_lqr = q_lqr
+        self.r_lqr = r_lqr
+        self.discrete_dynamics = discrete_dynamics
+
+        # iLQR parameters
+        self.max_iterations = max_iterations
+        self.lamb_factor = lamb_factor
+        self.lamb_max = lamb_max
+        self.epsilon = epsilon
 
         self.env = env_func(info_in_reset=True)
 
@@ -65,16 +72,15 @@ class iLQR(BaseController):
         self.reset()
 
     def close(self):
-        """Cleans up resources. """
+        '''Cleans up resources. '''
         self.env.close()
 
-    def learn(self, env=None):
-        """Run iLQR to iteratively update policy for each time step k
+    def learn(self, env=None, **kwargs):
+        '''Run iLQR to iteratively update policy for each time step
 
-        Returns:
-            ilqr_eval_results (dict): Dictionary containing the results from
-            each iLQR iteration.
-        """
+        Args:
+            env (gym.Env): the environment to be used for training
+        '''
 
         if env is None:
             env = self.env
@@ -95,17 +101,21 @@ class iLQR(BaseController):
             # Save data and update policy if iteration is finished.
             self.state_stack = np.vstack((self.state_stack, self.final_obs))
 
+            print(colored(f'Iteration: {self.ite_counter}, Reward: {self.total_reward}', 'green'))
+            print(colored('--------------------------', 'green'))
+
             # Break if the first iteration is not successful
             if env.TASK == Task.STABILIZATION:
-                if self.ite_counter == 0 and not self.final_info["goal_reached"]:
+                if self.ite_counter == 0 and not self.final_info['goal_reached']:
+                    print(colored('The initial policy might be unstable. '
+                                  + 'Break from iLQR updates.', 'red'))
                     break
 
             # Maximum episode length.
             self.num_steps = np.shape(self.input_stack)[0]
-            self.episode_len_sec = self.num_steps * self.stepsize
 
             # Check if cost is increased and update lambda correspondingly
-            delta_reward = np.abs(self.previous_total_reward - self.total_reward)
+            delta_reward = self.total_reward - self.previous_total_reward
             if self.ite_counter == 0:
                 # Save best iteration.
                 self.best_iteration = self.ite_counter
@@ -123,6 +133,14 @@ class iLQR(BaseController):
 
                 # Reset feedforward term and controller gain to that from
                 # the previous iteration.
+                print(f'Cost increased by {-delta_reward}. '
+                      + 'Set feedforward term and controller gain to that '
+                      'from the previous iteration. '
+                      f'Increased lambda to {self.lamb}.')
+                print(f'Current policy is from iteration {self.best_iteration}.')
+
+                # Reset feedforward term and controller gain to that from
+                # the previous iteration.
                 self.input_ff = np.copy(self.input_ff_best)
                 self.gains_fb = np.copy(self.gains_fb_best)
 
@@ -131,6 +149,7 @@ class iLQR(BaseController):
 
                 # Break if maximum lambda is reached.
                 if self.lamb > self.lamb_max:
+                    print(colored('Maximum lambda reached.', 'red'))
                     self.lamb = self.lamb_max
 
                 # Reset update_unstable flag to False.
@@ -144,6 +163,8 @@ class iLQR(BaseController):
                 # Check consecutive reward increment (cost decrement).
                 if delta_reward < self.epsilon and self.prev_ite_improved:
                     # Cost converged.
+                    print(colored('iLQR cost converged with a tolerance '
+                                  + f'of {self.epsilon}.', 'yellow'))
                     break
 
                 # Set improved flag to True.
@@ -151,11 +172,16 @@ class iLQR(BaseController):
 
                 # Update controller gains
                 self.update_policy(env)
+
             self.ite_counter += 1
             self.previous_total_reward = self.total_reward
 
     def update_policy(self, env):
-        """Updates policy. """
+        '''Updates policy.
+
+        Args:
+            env (gym.Env): the environment to be used for training
+        '''
 
         # Get symbolic loss function which also contains the necessary Jacobian
         # and Hessian of the loss w.r.t. state and input.
@@ -175,9 +201,9 @@ class iLQR(BaseController):
                       Ur=env.U_GOAL,
                       Q=self.Q,
                       R=self.R)
-        s = loss_k["l"].toarray()
-        Sv = loss_k["l_x"].toarray().transpose()
-        Sm = loss_k["l_xx"].toarray().transpose()
+        s = loss_k['l'].toarray()
+        Sv = loss_k['l_x'].toarray().transpose()
+        Sm = loss_k['l_xx'].toarray().transpose()
 
         # Backward pass.
         for k in reversed(range(self.num_steps)):
@@ -204,12 +230,12 @@ class iLQR(BaseController):
                           R=self.R)
 
             # Quadratic approximation of cost.
-            q = loss_k["l"].toarray()  # l
-            Qv = loss_k["l_x"].toarray().transpose()  # dl/dx
-            Qm = loss_k["l_xx"].toarray().transpose()  # ddl/dxdx
-            Rv = loss_k["l_u"].toarray().transpose()  # dl/du
-            Rm = loss_k["l_uu"].toarray().transpose()  # ddl/dudu
-            Pm = loss_k["l_xu"].toarray().transpose()  # ddl/dudx
+            q = loss_k['l'].toarray()  # l
+            Qv = loss_k['l_x'].toarray().transpose()  # dl/dx
+            Qm = loss_k['l_xx'].toarray().transpose()  # ddl/dxdx
+            Rv = loss_k['l_u'].toarray().transpose()  # dl/du
+            Rm = loss_k['l_uu'].toarray().transpose()  # ddl/dudu
+            Pm = loss_k['l_xu'].toarray().transpose()  # ddl/dudx
 
             # Control dependent terms of cost function.
             g = Rv + Bd_k.transpose().dot(Sv)
@@ -246,14 +272,14 @@ class iLQR(BaseController):
                 self.update_unstable = True
 
     def select_action(self, obs, info=None):
-        """Determine the action to take at the current timestep.
+        '''Determine the action to take at the current timestep.
         Args:
             obs (np.array): the observation at this timestep
             info (list): the info at this timestep
-        
+
         Returns:
             action (np.array): the action chosen by the controller
-        """
+        '''
 
         step = self.extract_step(info)
 
@@ -276,10 +302,10 @@ class iLQR(BaseController):
 
             # Save gains and feedforward term
             if step == 0:
-                self.gains_fb = gains_fb.reshape(1, self.model.nu, self.model.nx)
+                self.gains_fb = gains_fb.reshape((1, self.model.nu, self.model.nx))
                 self.input_ff = input_ff.reshape(self.model.nu, 1)
             else:
-                self.gains_fb = np.append(self.gains_fb, gains_fb.reshape(1, self.model.nu, self.model.nx), axis=0)
+                self.gains_fb = np.append(self.gains_fb, gains_fb.reshape((1, self.model.nu, self.model.nx)), axis=0)
                 self.input_ff = np.append(self.input_ff, input_ff.reshape(self.model.nu, 1), axis=1)
         else:
             action = self.gains_fb[step].dot(obs) + self.input_ff[:, step]
@@ -287,20 +313,17 @@ class iLQR(BaseController):
         return action
 
     def reset(self):
-        """Prepares for evaluation. """
+        '''Prepares for evaluation. '''
         self.env.reset()
         self.ite_counter = 0
 
     def run(self, env=None, max_steps=500):
-        """Runs evaluation with current policy.
+        '''Runs evaluation with current policy.
 
         Args:
             env (gym.Env): environment for the task.
             max_steps (int): maximum number of steps
-
-        Returns:
-            dict: evaluation results
-        """
+        '''
 
         if env is None:
             env = self.env
@@ -312,7 +335,7 @@ class iLQR(BaseController):
         for step in range(max_steps):
             # Select action.
             action = self.select_action(obs=obs, info=info)
-            
+
             # Save rollout data.
             if step == 0:
                 # Initialize state and input stack.
@@ -330,7 +353,7 @@ class iLQR(BaseController):
             if done:
                 print(f'SUCCESS: Reached goal on step {step}. Terminating...')
                 break
-        
+
         self.final_obs = obs
         self.final_info = info
         self.total_reward = total_reward
