@@ -177,8 +177,6 @@ class iLQR(BaseController):
 
             self.ite_counter += 1
 
-        print(colored(f'Best iteration: {self.best_iteration}', 'green'))
-
     def update_policy(self, env):
         '''Updates policy.
 

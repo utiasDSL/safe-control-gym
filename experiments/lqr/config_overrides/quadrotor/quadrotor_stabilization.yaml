@@ -18,8 +18,8 @@ task_config:
       high: 0.1
     init_z:
       distrib: 'uniform'
-      low: 1
-      high: 2
+      low: 0.5
+      high: 1.5
     init_z_dot:
       distrib: 'uniform'
       low: -0.1
@@ -37,7 +37,7 @@ task_config:
 
   task: stabilization
   task_info:
-    stabilization_goal: [0, 0.5]
+    stabilization_goal: [0, 1]
     stabilization_goal_tolerance: 0.0
     
   episode_len_sec: 6
