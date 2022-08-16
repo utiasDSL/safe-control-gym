@@ -91,7 +91,7 @@ class BaseController:
         '''Saves model params and experiment state to checkpoint path.
 
         Args:
-            path (str): the path where to the saved model params/experiment state
+            path (str): the path where to save the model params/experiment state
         '''
         return
 
