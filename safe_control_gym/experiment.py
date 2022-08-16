@@ -119,6 +119,15 @@ class Experiment:
         return trajs_data
 
     def _evaluation_reset(self, ctrl_data):
+        '''Resets the evaluation between runs.
+
+        Args:
+            ctrl_data (defaultdict): the controller specific data collected during execution.
+
+        Returns:
+            obs (ndarray): the initial observation.
+            info (dict): the initial info.
+        '''
         if self.env.INFO_IN_RESET:
             obs, info = self.env.reset()
         else:

@@ -16,8 +16,15 @@ from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 
 
-def run(gui=None, n_episodes=1, n_steps=None, custom_trajectory=True):
-    '''The main function creating, running, and closing an environment. '''
+def run(gui=True, n_episodes=1, n_steps=None, custom_trajectory=True):
+    '''The main function running the 3D quadrotor example.
+
+    Args:
+        gui (bool): Whether to display the gui and plot graphs.
+        n_episodes (int): The number of episodes to execute.
+        n_steps (int): The total number of steps to execute.
+        custom_trajectory (bool): Whether to run a custom trajectory or a standard one.
+    '''
 
     # Create an environment
     CONFIG_FACTORY = ConfigFactory()
@@ -27,8 +34,7 @@ def run(gui=None, n_episodes=1, n_steps=None, custom_trajectory=True):
     ITERATIONS = int(config.task_config['episode_len_sec']*config.task_config['ctrl_freq'])
 
     # Use function arguments for workflow testing
-    if gui is not None:
-        config.task_config['gui'] = gui
+    config.task_config['gui'] = gui
 
     env_func = partial(make,
                        config.task,

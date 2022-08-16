@@ -14,7 +14,13 @@ from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 
 def run(gui=True, n_episodes=1, n_steps=None):
-    '''The main function creating, running, and closing an environment. '''
+    '''The main function running the PID trajectory tracking quadrotor example.
+
+    Args:
+        gui (bool): Whether to display the gui and plot graphs.
+        n_episodes (int): The number of episodes to execute.
+        n_steps (int): The total number of steps to execute.
+    '''
 
     # Create an environment
     CONFIG_FACTORY = ConfigFactory()
