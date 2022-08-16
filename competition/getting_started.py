@@ -77,9 +77,7 @@ def main():
         if config.use_firmware:
             command_type, args = ctrl.cmdFirmware(curr_time, obs)
 
-            if command_type == Command.NONE:
-                pass
-            elif command_type == Command.FULLSTATE:
+            if command_type == Command.FULLSTATE:
                 firmware_wrapper.sendFullStateCmd(*args)
             elif command_type == Command.TAKEOFF:
                 firmware_wrapper.sendTakeoffCmd(*args)
@@ -89,9 +87,13 @@ def main():
                 firmware_wrapper.sendStopCmd()
             elif command_type == Command.GOTO:
                 firmware_wrapper.sendGotoCmd(*args)
+            elif command_type == Command.NONE:
+                pass
+            else:
+                raise ValueError("[ERROR] Invalid command_type.")
 
-            # Step the environment and print all returned information.
-            obs, reward, done, info, action = firmware_wrapper.step(i, action)
+            # Step the environment.
+            obs, reward, done, info, action = firmware_wrapper.step(i%(env.CTRL_FREQ*env.EPISODE_LEN_SEC), action)
         else:
             action = ctrl.cmdSimOnly(curr_time, obs)
             obs, reward, done, info = env.step(action)
@@ -137,6 +139,11 @@ def main():
             print(str(episodes_count)+'-th reset.')
             print('Reset obs' + str(new_initial_obs))
             print('Reset info' + str(new_initial_info))
+
+            # Re-initialize firmware.
+            if config.use_firmware:
+                firmware_wrapper.update_initial_state(new_initial_obs)
+                action = np.zeros(4)
 
     # Close the environment and print timing statistics.
     env.close()

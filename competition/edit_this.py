@@ -122,7 +122,7 @@ class Controller():
                        [point[0], point[1], point[2]],
                        p.getQuaternionFromEuler([0,0,0]),
                        physicsClientId=initial_info["pyb_client"])
-        step = 10
+        step = int(self.ref_x.shape[0]/50)
         for i in range(step, self.ref_x.shape[0], step):
             p.addUserDebugLine(lineFromXYZ=[self.ref_x[i-step], self.ref_y[i-step], self.ref_z[i-step]],
                                lineToXYZ=[self.ref_x[i], self.ref_y[i], self.ref_z[i]],
@@ -140,21 +140,26 @@ class Controller():
     def cmdFirmware(self,
                     time,
                     obs,
-                    vicon_pos=None, est_vel=None, est_acc=None, est_rpy=None, est_rpy_rates=None):
+                    vicon_pos=None,
+                    est_vel=None,
+                    est_acc=None,
+                    est_rpy=None,
+                    est_rpy_rates=None
+                    ):
         """
-        This function should return the target position, velocity, acceleration, attitude, and attitude rates to be sent 
+        This function should return the target position, velocity, acceleration, attitude, and attitude rates to be sent
         from crazyswarm to the crazyflie using a cmdFullState call. 
 
-        Arguments 
-        * time (s) 
-        * vicon_pos - contains feedback from the vicon tracking system about where your drone marker is (mm) 
-        * est_vel - estimation of drone velocity from vicon system 
-        * est_acc - estimation of drone acceleration from vicon system 
-        * est_rpy - estimation of drone attitude from vicon system 
-        * est_rpy_rates - estimation of drone body rates from vicon system 
+        Arguments
+        * time (s)
+        * vicon_pos - contains feedback from the vicon tracking system about where your drone marker is (mm)
+        * est_vel - estimation of drone velocity from vicon system
+        * est_acc - estimation of drone acceleration from vicon system
+        * est_rpy - estimation of drone attitude from vicon system
+        * est_rpy_rates - estimation of drone body rates from vicon system
         """
         if self.ctrl is not None:
-            print("[WARNING] Using method 'cmdFirmware' but Controller was created with 'use_firmware' = False.")
+            raise RuntimeError("[ERROR] Using method 'cmdFirmware' but Controller was created with 'use_firmware' = False.")
         if not FIRMWARE_INSTALLED:
             raise RuntimeError("[ERROR] Module 'cffirmware' not installed.")
 
@@ -189,10 +194,10 @@ class Controller():
         """Action selection.
 
         """
-        if FIRMWARE_INSTALLED:
-            print("[WARNING] Using method 'cmdSimOnly' but module 'cffirmware' is available.")
         if self.ctrl is None:
             raise RuntimeError("[ERROR] Attempting to use method 'cmdSimOnly' but Controller was created with 'use_firmware' = True.")
+        # if FIRMWARE_INSTALLED:
+        #     print("[WARNING] Using method 'cmdSimOnly' but module 'cffirmware' is available.")
 
         iteration = int(time*self.CTRL_FREQ)
         if iteration < len(self.ref_x):

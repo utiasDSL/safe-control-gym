@@ -1,4 +1,4 @@
-"""1D and 2D quadrotor environment using PyBullet physics.
+"""Quadrotor environment using PyBullet physics.
 
 Based on UTIAS Dynamic Systems Lab's gym-pybullet-drones:
     * https://github.com/utiasDSL/gym-pybullet-drones
