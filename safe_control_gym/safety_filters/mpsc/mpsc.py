@@ -180,14 +180,14 @@ class MPSC(BaseSafetyFilter, ABC):
     def certify_action(self,
                        current_state,
                        uncertified_action,
-                       iteration=None,
+                       info=None,
                        ):
         '''Algorithm 1 from Wabsersich 2019.
 
         Args:
             current_state (ndarray): current state/observation.
             uncertified_action (ndarray): the uncertified_controller's action
-            iteration (int): the current iteration, used for trajectory tracking.
+            info (list): the info at this timestep.
 
         Returns:
             action (ndarray): the certified action
@@ -198,6 +198,7 @@ class MPSC(BaseSafetyFilter, ABC):
         success = True
 
         self.before_optimization(current_state)
+        iteration = self.extract_step(info)
         action, feasible = self.solve_optimization(current_state, uncertified_action, iteration)
         self.results_dict['feasible'].append(feasible)
 

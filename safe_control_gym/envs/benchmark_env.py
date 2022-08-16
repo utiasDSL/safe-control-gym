@@ -45,9 +45,9 @@ class Environment(str, Enum):
 
 class BenchmarkEnv(gym.Env):
     """Benchmark environment base class.
-    
+
     Attributes:
-        id (int): unique identifier of the current env instance (among other instances). 
+        id (int): unique identifier of the current env instance (among other instances).
 
     """
     _count = 0  # Class variable, count env instance in current process.
@@ -105,27 +105,27 @@ class BenchmarkEnv(gym.Env):
             verbose (bool, optional): If to suppress environment print statetments.
             normalized_rl_action_space (bool, optional): Whether to normalize the action space.
             task: (Task, optional): The environment's task (stabilization or traj. tracking).
-            task_info (dict, optional): A dictionary with the information used to generate the 
+            task_info (dict, optional): A dictionary with the information used to generate the
                 task X and U references.
             cost (Cost, optional): Cost function choice used to compute the reward in .step().
             pyb_freq (int, optional): The frequency at which PyBullet steps (a multiple of ctrl_freq).
             ctrl_freq (int, optional): The frequency at which the environment steps.
             episode_len_sec (int, optional): Maximum episode duration in seconds.
-            init_state (ndarray/dict, optional): The initial state of the environment 
+            init_state (ndarray/dict, optional): The initial state of the environment
             randomized_init (bool, optional): Whether to randomize the initial state.
-            init_state_randomization_info (dict, optional): A dictionary with information used to 
+            init_state_randomization_info (dict, optional): A dictionary with information used to
                 randomize the initial state.
             prior_prop (dict, optional): The prior inertial properties of the environment.
             inertial_prop (dict, optional): The ground truth inertial properties of the environment.
             randomized_inertial_prop (bool, optional): Whether to randomize the inertial properties.
-            inertial_prop_randomization_info (dict, optional): A dictionary with information used 
+            inertial_prop_randomization_info (dict, optional): A dictionary with information used
                 to randomize the inert. properties.
             constraints (Dict, optional): Dictionary to specify the constraints being used.
             done_on_violation (bool, optional): Whether to return done==True on a constraint violation.
-            use_constraint_penalty (bool, optional): if to use shaped reward to penalize potential 
+            use_constraint_penalty (bool, optional): if to use shaped reward to penalize potential
                 constraint violation.
-            constraint_penalty (float, optional): constraint penalty cost for reward shaping. 
-            disturbances (dict, optional): Dictionary to specify disturbances being used. 
+            constraint_penalty (float, optional): constraint penalty cost for reward shaping.
+            disturbances (dict, optional): Dictionary to specify disturbances being used.
             adversary_disturbance (str, optional): if to use adversary/external disturbance.
             adversary_disturbance_offset (float, optional): parameterizes the offset of the adversary disturbance.
             adversary_disturbance_scale (float, optional): parameterizes magnitude of adversary disturbance.
@@ -210,12 +210,12 @@ class BenchmarkEnv(gym.Env):
              seed=None
              ):
         """Sets up a random number generator for a given seed.
-        
+
         Remember to seed all random generators, currently in
         - env
         - action_space
-        - disturbances 
-        
+        - disturbances
+
         """
         self.np_random, seed = seeding.np_random(seed)
         self.action_space.seed(seed)
@@ -328,23 +328,23 @@ class BenchmarkEnv(gym.Env):
 
     def _set_action_space(self):
         """Defines the action space of the environment.
-        
+
         """
         raise NotImplementedError
-        
+
     def _set_observation_space(self):
         """Defines the observation space of the environment.
 
         Sets `self.observation_space`, if observation is not identical to state,
         e.g. in RL where obs is [state, goal] or angle is converted to sine & cosine,
         additionally sets a `self.state_space`.
-        
+
         """
         raise NotImplementedError
-    
+
     def before_reset(self):
         """Pre-processing before calling `.reset()`.
-        
+
         """
         # Housekeeping variables.
         self.initial_reset = True
@@ -356,10 +356,10 @@ class BenchmarkEnv(gym.Env):
         self.current_clipped_action = None  # current_noisy_physical_action clipped to physical action bounds
         # Reset the disturbances.
         for mode in self.disturbances.keys():
-            self.disturbances[mode].reset(self) 
+            self.disturbances[mode].reset(self)
         if self.adversary_disturbance is not None:
             self.adv_action = None
-            
+
     def after_reset(self, obs, info):
         """Post-processing after calling `.reset()`.
 
@@ -369,16 +369,38 @@ class BenchmarkEnv(gym.Env):
         if self.constraints is not None:
             info["constraint_values"] = self.constraints.get_values(self, only_state=True)
         return obs, info
-        
+
     def _preprocess_control(self, action):
         """Pre-processes the action passed to `.step()`, default is identity.
 
         It's suggested that you set `self.current_clipped_action` here,
         if you ever need to use it later on (e.g. to compute reward/cost).
-        
+
         """
         return action
-    
+
+    def normalize_action(self, action):
+        """Converts a physical action into an normalized action if necessary.
+
+        Args:
+            action (ndarray): the action to be converted.
+
+        Returns:
+            normalized_action (ndarray): the action in the correct action space.
+        """
+        return
+
+    def denormalize_action(self, action):
+        """Converts a normalized action into a physical action if necessary.
+
+        Args:
+            action (ndarray): the action to be converted.
+
+        Returns:
+            physical_action (ndarray): the physical action.
+        """
+        return
+
     def before_step(self, action):
         """Pre-processing before calling `.step()`.
 
@@ -395,11 +417,20 @@ class BenchmarkEnv(gym.Env):
         # Pre-process/clip the action
         processed_action = self._preprocess_control(action)
         return processed_action
-    
+
     def extend_obs(self, obs, next_step):
-        if self.COST == Cost.RL_REWARD and self.TASK == Task.TRAJ_TRACKING and self.obs_goal_horizon > 0:            
+        '''Extends an observation with the next self.obs_goal_horizon reference points.
+
+        Args:
+            obs (ndarray): the observation to be extended.
+            next_step (int): the iteration for which to extend it.
+
+        Returns:
+            extended_obs (ndarray): the extended observation.
+        '''
+        if self.COST == Cost.RL_REWARD and self.TASK == Task.TRAJ_TRACKING and self.obs_goal_horizon > 0:
             wp_idx = [
-                min(next_step + i, self.X_GOAL.shape[0]-1) 
+                min(next_step + i, self.X_GOAL.shape[0]-1)
                 for i in range(self.obs_goal_horizon)
             ]
             goal_state = self.X_GOAL[wp_idx].flatten()
@@ -409,24 +440,24 @@ class BenchmarkEnv(gym.Env):
             extended_obs = np.concatenate([obs, goal_state])
         else:
             extended_obs = obs
-        
+
         return extended_obs
-    
+
     def after_step(self, obs, rew, done, info):
         """Post-processing after calling `.step()`.
 
         """
-        # Increment counters 
+        # Increment counters
         self.pyb_step_counter += self.PYB_STEPS_PER_CTRL
         self.ctrl_step_counter += 1
 
         info['current_step'] = self.ctrl_step_counter
-                
+
         # Terminate when (any) constraint is violated.
         # here we cache the constraint values `c_value`, so we only evaluate the constraints once,
         # but use it in 1) info dict; 2) check constraint violation; 3) check near constraint violation/almost active.
         # it also allows stateful constraint, where evaluation/update should only be done once per time step.
-        c_value = None 
+        c_value = None
         if self.constraints is not None:
             c_value = self.constraints.get_values(self)
             info["constraint_values"] = c_value
@@ -445,10 +476,10 @@ class BenchmarkEnv(gym.Env):
                 rew += self.constraint_penalty
 
         # Terminate when reaching time limit,
-        # but distinguish between done due to true termination or time limit reached 
+        # but distinguish between done due to true termination or time limit reached
         if self.ctrl_step_counter >= self.CTRL_STEPS:
             info["TimeLimit.truncated"] = not done
-            done = True 
+            done = True
         return obs, rew, done, info
 
     def _generate_trajectory(self,
@@ -567,10 +598,10 @@ class BenchmarkEnv(gym.Env):
             scaling (float, optional): Scaling factor for the trajectory.
 
         Returns:
-            float: The position in the first coordinate. 
-            float: The position in the second coordinate. 
-            float: The velocity in the first coordinate. 
-            float: The velocity in the second coordinate. 
+            float: The position in the first coordinate.
+            float: The position in the second coordinate.
+            float: The velocity in the first coordinate.
+            float: The velocity in the second coordinate.
 
         """
         traj_freq = 2.0 * np.pi / traj_period
@@ -593,10 +624,10 @@ class BenchmarkEnv(gym.Env):
             scaling (float, optional): Scaling factor for the trajectory.
 
         Returns:
-            float: The position in the first coordinate. 
-            float: The position in the second coordinate. 
-            float: The velocity in the first coordinate. 
-            float: The velocity in the second coordinate. 
+            float: The position in the first coordinate.
+            float: The position in the second coordinate.
+            float: The velocity in the first coordinate.
+            float: The velocity in the second coordinate.
 
         """
         traj_freq = 2.0 * np.pi / traj_period
@@ -619,10 +650,10 @@ class BenchmarkEnv(gym.Env):
             scaling (float, optional): Scaling factor for the trajectory.
 
         Returns:
-            float: The position in the first coordinate. 
-            float: The position in the second coordinate. 
-            float: The velocity in the first coordinate. 
-            float: The velocity in the second coordinate. 
+            float: The position in the first coordinate.
+            float: The position in the second coordinate.
+            float: The velocity in the first coordinate.
+            float: The velocity in the second coordinate.
 
         """
         # Compute time for each segment to complete.

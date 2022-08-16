@@ -125,7 +125,7 @@ class CartPole(BenchmarkEnv):
                  init_state=None,
                  prior_prop=None,
                  inertial_prop=None,
-                 # custom args 
+                 # custom args
                  obs_goal_horizon=0,
                  obs_wrap_angle=False,
                  rew_state_weight=1.0,
@@ -137,7 +137,7 @@ class CartPole(BenchmarkEnv):
         """Initialize a cartpole environment.
 
         Args:
-            init_state  (ndarray/dict, optional): The initial state of the environment 
+            init_state  (ndarray/dict, optional): The initial state of the environment
                 (x, x_dot, theta, theta_dot).
             prior_prop (dict, optional): The prior inertial properties of the environment.
             inertial_prop (dict, optional): The ground truth inertial properties of the environment.
@@ -154,10 +154,10 @@ class CartPole(BenchmarkEnv):
         self.rew_act_weight = np.array(rew_act_weight, ndmin=1, dtype=float)
         self.rew_exponential = rew_exponential
         self.done_on_out_of_bound = done_on_out_of_bound
-        # BenchmarkEnv constructor, called after defining the custom args, 
-        # since some BenchmarkEnv init setup can be task(custom args)-dependent. 
+        # BenchmarkEnv constructor, called after defining the custom args,
+        # since some BenchmarkEnv init setup can be task(custom args)-dependent.
         super().__init__(init_state=init_state, prior_prop=prior_prop, inertial_prop=inertial_prop, **kwargs)
-        
+
         # Create PyBullet client connection.
         self.PYB_CLIENT = -1
         if self.GUI:
@@ -169,8 +169,8 @@ class CartPole(BenchmarkEnv):
 
         # Set GUI and rendering constants.
         self.RENDER_HEIGHT = int(200)
-        self.RENDER_WIDTH = int(320)   
-             
+        self.RENDER_WIDTH = int(320)
+
         # Set the initial state.
         if init_state is None:
             self.INIT_X, self.INIT_X_DOT, self.INIT_THETA, self.INIT_THETA_DOT = np.zeros(4)
@@ -183,7 +183,7 @@ class CartPole(BenchmarkEnv):
             self.INIT_THETA_DOT = init_state.get("init_theta_dot", 0)
         else:
             raise ValueError("[ERROR] in CartPole.__init__(), init_state incorrect format.")
-            
+
         # Get physical properties from URDF (as default parameters).
         self.GRAVITY_ACC = 9.8
         EFFECTIVE_POLE_LENGTH, POLE_MASS, CART_MASS = self._parse_urdf_parameters(self.URDF_PATH)
@@ -199,7 +199,7 @@ class CartPole(BenchmarkEnv):
             self.CART_MASS = inertial_prop.get("cart_mass", CART_MASS)
         else:
             raise ValueError("[ERROR] in CartPole.__init__(), inertial_prop incorrect format.")
-        
+
         # Store prior parameters.
         if prior_prop is None:
             self.PRIOR_EFFECTIVE_POLE_LENGTH = EFFECTIVE_POLE_LENGTH
@@ -436,12 +436,12 @@ class CartPole(BenchmarkEnv):
 
         """
         self.action_scale = 10
-        self.physical_action_bounds = (-np.asarray(self.action_scale), np.asarray(self.action_scale))
+        self.physical_action_bounds = (-np.atleast_1d(self.action_scale), np.atleast_1d(self.action_scale))
         self.action_threshold = 1 if self.NORMALIZED_RL_ACTION_SPACE else self.action_scale
         self.action_space = spaces.Box(low=-self.action_threshold, high=self.action_threshold, shape=(1,))
         # Define action/input labels and units.
         self.ACTION_LABELS = ['U']
-        self.ACTION_UNITS = ['N'] if not self.NORMALIZED_RL_ACTION_SPACE else ['-']   
+        self.ACTION_UNITS = ['N'] if not self.NORMALIZED_RL_ACTION_SPACE else ['-']
 
     def _set_observation_space(self):
         """Returns the observation space of the environment.
@@ -456,15 +456,15 @@ class CartPole(BenchmarkEnv):
         obs_bound = np.array([self.x_threshold * 2, np.finfo(np.float32).max, self.theta_threshold_radians * 2, np.finfo(np.float32).max])
         self.state_space = spaces.Box(low=-obs_bound, high=obs_bound, dtype=np.float32)
 
-        # Concatenate goal info for RL 
+        # Concatenate goal info for RL
         if self.COST == Cost.RL_REWARD and self.TASK == Task.TRAJ_TRACKING and self.obs_goal_horizon > 0:
-            # include future goal state(s) 
+            # include future goal state(s)
             # e.g. horizon=1, obs = {state, state_target}
             mul = 1 + self.obs_goal_horizon
             obs_bound = np.concatenate([obs_bound] * mul)
         elif self.COST == Cost.RL_REWARD and self.TASK == Task.STABILIZATION and self.obs_goal_horizon > 0:
             obs_bound = np.concatenate([obs_bound] * 2)
-        # Define obs space exposed to the controller 
+        # Define obs space exposed to the controller
         # Note obs space is often different to state space for RL (with additional task info)
         self.observation_space = spaces.Box(low=-obs_bound, high=obs_bound, dtype=np.float32)
 
@@ -480,24 +480,49 @@ class CartPole(BenchmarkEnv):
 
         Returns:
             float: The scalar, clipped force to apply to the cart.
-
         """
-        if self.NORMALIZED_RL_ACTION_SPACE:
-            action = self.action_scale * action
         self.current_physical_action = action
-        
+
         # Apply disturbances.
         if "action" in self.disturbances:
             action = self.disturbances["action"].apply(action, self)
         if self.adversary_disturbance == "action" and self.adv_action is not None:
             action = action + self.adv_action
         self.current_noisy_physical_action = action
-        
+
         # Save the actual input.
         force = np.clip(action, self.physical_action_bounds[0], self.physical_action_bounds[1])
         self.current_clipped_action = force
 
         return force[0] # Only use the scalar value.
+
+    def normalize_action(self, action):
+        """Converts a physical action into an normalized action if necessary.
+
+        Args:
+            action (ndarray): the action to be converted.
+
+        Returns:
+            normalized_action (ndarray): the action in the correct action space.
+        """
+        if self.NORMALIZED_RL_ACTION_SPACE:
+            action = action / self.action_scale
+
+        return action
+
+    def denormalize_action(self, action):
+        """Converts a normalized action into a physical action if necessary.
+
+        Args:
+            action (ndarray): the action to be converted.
+
+        Returns:
+            physical_action (ndarray): the physical action.
+        """
+        if self.NORMALIZED_RL_ACTION_SPACE:
+            action = self.action_scale * action
+
+        return action
 
     def _advance_simulation(self, force):
         """Apply the commanded forces and adversarial actions to the cartpole.
@@ -569,7 +594,7 @@ class CartPole(BenchmarkEnv):
         # Wrap angle to constrain state space, useful in swing-up task.
         if self.obs_wrap_angle:
             obs[2] = normalize_angle(obs[2])
-        # Concatenate goal info (goal state(s)) for RL 
+        # Concatenate goal info (goal state(s)) for RL
         obs = self.extend_obs(obs, self.ctrl_step_counter+1)
         return obs
 
@@ -579,11 +604,11 @@ class CartPole(BenchmarkEnv):
         Returns:
             float: The evaluated reward/cost.
 
-        """   
+        """
         if self.COST == Cost.RL_REWARD:
-            # negative quadratic reward with angle wrapped around 
+            # negative quadratic reward with angle wrapped around
             state = deepcopy(self.state)
-            # TODO: should use angle wrapping 
+            # TODO: should use angle wrapping
             # state[2] = normalize_angle(state[2])
             act = np.asarray(self.current_noisy_physical_action)
             if self.TASK == Task.STABILIZATION:
@@ -600,7 +625,7 @@ class CartPole(BenchmarkEnv):
             if self.rew_exponential:
                 rew = np.exp(rew)
             return rew
-            # TODO: legacy code to match paper results 
+            # TODO: legacy code to match paper results
             # if self.constraints is not None and self.use_constraint_penalty and self.constraints.is_almost_active(self):
             #     return self.constraint_penalty
             # # Constant reward if episode not done (pole stays upright).
@@ -649,7 +674,7 @@ class CartPole(BenchmarkEnv):
                 self.out_of_bounds = True
                 return True
         self.out_of_bounds = False
-        return False 
+        return False
 
     def _get_info(self):
         """Generates the info dictionary returned by every call to .step().
@@ -675,8 +700,8 @@ class CartPole(BenchmarkEnv):
         #             done = True
         #     info['TimeLimit.truncated'] = not done
         # Add MSE.
-        state = deepcopy(self.state) 
-        info["mse"] = np.sum(state ** 2)  
+        state = deepcopy(self.state)
+        info["mse"] = np.sum(state ** 2)
         return info
 
     def _get_reset_info(self):
@@ -721,15 +746,15 @@ class CartPole(BenchmarkEnv):
 
     def _create_urdf(self, file_name, length=None, inertia=None):
         """For domain randomization.
-        
+
         Args:
             file_name (str): path to the base URDF with attributes to modify.
-            length (float): overriden effective pole length. 
+            length (float): overriden effective pole length.
             inertia (float): pole inertia (symmetric, Ixx & Iyy).
-            
+
         Returns:
             xml tree object.
-            
+
         """
         tree = etxml.parse(file_name)
         root = tree.getroot()

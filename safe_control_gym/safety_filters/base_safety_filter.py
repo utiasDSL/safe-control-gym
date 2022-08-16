@@ -33,20 +33,37 @@ class BaseSafetyFilter(ABC):
     def certify_action(self,
                        current_state,
                        uncertified_action,
-                       iteration=None,
+                       info=None,
                        ):
         '''Determines a safe action from the current state and proposed action.
 
         Args:
             current_state (ndarray): current state/observation.
             uncertified_action (ndarray): the uncertified_controller's action.
-            iteration (int): the current iteration, used for trajectory tracking.
+            info (list): the info at this timestep.
 
         Returns:
             action (ndarray): the certified action.
             success (bool): whether the safety filtering was successful or not.
         '''
         return
+
+    def extract_step(self, info=None):
+        '''Extracts the current step from the info.
+
+        Args:
+            info (list): the info list returned from the environment.
+
+        Returns:
+            step (int): the current step/iteration of the environment.
+        '''
+
+        if info is not None:
+            step = info['current_step']
+        else:
+            step = 0
+
+        return step
 
     def learn(self,
               env=None,

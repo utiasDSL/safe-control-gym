@@ -27,12 +27,12 @@ class Constraint:
 
     Attributes:
         constrained_variable: the variable(s) from env to be constrained.
-        dim (int): Total number of input dimensions to be constrained, i.e. dim of x. 
+        dim (int): Total number of input dimensions to be constrained, i.e. dim of x.
         num_constraints (int): total number of output dimensions or number of constraints, i.e. dim of g(x).
         sym_func (Callable): the symbolic function of the constraint, can take in np.array or CasADi variable.
-        
+
     """
-    
+
     def __init__(self,
                  env,
                  constrained_variable: ConstrainedVariableType,
@@ -309,7 +309,7 @@ class DefaultConstraint(BoundedConstraint):
     (to constrain both, use two DefaultConstraints).
     The class constrain the entire variable, i.e. no `active_dims` option
     (to constrain subset of the variable, use the BoundedConstraint instead).
-    
+
     """
 
     def __init__(self,
@@ -332,18 +332,19 @@ class DefaultConstraint(BoundedConstraint):
             tolerance (float): The distance at which is_almost_active(env) triggers.
 
         """
+
         if constrained_variable == ConstrainedVariableType.STATE:
             # for now we only constrain the underlying env state, and assume either the observation
-            # is the same as state, or observation contain additional info other than state and so 
+            # is the same as state, or observation contain additional info other than state and so
             # the env has separate `state_space` and `observation_space`
             if hasattr(env, "state_space"):
                 default_constraint_space = env.state_space
             else:
                 default_constraint_space = env.observation_space
         elif constrained_variable == ConstrainedVariableType.INPUT:
-            default_constraint_space = spaces.Box(low=env.physical_action_bounds[0], 
-                                            high=env.physical_action_bounds[1], 
-                                            dtype=np.float32)
+            default_constraint_space = spaces.Box(low=env.physical_action_bounds[0],
+                                                  high=env.physical_action_bounds[1],
+                                                  shape=(1,))
         else:
             raise NotImplementedError('[ERROR] DefaultConstraint can only be of type STATE or INPUT')
         # extract bounds from the space
@@ -404,10 +405,10 @@ class SymmetricStateConstraint(BoundedConstraint):
     def get_value(self, env):
         c_value = np.abs(self.constraint_filter @ env.state) - self.bound
         return c_value
-    
-    # TODO: temp addition 
+
+    # TODO: temp addition
     def check_tolerance_shape(self):
-        """Note we compare tolerance shape to bound shape (instead of num_constraints), since 
+        """Note we compare tolerance shape to bound shape (instead of num_constraints), since
         num_constraints will be set as 2x due to subclassing BoundedConstraint,
         it will be overwritten at the end of __init__ to the correct shape.
         """
@@ -439,7 +440,7 @@ class ConstraintList:
         """
         self.constraints = constraints
         self.constraint_lengths = [con.num_constraints for con in self.constraints]
-        # 1st constraint is always index 0, hence ignored 
+        # 1st constraint is always index 0, hence ignored
         self.constraint_indices = np.cumsum(self.constraint_lengths[:-1])
         self.num_constraints = sum(self.constraint_lengths)
         # constraint subsets
@@ -549,13 +550,13 @@ class ConstraintList:
             c_value: an already calculated constraint value (no need to recompute).
 
         Returns:
-            bool: A boolean flag if any constraint is violeted. 
+            bool: A boolean flag if any constraint is violeted.
 
         """
         if c_value is not None:
             c_value_splits = np.split(c_value, self.constraint_indices)
             flag = any([
-                con.is_violated(env, c_value=c_value_split) 
+                con.is_violated(env, c_value=c_value_split)
                 for con, c_value_split in zip(self.constraints, c_value_splits)
             ])
         else:
@@ -575,7 +576,7 @@ class ConstraintList:
         if c_value is not None:
             c_value_splits = np.split(c_value, self.constraint_indices)
             flag = any([
-                con.is_almost_active(env, c_value=c_value_split) 
+                con.is_almost_active(env, c_value=c_value_split)
                 for con, c_value_split in zip(self.constraints, c_value_splits)
             ])
         else:

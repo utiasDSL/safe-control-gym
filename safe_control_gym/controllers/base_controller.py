@@ -36,6 +36,7 @@ class BaseController(ABC):
         self.use_gpu = use_gpu and torch.cuda.is_available()
         self.device = 'cpu' if self.use_gpu is False else 'cuda'
         self.seed = seed
+        self.safety_filter = None
 
         # Algorithm specific args.
         for key, value in kwargs.items():
