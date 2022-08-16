@@ -5,9 +5,10 @@ Example:
 '''
 
 import os
+from functools import partial
+
 import numpy as np
 import pybullet as p
-from functools import partial
 import matplotlib.pyplot as plt
 
 from safe_control_gym.experiment import Experiment
@@ -36,7 +37,7 @@ def run(gui=None, n_episodes=1, n_steps=None, custom_trajectory=True):
     # Setup controller.
     ctrl = make(config.algo,
                     env_func)
-    
+
     if custom_trajectory:
         # Curve fitting with waypoints.
         waypoints = np.array([(0, 0, 0), (0.2, 0.5, 0.5), (0.5, 0.1, 0.6), (1, 1, 1), (1.3, 1, 1.2)])
@@ -60,7 +61,7 @@ def run(gui=None, n_episodes=1, n_steps=None, custom_trajectory=True):
 
         ctrl.env.X_GOAL = X_GOAL
         ctrl.reference = X_GOAL
-    
+
     obs, _ = ctrl.env.reset()
 
     if config.task_config['gui']:
@@ -86,7 +87,7 @@ def run(gui=None, n_episodes=1, n_steps=None, custom_trajectory=True):
 
     # Run the experiment.
     experiment = Experiment(ctrl.env, ctrl)
-    trajs_data, metrics = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
+    trajs_data, _ = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
     experiment.close()
 
     iterations = len(trajs_data['action'][0])
