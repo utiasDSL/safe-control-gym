@@ -15,6 +15,16 @@ from safe_control_gym.envs.gym_pybullet_drones.Logger import Logger
 
 from edit_this import Controller, Command
 
+try:
+    import cffirmware
+except ImportError:
+    FIRMWARE_INSTALLED = False
+else:
+    FIRMWARE_INSTALLED = True
+finally:
+    print("Module 'cffirmware' available:", FIRMWARE_INSTALLED)
+
+
 def main():
     """The main function creating, running, and closing an environment.
 
@@ -27,29 +37,26 @@ def main():
     CONFIG_FACTORY = ConfigFactory()
     config = CONFIG_FACTORY.merge()
 
-    # Check if firmware wrapper is available and create environment.
-    try:
-        raise
-        import cffirmware
+    # Create environment.
+    if FIRMWARE_INSTALLED:
         env_func = partial(make, 'quadrotor', **config.quadrotor_config)
         firmware_wrapper = make('firmware',
                     env_func,
                     )
         env = firmware_wrapper.env
-        firmware_exists = True
         action = np.zeros(4)
-    except:
+    else:
         env = make('quadrotor', **config.quadrotor_config)
-        firmware_exists = False
+
 
     # Reset the environment, obtain the initial observations and info dictionary.
     obs, info = env.reset()
 
     # Create controller.
-    ctrl = Controller(obs, info)
+    ctrl = Controller(obs, info, FIRMWARE_INSTALLED)
 
     # Initialize firmware.
-    if firmware_exists:
+    if FIRMWARE_INSTALLED:
         firmware_wrapper.update_initial_state(obs)
 
     # Create logger and counters.
@@ -62,9 +69,11 @@ def main():
         # Step by keyboard input.
         # _ = input('Press any key to continue.')
 
-        # Compute control input.
+        # Elapsed sim time.
         curr_time = (i%(env.CTRL_FREQ*env.EPISODE_LEN_SEC))*env.CTRL_TIMESTEP
-        if firmware_exists:
+
+        # Compute control input.
+        if FIRMWARE_INSTALLED:
             command_type, args = ctrl.cmdFirmware(curr_time, obs)
 
             if command_type == Command.NONE:

@@ -13,6 +13,15 @@ import matplotlib.pyplot as plt
 
 from safe_control_gym.envs.gym_pybullet_drones.quadrotor_utils import PIDController
 
+try:
+    import cffirmware
+except ImportError:
+    FIRMWARE_INSTALLED = False
+else:
+    FIRMWARE_INSTALLED = True
+finally:
+    print("Module 'cffirmware' available:", FIRMWARE_INSTALLED)
+
 
 class Command(Enum):
     NONE = 0 # Args: Empty
@@ -30,17 +39,18 @@ class Controller():
 
     def __init__(self,
                  initial_obs,
-                 initial_info
+                 initial_info,
+                 use_firmware: bool = False
                  ):
         """Initialization of the controller.
 
         """
 
-        try: 
-            raise
-            import cffirmware
-            firmware_exists = True
-        except:
+        if use_firmware:
+            if not FIRMWARE_INSTALLED:
+                raise RuntimeError("[ERROR] Module 'cffirmware' not installed.")
+            self.ctrl = None
+        else:
             # Simple PID Controller.
             self.ctrl = PIDController()
 
@@ -127,6 +137,14 @@ class Controller():
         # REPLACE THIS (END) ####
         #########################
 
+    def cmdCrazyFlie(self,
+                     time,
+                     obs,
+                     vicon_pos=None, est_vel=None, est_acc=None, est_rpy=None, est_rpy_rates=None):
+        """
+        """
+        pass
+
     def cmdFirmware(self,
                     time,
                     obs,
@@ -143,6 +161,11 @@ class Controller():
         * est_rpy - estimation of drone attitude from vicon system 
         * est_rpy_rates - estimation of drone body rates from vicon system 
         """
+        if self.ctrl is not None:
+            print("[WARNING] Using method 'cmdFirmware' but Controller was created with 'use_firmware' = False.")
+        if not FIRMWARE_INSTALLED:
+            raise RuntimeError("[ERROR] Module 'cffirmware' not installed.")
+
         iteration = int(time*self.CTRL_FREQ)
 
         #########################
@@ -174,6 +197,11 @@ class Controller():
         """Action selection.
 
         """
+        if FIRMWARE_INSTALLED:
+            print("[WARNING] Using method 'cmdSimOnly' but module 'cffirmware' is available.")
+        if self.ctrl is None:
+            raise RuntimeError("[ERROR] Attempting to use method 'cmdSimOnly' but Controller was created with 'use_firmware' = True.")
+
         iteration = int(time*self.CTRL_FREQ)
         if iteration < len(self.ref_x):
             target = np.array([self.ref_x[iteration], self.ref_y[iteration], self.ref_z[iteration]])
