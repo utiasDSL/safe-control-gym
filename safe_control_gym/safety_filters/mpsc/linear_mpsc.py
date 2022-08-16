@@ -8,6 +8,7 @@ Based on
       https://arxiv.org/pdf/1803.08552.pdf
 '''
 
+import pickle
 from itertools import product
 
 import numpy as np
@@ -66,7 +67,7 @@ class LINEAR_MPSC(MPSC):
 
         super().__init__(env_func, horizon, q_lin, r_lin, integration_algo, warmstart, additional_constraints, use_terminal_set, cost_function)
 
-        self.omega_AABB_verts = None
+        self.terminal_set_verts = None
 
     def set_dynamics(self):
         '''Compute the linear dynamics. '''
@@ -128,11 +129,11 @@ class LINEAR_MPSC(MPSC):
             x_next_linear = np.squeeze(self.dynamics_func(x0=init_state - self.X_EQ, p=u - self.U_EQ)['xf'].toarray()) + self.X_EQ
             w[:,i] = x_next_obs - x_next_linear
         A_cl = self.discrete_dfdx + self.discrete_dfdu @ self.lqr_gain
-        P = compute_RPI_set(A_cl, w, self.tau)
-        self.omega_AABB_verts = ellipse_bounding_box(P)
+        self.P = compute_RPI_set(A_cl, w, self.tau)
+        self.omega_AABB_verts = ellipse_bounding_box(self.P)
         self.tighten_state_and_input_constraints()
         self.omega_constraint = QuadraticContstraint(self.env,
-                                                     P,
+                                                     self.P,
                                                      1.0,
                                                      constrained_variable=ConstrainedVariableType.STATE)
         # Now that constraints are defined, setup the optimizer.
@@ -148,6 +149,7 @@ class LINEAR_MPSC(MPSC):
             elif self.env.TASK == Task.STABILIZATION:
                 self.terminal_set = None
 
+            points = None
             for i in range(self.n_samples_terminal_set):
                 if self.terminal_set is None:
                     init_state = self.X_EQ
@@ -172,30 +174,51 @@ class LINEAR_MPSC(MPSC):
                     self.terminal_set.minimize_V_rep()
                     self.setup_optimizer()
 
+            self.terminal_set_verts = points
+
     def load(self,
-             path_to_P,
-             path_to_terminal_set=None,
+             path,
              ):
         '''Load values used by the MPC
 
         Args:
-            path_to_P (str): path to the file containing the P matrix
-            path_to_terminal_set (str): path to the file containing the terminal set vertices
+            path (str): path to the file containing the P matrix and terminal set.
         '''
 
-        P = np.load(path_to_P)
-        self.omega_AABB_verts = ellipse_bounding_box(P)
+        with open(path, 'rb') as file:
+            parameters = pickle.load(file)
+
+        self.P = parameters['P']
+        self.omega_AABB_verts = ellipse_bounding_box(self.P)
         self.tighten_state_and_input_constraints()
         self.omega_constraint = QuadraticContstraint(self.env,
-                                                     P,
+                                                     self.P,
                                                      1.0,
                                                      constrained_variable=ConstrainedVariableType.STATE)
+
+        if self.learn_terminal_set and 'terminal_set' in parameters:
+            self.terminal_set_verts = parameters['terminal_set']
+            self.terminal_set = Polytope(self.terminal_set_verts)
+
         # Now that constraints are defined, setup the optimizer.
         self.setup_optimizer()
 
-        if self.learn_terminal_set and path_to_terminal_set is not None:
-            terminal_set_verts = np.load(path_to_terminal_set)
-            self.terminal_set = Polytope(terminal_set_verts)
+    def save(self,
+             path,
+             ):
+        '''Saves the values used by the MPC
+
+        Args:
+            path (str): path to where to save the P matrix and terminal set.
+        '''
+
+        parameters = {}
+        parameters['P'] = self.P
+        if self.learn_terminal_set and self.terminal_set_verts is not None:
+            parameters['terminal_set'] = self.terminal_set_verts
+
+        with open(path, 'wb') as file:
+            pickle.dump(parameters, file)
 
     def tighten_state_and_input_constraints(self):
         '''Tigthen the state and input constraints based on the RPI. '''
@@ -324,7 +347,7 @@ class LINEAR_MPSC(MPSC):
         '''Setup the optimization.
 
         Args:
-            obs (np.array): current state/observation.
+            obs (ndarray): current state/observation.
         '''
 
         if self.env.NAME == Environment.CARTPOLE:

@@ -33,12 +33,12 @@ def compute_RPI_set(Acl,
         2019. https://arxiv.org/pdf/1803.08552.pdf
 
     Args:
-        Acl (np.array): Closed loop gain matrix A+BK (nx by nx)
-        w (np.array): Collection of dynamics error residuals with dim (nx by n_samples)
+        Acl (ndarray): Closed loop gain matrix A+BK (nx by nx)
+        w (ndarray): Collection of dynamics error residuals with dim (nx by n_samples)
         tau (float): Coefficient from the s-procedure. Somewhere near 0.9 seems to work.
 
     Returns:
-        P (np.array): P from eqn 8 that defines the ellipsoidal RPI set.
+        P (ndarray): P from eqn 8 that defines the ellipsoidal RPI set.
     '''
 
     n_samples = w.shape[1]
@@ -67,10 +67,10 @@ def ellipse_bounding_box(P):
     '''Finds the bounding box of an ellipse defined by x^T P x <= 1.
 
     Args:
-        P (np.array): n by n array defining the ellipse.
+        P (ndarray): n by n array defining the ellipse.
 
     Returns:
-        vertices (np.array): An vertical of the vertices (number of verts by dim of space).
+        vertices (ndarray): An vertical of the vertices (number of verts by dim of space).
     '''
 
     c = np.eye(P.shape[0])
@@ -88,14 +88,14 @@ def pontryagin_difference_AABB(verts1,
     '''Computre verts1 (-) verts2.
 
     Args:
-        verts1, verts2 (np.array): Array of vertices ( n vertices by space dimension) stacked vertically
+        verts1, verts2 (ndarray): Array of vertices ( n vertices by space dimension) stacked vertically
         so that every vertix is a horizonal array:
             vertsi = [v1,
                       v2,
                       ...,
                       vn]
     Returns:
-        verts (np.array): Array of pontyagin difference.
+        verts (ndarray): Array of pontyagin difference.
         const_func (partial constraint): Constraint function initialized with parameters from the difference.
     '''
 
@@ -130,7 +130,7 @@ def get_trajectory_on_horizon(env, iteration, horizon):
         horizon (int): The MPC horizon.
 
     Returns:
-        clipped_X_GOAL (np.array): the trajectory for the next horizon steps
+        clipped_X_GOAL (ndarray): the trajectory for the next horizon steps
     '''
 
     if env.TASK == Task.TRAJ_TRACKING:

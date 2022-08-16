@@ -111,7 +111,7 @@ class MPSC(BaseSafetyFilter, ABC):
         '''Setup the optimization.
 
         Args:
-            obs (np.array): current state/observation.
+            obs (ndarray): current state/observation.
         '''
         return
 
@@ -123,12 +123,12 @@ class MPSC(BaseSafetyFilter, ABC):
         '''Solve the MPC optimization problem for a given observation and uncertified input.
 
         Args:
-            obs (np.array): current state/observation.
-            uncertified_action (np.array): the uncertified_controller's action
+            obs (ndarray): current state/observation.
+            uncertified_action (ndarray): the uncertified_controller's action
             iteration (int): the current iteration, used for trajectory tracking.
 
         Returns:
-            action (np.array): the certified action
+            action (ndarray): the certified action
             feasible (bool): whether the safety filtering was feasible or not
         '''
 
@@ -185,12 +185,12 @@ class MPSC(BaseSafetyFilter, ABC):
         '''Algorithm 1 from Wabsersich 2019.
 
         Args:
-            current_state (np.array): current state/observation.
-            uncertified_action (np.array): the uncertified_controller's action
+            current_state (ndarray): current state/observation.
+            uncertified_action (ndarray): the uncertified_controller's action
             iteration (int): the current iteration, used for trajectory tracking.
 
         Returns:
-            action (np.array): the certified action
+            action (ndarray): the certified action
             success (bool): whether the safety filtering was successful or not
         '''
 
