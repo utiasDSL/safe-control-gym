@@ -41,7 +41,7 @@ class BaseController(ABC):
         # Algorithm specific args.
         for k, v in kwargs.items():
             self.__dict__[k] = v
-        
+
         self.setup_results_dict()
 
     @abstractmethod
@@ -51,27 +51,27 @@ class BaseController(ABC):
         Args:
             obs (ndarray): the observation at this timestep.
             info (list): the info at this timestep.
-        
+
         Returns:
             action (ndarray): the action chosen by the controller.
         """
-        return 
+        return
 
     def extract_step(self, info=None):
         """Extracts the current step from the info.
 
         Args:
             info (list): the info list returned from the environment.
-        
+
         Returns:
             step (int): the current step/iteration of the environment.
         """
-        
+
         if info is not None:
             step = info['current_step']
         else:
             step = 0
-        
+
         return step
 
     def learn(self,
@@ -85,6 +85,7 @@ class BaseController(ABC):
         """
         pass
 
+    @abstractmethod
     def reset(self):
         """Do initializations for training or evaluation. """
         pass
@@ -97,8 +98,9 @@ class BaseController(ABC):
             info (list): the first info of the new run
             env (gym.Env): the environment to be used for the new run
         """
-        self.setup_results_dict() 
+        self.setup_results_dict()
 
+    @abstractmethod
     def close(self):
         """Shuts down and cleans up lingering resources. """
         pass
@@ -122,7 +124,7 @@ class BaseController(ABC):
             path (str): the path where the model params/experiment state are saved
         """
         pass
-    
+
     def setup_results_dict(self):
         """Setup the results dictionary to store run information. """
         self.results_dict = {}
