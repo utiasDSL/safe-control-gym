@@ -85,7 +85,7 @@ class PID(BaseController):
 
         Args:
             obs (ndarray): The observation at this timestep.
-            info (list): The info at this timestep.
+            info (dict): The info at this timestep.
 
         Returns:
             action (ndarray): The action chosen by the controller.

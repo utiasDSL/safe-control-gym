@@ -362,11 +362,11 @@ class BenchmarkEnv(gym.Env):
 
         Args:
             obs (ndarray): The first observation.
-            info (list): The first info.
+            info (dict): The first info.
 
         Returns:
             obs (ndarray): The updated first observation.
-            info (list): The updated first info.
+            info (dict): The updated first info.
         '''
         # Add initial constraint info (no action/input yet, so only state-based constraints)
         info['current_step'] = 0
@@ -442,13 +442,13 @@ class BenchmarkEnv(gym.Env):
             obs (ndarray): The observation after this step.
             rew (float): The reward after this step.
             done (bool): Whether the evaluation is done.
-            info (list): The info after this step.
+            info (dict): The info after this step.
 
         Returns:
             obs (ndarray): The udpdated observation after this step.
             rew (float): The udpdated reward after this step.
             done (bool): Whether the evaluation is done.
-            info (list): The udpdated info after this step.
+            info (dict): The udpdated info after this step.
         '''
         # Increment counters
         self.pyb_step_counter += self.PYB_STEPS_PER_CTRL

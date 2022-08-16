@@ -45,7 +45,7 @@ class BaseController:
 
         Args:
             obs (np.array): The observation at this timestep.
-            info (list): The info at this timestep.
+            info (dict): The info at this timestep.
 
         Returns:
             action (np.array): The action chosen by the controller.
@@ -72,7 +72,7 @@ class BaseController:
 
         Args:
             obs (np.array): The initial observation for the new run.
-            info (list): The first info of the new run.
+            info (dict): The first info of the new run.
             env (gym.Env): The environment to be used for the new run.
         '''
         self.setup_results_dict()
