@@ -344,7 +344,7 @@ class DefaultConstraint(BoundedConstraint):
         elif constrained_variable == ConstrainedVariableType.INPUT:
             default_constraint_space = spaces.Box(low=env.physical_action_bounds[0],
                                                   high=env.physical_action_bounds[1],
-                                                  shape=(1,))
+                                                   dtype=np.float32)
         else:
             raise NotImplementedError('[ERROR] DefaultConstraint can only be of type STATE or INPUT')
         # extract bounds from the space

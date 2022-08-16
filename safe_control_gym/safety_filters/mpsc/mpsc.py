@@ -243,15 +243,6 @@ class MPSC(BaseSafetyFilter, ABC):
         self.results_dict['action'] = []
         self.results_dict['correction'] = []
 
-    def close_results_dict(self):
-        '''Cleanup the results dict and munchify it. '''
-        self.results_dict['feasible'] = np.vstack(self.results_dict['feasible']).flatten()
-        self.results_dict['kinf'] = np.vstack(self.results_dict['kinf']).flatten()
-        self.results_dict['uncertified_action'] = np.vstack(self.results_dict['uncertified_action'])
-        self.results_dict['action'] = np.vstack(self.results_dict['action'])
-        self.results_dict['correction'] = np.vstack(self.results_dict['correction']).flatten()
-        self.results_dict = munchify(self.results_dict)
-
     def close(self):
         '''Cleans up resources. '''
         self.env.close()
@@ -259,9 +250,16 @@ class MPSC(BaseSafetyFilter, ABC):
 
     def reset(self):
         '''Prepares for training or evaluation. '''
+        self.env.reset()
+        self.reset_before_run()
+
+    def reset_before_run(self, env=None):
+        '''Reinitialize just the controller before a new run.
+
+        Args:
+            env (gym.Env): the environment to be used for the new run
+        '''
         self.z_prev = None
         self.v_prev = None
         self.kinf = self.horizon - 1
-
-        self.env.reset()
         self.setup_results_dict()

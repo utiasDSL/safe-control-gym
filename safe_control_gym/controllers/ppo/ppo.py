@@ -235,7 +235,7 @@ class PPO(BaseController):
             action = self.select_action(obs=obs, info=info)
             physical_action = env.denormalize_action(action)
 
-            if self.safety_filter:
+            if self.safety_filter is not None:
                 certified_action, success = self.safety_filter.certify_action(obs[:env.symbolic.nx], physical_action, info)
                 if success:
                     action = env.normalize_action(certified_action)

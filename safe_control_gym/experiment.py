@@ -87,22 +87,23 @@ class Experiment:
         # initialize
         sim_steps = log_freq // self.env.CTRL_FREQ if log_freq else 1
         steps, trajs = 0, 0
-        obs, info = self._evaluation_reset(ctrl_data=None)
+        obs, info = self._evaluation_reset(ctrl_data=None, sf_data=None)
         ctrl_data = defaultdict(list)
+        sf_data = defaultdict(list)
 
         if n_episodes is not None:
             while trajs < n_episodes:
-                action = self.ctrl.select_action(obs, info)
+                action = self._select_action(obs=obs, info=info)
                 # inner sim loop to accomodate different control frequencies
                 for _ in range(sim_steps):
                     obs, _, done, info = self.env.step(action)
                     if done:
                         trajs += 1
-                        obs, info = self._evaluation_reset(ctrl_data=ctrl_data)
+                        obs, info = self._evaluation_reset(ctrl_data=ctrl_data, sf_data=sf_data)
                         break
         elif n_steps is not None:
             while steps < n_steps:
-                action = self.ctrl.select_action(obs, info)
+                action = self._select_action(obs=obs, info=info)
                 # inner sim loop to accomodate different control frequencies
                 for _ in range(sim_steps):
                     obs, _, done, info = self.env.step(action)
@@ -110,17 +111,53 @@ class Experiment:
                     if steps >= n_steps:
                         self.env.save_data()
                         for data_key, data_val in self.ctrl.results_dict.items():
-                            ctrl_data[data_key].append(data_val)
+                            ctrl_data[data_key].append(np.array(deepcopy(data_val)))
+                        if self.safety_filter is not None:
+                            for data_key, data_val in self.safety_filter.results_dict.items():
+                                sf_data[data_key].append(np.array(deepcopy(data_val)))
                         break
                     if done:
-                        obs, info = self._evaluation_reset(ctrl_data=ctrl_data)
+                        obs, info = self._evaluation_reset(ctrl_data=ctrl_data, sf_data=sf_data)
                         break
 
         trajs_data = self.env.data
         trajs_data['controller_data'].append(dict(ctrl_data))
+        if self.safety_filter is not None:
+            trajs_data['safety_filter_data'].append(dict(sf_data))
         return trajs_data
 
-    def _evaluation_reset(self, ctrl_data):
+    def _select_action(self, obs, info):
+        '''Determines the executed action using the controller and safety filter.
+
+        Args:
+            obs (ndarray): the observation at this timestep.
+            info (list): the info at this timestep.
+
+        Returns:
+            action (ndarray): the action chosen by the controller and safety filter.
+        '''
+        action = self.ctrl.select_action(obs, info)
+        physical_action = self.env.denormalize_action(action)
+        unextended_obs = obs[:self.env.symbolic.nx]
+
+        if self.safety_filter is not None:
+            certified_action, success = self.safety_filter.certify_action(unextended_obs, physical_action, info)
+            if success:
+                action = self.env.normalize_action(certified_action)
+
+        return action
+
+    def _evaluation_reset(self, ctrl_data, sf_data):
+        '''Resets the evaluation between runs.
+
+        Args:
+            ctrl_data (defaultdict): the controller specific data collected during execution.
+            sf_data (defaultdict): the safety filter specific data collected during execution.
+
+        Returns:
+            obs (ndarray): the initial observation.
+            info (list): the initial info.
+        '''
         if self.env.INFO_IN_RESET:
             obs, info = self.env.reset()
         else:
@@ -128,8 +165,13 @@ class Experiment:
             info = None
         if ctrl_data is not None:
             for data_key, data_val in self.ctrl.results_dict.items():
-                ctrl_data[data_key].append(data_val)
+                ctrl_data[data_key].append(np.array(deepcopy(data_val)))
+        if sf_data is not None and self.safety_filter is not None:
+            for data_key, data_val in self.safety_filter.results_dict.items():
+                sf_data[data_key].append(np.array(deepcopy(data_val)))
         self.ctrl.reset_before_run(obs, info, env=self.env)
+        if self.safety_filter is not None:
+            self.safety_filter.reset_before_run(env=self.env)
         return obs, info
 
     def launch_training(self, **kwargs):
@@ -235,7 +277,7 @@ class RecordDataWrapper(gym.Wrapper):
 
     """
 
-    def __init__(self, env, deque_size=None, **kwargs):
+    def __init__(self, env):
         super().__init__(env)
         self.episode_data = defaultdict(list)
         self.clear_data()
@@ -245,7 +287,10 @@ class RecordDataWrapper(gym.Wrapper):
         if self.episode_data:
             # save to data container
             for key, ep_val in self.episode_data.items():
-                self.data[key].append(deepcopy(ep_val))
+                if key == 'info':
+                    self.data[key].append(np.array(deepcopy(ep_val), dtype=object))
+                else:
+                    self.data[key].append(np.array(deepcopy(ep_val)))
             # re-initialize episode data container
             self.episode_data = defaultdict(list)
 

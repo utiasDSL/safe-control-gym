@@ -80,6 +80,14 @@ class BaseSafetyFilter(ABC):
         '''Do initializations for training or evaluation. '''
         return
 
+    def reset_before_run(self, env=None):
+        '''Reinitialize just the safety filter before a new run.
+
+        Args:
+            env (gym.Env): the environment to be used for the new run
+        '''
+        self.setup_results_dict()
+
     def close(self):
         '''Shuts down and cleans up lingering resources. '''
         return
@@ -103,3 +111,7 @@ class BaseSafetyFilter(ABC):
             path (str): the path where the model params/experiment state are saved.
         '''
         return
+
+    def setup_results_dict(self):
+        '''Setup the results dictionary to store run information. '''
+        self.results_dict = {}
