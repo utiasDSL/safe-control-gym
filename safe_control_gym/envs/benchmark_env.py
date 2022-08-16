@@ -338,7 +338,6 @@ class BenchmarkEnv(gym.Env):
         e.g. in RL where obs is [state, goal] or angle is converted to sine & cosine,
         additionally sets a `self.state_space`.
         '''
-
         raise NotImplementedError
 
     def before_reset(self):
@@ -386,7 +385,7 @@ class BenchmarkEnv(gym.Env):
         Returns:
             action (ndarray): The processed action to be executed.
         '''
-        return action
+        raise NotImplementedError
 
     def before_step(self, action):
         '''Pre-processing before calling `.step()`.

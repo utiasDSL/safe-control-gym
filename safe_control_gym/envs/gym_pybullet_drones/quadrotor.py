@@ -1,4 +1,4 @@
-'''1D and 2D quadrotor environment using PyBullet physics.
+'''1D, 2D, and 3D quadrotor environment using PyBullet physics.
 
 Based on UTIAS Dynamic Systems Lab's gym-pybullet-drones:
     * https://github.com/utiasDSL/gym-pybullet-drones
@@ -21,7 +21,7 @@ from safe_control_gym.math_and_models.normalization import normalize_angle
 from safe_control_gym.math_and_models.transformations import projection_matrix, transform_trajectory, csRotXYZ
 
 class Quadrotor(BaseAviary):
-    '''1D and 2D quadrotor environment task.
+    '''1D, 2D, and 3D quadrotor environment task.
 
     Including symbolic model, constraints, randomization, adversarial disturbances,
     multiple cost functions, stabilization and trajectory tracking references.
@@ -164,7 +164,7 @@ class Quadrotor(BaseAviary):
         Args:
             init_state (ndarray, optional): The initial state of the environment, (z, z_dot) or (x, x_dot, z, z_dot theta, theta_dot).
             inertial_prop (ndarray, optional): The inertial properties of the environment (M, Ixx, Iyy, Izz).
-            quad_type (QuadType, optional): The choice of motion type (1D along z or 2D in the x-z plane).
+            quad_type (QuadType, optional): The choice of motion type (1D along z, 2D in the x-z plane, or 3D).
             norm_act_scale (float): Scaling the [-1,1] action space around hover thrust when `normalized_action_space` is True.
             obs_goal_horizon (int): How many future goal states to append to obervation.
             rew_state_weight (list/ndarray): Quadratic weights for state in rl reward.
@@ -174,7 +174,6 @@ class Quadrotor(BaseAviary):
             info_mse_metric_state_weight (list/ndarray): Quadratic weights for state in mse calculation for info dict.
         '''
 
-        # Select the 1D (moving along z) or 2D (moving in the xz plane) quadrotor.
         self.QUAD_TYPE = QuadType(quad_type)
         self.norm_act_scale = norm_act_scale
         self.obs_goal_horizon = obs_goal_horizon

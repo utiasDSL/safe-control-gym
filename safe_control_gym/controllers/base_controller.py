@@ -50,7 +50,7 @@ class BaseController:
         Returns:
             action (np.array): The action chosen by the controller.
         '''
-        return
+        raise NotImplementedError
 
     def learn(self,
               env=None,
@@ -65,7 +65,7 @@ class BaseController:
 
     def reset(self):
         '''Do initializations for training or evaluation. '''
-        return
+        raise NotImplementedError
 
     def reset_before_run(self, obs, info=None, env=None):
         '''Reinitialize just the controller before a new run.
@@ -79,7 +79,7 @@ class BaseController:
 
     def close(self):
         '''Shuts down and cleans up lingering resources. '''
-        return
+        raise NotImplementedError
 
     def save(self,
              path
