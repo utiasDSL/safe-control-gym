@@ -36,9 +36,11 @@ def main():
     # Load configuration.
     CONFIG_FACTORY = ConfigFactory()
     config = CONFIG_FACTORY.merge()
+    if config.use_firmware and not FIRMWARE_INSTALLED:
+        raise RuntimeError("[ERROR] Module 'cffirmware' not installed.")
 
     # Create environment.
-    if FIRMWARE_INSTALLED:
+    if config.use_firmware:
         env_func = partial(make, 'quadrotor', **config.quadrotor_config)
         firmware_wrapper = make('firmware',
                     env_func,
@@ -48,15 +50,14 @@ def main():
     else:
         env = make('quadrotor', **config.quadrotor_config)
 
-
     # Reset the environment, obtain the initial observations and info dictionary.
     obs, info = env.reset()
 
     # Create controller.
-    ctrl = Controller(obs, info, FIRMWARE_INSTALLED)
+    ctrl = Controller(obs, info, config.use_firmware)
 
     # Initialize firmware.
-    if FIRMWARE_INSTALLED:
+    if config.use_firmware:
         firmware_wrapper.update_initial_state(obs)
 
     # Create logger and counters.
@@ -73,7 +74,7 @@ def main():
         curr_time = (i%(env.CTRL_FREQ*env.EPISODE_LEN_SEC))*env.CTRL_TIMESTEP
 
         # Compute control input.
-        if FIRMWARE_INSTALLED:
+        if config.use_firmware:
             command_type, args = ctrl.cmdFirmware(curr_time, obs)
 
             if command_type == Command.NONE:
@@ -96,7 +97,7 @@ def main():
             obs, reward, done, info = env.step(action)
 
         # Printouts.
-        if i%20 == 0:
+        if i%100 == 0:
             print('\n'+str(i)+'-th step.')
             print('\tApplied action: ' + str(action))
             print('\tObservation: ' + str(obs))

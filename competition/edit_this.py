@@ -137,14 +137,6 @@ class Controller():
         # REPLACE THIS (END) ####
         #########################
 
-    def cmdCrazyFlie(self,
-                     time,
-                     obs,
-                     vicon_pos=None, est_vel=None, est_acc=None, est_rpy=None, est_rpy_rates=None):
-        """
-        """
-        pass
-
     def cmdFirmware(self,
                     time,
                     obs,
