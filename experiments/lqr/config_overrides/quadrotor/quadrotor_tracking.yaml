@@ -18,8 +18,8 @@ task_config:
       high: 0.1
     init_z:
       distrib: 'uniform'
-      low: 1
-      high: 2
+      low: 0.5
+      high: 1.5
     init_z_dot:
       distrib: 'uniform'
       low: -0.1
@@ -37,14 +37,12 @@ task_config:
 
   task: traj_tracking
   task_info:
-    stabilization_goal: [0, 1]
-    stabilization_goal_tolerance: 0.01
     trajectory_type: figure8
     num_cycles: 1
     trajectory_plane: 'xz'
     trajectory_position_offset: [0, 1]
-    trajectory_scale: 1
+    trajectory_scale: 0.75
     
   episode_len_sec: 6
   cost: quadratic
-  done_on_out_of_bound: False
+  done_on_out_of_bound: True

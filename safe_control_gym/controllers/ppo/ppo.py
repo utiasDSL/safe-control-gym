@@ -10,13 +10,12 @@ Additional references:
     * pytorch-a2c-ppo-acktr-gail - https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail
     * openai spinning up - ppo - https://github.com/openai/spinningup/tree/master/spinup/algos/pytorch/ppo
     * stable baselines3 - ppo - https://github.com/DLR-RM/stable-baselines3/tree/master/stable_baselines3/ppo
-    
 """
+
 import os
 import time
 import numpy as np
 import torch
-from collections import defaultdict
 
 from safe_control_gym.utils.logging import ExperimentLogger
 from safe_control_gym.utils.utils import get_random_state, set_random_state, is_wrapped
@@ -189,6 +188,22 @@ class PPO(BaseController):
             # Logging.
             if self.log_interval and self.total_steps % self.log_interval == 0:
                 self.log_step(results)
+    
+    def select_action(self, obs, info=None):
+        """Determine the action to take at the current timestep.
+        Args:
+            obs (np.array): the observation at this timestep
+            info (list): the info at this timestep
+        
+        Returns:
+            action (np.array): the action chosen by the controller
+        """
+                
+        with torch.no_grad():
+            obs = torch.FloatTensor(obs).to(self.device)
+            action = self.agent.ac.act(obs)
+        
+        return action
 
     def run(self,
             env=None,
@@ -217,9 +232,7 @@ class PPO(BaseController):
         ep_returns, ep_lengths = [], []
         frames = []
         while len(ep_returns) < n_episodes:
-            with torch.no_grad():
-                obs = torch.FloatTensor(obs).to(self.device)
-                action = self.agent.ac.act(obs)
+            action = self.select_action(obs=obs, info=info)
             obs, reward, done, info = env.step(action)
             if render:
                 env.render()

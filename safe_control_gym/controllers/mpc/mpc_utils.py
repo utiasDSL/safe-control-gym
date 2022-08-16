@@ -5,6 +5,8 @@ import numpy as np
 import casadi as cs
 import scipy
 
+from safe_control_gym.envs.constraints import ConstraintList
+
 
 def get_cost_weight_matrix(weights,
                            dim
@@ -107,3 +109,17 @@ def compute_state_rmse(state_error):
     state_rmse_scalar = np.sqrt(np.sum(mse))
 
     return state_rmse, state_rmse_scalar
+
+def reset_constraints(constraints):
+    """ Setup the constraints list.
+
+    Args:
+        constraints (list): List of constraints controller is subject too.
+    """
+
+    constraints_list = ConstraintList(constraints)
+    state_constraints_sym = constraints_list.get_state_constraint_symbolic_models()
+    input_constraints_sym = constraints_list.get_input_constraint_symbolic_models()
+    if len(constraints_list.input_state_constraints) > 0:
+        raise NotImplementedError('MPSC cannot handle combined state input constraints yet.')
+    return constraints_list, state_constraints_sym, input_constraints_sym

@@ -7,14 +7,10 @@ Reference paper & code:
 
 Example:
     $ python experiments/main.py --algo ddpg --task cartpole --output_dir results --tag test/cartpole_ddpg --seed 6 
-    
-Todo
-    *
-
 """
+
 import os
 import time
-import copy
 import numpy as np
 import torch
 from collections import defaultdict
@@ -199,6 +195,22 @@ class DDPG(BaseController):
             if self.log_interval and self.total_steps % self.log_interval == 0:
                 self.log_step(results)
 
+    def select_action(self, obs, info=None):
+        """Determine the action to take at the current timestep.
+        Args:
+            obs (np.array): the observation at this timestep
+            info (list): the info at this timestep
+        
+        Returns:
+            action (np.array): the action chosen by the controller
+        """
+        
+        with torch.no_grad():
+            obs = torch.FloatTensor(obs).to(self.device)
+            action = self.agent.ac.act(obs)
+
+        return action
+
     def run(self, env=None, render=False, n_episodes=10, verbose=False, **kwargs):
         """Runs evaluation with current policy."""
         self.agent.eval()
@@ -219,9 +231,7 @@ class DDPG(BaseController):
         frames = []
 
         while len(ep_returns) < n_episodes:
-            with torch.no_grad():
-                obs = torch.FloatTensor(obs).to(self.device)
-                action = self.agent.ac.act(obs)
+            action = self.select_action(obs, info)
 
             obs, reward, done, info = env.step(action)
             if render:

@@ -40,6 +40,8 @@ class Experiment:
             self.train_env = RecordDataWrapper(self.train_env)
         self.safety_filter = safety_filter
 
+        self.reset()
+
     def run_evaluation(self, training=False, n_episodes=None, n_steps=None, log_freq=None, **kwargs):
         '''Evaluate a trained controller.
 
@@ -96,7 +98,7 @@ class Experiment:
                     obs, _, done, info = self.env.step(action)
                     if done:
                         trajs += 1
-                        self._evaluation_reset(ctrl_data=ctrl_data)
+                        obs, info = self._evaluation_reset(ctrl_data=ctrl_data)
                         break
         elif n_steps is not None:
             while steps < n_steps:
@@ -111,11 +113,11 @@ class Experiment:
                             ctrl_data[data_key].append(data_val)
                         break
                     if done:
-                        self._evaluation_reset(ctrl_data=ctrl_data)
+                        obs, info = self._evaluation_reset(ctrl_data=ctrl_data)
                         break
 
         trajs_data = self.env.data
-        trajs_data.update(ctrl_data)
+        trajs_data['controller_data'].append(dict(ctrl_data))
         return trajs_data
 
     def _evaluation_reset(self, ctrl_data):
@@ -139,7 +141,12 @@ class Experiment:
         if self.safety_filter:
             self.safety_filter.learn(env=self.train_env, **kwargs)
 
-        print('Training done.')
+        print("Training done.")
+
+        trajs_data = {}
+        if self.train_env is not None:
+            trajs_data = self.train_env.data
+        return dict(trajs_data)
 
     def compute_metrics(self, trajs_data):
         '''Compute all standard metrics on the given trajectory data.
@@ -175,6 +182,10 @@ class Experiment:
         if self.safety_filter is not None:
             self.safety_filter.reset()
 
+        if self.train_env is not None:
+            self.train_env.reset()
+            self.train_env.clear_data()
+
     def close(self):
         '''Closes the environments, controller, and safety filter. '''
 
@@ -183,6 +194,9 @@ class Experiment:
 
         if self.safety_filter is not None:
             self.safety_filter.close()
+
+        if self.train_env is not None:
+            self.train_env.close()
 
     def load(self, ctrl_path=None, safety_filter_path=None):
         '''Restores model of the controller and/or safety filter given checkpoint paths.
@@ -212,15 +226,16 @@ class Experiment:
 
 
 class RecordDataWrapper(gym.Wrapper):
-    '''A wrapper to standardizes logging for benchmark envs.
+    """A wrapper to standardizes logging for benchmark envs.
 
-    currently saved info:
+    currently saved info
     * obs, reward, done, info, action
     * env.state, env.current_physical_action,
-    * env.current_noisy_physical_action, env.current_clipped_action
-    '''
+    env.current_noisy_physical_action, env.current_clipped_action
 
-    def __init__(self, env):
+    """
+
+    def __init__(self, env, deque_size=None, **kwargs):
         super().__init__(env)
         self.episode_data = defaultdict(list)
         self.clear_data()

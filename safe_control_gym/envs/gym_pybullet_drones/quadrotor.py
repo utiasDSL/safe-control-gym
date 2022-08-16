@@ -857,13 +857,14 @@ class Quadrotor(BaseAviary):
             if self.QUAD_TYPE == QuadType.THREE_D:
                 mask = np.array([1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0])
             # Element-wise or to check out-of-bound conditions.
-            out_of_bound = np.logical_or(self.state < self.state_space.low, 
+            self.out_of_bounds = np.logical_or(self.state < self.state_space.low, 
                                          self.state > self.state_space.high)
             # Mask out un-included dimensions (i.e. velocities)
-            out_of_bound = np.any(out_of_bound * mask)
+            self.out_of_bounds = np.any(self.out_of_bounds * mask)
             # Early terminate if needed.
-            if out_of_bound:
+            if self.out_of_bounds:
                 return True 
+        self.out_of_bounds = False
 
         return False 
 
@@ -877,6 +878,8 @@ class Quadrotor(BaseAviary):
         info = {}
         if self.TASK == Task.STABILIZATION and self.COST == Cost.QUADRATIC:
             info["goal_reached"] = self.goal_reached  # Add boolean flag for the goal being reached.
+        if self.done_on_out_of_bound:
+            info["out_of_bounds"] = self.out_of_bounds
         # Add MSE.
         state = deepcopy(self.state) 
         if self.TASK == Task.STABILIZATION:

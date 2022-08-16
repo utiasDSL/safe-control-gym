@@ -10,7 +10,6 @@ from collections import defaultdict
 from safe_control_gym.utils.logging import ExperimentLogger
 from safe_control_gym.utils.utils import get_random_state, set_random_state, is_wrapped
 from safe_control_gym.envs.env_wrappers.vectorized_env import make_vec_envs
-from safe_control_gym.envs.env_wrappers.vectorized_env.vec_env_utils import _flatten_obs
 from safe_control_gym.envs.env_wrappers.record_episode_statistics import RecordEpisodeStatistics, VecRecordEpisodeStatistics
 from safe_control_gym.math_and_models.normalization import BaseNormalizer, MeanStdNormalizer, RewardStdNormalizer
 
@@ -223,6 +222,23 @@ class SafeExplorerPPO(BaseController):
             if self.log_interval and self.total_steps % self.log_interval == 0:
                 self.log_step(results)
 
+    def select_action(self, obs, info=None):
+        """Determine the action to take at the current timestep.
+        Args:
+            obs (np.array): the observation at this timestep
+            info (list): the info at this timestep
+        
+        Returns:
+            action (np.array): the action chosen by the controller
+        """
+        
+        with torch.no_grad():
+                obs = torch.FloatTensor(obs).to(self.device)
+                c = torch.FloatTensor(c).to(self.device)
+                action = self.agent.ac.act(obs, c=c)
+
+        return action
+
     def run(self,
             env=None,
             render=False,
@@ -249,10 +265,7 @@ class SafeExplorerPPO(BaseController):
         ep_returns, ep_lengths = [], []
         frames = []
         while len(ep_returns) < n_episodes:
-            with torch.no_grad():
-                obs = torch.FloatTensor(obs).to(self.device)
-                c = torch.FloatTensor(c).to(self.device)
-                action = self.agent.ac.act(obs, c=c)
+            action = self.select_action(obs, info)
             obs, reward, done, info = env.step(action)
             if render:
                 env.render()
