@@ -202,7 +202,9 @@ class Logger(object):
 
     ################################################################################
     
-    def plot(self, pwm=False):
+    def plot(self,
+             comment: str="",
+             pwm=False):
         """Logs entries for a single simulation step, of a single drone.
 
         Parameters
@@ -373,7 +375,7 @@ class Logger(object):
                             wspace=0.15,
                             hspace=0.0
                             )
-        if self.COLAB: 
-            plt.savefig(os.path.join('results', 'output_figure.png'))
-        else:
-            plt.show()
+        plt.savefig(os.path.join('results', comment+'-output_figure.png'))
+        plt.show(block=False)
+        plt.pause(3)
+        plt.close()

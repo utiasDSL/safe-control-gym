@@ -1,9 +1,10 @@
-"""1D and 2D quadrotor environment using PyBullet physics.
+"""Quadrotor environment using PyBullet physics.
 
 Based on UTIAS Dynamic Systems Lab's gym-pybullet-drones:
     * https://github.com/utiasDSL/gym-pybullet-drones
 
 """
+import os
 import math
 from copy import deepcopy
 import casadi as cs
@@ -115,7 +116,7 @@ class Quadrotor(BaseAviary):
             'low': -0.01,
             'high': 0.01
         },
-        "init_theta_dot": {  # TODO: replace with q.
+        "init_theta_dot": {  # Only used in 2D quad.
             'distrib': "uniform",
             'low': -0.01,
             'high': 0.01
@@ -270,12 +271,12 @@ class Quadrotor(BaseAviary):
                     self.TASK_INFO["stabilization_goal"][1], 0.0, 0.0, 0.0
                 ])  # x = {x, x_dot, z, z_dot, theta, theta_dot}.
             elif self.QUAD_TYPE == QuadType.THREE_D:
-                self.X_GOAL = np.hstack(
+                self.X_GOAL = np.hstack([
                     self.TASK_INFO["stabilization_goal"][0], 0.0,
                     self.TASK_INFO["stabilization_goal"][1], 0.0,
                     self.TASK_INFO["stabilization_goal"][2], 0.0,
                     0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-                )  # x = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
+                ])  # x = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
         elif self.TASK == Task.TRAJ_TRACKING:
             POS_REF, \
             VEL_REF, \
@@ -327,6 +328,13 @@ class Quadrotor(BaseAviary):
         self.X_EQ = np.zeros(self.state_dim)
         self.U_EQ = self.U_GOAL
 
+        # IROS 2022 - Load maze.
+        self.OBSTACLES = []
+        self.GATES = []
+        if 'obstacles' in kwargs:
+            self.OBSTACLES = kwargs['obstacles']
+        if 'gates' in kwargs:
+            self.GATES = kwargs['gates']
 
     def reset(self):
         """(Re-)initializes the environment to start an episode.
@@ -339,8 +347,30 @@ class Quadrotor(BaseAviary):
 
         """
         super().before_reset()
-        # PyBullet simulation reset.  
+        # PyBullet simulation reset.
         super()._reset_simulation()
+
+        # IROS 2022 - Create maze.
+        self.OBSTACLES_IDS = [
+            p.loadURDF(os.path.join(self.URDF_DIR, "obstacle.urdf"),
+                       np.array(obstacle[0:3]) + np.array([0.1*np.random.rand(), 0.1*np.random.rand(), 0]), # TODO - Parametrize distribution
+                       p.getQuaternionFromEuler(obstacle[3:6]),
+                       physicsClientId=self.PYB_CLIENT)
+            for obstacle in self.OBSTACLES]
+        
+        self.GATES_IDS = [
+            p.loadURDF(os.path.join(self.URDF_DIR, "portal.urdf"),
+                       np.array(gate[0:3]) + np.array([0.1*np.random.rand(), 0.1*np.random.rand(), 0]), # TODO - Parametrize distribution
+                       p.getQuaternionFromEuler(gate[3:6]),
+                       physicsClientId=self.PYB_CLIENT)
+            for gate in self.GATES]
+        # Deactivate select collisions, e.g. between the ground plane and the drone
+        # p.setCollisionFilterPair(bodyUniqueIdA=self.PLANE_ID,
+        #                          bodyUniqueIdB=self.DRONE_IDS[0],
+        #                          linkIndexA=-1,
+        #                          linkIndexB=-1,
+        #                          enableCollision=0,
+        #                          physicsClientId=self.PYB_CLIENT)
         
         # Choose randomized or deterministic inertial properties.
         prop_values = {
@@ -376,7 +406,7 @@ class Quadrotor(BaseAviary):
         if self.QUAD_TYPE == QuadType.TWO_D:
             INIT_ANG_VEL = [0, init_values.get("init_theta_dot", 0.), 0]
         else:
-            INIT_ANG_VEL = [init_values.get("init_"+k, 0.) for k in ["p", "q", "r"]]  # TODO: transform from body rates.
+            INIT_ANG_VEL = [init_values.get("init_"+k, 0.) for k in ["p", "q", "r"]]
         p.resetBasePositionAndOrientation(self.DRONE_IDS[0], INIT_XYZ,
                                           p.getQuaternionFromEuler(INIT_RPY),
                                           physicsClientId=self.PYB_CLIENT)
@@ -805,8 +835,6 @@ class Quadrotor(BaseAviary):
 
         # Control cost.
         if self.COST == Cost.QUADRATIC:
-            if self.QUAD_TYPE == QuadType.THREE_D:
-                return -1  # TODO: add self.symbolic to 3D quad
             if self.TASK == Task.STABILIZATION:
                 return float(-1 * self.symbolic.loss(x=self.state,
                                                      Xr=self.X_GOAL,
@@ -885,9 +913,38 @@ class Quadrotor(BaseAviary):
         # Filter only relevant dimensions.
         state_error = state_error * self.info_mse_metric_state_weight
         info["mse"] = np.sum(state_error ** 2)
-        # if self.constraints is not None:
-        #     info["constraint_values"] = self.constraints.get_values(self)
-        #     info["constraint_violations"] = self.constraints.get_violations(self)
+
+        # Note: constraint_values and constraint_violations populated in benchmark_env.
+
+        # IROS 2022 - Per-step info.
+        # Collisions
+        # tmp1 = [p.getContactPoints(bodyA=obs_id,
+        #                            bodyB=self.DRONE_IDS[0],
+        #                            # linkIndexA=-1, linkIndexB=-1,
+        #                            physicsClientId=self.PYB_CLIENT)
+        #         for obs_id in self.OBSTACLES_IDS]
+        # tmp2 = [p.getContactPoints(bodyA=gates_id,
+        #                            bodyB=self.DRONE_IDS[0],
+        #                            # linkIndexA=-1, linkIndexB=-1,
+        #                            physicsClientId=self.PYB_CLIENT)
+        #         for gates_id in self.GATES_IDS]
+        # tmp3 = p.getContactPoints(bodyA=self.PLANE_ID,
+        #                           bodyB=self.DRONE_IDS[0],
+        #                           # linkIndexA=-1, linkIndexB=-1,
+        #                           physicsClientId=self.PYB_CLIENT)
+        # print(tmp1, tmp2, tmp3)
+        for GATE_OBS_ID in self.GATES_IDS + self.OBSTACLES_IDS + [self.PLANE_ID]:
+            ret = p.getContactPoints(bodyA=GATE_OBS_ID,
+                                     bodyB=self.DRONE_IDS[0],
+                                     # linkIndexA=-1, linkIndexB=-1,
+                                     physicsClientId=self.PYB_CLIENT)
+            if ret:
+                info["collision"] = (GATE_OBS_ID, True)
+                break  # Note: only returning the first collision per step.
+        else:
+            info["collision"] = (None, False)
+        # Gates progress - TODO
+
         return info
 
     def _get_reset_info(self):
@@ -899,12 +956,38 @@ class Quadrotor(BaseAviary):
         """
         info = {}
         info["symbolic_model"] = self.symbolic
-        info["physical_parameters"] = {
+        info["nominal_physical_parameters"] = {
             "quadrotor_mass": self.MASS,
-            "quadrotor_iyy_inertia": self.J[1, 1]
+            "quadrotor_ixx_inertia": self.J[0, 0],
+            "quadrotor_iyy_inertia": self.J[1, 1],
+            "quadrotor_izz_inertia": self.J[2, 2]
         }
         info["x_reference"] = self.X_GOAL
         info["u_reference"] = self.U_GOAL
         if self.constraints is not None:
             info["symbolic_constraints"] = self.constraints.get_all_symbolic_models()
+        
+        # IROS 2022 - Reset info.
+        info["ctrl_timestep"] = self.CTRL_TIMESTEP
+        info["ctrl_freq"] = self.CTRL_FREQ
+        info["episode_len_sec"] = self.EPISODE_LEN_SEC
+        info["quadrotor_kf"] = self.KF
+        info["quadrotor_km"] = self.KM
+        info["gate_dimensions"] = {
+            "shape": "square",
+            "height": 0.75,
+            "edge": 0.45
+        }
+        info["obstacle_dimensions"] = {
+            "shape": "cylinder",
+            "height": 0.8,
+            "radius": 0.05
+        }
+        info["nominal_gates_pos"] = self.GATES
+        info["nominal_obstacles_pos"] = self.OBSTACLES
+
+        # INFO 2022 - Debugging.
+        info["urdf_dir"] = self.URDF_DIR
+        info["pyb_client"] = self.PYB_CLIENT
+
         return info
