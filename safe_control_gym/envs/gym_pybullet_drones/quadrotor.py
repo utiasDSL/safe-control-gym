@@ -335,6 +335,13 @@ class Quadrotor(BaseAviary):
             self.OBSTACLES = kwargs['obstacles']
         if 'gates' in kwargs:
             self.GATES = kwargs['gates']
+        if 'randomized_gates_and_obstacles' in kwargs and kwargs['randomized_gates_and_obstacles']:
+            self.RANDOMIZED_GATES_AND_OBS = True
+            if 'gates_and_obstacles_randomization_info' not in kwargs:
+                raise ValueError("[ERROR] Missing 'gates_and_obstacles_randomization_info' in YAML configuration.")
+            self.GATES_AND_OBS_RAND_INFO = kwargs['gates_and_obstacles_randomization_info']
+        else:
+            self.RANDOMIZED_GATES_AND_OBS = False
 
     def reset(self):
         """(Re-)initializes the environment to start an episode.
@@ -351,19 +358,53 @@ class Quadrotor(BaseAviary):
         super()._reset_simulation()
 
         # IROS 2022 - Create maze.
-        self.OBSTACLES_IDS = [
-            p.loadURDF(os.path.join(self.URDF_DIR, "obstacle.urdf"),
-                       np.array(obstacle[0:3]) + np.array([0.1*np.random.rand(), 0.1*np.random.rand(), 0]), # TODO - Parametrize distribution
+        self.OBSTACLES_IDS = []
+        rand_info_copy = deepcopy(self.GATES_AND_OBS_RAND_INFO)
+        distrib = getattr(self.np_random, rand_info_copy["obstacles"].pop("distrib"))
+        d_args = rand_info_copy["obstacles"].pop("args", [])
+        d_kwargs = rand_info_copy["obstacles"]
+        for obstacle in self.OBSTACLES:
+            offset = np.array([0, 0, 0])
+            if self.RANDOMIZED_GATES_AND_OBS:
+                offset = np.array([distrib(*d_args, **d_kwargs), distrib(*d_args, **d_kwargs), 0])
+            else:
+                offset = np.array([0, 0, 0])
+            TMP_ID = p.loadURDF(os.path.join(self.URDF_DIR, "obstacle.urdf"),
+                       np.array(obstacle[0:3]) + offset,
                        p.getQuaternionFromEuler(obstacle[3:6]),
                        physicsClientId=self.PYB_CLIENT)
-            for obstacle in self.OBSTACLES]
-        
-        self.GATES_IDS = [
-            p.loadURDF(os.path.join(self.URDF_DIR, "portal.urdf"),
-                       np.array(gate[0:3]) + np.array([0.1*np.random.rand(), 0.1*np.random.rand(), 0]), # TODO - Parametrize distribution
+            self.OBSTACLES_IDS.append(TMP_ID)
+
+        self.GATES_IDS = []
+        rand_info_copy = deepcopy(self.GATES_AND_OBS_RAND_INFO)
+        distrib = getattr(self.np_random, rand_info_copy["gates"].pop("distrib"))
+        d_args = rand_info_copy["gates"].pop("args", [])
+        d_kwargs = rand_info_copy["gates"]
+        for gate in self.GATES:
+            offset = np.array([0, 0, 0])
+            if self.RANDOMIZED_GATES_AND_OBS:
+                offset = np.array([distrib(*d_args, **d_kwargs), distrib(*d_args, **d_kwargs), 0])
+            else:
+                offset = np.array([0, 0, 0])
+            TMP_ID = p.loadURDF(os.path.join(self.URDF_DIR, "portal.urdf"),
+                       np.array(gate[0:3]) + offset,
                        p.getQuaternionFromEuler(gate[3:6]),
                        physicsClientId=self.PYB_CLIENT)
-            for gate in self.GATES]
+            self.GATES_IDS.append(TMP_ID)
+
+        # self.OBSTACLES_IDS = [
+        #     p.loadURDF(os.path.join(self.URDF_DIR, "obstacle.urdf"),
+        #                np.array(obstacle[0:3]) + np.array([0.1*np.random.rand(), 0.1*np.random.rand(), 0]), # TODO - Parametrize distribution
+        #                p.getQuaternionFromEuler(obstacle[3:6]),
+        #                physicsClientId=self.PYB_CLIENT)
+        #     for obstacle in self.OBSTACLES]
+        # self.GATES_IDS = [
+        #     p.loadURDF(os.path.join(self.URDF_DIR, "portal.urdf"),
+        #                np.array(gate[0:3]) + np.array([0.1*np.random.rand(), 0.1*np.random.rand(), 0]), # TODO - Parametrize distribution
+        #                p.getQuaternionFromEuler(gate[3:6]),
+        #                physicsClientId=self.PYB_CLIENT)
+        #     for gate in self.GATES]
+
         # Deactivate select collisions, e.g. between the ground plane and the drone
         # p.setCollisionFilterPair(bodyUniqueIdA=self.PLANE_ID,
         #                          bodyUniqueIdB=self.DRONE_IDS[0],
