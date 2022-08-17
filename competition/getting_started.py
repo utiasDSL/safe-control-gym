@@ -33,12 +33,21 @@ def main():
     # Create an environment
     CONFIG_FACTORY = ConfigFactory()
     config = CONFIG_FACTORY.merge()
+
+    pyb_freq = config.quadrotor_config['pyb_freq']
+    ctrl_freq = config.quadrotor_config['ctrl_freq']
+    firmware_freq = config.quadrotor_config['firmware_freq']
+
+    assert(pyb_freq % firmware_freq == 0), "pyb_freq must be a multiple of firmware freq"
+
+    config.quadrotor_config['ctrl_freq'] = firmware_freq
+
     try: 
-        raise
-        import cffirmware
+        # raise
+        import pycffirmware
         env_func = partial(make, 'quadrotor', **config.quadrotor_config)
         firmware_wrapper = make('firmware',
-                    env_func,
+                    env_func, firmware_freq, ctrl_freq
                     ) 
         env = firmware_wrapper.env
         firmware_exists = True
@@ -80,17 +89,18 @@ def main():
     episodes_count = 1
 
     # Create a logger.
-    logger = Logger(logging_freq_hz=env.CTRL_FREQ)
+    logger = Logger(logging_freq_hz=ctrl_freq)
 
     # Run an experiment.
-    for i in range(num_episodes*env.CTRL_FREQ*env.EPISODE_LEN_SEC):
+    for i in range(num_episodes*ctrl_freq*env.EPISODE_LEN_SEC):
 
         # Step by keyboard input.
         # _ = input('Press any key to continue.')
 
         # Compute control input.
         if firmware_exists:
-            command_type, args = ctrl.getCmd(i*(1/env.CTRL_FREQ), obs)
+            command_type, args = ctrl.getCmd(i*(1/ctrl_freq), obs)
+            # time.sleep(0.05)
 
             if command_type == Command.NONE:
                 pass
@@ -108,7 +118,7 @@ def main():
             # Step the environment and print all returned information.
             obs, reward, done, info, action = firmware_wrapper.step(i, action)
         else:
-            action = ctrl.cmdFullState(i%(env.CTRL_FREQ*env.EPISODE_LEN_SEC), obs)
+            action = ctrl.cmdFullState(i%(ctrl_freq*env.EPISODE_LEN_SEC), obs)
             obs, reward, done, info = env.step(action)
 
         # Print outs.

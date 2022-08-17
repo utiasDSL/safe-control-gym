@@ -8,10 +8,9 @@ from munch import munchify
 from scipy.spatial.transform import Rotation as R
 
 from safe_control_gym.controllers.base_controller import BaseController
-import cffirmware as firm
+import pycffirmware as firm
 
 class FirmwareWrapper(BaseController):
-    ENV_HZ = 1000
     ACTION_DELAY = 0 # max 2
     SENSOR_DELAY = 0 # doesn't affect ideal environment 
     STATE_DELAY = 0 # anything breaks 
@@ -28,8 +27,9 @@ class FirmwareWrapper(BaseController):
     RAD_TO_DEG = 180 / math.pi
 
     def __init__(self, 
-                env_func=None, 
-                ctrl=None,
+                env_func, 
+                firmware_freq,
+                ctrl_freq,
                 PWM2RPM_SCALE = 0.2685,
                 PWM2RPM_CONST = 4070.3,
                 KF = 3.16e-10,
@@ -39,7 +39,8 @@ class FirmwareWrapper(BaseController):
                 **kwargs):
         super().__init__(env_func, **kwargs)
         self.env_func = env_func
-        self.ctrl = ctrl
+        self.firmware_freq = firmware_freq
+        self.ctrl_freq = ctrl_freq
 
         self.PWM2RPM_SCALE = float(PWM2RPM_SCALE)
         self.PWM2RPM_CONST = float(PWM2RPM_CONST)
@@ -100,8 +101,8 @@ class FirmwareWrapper(BaseController):
         self.acclpf = [firm.lpf2pData() for _ in range(3)]
         self.gyrolpf = [firm.lpf2pData() for _ in range(3)]
         for i in range(3):
-            firm.lpf2pInit(self.acclpf[i], 1000, self.GYRO_LPF_CUTOFF_FREQ)
-            firm.lpf2pInit(self.gyrolpf[i], 1000, self.ACCEL_LPF_CUTOFF_FREQ)
+            firm.lpf2pInit(self.acclpf[i], self.firmware_freq, self.GYRO_LPF_CUTOFF_FREQ)
+            firm.lpf2pInit(self.gyrolpf[i], self.firmware_freq, self.ACCEL_LPF_CUTOFF_FREQ)
         self._error = False
 
         # Initialize state objects 
@@ -125,6 +126,8 @@ class FirmwareWrapper(BaseController):
         self.prev_vel = np.array([0, 0, 0])
         self.prev_rpy = np.array([0, 0, 0])
         self.prev_time_s = None
+        self.last_pos_pid_call = 0
+        self.last_att_pid_call = 0
 
         # Initialize PID controller 
         # TODO: add support for other controllers 
@@ -137,8 +140,8 @@ class FirmwareWrapper(BaseController):
 
         self.env = self.env_func()
         self.env.reset()
-        self.ctrl_dt = 1 / self.env.CTRL_FREQ
-        self.firmware_dt = 0.001
+        self.ctrl_dt = 1 / self.ctrl_freq
+        self.firmware_dt = 1 / self.firmware_freq
         # initialize emulator state objects 
         if self.env.NUM_DRONES > 1: 
             raise NotImplementedError("Firmware controller wrapper does not support multiple drones.")
@@ -168,9 +171,9 @@ class FirmwareWrapper(BaseController):
         # Runs at rate of self.env.CTRL_FREQ --- need to make sure different actions are called appropriate number of times 
         sim_time = i*self.ctrl_dt
         self.process_command_queue()
-
+        
         count = 0
-        while self.tick / 1000 < sim_time + self.ctrl_dt:
+        while self.tick / self.firmware_freq < sim_time + self.ctrl_dt:
             count += 1
             # Step the environment and print all returned information.
             obs, reward, done, info = self.env.step(action)
@@ -195,7 +198,7 @@ class FirmwareWrapper(BaseController):
             
 
             # Update state 
-            state_timestamp = int(self.tick / 1000 * 1e3)
+            state_timestamp = int(self.tick / self.firmware_freq * 1e3)
             if self.STATE_DELAY:
                 self._update_state(state_timestamp, *self.state_history[0])#, quat=cur_quat)
                 self.state_history = self.state_history[1:] + [[cur_pos, cur_vel, cur_acc, cur_rpy * self.RAD_TO_DEG]]
@@ -204,7 +207,7 @@ class FirmwareWrapper(BaseController):
 
 
             # Update sensor data 
-            sensor_timestamp = int(self.tick / 1000 * 1e6)
+            sensor_timestamp = int(self.tick / self.firmware_freq * 1e6)
             if self.SENSOR_DELAY:
                 self._update_sensorData(sensor_timestamp, *self.sensor_history[0])
                 self.sensor_history = self.sensor_history[1:] + [[body_rot.apply(cur_acc), cur_rotation_rates * self.RAD_TO_DEG]]
@@ -213,7 +216,7 @@ class FirmwareWrapper(BaseController):
 
 
             # Update setpoint 
-            self._updateSetpoint(self.tick / 1000) # setpoint looks right 
+            self._updateSetpoint(self.tick / self.firmware_freq) # setpoint looks right 
 
 
             # Step controller 
@@ -237,7 +240,6 @@ class FirmwareWrapper(BaseController):
                 print("Drone firmware error. Motors are killed.")
 
             self.action = action 
-        print("COUNT", count)
         return obs, reward, done, info, action
 
     def update_initial_state(self, obs):
@@ -248,9 +250,6 @@ class FirmwareWrapper(BaseController):
             iterations,
             traj={},
             **kwargs):
-
-
-
         action = np.zeros(4)
         # action = np.array([38727, 38727, 38727, 38727]) # hover to start 
         # action = self.KF * (self.PWM2RPM_SCALE * np.clip(np.array(action), self.MIN_PWM, self.MAX_PWM) + self.PWM2RPM_CONST)**2
@@ -471,15 +470,27 @@ class FirmwareWrapper(BaseController):
             self._error = True
             return 
 
+
+        cur_time = self.tick / self.ctrl_freq
+        if cur_time - self.last_pos_pid_call > 0.002 and cur_time - self.last_att_pid_call > 0.01:
+            _tick = 0
+            self.last_pos_pid_call = cur_time
+            self.last_att_pid_call = cur_time
+        elif cur_time - self.last_att_pid_call > 0.01:
+            self.last_att_pid_call = cur_time
+            _tick = 2
+        else:
+            _tick = 1
+
         firm.controllerPid(
             self.control,
             self.setpoint,
             self.sensorData,
             self.state,
-            self.tick
+            _tick
         )
         '''
-        Tick should increment 1000 times / s. Position updates run at 100Hz, attitude runs at 500Hz 
+        Tick should increment self.firmware_freq times / s. Position updates run at 100Hz, attitude runs at 500Hz 
 
         Idea: Set tick from pybullet based on what loops we need to run. 
         = 0: runs both 
