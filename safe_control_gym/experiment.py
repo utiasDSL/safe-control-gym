@@ -393,24 +393,44 @@ class MetricExtractor:
         return episode_data
 
     def get_episode_lengths(self):
-        '''Total length of episodes. '''
+        '''Total length of episodes.
+
+        Returns:
+            episode_lengths (list): The lengths of each episode.
+        '''
         return self.get_episode_data('length', postprocess_func=sum)
 
     def get_episode_returns(self):
-        '''Total reward/return of episodes. '''
+        '''Total reward/return of episodes.
+
+        Returns:
+            episode_rewards (list): The total reward of each episode.
+        '''
         return self.get_episode_data('reward', postprocess_func=sum)
 
     def get_episode_rmse(self):
-        '''Root mean square error of episodes. '''
+        '''Root mean square error of episodes.
+
+        Returns:
+            episode_rmse (list): The total rmse of each episode.
+        '''
         return self.get_episode_data('mse',
                                      postprocess_func=lambda x: np.sqrt(np.mean(x)))
 
     def get_episode_constraint_violations(self):
-        '''Occurence of any violation in episodes. '''
+        '''Occurence of any violation in episodes.
+
+        Returns:
+            episode_violated (list): Whether each episode had a constraint violation.
+        '''
         return self.get_episode_data('constraint_violation',
                                      postprocess_func=lambda x: float(any(x)))
 
     def get_episode_constraint_violation_steps(self):
-        '''Total violation steps of episodes. '''
+        '''Total violation steps of episodes.
+
+        Returns:
+            episode_violations (list): The total number of constraint violations of each episode.
+        '''
         return self.get_episode_data('constraint_violation',
                                      postprocess_func=sum)
