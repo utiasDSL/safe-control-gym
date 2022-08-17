@@ -941,10 +941,10 @@ class Quadrotor(BaseAviary):
                                      # linkIndexA=-1, linkIndexB=-1,
                                      physicsClientId=self.PYB_CLIENT)
             if ret:
-                info["collision"] = True
-                break
+                info["collision"] = (GATE_OBS_ID, True)
+                break  # Note: only returning the first collision per step.
         else:
-            info["collision"] = False
+            info["collision"] = (None, False)
         # Gates progress - TODO
 
         return info

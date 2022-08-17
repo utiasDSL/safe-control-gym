@@ -64,6 +64,7 @@ def main():
     logger = Logger(logging_freq_hz=env.CTRL_FREQ)
     episodes_count = 1
     collisions_count = 0
+    collided_objects = set()
 
     # Run an experiment.
     for i in range(config.num_episodes*env.CTRL_FREQ*env.EPISODE_LEN_SEC):
@@ -99,8 +100,9 @@ def main():
             action = ctrl.cmdSimOnly(curr_time, obs)
             obs, reward, done, info = env.step(action)
 
-        if info["collision"]:
+        if info["collision"][1]:
             collisions_count += 1
+            collided_objects.add(info["collision"][0])
 
         # Printouts.
         if i%100 == 0:
@@ -113,6 +115,7 @@ def main():
                 print('\tConstraints evaluations: ' + str(info['constraint_values']))
                 print('\tConstraints violation: ' + str(bool(info['constraint_violation'])))
             print('\tCollisions: ' + str(collisions_count))
+            print('\tCollided objects: ' + str(collided_objects))
 
         # Log data.
         pos = [obs[0],obs[2],obs[4]]
@@ -139,6 +142,7 @@ def main():
             if episodes_count > config.num_episodes:
                 break
             collisions_count = 0
+            collided_objects = set()
 
             # Reset the environment.
             new_initial_obs, new_initial_info = env.reset()
