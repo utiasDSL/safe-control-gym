@@ -1,38 +1,36 @@
-"""Constraints module.
+'''Constraints module.
 
 Classes for constraints and lists of constraints.
+'''
 
-"""
-import casadi as cs
 from enum import Enum
+
+import casadi as cs
 import numpy as np
 from gym import spaces
 
 
 class ConstrainedVariableType(str, Enum):
-    """Allowable constraint type specifiers.
+    '''Allowable constraint type specifiers. '''
 
-    """
-
-    STATE = "state"  # Constraints who are a function of the state X.
-    INPUT = "input"  # Constraints who are a function of the input U.
-    INPUT_AND_STATE = "input_and_state"  # Constraints who are a function of the input U and state X.
+    STATE = 'state'  # Constraints who are a function of the state X.
+    INPUT = 'input'  # Constraints who are a function of the input U.
+    INPUT_AND_STATE = 'input_and_state'  # Constraints who are a function of the input U and state X.
 
 
 class Constraint:
-    """Implements a (state-wise/trajectory-wise/stateful) constraint.
+    '''Implements a (state-wise/trajectory-wise/stateful) constraint.
 
     A constraint can contain multiple scalar-valued constraint functions.
     Each should be represented as g(x) <= 0.
 
     Attributes:
-        constrained_variable: the variable(s) from env to be constrained.
-        dim (int): Total number of input dimensions to be constrained, i.e. dim of x. 
-        num_constraints (int): total number of output dimensions or number of constraints, i.e. dim of g(x).
-        sym_func (Callable): the symbolic function of the constraint, can take in np.array or CasADi variable.
-        
-    """
-    
+        constrained_variable (ConstrainedVariableType): The variable(s) from env to be constrained.
+        dim (int): Total number of input dimensions to be constrained, i.e. dim of x.
+        num_constraints (int): Total number of output dimensions or number of constraints, i.e. dim of g(x).
+        sym_func (Callable): The symbolic function of the constraint, can take in np.array or CasADi variable.
+    '''
+
     def __init__(self,
                  env,
                  constrained_variable: ConstrainedVariableType,
@@ -41,7 +39,7 @@ class Constraint:
                  tolerance=None,
                  **kwargs
                  ):
-        """Defines params (e.g. bounds) and state.
+        '''Defines params (e.g. bounds) and state.
 
         Args:
             env (safe_control_gym.envs.bechmark_env.BenchmarkEnv): The environment the constraint is for.
@@ -50,8 +48,8 @@ class Constraint:
             strict (optional, bool): Whether the constraint is violated also when equal to its threshold.
             active_dims (list of ints): Filters the constraint to only act only select certian dimensions.
             tolerance (list or np.array): The distance from the constraint at which is_almost_active returns True.
+        '''
 
-        """
         self.constrained_variable = ConstrainedVariableType(constrained_variable)
         if self.constrained_variable == ConstrainedVariableType.STATE:
             self.dim = env.state_dim
@@ -82,37 +80,28 @@ class Constraint:
             self.tolerance = None
 
     def reset(self):
-        """Clears up the constraint state (if any).
+        '''Clears up the constraint state (if any). '''
+        return
 
-        """
-        pass
-
-    def get_symbolic_model(self,
-                           env
-                           ):
-        """Gets the symbolic form of the constraint function.
-
-        Args:
-            env: The environment to constrain.
+    def get_symbolic_model(self):
+        '''Gets the symbolic form of the constraint function.
 
         Returns:
-            obj: The symbolic form of the constraint.
-
-        """
+            obj (SymbolicModel): The symbolic form of the constraint.
+        '''
         raise NotImplementedError
 
     def get_value(self,
                   env
                   ):
-        """Gets the constraint function value.
+        '''Gets the constraint function value.
 
         Args:
-            env: The environment to constrain.
+            env (BenchmarkEnv): The environment to constrain.
 
         Returns:
-            ndarray: The evaulation of the constraint.
-
-        """
+            value (ndarray): The evaulation of the constraint.
+        '''
         env_value = self.get_env_constraint_var(env)
         return np.atleast_1d(np.squeeze(self.sym_func(np.array(env_value, ndmin=1))))
 
@@ -120,16 +109,15 @@ class Constraint:
                     env,
                     c_value=None
                     ):
-        """Checks if constraint is violated.
+        '''Checks if constraint is violated.
 
         Args:
-            env: The environment to constrain.
-            c_value: an already calculated constraint value (no need to recompute).
+            env (BenchmarkEnv): The environment to constrain.
+            c_value (float): An already calculated constraint value (no need to recompute).
 
         Returns:
-            bool: Whether the constraint was violeted.
-
-        """
+            is_violated (bool): Whether the constraint was violated.
+        '''
         if c_value is None:
             c_value = self.get_value(env)
         if self.strict:
@@ -142,13 +130,19 @@ class Constraint:
                          env,
                          c_value=None
                          ):
-        """Checks if constraint is nearly violated.
+        '''Checks if constraint is nearly violated.
 
         This is checked by using a slack variable (from init args).
         This can be used for reward shaping/constraint penalty in RL methods.
 
-        """
-        if not hasattr(self, "tolerance") or self.tolerance is None:
+        Args:
+            env (BenchmarkEnv): The environment to constrain.
+            c_value (float): An already calculated constraint value (no need to recompute).
+
+        Returns:
+            is_almost_active (bool): Whether the constraint is almost violated.
+        '''
+        if not hasattr(self, 'tolerance') or self.tolerance is None:
             return False
         if c_value is None:
             c_value = self.get_value(env)
@@ -158,8 +152,14 @@ class Constraint:
     def get_env_constraint_var(self,
                                env
                                ):
-        """Gets the env variable(s) subject to the constraint.
-        """
+        '''Gets the env variable(s) subject to the constraint.
+
+        Args:
+            env (BenchmarkEnv): The environment to constrain.
+
+        Returns:
+            constraint_var (tuple or ndarray): The state, input, or both depending on constraint type.
+        '''
         if self.constrained_variable == ConstrainedVariableType.STATE:
             return env.state
         elif self.constrained_variable == ConstrainedVariableType.INPUT:
@@ -167,17 +167,16 @@ class Constraint:
         elif self.constrained_variable == ConstrainedVariableType.INPUT_AND_STATE:
             return (env.state, env.current_noisy_physical_action)
         else:
-            raise NotImplementedError("Constraint input type not implemented.")
+            raise NotImplementedError('Constraint input type not implemented.')
 
     def check_tolerance_shape(self):
+        '''Checks the tolerance and makes sure it is the correct shape. '''
         if self.tolerance is not None and len(self.tolerance) != self.num_constraints:
             raise ValueError('[ERROR] the tolerance dimension does not match the number of constraints.')
 
 
 class QuadraticContstraint(Constraint):
-    """Constraint class for constraints of the form x.T @ P @ x <= b.
-
-    """
+    '''Constraint class for constraints of the form x.T @ P @ x <= b. '''
 
     def __init__(self,
                  env,
@@ -188,19 +187,19 @@ class QuadraticContstraint(Constraint):
                  active_dims=None,
                  tolerance=None
                  ):
-        """Initializes the class.
+        '''Initializes the class.
 
         Args:
             env (safe_control_gym.envs.bechmark_env.BenchmarkEnv): The environment the constraint is for.
-            P (np.array): The square matrix representing the quadratic.
+            P (ndarray): The square matrix representing the quadratic.
             b (float): The scalar limit for the quadatic constraint.
             constrained_variable (ConstrainedVariableType): Specifies the input type to the constraint as a constraint
                                                         that acts on the state, input, or both.
             strict (optional, bool): Whether the constraint is violated also when equal to its threshold.
             active_dims (list of ints): Filters the constraint to only act only select certian dimensions.
             tolerance (list or np.array): The distance from the constraint at which is_almost_active returns True.
+        '''
 
-        """
         super().__init__(env, constrained_variable, strict=strict, active_dims=active_dims, tolerance=tolerance)
         P = np.array(P, ndmin=1)
         assert P.shape == (self.dim, self.dim), '[ERROR] P has the wrong dimension!'
@@ -212,19 +211,16 @@ class QuadraticContstraint(Constraint):
         self.check_tolerance_shape()
 
     def get_symbolic_model(self):
-        """Gets the symbolic form of the constraint function.
+        '''Gets the symbolic form of the constraint function.
 
         Returns:
-            lambda: The symbolic form of the constraint.
-
-        """
+            sym_func (lambda): The symbolic form of the constraint.
+        '''
         return self.sym_func
 
 
 class LinearConstraint(Constraint):
-    """Constraint class for constraints of the form A @ x <= b.
-
-    """
+    '''Constraint class for constraints of the form A @ x <= b. '''
 
     def __init__(self,
                  env,
@@ -235,18 +231,18 @@ class LinearConstraint(Constraint):
                  active_dims=None,
                  tolerance=None
                  ):
-        """Initialize the class.
+        '''Initialize the class.
 
         Args:
             env (BenchmarkEnv): The environment to constraint.
-            A (np.array or list): A matrix of the constraint (self.num_constraints by self.dim).
-            b (np.array or list): b matrix of the constraint (1D array self.num_constraints)
+            A (ndarray or list): A matrix of the constraint (self.num_constraints by self.dim).
+            b (ndarray or list): b matrix of the constraint (1D array self.num_constraints)
                                   constrained_variable (ConstrainedVariableType): Type of constraint.
             strict (optional, bool): Whether the constraint is violated also when equal to its threshold.
             active_dims (list or int): List specifying which dimensions the constraint is active for.
             tolerance (float): The distance at which is_almost_active(env) triggers.
+        '''
 
-        """
         super().__init__(env, constrained_variable, strict=strict, active_dims=active_dims, tolerance=tolerance)
         A = np.array(A, ndmin=1)
         b = np.array(b, ndmin=1)
@@ -259,19 +255,16 @@ class LinearConstraint(Constraint):
         self.check_tolerance_shape()
 
     def get_symbolic_model(self):
-        """Gets the symbolic form of the constraint function.
+        '''Gets the symbolic form of the constraint function.
 
         Returns:
-            lambda: The symbolic form of the constraint.
-
-        """
+            sym_func (lambda): The symbolic form of the constraint.
+        '''
         return self.sym_func
 
 
 class BoundedConstraint(LinearConstraint):
-    """ Class for bounded constraints lb <= x <= ub as polytopic constraints -Ix + b <= 0 and Ix - b <= 0.
-
-    """
+    ''' Class for bounded constraints lb <= x <= ub as polytopic constraints -Ix + b <= 0 and Ix - b <= 0. '''
 
     def __init__(self,
                  env,
@@ -281,18 +274,18 @@ class BoundedConstraint(LinearConstraint):
                  strict: bool=False,
                  active_dims=None,
                  tolerance=None):
-        """Initialize the constraint.
+        '''Initialize the constraint.
 
         Args:
             env (BenchmarkEnv): The environment to constraint.
-            lower_bounds (np.array or list): Lower bound of constraint.
-            upper_bounds (np.array or list): Uppbound of constraint.
+            lower_bounds (ndarray or list): Lower bound of constraint.
+            upper_bounds (ndarray or list): Uppbound of constraint.
             constrained_variable (ConstrainedVariableType): Type of constraint.
             strict (optional, bool): Whether the constraint is violated also when equal to its threshold.
             active_dims (list or int): List specifying which dimensions the constraint is active for.
             tolerance (float): The distance at which is_almost_active(env) triggers.
+        '''
 
-        """
         self.lower_bounds = np.array(lower_bounds, ndmin=1)
         self.upper_bounds = np.array(upper_bounds, ndmin=1)
         dim = self.lower_bounds.shape[0]
@@ -303,14 +296,13 @@ class BoundedConstraint(LinearConstraint):
 
 
 class DefaultConstraint(BoundedConstraint):
-    """Use the environment's observation_space or action_space for default state or input bound constraints.
+    '''Use the environment's observation_space or action_space for default state or input bound constraints.
 
     This class only constraint either STATE or INPUT constraint but not both
     (to constrain both, use two DefaultConstraints).
     The class constrain the entire variable, i.e. no `active_dims` option
     (to constrain subset of the variable, use the BoundedConstraint instead).
-    
-    """
+    '''
 
     def __init__(self,
                  env,
@@ -320,7 +312,7 @@ class DefaultConstraint(BoundedConstraint):
                  strict: bool=False,
                  tolerance=None
                  ):
-        """"Initialize the class.
+        ''''Initialize the class.
 
         Args:
             env (BenchmarkEnv): Environment for the constraint.
@@ -330,19 +322,19 @@ class DefaultConstraint(BoundedConstraint):
                 the environemt observation space dimension. If None, the env defaults are used.
             strict (optional, bool): Whether the constraint is violated also when equal to its threshold.
             tolerance (float): The distance at which is_almost_active(env) triggers.
+        '''
 
-        """
         if constrained_variable == ConstrainedVariableType.STATE:
             # for now we only constrain the underlying env state, and assume either the observation
-            # is the same as state, or observation contain additional info other than state and so 
+            # is the same as state, or observation contain additional info other than state and so
             # the env has separate `state_space` and `observation_space`
-            if hasattr(env, "state_space"):
+            if hasattr(env, 'state_space'):
                 default_constraint_space = env.state_space
             else:
                 default_constraint_space = env.observation_space
         elif constrained_variable == ConstrainedVariableType.INPUT:
-            default_constraint_space = spaces.Box(low=env.physical_action_bounds[0], 
-                                            high=env.physical_action_bounds[1], 
+            default_constraint_space = spaces.Box(low=env.physical_action_bounds[0],
+                                            high=env.physical_action_bounds[1],
                                             dtype=np.float32)
         else:
             raise NotImplementedError('[ERROR] DefaultConstraint can only be of type STATE or INPUT')
@@ -352,13 +344,13 @@ class DefaultConstraint(BoundedConstraint):
         else:
             upper_bounds = np.array(upper_bounds, ndmin=1)
             assert len(upper_bounds) == default_constraint_space.shape[0],\
-                ValueError("[ERROR]: Upper bound must have length equal to space dimension.")
+                ValueError('[ERROR]: Upper bound must have length equal to space dimension.')
         if lower_bounds is None:
             lower_bounds = default_constraint_space.low
         else:
             lower_bounds = np.array(lower_bounds, ndmin=1)
             assert len(lower_bounds) == default_constraint_space.shape[0],\
-                ValueError("[ERROR]: Lower bound must have length equal to space dimension.")
+                ValueError('[ERROR]: Lower bound must have length equal to space dimension.')
         super().__init__(env,
                          lower_bounds=lower_bounds,
                          upper_bounds=upper_bounds,
@@ -369,11 +361,10 @@ class DefaultConstraint(BoundedConstraint):
 
 
 class SymmetricStateConstraint(BoundedConstraint):
-    """Symmetric state bound constraint.
+    '''Symmetric state bound constraint.
 
     Note: speficially intended for Cartpole and Safe Exploration (Dalal 2018).
-
-    """
+    '''
 
     def __init__(self,
                  env,
@@ -384,9 +375,19 @@ class SymmetricStateConstraint(BoundedConstraint):
                  tolerance=None,
                  **kwrags
                  ):
-        """
+        ''''Initialize the class.
 
-        """
+        Args:
+            env (BenchmarkEnv): Environment for the constraint.
+            constrained_variable (ConstrainedVariableType): Specifies the input type to the constraint as a constraint
+                                                         that acts on the state, input, or both.
+            bound (list, np.array): 1D array or list of the bounds. Length must match
+                the environemt observation space dimension. If none, the env defaults are used
+            strict (optional, bool): Whether the constraint is violated also when equal to its threshold.
+            active_dims (list of ints): Filters the constraint to only act only select certian dimensions.
+            tolerance (list or np.array): The distance from the constraint at which is_almost_active returns True.
+        '''
+
         assert bound is not None
         self.bound = np.array(bound, ndmin=1)
         super().__init__(env,
@@ -404,42 +405,44 @@ class SymmetricStateConstraint(BoundedConstraint):
     def get_value(self, env):
         c_value = np.abs(self.constraint_filter @ env.state) - self.bound
         return c_value
-    
-    # TODO: temp addition 
+
+    # TODO: temp addition
     def check_tolerance_shape(self):
-        """Note we compare tolerance shape to bound shape (instead of num_constraints), since 
+        '''Note we compare tolerance shape to bound shape (instead of num_constraints), since
         num_constraints will be set as 2x due to subclassing BoundedConstraint,
         it will be overwritten at the end of __init__ to the correct shape.
-        """
+        '''
         if self.tolerance is not None and len(self.tolerance) != len(self.bound):
             raise ValueError('[ERROR] the tolerance dimension does not match the number of constraints.')
 
 
 def get_symbolic_constraint_models(constraint_list):
-    """Create list of symbolic models from list of constraints.
+    '''Create list of symbolic models from list of constraints.
 
-    """
+    Args:
+        constraint_list (list): A list of constraints.
+
+    Returns:
+        symbolic_models (list): A list of the symbolic models of the constraints.
+    '''
     symbolic_models = [con.get_symbolic_model() for con in constraint_list]
     return symbolic_models
 
 
 class ConstraintList:
-    """Collates a (ordered) list of constraints.
-
-    """
+    '''Collates a (ordered) list of constraints. '''
 
     def __init__(self,
                  constraints
                  ):
-        """Initialize the constraint list.
+        '''Initialize the constraint list.
 
         Args:
             constraints: The list of constraints.
-
-        """
+        '''
         self.constraints = constraints
         self.constraint_lengths = [con.num_constraints for con in self.constraints]
-        # 1st constraint is always index 0, hence ignored 
+        # 1st constraint is always index 0, hence ignored
         self.constraint_indices = np.cumsum(self.constraint_lengths[:-1])
         self.num_constraints = sum(self.constraint_lengths)
         # constraint subsets
@@ -451,68 +454,74 @@ class ConstraintList:
         self.num_input_state_constraints = sum([con.num_constraints for con in self.input_state_constraints])
 
     def __len__(self):
-        """Gets the constraint list length.
+        '''Gets the constraint list length.
 
         Returns:
-            int: The number of constraints in the list.
-
-        """
+            length (int): The number of constraints in the list.
+        '''
         return len(self.constraints)
 
     def get_all_symbolic_models(self):
-        """Return all the symbolic models the constraints.
+        '''Return all the symbolic models the constraints.
 
-        """
+        Returns:
+            symbolic_models (list): A list of the symbolic models of the constraints.
+        '''
         return get_symbolic_constraint_models(self.constraints)
 
     def get_state_constraint_symbolic_models(self):
-        """Return only the constraints that act on the state.
+        '''Return only the constraints that act on the state.
 
-        """
+        Returns:
+            symbolic_models (list): A list of the symbolic models of the state constraints.
+        '''
         return get_symbolic_constraint_models(self.state_constraints)
 
     def get_input_constraint_symbolic_models(self):
-        """Return only the constraints that act on the input.
+        '''Return only the constraints that act on the input.
 
-        """
+        Returns:
+            symbolic_models (list): A list of the symbolic models of the input constraints.
+        '''
         return get_symbolic_constraint_models(self.input_constraints)
 
     def get_input_and_state_constraint_symbolic_models(self):
-        """Return only the constraints that act on both state and inputs simultaneously.
+        '''Return only the constraints that act on both state and inputs simultaneously.
 
-        """
+        Returns:
+            symbolic_models (list): A list of the symbolic models of the joint state and input constraints.
+        '''
         return get_symbolic_constraint_models(self.input_state_constraints)
 
     def get_stacked_symbolic_model(self, env):
-        """Gets the symbolic form of all constraints.
+        '''Gets the symbolic form of all constraints.
 
         Args:
-            env: The environment to constrain.
+            env (BenchmarkEnv): The environment to constrain.
 
         Returns:
-            obj: The symbolic form of the constraint.
+            sym_func (obj): The symbolic form of the constraint.
+        '''
 
-        """
         symbolic_models = [con.get_symbolic_model() for con in self.constraints]
         X = env.symbolic.x_sym
         U = env.symbolic.u_sym
         stack_c_sym = cs.vertcat(*[func(X, U) for func in symbolic_models])
-        sym_func = cs.Function("constraints", [X, U], [stack_c_sym])
+        sym_func = cs.Function('constraints', [X, U], [stack_c_sym])
         return sym_func
 
     def get_values(self,
                    env,
                    only_state=False
                    ):
-        """Gets all constraint function values.
+        '''Gets all constraint function values.
 
         Args:
-            env: The environment to constrain.
+            env (BenchmarkEnv): The environment to constrain.
 
         Returns:
-            ndarray: An array with the evaluation of each constraint.
-
-        """
+            con_values (ndarray): An array with the evaluation of each constraint.
+        '''
         if only_state:
             con_values = np.concatenate([con.get_value(env) for con in self.state_constraints])
         else:
@@ -523,15 +532,14 @@ class ConstraintList:
                        env,
                        only_state=False
                        ):
-        """Gets all constraint violations.
+        '''Gets all constraint violations.
 
         Args:
-            env: The environment to constrain.
+            env (BenchmarkEnv): The environment to constrain.
 
         Returns:
-            list: A list of booleans saying whether each constraint was violated.
-
-        """
+            flags (list): A list of booleans saying whether each constraint was violated.
+        '''
         if only_state:
             flags = [con.is_violated(env) for con in self.state_constraints]
         else:
@@ -542,20 +550,19 @@ class ConstraintList:
                     env,
                     c_value=None
                     ):
-        """Checks if any of the constraints is violated.
+        '''Checks if any of the constraints is violated.
 
         Args:
-            env: The environment to constrain.
-            c_value: an already calculated constraint value (no need to recompute).
+            env (BenchmarkEnv): The environment to constrain.
+            c_value (float): An already calculated constraint value (no need to recompute).
 
         Returns:
-            bool: A boolean flag if any constraint is violeted. 
-
-        """
+            flag (bool): A boolean flag if any constraint is violated.
+        '''
         if c_value is not None:
             c_value_splits = np.split(c_value, self.constraint_indices)
             flag = any([
-                con.is_violated(env, c_value=c_value_split) 
+                con.is_violated(env, c_value=c_value_split)
                 for con, c_value_split in zip(self.constraints, c_value_splits)
             ])
         else:
@@ -566,16 +573,23 @@ class ConstraintList:
                          env,
                          c_value=None
                          ):
-        """Checks if constraint is nearly violated.
+        '''Checks if constraint is nearly violated.
 
         This is checked by using a slack variable (from init args) and can be used
         for reward shaping/constraint penalty in RL methods.
 
-        """
+        Args:
+            env (BenchmarkEnv): The environment to constrain.
+            c_value (float): An already calculated constraint value (no need to recompute).
+
+        Returns:
+            flag (bool): A boolean flag if any constraint is almost violated.
+        '''
+
         if c_value is not None:
             c_value_splits = np.split(c_value, self.constraint_indices)
             flag = any([
-                con.is_almost_active(env, c_value=c_value_split) 
+                con.is_almost_active(env, c_value=c_value_split)
                 for con, c_value_split in zip(self.constraints, c_value_splits)
             ])
         else:
@@ -592,21 +606,21 @@ GENERAL_CONSTRAINTS = {
 
 
 def create_constraint_list(constraint_specs, available_constraints, env):
-    """Creates a ConstraintList from yaml constraint specification.
+    '''Creates a ConstraintList from yaml constraint specification.
 
     Args:
         constraint_specs (list): List of dicts defining the constraints info.
         available_constraints (dict): Dict of the constraints that are available
-        env (BenchmarkEnv): Env for which the constraints will be applied
-    """
+        env (BenchmarkEnv): The environment for which the constraints will be applied
+    '''
     constraint_list = []
     for constraint in constraint_specs:
-        assert isinstance(constraint, dict), "[ERROR]: Each constraint must be specified as a dict."
-        assert "constraint_form" in constraint.keys(),\
-            "[ERROR]: Each constraint must have a key 'constraint_form'"
-        con_form = constraint["constraint_form"]
-        assert con_form in available_constraints, "[ERROR]. constraint not in list of available constraints"
+        assert isinstance(constraint, dict), '[ERROR]: Each constraint must be specified as a dict.'
+        assert 'constraint_form' in constraint.keys(),\
+            '[ERROR]: Each constraint must have a key \'constraint_form\''
+        con_form = constraint['constraint_form']
+        assert con_form in available_constraints, '[ERROR]. constraint not in list of available constraints'
         con_class = available_constraints[con_form]
-        cfg = {key: constraint[key] for key in constraint if key != "constraint_form"}
+        cfg = {key: constraint[key] for key in constraint if key != 'constraint_form'}
         constraint_list.append(con_class(env, **cfg))
     return ConstraintList(constraint_list)

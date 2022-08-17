@@ -5,9 +5,10 @@ Example:
 '''
 
 import os
+from functools import partial
+
 import numpy as np
 import pybullet as p
-from functools import partial
 import matplotlib.pyplot as plt
 
 from safe_control_gym.experiment import Experiment
@@ -15,8 +16,15 @@ from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 
 
-def run(gui=None, n_episodes=1, n_steps=None, custom_trajectory=True):
-    '''The main function creating, running, and closing an environment. '''
+def run(gui=True, n_episodes=1, n_steps=None, custom_trajectory=True):
+    '''The main function running the 3D quadrotor example.
+
+    Args:
+        gui (bool): Whether to display the gui and plot graphs.
+        n_episodes (int): The number of episodes to execute.
+        n_steps (int): The total number of steps to execute.
+        custom_trajectory (bool): Whether to run a custom trajectory or a standard one.
+    '''
 
     # Create an environment
     CONFIG_FACTORY = ConfigFactory()
@@ -26,8 +34,7 @@ def run(gui=None, n_episodes=1, n_steps=None, custom_trajectory=True):
     ITERATIONS = int(config.task_config['episode_len_sec']*config.task_config['ctrl_freq'])
 
     # Use function arguments for workflow testing
-    if gui is not None:
-        config.task_config['gui'] = gui
+    config.task_config['gui'] = gui
 
     env_func = partial(make,
                        config.task,
@@ -36,7 +43,7 @@ def run(gui=None, n_episodes=1, n_steps=None, custom_trajectory=True):
     # Setup controller.
     ctrl = make(config.algo,
                     env_func)
-    
+
     if custom_trajectory:
         # Curve fitting with waypoints.
         waypoints = np.array([(0, 0, 0), (0.2, 0.5, 0.5), (0.5, 0.1, 0.6), (1, 1, 1), (1.3, 1, 1.2)])
@@ -60,7 +67,7 @@ def run(gui=None, n_episodes=1, n_steps=None, custom_trajectory=True):
 
         ctrl.env.X_GOAL = X_GOAL
         ctrl.reference = X_GOAL
-    
+
     obs, _ = ctrl.env.reset()
 
     if config.task_config['gui']:
@@ -86,7 +93,7 @@ def run(gui=None, n_episodes=1, n_steps=None, custom_trajectory=True):
 
     # Run the experiment.
     experiment = Experiment(ctrl.env, ctrl)
-    trajs_data, metrics = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
+    trajs_data, _ = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
     experiment.close()
 
     iterations = len(trajs_data['action'][0])
