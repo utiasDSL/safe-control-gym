@@ -711,7 +711,7 @@ class BenchmarkEnv(gym.Env):
         fx = np.poly1d(fit_x)
         fy = np.poly1d(fit_y)
         fz = np.poly1d(fit_z)
-        t_scaled = np.linspace(t[0], t[-1], int(0.75*initial_info["episode_len_sec"]*self.CTRL_FREQ))
+        t_scaled = np.linspace(t[0], t[-1], int(self.EPISODE_LEN_SEC*self.CTRL_FREQ))
         self.ref_x = fx(t_scaled)
         self.ref_y = fy(t_scaled)
         self.ref_z = fz(t_scaled)
