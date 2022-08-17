@@ -89,8 +89,8 @@ def post_analysis(state_stack, input_stack, env):
     '''Plots the input and states to determine iLQR's success.
 
     Args:
-        state_stack (ndarray): the list of observations of iLQR in the latest run.
-        input_stack (ndarray): the list of inputs of iLQR in the latest run.
+        state_stack (ndarray): The list of observations of iLQR in the latest run.
+        input_stack (ndarray): The list of inputs of iLQR in the latest run.
     '''
     model = env.symbolic
     stepsize = model.dt
@@ -134,7 +134,7 @@ def wrap2pi_vec(angle_vec):
     '''Wraps a vector of angles between -pi and pi.
 
     Args:
-        angle_vec (ndarray): a vector of angles.
+        angle_vec (ndarray): A vector of angles.
     '''
     for k, angle in enumerate(angle_vec):
         while angle > np.pi:

@@ -267,13 +267,13 @@ class MPC(BaseController):
         """Solves nonlinear mpc problem to get next action.
 
         Args:
-            obs (np.array): current state/observation. 
-            info (list): current info
-        
-        Returns:
-            np.array: input/action to the task/env. 
+            obs (ndarray): Current state/observation.
+            info (dict): Current info
 
+        Returns:
+            action (ndarray): Input/action to the task/env.
         """
+
         opti_dict = self.opti_dict
         opti = opti_dict["opti"]
         x_var = opti_dict["x_var"]
@@ -364,13 +364,13 @@ class MPC(BaseController):
             terminate_run_on_done=None
             ):
         """Runs evaluation with current policy.
-        
+
         Args:
-            render (bool): if to do real-time rendering. 
+            render (bool): if to do real-time rendering.
             logging (bool): if to log on terminal.
-            
+
         Returns:
-            dict: evaluation statisitcs, rendered frames. 
+            dict: evaluation statisitcs, rendered frames.
 
         """
         if env is None:

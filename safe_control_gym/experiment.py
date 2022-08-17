@@ -24,9 +24,9 @@ class Experiment:
         '''Creates a generic experiment class to run evaluations and collect standard metrics.
 
         Args:
-            env (gym.Env): the environment for the task.
+            env (BenchmarkEnv): the environment for the task.
             ctrl (BaseController): the controller for the task.
-            train_env (gym.Env): the environment used for training.
+            train_env (BenchmarkEnv): the environment used for training.
             safety_filter (BaseSafetyFilter): the safety filter to filter the controller.
         '''
 

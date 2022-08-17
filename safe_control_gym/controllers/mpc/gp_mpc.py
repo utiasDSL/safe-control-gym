@@ -37,7 +37,7 @@ from safe_control_gym.envs.benchmark_env import Task
 from safe_control_gym.envs.constraints import GENERAL_CONSTRAINTS
 
 class GPMPC(MPC):
-    """MPC with Gaussian Process as dynamics residual. 
+    """MPC with Gaussian Process as dynamics residual.
 
     """
 
@@ -263,12 +263,12 @@ class GPMPC(MPC):
                                  x_next_seq
                                  ):
         """Converts trajectory data for GP trianing.
-        
+
         Args:
-            x_seq (list): state sequence of np.array (nx,). 
-            u_seq (list): action sequence of np.array (nu,). 
-            x_next_seq (list): next state sequence of np.array (nx,). 
-            
+            x_seq (list): state sequence of np.array (nx,).
+            u_seq (list): action sequence of np.array (nu,).
+            x_next_seq (list): next state sequence of np.array (nx,).
+
         Returns:
             np.array: inputs for GP training, (N, nx+nu).
             np.array: targets for GP training, (N, nx).
@@ -841,13 +841,13 @@ class GPMPC(MPC):
         """Select the action based on the given observation.
 
         Args:
-            obs (np.array): current observed state.
-            info (list): current info
+            obs (ndarray): Current observed state.
+            info (dict): Current info.
 
         Returns:
-            action (np.array): desired policy action.
-
+            action (ndarray): Desired policy action.
         """
+
         if self.gaussian_process is None:
             action = self.prior_ctrl.select_action(obs)
         else:

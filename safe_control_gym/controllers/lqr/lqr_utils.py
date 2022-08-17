@@ -7,15 +7,15 @@ def compute_lqr_gain(model, x_0, u_0, Q, R, discrete_dynamics=True):
     '''Computes the LQR gain from the model, linearization points, and Q and R matrices.
 
     Args:
-        model (SymbolicModel): the SymbolicModel of the system
-        x_0 (ndarray): the linearization point of the state X
-        u_0 (ndarray): the linearization point of the input U
-        Q (ndarray): the state cost matrix Q
-        R (ndarray): the input cost matrix R
-        discrete_dynamics (bool): if to use discrete or continuous dynamics.
+        model (SymbolicModel): The SymbolicModel of the system.
+        x_0 (ndarray): The linearization point of the state X.
+        u_0 (ndarray): The linearization point of the input U.
+        Q (ndarray): The state cost matrix Q.
+        R (ndarray): The input cost matrix R.
+        discrete_dynamics (bool): If to use discrete or continuous dynamics.
 
     Returns:
-        gain (ndarray): the LQR gain for the system
+        gain (ndarray): The LQR gain for the system.
     '''
 
     # Linearization.
@@ -45,14 +45,14 @@ def discretize_linear_system(A, B, dt, exact=False):
     --> xd[k+1] = Ad xd[k] + Bd ud[k] where xd[k] = x(k*dt)
 
     Args:
-        A (ndarray): system transition matrix
-        B (ndarray): input matrix
-        dt (scalar): step time interval
-        exact (bool): if to use exact discretization
+        A (ndarray): System transition matrix.
+        B (ndarray): Input matrix.
+        dt (scalar): Step time interval.
+        exact (bool): If to use exact discretization.
 
     Returns:
-        Ad (ndarray): the discrete linear state matrix A
-        Bd (ndarray): the discrete linear input matrix B
+        Ad (ndarray): The discrete linear state matrix A.
+        Bd (ndarray): The discrete linear input matrix B.
     '''
 
     state_dim, input_dim = A.shape[1], B.shape[1]
@@ -77,11 +77,11 @@ def get_cost_weight_matrix(weights, dim):
     '''Gets weight matrix from input args.
 
     Args:
-        weights (list): a 1D list of weights
-        dim (int): the dimension of the desired cost weight matrix
+        weights (list): A 1D list of weights.
+        dim (int): The dimension of the desired cost weight matrix.
 
     Returns:
-        W (ndarray): the cost weight matrix
+        W (ndarray): The cost weight matrix.
     '''
 
     if len(weights) == dim:

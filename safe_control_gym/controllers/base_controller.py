@@ -1,7 +1,8 @@
 '''Base controller. '''
 
-import torch
 from abc import ABC, abstractmethod
+
+import torch
 
 
 class BaseController(ABC):
@@ -59,7 +60,7 @@ class BaseController(ABC):
         '''Extracts the current step from the info.
 
         Args:
-            info (list): the info list returned from the environment.
+            info (dict): the info list returned from the environment.
 
         Returns:
             step (int): the current step/iteration of the environment.
@@ -79,7 +80,7 @@ class BaseController(ABC):
         '''Performs learning (pre-training, training, fine-tuning, etc).
 
         Args:
-            env (gym.Env): The environment to be used for training.
+            env (BenchmarkEnv): The environment to be used for training.
         '''
         return
 
@@ -94,7 +95,7 @@ class BaseController(ABC):
         Args:
             obs (ndarray): The initial observation for the new run.
             info (dict): The first info of the new run.
-            env (gym.Env): The environment to be used for the new run.
+            env (BenchmarkEnv): The environment to be used for the new run.
         '''
         self.setup_results_dict()
 

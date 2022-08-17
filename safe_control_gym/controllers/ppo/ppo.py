@@ -92,7 +92,7 @@ class PPO(BaseController):
             self.env.add_tracker("constraint_violation", 0, mode="queue")
             self.eval_env.add_tracker("constraint_violation", 0, mode="queue")
             self.eval_env.add_tracker("mse", 0, mode="queue")
-            
+
             self.total_steps = 0
             obs, _ = self.env.reset()
             self.obs = self.obs_normalizer(obs)
@@ -188,21 +188,22 @@ class PPO(BaseController):
             # Logging.
             if self.log_interval and self.total_steps % self.log_interval == 0:
                 self.log_step(results)
-    
+
     def select_action(self, obs, info=None):
         """Determine the action to take at the current timestep.
+
         Args:
-            obs (np.array): the observation at this timestep
-            info (list): the info at this timestep
-        
+            obs (ndarray): The observation at this timestep.
+            info (dict): The info at this timestep.
+
         Returns:
-            action (np.array): the action chosen by the controller
+            action (ndarray): The action chosen by the controller.
         """
-                
+
         with torch.no_grad():
             obs = torch.FloatTensor(obs).to(self.device)
             action = self.agent.ac.act(obs)
-        
+
         return action
 
     def run(self,
@@ -226,7 +227,7 @@ class PPO(BaseController):
                 env.add_tracker("constraint_violation", 0, mode="queue")
                 env.add_tracker("constraint_values", 0, mode="queue")
                 env.add_tracker("mse", 0, mode="queue")
-                
+
         obs, info = env.reset()
         obs = self.obs_normalizer(obs)
         ep_returns, ep_lengths = [], []
@@ -326,10 +327,10 @@ class PPO(BaseController):
         # Learning stats.
         self.logger.add_scalars(
             {
-                k: results[k] 
+                k: results[k]
                 for k in ["policy_loss", "value_loss", "entropy_loss", "approx_kl"]
-            }, 
-            step, 
+            },
+            step,
             prefix="loss")
         # Performance stats.
         ep_lengths = np.asarray(self.env.length_queue)

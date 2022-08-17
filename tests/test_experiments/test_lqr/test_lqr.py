@@ -11,7 +11,7 @@ def test_lqr(SYS, TASK, ALGO):
     sys.argv[1:] = ['--algo', ALGO,
                     '--task', SYS,
                     '--overrides',
-                        f'./experiments/lqr/config_overrides/{SYS}/{SYS}_{TASK}.yaml', 
+                        f'./experiments/lqr/config_overrides/{SYS}/{SYS}_{TASK}.yaml',
                         f'./experiments/lqr/config_overrides/{SYS}/{ALGO}_{SYS}_{TASK}.yaml',
                     '--kv_overrides',
                         'algo_config.max_iterations=2'
