@@ -695,6 +695,10 @@ class BenchmarkEnv(gym.Env):
             coords_b_dot = 0.0
         return coords_a, coords_b, coords_a_dot, coords_b_dot
 
+    def _waypoints(self,
+                   waypoints_list):
+        pass
+
     def _plot_trajectory(self,
                          traj_type,
                          traj_plane,
