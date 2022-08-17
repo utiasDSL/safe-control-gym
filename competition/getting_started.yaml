@@ -5,15 +5,15 @@ use_firmware: False
 # Environment
 quadrotor_config:
   seed: 1337
-  camera_view: [5, -40, -55, 1.5, 2, 0.5]
-  info_in_reset: True
   ctrl_freq: 60
   pyb_freq: 240
   gui: True
-  physics: pyb
+  camera_view: [5, -40, -55, 1.5, 2, 0.5]
   quad_type: 3
-  normalized_rl_action_space: False
+  physics: pyb
   episode_len_sec: 15
+  info_in_reset: True
+  normalized_rl_action_space: False
   task: stabilization
   task_info:
     stabilization_goal: [0.5, 6., 0.75]
