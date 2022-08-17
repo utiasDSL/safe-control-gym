@@ -25,11 +25,11 @@ quadrotor_config:
   obstacles: [[2.5, 0.5, 0.35, 0, 0, 0], [1.5, 2, 0.35, 0, 0, 0], [2.5, 3, 0.35, 0, 0, 0], [0, 3, 0.35, 0, 0, 0]]
 # Randomization
   init_state:
-    init_x: 0
+    init_x: 0.1
     init_x_dot: 0
-    init_y: 0
+    init_y: 0.1
     init_y_dot: 0
-    init_z: 0
+    init_z: 0.1
     init_z_dot: 0
     init_phi: 0
     init_theta: 0
