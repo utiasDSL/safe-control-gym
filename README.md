@@ -11,13 +11,11 @@ Links:
 
 Complete this [Google Form](https://forms.gle/vEmVK99n1SyaE4Zw9) to register you interest and receive e-mail updates
 
-## Latest Update: August 14
-- Configurable (via YAML) obstacles and gates
-- Randomized initial position and inertial properties
-- Constraint evaluations
+## Latest Update: August 15
+- Collisions count
 
 ## Next Update: August 18 (approx.)
-- Reward function (collisions count, gate progress, goal position reached)
+- Goal position reached, gate progress metrics
 - Training script template
 - `cffirmare` Python module
 
