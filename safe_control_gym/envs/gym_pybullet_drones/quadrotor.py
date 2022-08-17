@@ -374,7 +374,6 @@ class Quadrotor(BaseAviary):
                        p.getQuaternionFromEuler(obstacle[3:6]),
                        physicsClientId=self.PYB_CLIENT)
             self.OBSTACLES_IDS.append(TMP_ID)
-
         self.GATES_IDS = []
         rand_info_copy = deepcopy(self.GATES_AND_OBS_RAND_INFO)
         distrib = getattr(self.np_random, rand_info_copy["gates"].pop("distrib"))
@@ -391,20 +390,6 @@ class Quadrotor(BaseAviary):
                        p.getQuaternionFromEuler(gate[3:6]),
                        physicsClientId=self.PYB_CLIENT)
             self.GATES_IDS.append(TMP_ID)
-
-        # self.OBSTACLES_IDS = [
-        #     p.loadURDF(os.path.join(self.URDF_DIR, "obstacle.urdf"),
-        #                np.array(obstacle[0:3]) + np.array([0.1*np.random.rand(), 0.1*np.random.rand(), 0]), # TODO - Parametrize distribution
-        #                p.getQuaternionFromEuler(obstacle[3:6]),
-        #                physicsClientId=self.PYB_CLIENT)
-        #     for obstacle in self.OBSTACLES]
-        # self.GATES_IDS = [
-        #     p.loadURDF(os.path.join(self.URDF_DIR, "portal.urdf"),
-        #                np.array(gate[0:3]) + np.array([0.1*np.random.rand(), 0.1*np.random.rand(), 0]), # TODO - Parametrize distribution
-        #                p.getQuaternionFromEuler(gate[3:6]),
-        #                physicsClientId=self.PYB_CLIENT)
-        #     for gate in self.GATES]
-
         # Deactivate select collisions, e.g. between the ground plane and the drone
         # p.setCollisionFilterPair(bodyUniqueIdA=self.PLANE_ID,
         #                          bodyUniqueIdB=self.DRONE_IDS[0],
