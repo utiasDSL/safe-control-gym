@@ -115,7 +115,7 @@ class Quadrotor(BaseAviary):
             'low': -0.01,
             'high': 0.01
         },
-        "init_theta_dot": {  # TODO: replace with q.
+        "init_theta_dot": {  # Only used in 2D quad.
             'distrib': "uniform",
             'low': -0.01,
             'high': 0.01
