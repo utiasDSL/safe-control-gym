@@ -351,16 +351,26 @@ class Quadrotor(BaseAviary):
         super()._reset_simulation()
 
         # IROS 2022 - Create maze.
-        for obstacle in self.OBSTACLES:
+        self.OBSTACLES_IDS = [
             p.loadURDF(os.path.join(self.URDF_DIR, "obstacle.urdf"),
                        np.array(obstacle[0:3]) + np.array([0.1*np.random.rand(), 0.1*np.random.rand(), 0]), # TODO - Parametrize distribution
                        p.getQuaternionFromEuler(obstacle[3:6]),
                        physicsClientId=self.PYB_CLIENT)
-        for gate in self.GATES:
+            for obstacle in self.OBSTACLES]
+        
+        self.GATES_IDS = [
             p.loadURDF(os.path.join(self.URDF_DIR, "portal.urdf"),
                        np.array(gate[0:3]) + np.array([0.1*np.random.rand(), 0.1*np.random.rand(), 0]), # TODO - Parametrize distribution
                        p.getQuaternionFromEuler(gate[3:6]),
                        physicsClientId=self.PYB_CLIENT)
+            for gate in self.GATES]
+        # Deactivate select collisions, e.g. between the ground plane and the drone
+        # p.setCollisionFilterPair(bodyUniqueIdA=self.PLANE_ID,
+        #                          bodyUniqueIdB=self.DRONE_IDS[0],
+        #                          linkIndexA=-1,
+        #                          linkIndexB=-1,
+        #                          enableCollision=0,
+        #                          physicsClientId=self.PYB_CLIENT)
         
         # Choose randomized or deterministic inertial properties.
         prop_values = {
@@ -908,8 +918,29 @@ class Quadrotor(BaseAviary):
 
         # Note: constraint_values and constraint_violations populated in benchmark_env.
 
-        # IROS 2022 - Reset info.
-        # Collisions - TODO
+        # IROS 2022 - Per-step info.
+        # Collisions
+        # tmp1 = [p.getContactPoints(bodyA=obs_id,
+        #                            bodyB=self.DRONE_IDS[0],
+        #                            # linkIndexA=-1, linkIndexB=-1,
+        #                            physicsClientId=self.PYB_CLIENT)
+        #         for obs_id in self.OBSTACLES_IDS]
+        # tmp2 = [p.getContactPoints(bodyA=gates_id,
+        #                            bodyB=self.DRONE_IDS[0],
+        #                            # linkIndexA=-1, linkIndexB=-1,
+        #                            physicsClientId=self.PYB_CLIENT)
+        #         for gates_id in self.GATES_IDS]
+        # print(tmp1, tmp2)
+        for GATE_OBS_ID in self.GATES_IDS + self.OBSTACLES_IDS:
+            ret = p.getContactPoints(bodyA=GATE_OBS_ID,
+                                     bodyB=self.DRONE_IDS[0],
+                                     # linkIndexA=-1, linkIndexB=-1,
+                                     physicsClientId=self.PYB_CLIENT)
+            if ret:
+                info["collision"] = True
+                break
+        else:
+            info["collision"] = False
         # Gates progress - TODO
 
         return info
