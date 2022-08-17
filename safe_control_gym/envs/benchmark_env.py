@@ -696,8 +696,45 @@ class BenchmarkEnv(gym.Env):
         return coords_a, coords_b, coords_a_dot, coords_b_dot
 
     def _waypoints(self,
-                   waypoints_list):
-        pass
+                   waypoints_list,
+                   deg: int = 6):
+        '''Curve fitting with waypoints.
+        
+        Work in progress.
+        
+        '''
+        waypoints = np.array(waypoints_list)
+        t = np.arange(waypoints.shape[0])
+        fit_x = np.polyfit(t, waypoints[:,0], deg)
+        fit_y = np.polyfit(t, waypoints[:,1], deg)
+        fit_z = np.polyfit(t, waypoints[:,2], deg)
+        fx = np.poly1d(fit_x)
+        fy = np.poly1d(fit_y)
+        fz = np.poly1d(fit_z)
+        t_scaled = np.linspace(t[0], t[-1], int(0.75*initial_info["episode_len_sec"]*self.CTRL_FREQ))
+        self.ref_x = fx(t_scaled)
+        self.ref_y = fy(t_scaled)
+        self.ref_z = fz(t_scaled)
+
+        # Plot each dimension.
+        # _, axs = plt.subplots(3, 1)
+        # axs[0].plot(t_scaled, self.ref_x)
+        # axs[0].set_ylabel('x (m)')
+        # axs[1].plot(t_scaled, self.ref_y)
+        # axs[1].set_ylabel('y (m)')
+        # axs[2].plot(t_scaled, self.ref_z)
+        # axs[2].set_ylabel('z (m)')
+        # plt.show(block=False)
+        # plt.pause(2)
+        # plt.close()
+
+        # Plot in 3D.
+        # ax = plt.axes(projection='3d')
+        # ax.plot3D(self.ref_x, self.ref_y, self.ref_z)
+        # ax.scatter3D(waypoints[:,0], waypoints[:,1], waypoints[:,2])
+        # plt.show(block=False)
+        # plt.pause(2)
+        # plt.close()
 
     def _plot_trajectory(self,
                          traj_type,
