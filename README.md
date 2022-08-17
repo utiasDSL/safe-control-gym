@@ -23,6 +23,7 @@ Complete this [Google Form](https://forms.gle/vEmVK99n1SyaE4Zw9) to register you
 
 ```bash
 git clone https://github.com/utiasDSL/safe-control-gym.git
+git checkout alpha-iros-competition
 cd safe-control-gym
 ```
 
