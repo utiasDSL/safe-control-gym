@@ -112,7 +112,7 @@ def post_analysis(state_stack, input_stack, env):
         if k != model.nx - 1:
             axs[k].set_xticks([])
     axs[0].set_title('State Trajectories')
-    axs[-1].legend(ncol=3, bbox_transform=fig.transFigure, bbox_to_anchor=(1, 0), loc="lower right")
+    axs[-1].legend(ncol=3, bbox_transform=fig.transFigure, bbox_to_anchor=(1, 0), loc='lower right')
     axs[-1].set(xlabel='time (sec)')
 
     # Plot inputs

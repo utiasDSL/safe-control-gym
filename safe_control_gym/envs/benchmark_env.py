@@ -1,59 +1,53 @@
-"""Base environment class module.
+'''Base environment class module.
 
 This module also contains enumerations for cost functions, tasks, disturbances, and quadrotor types.
+'''
 
-"""
 import os
+import copy
 from enum import Enum
 from abc import ABC, abstractmethod
 
-from matplotlib import pyplot as plt
-import numpy as np
 import gym
 from gym import spaces
 from gym.utils import seeding
-import copy
+import numpy as np
+from matplotlib import pyplot as plt
 
 from safe_control_gym.envs.constraints import create_constraint_list
 from safe_control_gym.envs.disturbances import create_disturbance_list
 
 
 class Cost(str, Enum):
-    """Reward/cost functions enumeration class.
+    '''Reward/cost functions enumeration class. '''
 
-    """
-
-    RL_REWARD = "rl_reward"  # Default RL reward function.
-    QUADRATIC = "quadratic"  # Quadratic cost.
+    RL_REWARD = 'rl_reward'  # Default RL reward function.
+    QUADRATIC = 'quadratic'  # Quadratic cost.
 
 
 class Task(str, Enum):
-    """Environment tasks enumeration class.
+    '''Environment tasks enumeration class. '''
 
-    """
-
-    STABILIZATION = "stabilization"  # Stabilization task.
-    TRAJ_TRACKING = "traj_tracking"  # Trajectory tracking task.
+    STABILIZATION = 'stabilization'  # Stabilization task.
+    TRAJ_TRACKING = 'traj_tracking'  # Trajectory tracking task.
 
 
 class Environment(str, Enum):
-    """Environment enumeration class.
+    '''Environment enumeration class. '''
 
-    """
-
-    CARTPOLE = "cartpole"  # Cartpole system
-    QUADROTOR = "quadrotor"  # Quadrotor, both 1D and 2D
+    CARTPOLE = 'cartpole'  # Cartpole system
+    QUADROTOR = 'quadrotor'  # Quadrotor, both 1D and 2D
 
 
 class BenchmarkEnv(gym.Env, ABC):
-    """Benchmark environment base class.
+    '''Benchmark environment base class.
 
     Attributes:
-        id (int): unique identifier of the current env instance (among other instances).
+        id (int): Unique identifier of the current env instance (among other instances).
+    '''
 
-    """
     _count = 0  # Class variable, count env instance in current process.
-    NAME = "base"  # Environment name.
+    NAME = 'base'  # Environment name.
     URDF_PATH = None  # Path to urdf file that defines base parameters of the robot.
     AVAILABLE_CONSTRAINTS = None  # Dict of constraint names & classes.
     DISTURBANCE_MODES = None  # Dict of disturbance mode names & shared args, e.g. dim of the affected variable.
@@ -96,10 +90,10 @@ class BenchmarkEnv(gym.Env, ABC):
                  adversary_disturbance_scale=0.01,
                  **kwargs
                  ):
-        """Initialization method for BenchmarkEnv.
+        '''Initialization method for BenchmarkEnv.
 
         Args:
-            output_dir (str, optional): path to directory to save any env outputs.
+            output_dir (str, optional): Path to directory to save any env outputs.
             seed (int, optional): Seed for the random number generator.
             info_in_reset (bool, optional): Whether .reset() returns a dictionary with the
                                             environment's symbolic model.
@@ -124,18 +118,17 @@ class BenchmarkEnv(gym.Env, ABC):
                 to randomize the inert. properties.
             constraints (Dict, optional): Dictionary to specify the constraints being used.
             done_on_violation (bool, optional): Whether to return done==True on a constraint violation.
-            use_constraint_penalty (bool, optional): if to use shaped reward to penalize potential
+            use_constraint_penalty (bool, optional): If to use shaped reward to penalize potential
                 constraint violation.
-            constraint_penalty (float, optional): constraint penalty cost for reward shaping.
+            constraint_penalty (float, optional): Constraint penalty cost for reward shaping.
             disturbances (dict, optional): Dictionary to specify disturbances being used.
-            adversary_disturbance (str, optional): if to use adversary/external disturbance.
-            adversary_disturbance_offset (float, optional): parameterizes the offset of the adversary disturbance.
-            adversary_disturbance_scale (float, optional): parameterizes magnitude of adversary disturbance.
+            adversary_disturbance (str, optional): If to use adversary/external disturbance.
+            adversary_disturbance_offset (float, optional): Parameterizes the offset of the adversary disturbance.
+            adversary_disturbance_scale (float, optional): Parameterizes magnitude of adversary disturbance.
 
         Attributes:
-            id (int): unique identifier of the current env instance (among other instances).
-
-        """
+            id (int): Unique identifier of the current env instance (among other instances).
+        '''
         # Assign unique ID based on env instance count.
         self.id = self.__class__._count
         self.__class__._count += 1
@@ -153,7 +146,7 @@ class BenchmarkEnv(gym.Env, ABC):
         self.CTRL_FREQ = ctrl_freq
         self.PYB_FREQ = pyb_freq
         if self.PYB_FREQ % self.CTRL_FREQ != 0:
-            raise ValueError("[ERROR] in BenchmarkEnv.__init__(), pyb_freq is not divisible by env_freq.")
+            raise ValueError('[ERROR] in BenchmarkEnv.__init__(), pyb_freq is not divisible by env_freq.')
         self.PYB_STEPS_PER_CTRL = int(self.PYB_FREQ / self.CTRL_FREQ)
         self.CTRL_TIMESTEP = 1. / self.CTRL_FREQ
         self.PYB_TIMESTEP = 1. / self.PYB_FREQ
@@ -183,7 +176,7 @@ class BenchmarkEnv(gym.Env, ABC):
         # and `state_dim` is queried from it.
         self.action_dim = self.action_space.shape[0]
         self.obs_dim = self.observation_space.shape[0]
-        if hasattr(self, "state_space"):
+        if hasattr(self, 'state_space'):
             self.state_dim = self.state_space.shape[0]
         else:
             self.state_dim = self.obs_dim
@@ -211,14 +204,20 @@ class BenchmarkEnv(gym.Env, ABC):
     def seed(self,
              seed=None
              ):
-        """Sets up a random number generator for a given seed.
+        '''Sets up a random number generator for a given seed.
 
         Remember to seed all random generators, currently in
         - env
         - action_space
         - disturbances
 
-        """
+        Args:
+            seed (int): The seed used to seed the random number generator.
+
+        Returns:
+            seeds (list): A list containing the seed.
+        '''
+
         self.np_random, seed = seeding.np_random(seed)
         self.action_space.seed(seed)
         for _, disturbs in self.disturbances.items():
@@ -229,13 +228,13 @@ class BenchmarkEnv(gym.Env, ABC):
                                 Q,
                                 R
                                 ):
-        """Set the cost function parameters.
+        '''Set the cost function parameters.
 
         Args:
-            Q (np.array): State weight matrix (nx by nx).
-            R (np.array): Input weight matrix (nu by nu).
+            Q (ndarray): State weight matrix (nx by nx).
+            R (ndarray): Input weight matrix (nu by nu).
+        '''
 
-        """
         if not self.initial_reset:
             self.Q = Q
             self.R = R
@@ -245,53 +244,53 @@ class BenchmarkEnv(gym.Env, ABC):
             )
 
     def set_adversary_control(self, action):
-        """Sets disturbance by an adversary controller, called before (each) step().
+        '''Sets disturbance by an adversary controller, called before (each) step().
 
-        """
+        Args:
+            action (ndarray): The action.
+        '''
         if self.adversary_disturbance is not None:
             clipped_adv_action = np.clip(action, self.adversary_action_space.low, self.adversary_action_space.high)
             self.adv_action = clipped_adv_action * self.adversary_disturbance_scale + self.adversary_disturbance_offset
         else:
             raise RuntimeError(
-                "[ERROR] adversary_disturbance does not exist, env.set_adversary_control() cannot be called."
+                '[ERROR] adversary_disturbance does not exist, env.set_adversary_control() cannot be called.'
             )
 
     def _check_initial_reset(self):
-        """Makes sure that .reset() is called at least once before .step().
-
-        """
+        '''Makes sure that .reset() is called at least once before .step(). '''
         if not self.initial_reset:
             raise RuntimeError(
-                "[ERROR] You must call env.reset() at least once before using env.step()."
+                '[ERROR] You must call env.reset() at least once before using env.step().'
             )
 
     def _randomize_values_by_info(self,
                                   original_values,
                                   randomization_info
                                   ):
-        """Randomizes a list of values according to desired distributions.
+        '''Randomizes a list of values according to desired distributions.
 
         Args:
-            original_values (dict): a dict of orginal values.
+            original_values (dict): A dict of orginal values.
             randomization_info (dict): A dictionary containing information about the distributions
                                        used to randomize original_values.
 
         Returns:
-            dict: A dict of randomized values.
+            randomized_values (dict): A dict of randomized values.
+        '''
 
-        """
         # Start from a copy of the original values.
         randomized_values = copy.deepcopy(original_values)
-        # Copy the info dict to parse it with "pop".
+        # Copy the info dict to parse it with 'pop'.
         rand_info_copy = copy.deepcopy(randomization_info)
         # Randomized and replace values for which randomization info are given.
         for key in original_values:
             if key in rand_info_copy:
                 # Get distribution removing it from info dict.
                 distrib = getattr(self.np_random,
-                                  rand_info_copy[key].pop("distrib"))
+                                  rand_info_copy[key].pop('distrib'))
                 # Pop positional args.
-                d_args = rand_info_copy[key].pop("args", [])
+                d_args = rand_info_copy[key].pop('args', [])
                 # Keyword args are just anything left.
                 d_kwargs = rand_info_copy[key]
                 # Randomize (adding to the original values).
@@ -300,29 +299,29 @@ class BenchmarkEnv(gym.Env, ABC):
 
     @abstractmethod
     def _setup_symbolic(self):
-        """Creates a symbolic (CasADi) model for dynamics and cost."""
+        '''Creates a symbolic (CasADi) model for dynamics and cost. '''
         raise NotImplementedError
 
     def _setup_disturbances(self):
-        """Creates attributes and action spaces for the disturbances."""
+        '''Creates attributes and action spaces for the disturbances. '''
         # Default: no passive disturbances.
         self.disturbances = {}
         if self.DISTURBANCES is not None:
             for mode, disturb_specs in self.DISTURBANCES.items():
-                assert mode in self.DISTURBANCE_MODES, "[ERROR] in BenchmarkEnv._setup_disturbances(), disturbance mode not available."
+                assert mode in self.DISTURBANCE_MODES, '[ERROR] in BenchmarkEnv._setup_disturbances(), disturbance mode not available.'
                 mode_shared_args = self.DISTURBANCE_MODES[mode]
                 self.disturbances[mode] = create_disturbance_list(disturb_specs, mode_shared_args, self)
         # Adversary disturbance (set from outside of env, active/non-passive).
         if self.adversary_disturbance is not None:
-            assert self.adversary_disturbance in self.DISTURBANCE_MODES, "[ERROR] in Cartpole._setup_disturbances()"
+            assert self.adversary_disturbance in self.DISTURBANCE_MODES, '[ERROR] in Cartpole._setup_disturbances()'
             shared_args = self.DISTURBANCE_MODES[self.adversary_disturbance]
-            dim = shared_args["dim"]
+            dim = shared_args['dim']
             self.adversary_action_space = spaces.Box(low=-1, high=1, shape=(dim,))
             # Adversary obs are the same as those of the protagonist.
             self.adversary_observation_space = self.observation_space
 
     def _setup_constraints(self):
-        """Creates a list of constraints as an attribute."""
+        '''Creates a list of constraints as an attribute. '''
         self.constraints = None
         self.num_constraints = 0
         if self.CONSTRAINTS is not None:
@@ -331,26 +330,21 @@ class BenchmarkEnv(gym.Env, ABC):
 
     @abstractmethod
     def _set_action_space(self):
-        """Defines the action space of the environment.
-
-        """
+        '''Defines the action space of the environment. '''
         raise NotImplementedError
 
     @abstractmethod
     def _set_observation_space(self):
-        """Defines the observation space of the environment.
+        '''Defines the observation space of the environment.
 
         Sets `self.observation_space`, if observation is not identical to state,
         e.g. in RL where obs is [state, goal] or angle is converted to sine & cosine,
         additionally sets a `self.state_space`.
-
-        """
+        '''
         raise NotImplementedError
 
     def before_reset(self):
-        """Pre-processing before calling `.reset()`.
-
-        """
+        '''Pre-processing before calling `.reset()`. '''
         # Housekeeping variables.
         self.initial_reset = True
         self.pyb_step_counter = 0
@@ -366,28 +360,46 @@ class BenchmarkEnv(gym.Env, ABC):
             self.adv_action = None
 
     def after_reset(self, obs, info):
-        """Post-processing after calling `.reset()`.
+        '''Post-processing after calling `.reset()`.
 
-        """
+        Args:
+            obs (ndarray): The first observation.
+            info (dict): The first info.
+
+        Returns:
+            obs (ndarray): The updated first observation.
+            info (dict): The updated first info.
+        '''
         # Add initial constraint info (no action/input yet, so only state-based constraints)
         info['current_step'] = 0
         if self.constraints is not None:
-            info["constraint_values"] = self.constraints.get_values(self, only_state=True)
+            info['constraint_values'] = self.constraints.get_values(self, only_state=True)
         return obs, info
 
+    @abstractmethod
     def _preprocess_control(self, action):
-        """Pre-processes the action passed to `.step()`, default is identity.
+        '''Pre-processes the action passed to `.step()`, default is identity.
 
         It's suggested that you set `self.current_clipped_action` here,
         if you ever need to use it later on (e.g. to compute reward/cost).
 
-        """
-        return action
+        Args:
+            action (ndarray): The raw action returned by the controller.
+
+        Returns:
+            action (ndarray): The processed action to be executed.
+        '''
+        raise NotImplementedError
 
     def before_step(self, action):
-        """Pre-processing before calling `.step()`.
+        '''Pre-processing before calling `.step()`.
 
-        """
+        Args:
+            action (ndarray): The raw action returned by the controller.
+
+        Returns:
+            action (ndarray): The processed action to be executed.
+        '''
         # Sanity check (reset at least once).
         self._check_initial_reset()
         # Save the raw input action.
@@ -402,6 +414,15 @@ class BenchmarkEnv(gym.Env, ABC):
         return processed_action
 
     def extend_obs(self, obs, next_step):
+        '''Extends an observation with the next self.obs_goal_horizon reference points.
+
+        Args:
+            obs (ndarray): The observation to be extended.
+            next_step (int): The iteration for which to extend it.
+
+        Returns:
+            extended_obs (ndarray): The extended observation.
+        '''
         if self.COST == Cost.RL_REWARD and self.TASK == Task.TRAJ_TRACKING and self.obs_goal_horizon > 0:
             wp_idx = [
                 min(next_step + i, self.X_GOAL.shape[0]-1)
@@ -418,9 +439,20 @@ class BenchmarkEnv(gym.Env, ABC):
         return extended_obs
 
     def after_step(self, obs, rew, done, info):
-        """Post-processing after calling `.step()`.
+        '''Post-processing after calling `.step()`.
 
-        """
+        Args:
+            obs (ndarray): The observation after this step.
+            rew (float): The reward after this step.
+            done (bool): Whether the evaluation is done.
+            info (dict): The info after this step.
+
+        Returns:
+            obs (ndarray): The udpdated observation after this step.
+            rew (float): The udpdated reward after this step.
+            done (bool): Whether the evaluation is done.
+            info (dict): The udpdated info after this step.
+        '''
         # Increment counters
         self.pyb_step_counter += self.PYB_STEPS_PER_CTRL
         self.ctrl_step_counter += 1
@@ -434,15 +466,15 @@ class BenchmarkEnv(gym.Env, ABC):
         c_value = None
         if self.constraints is not None:
             c_value = self.constraints.get_values(self)
-            info["constraint_values"] = c_value
+            info['constraint_values'] = c_value
             if self.constraints.is_violated(self, c_value=c_value):
-                info["constraint_violation"] = 1
+                info['constraint_violation'] = 1
                 if self.DONE_ON_VIOLATION:
                     done = True
             else:
-                info["constraint_violation"] = 0
+                info['constraint_violation'] = 0
         else:
-            info["constraint_violation"] = 0
+            info['constraint_violation'] = 0
 
         # Apply penalized reward when close to constraint violation
         if self.COST == Cost.RL_REWARD:
@@ -452,25 +484,25 @@ class BenchmarkEnv(gym.Env, ABC):
         # Terminate when reaching time limit,
         # but distinguish between done due to true termination or time limit reached
         if self.ctrl_step_counter >= self.CTRL_STEPS:
-            info["TimeLimit.truncated"] = not done
+            info['TimeLimit.truncated'] = not done
             done = True
         return obs, rew, done, info
 
     def _generate_trajectory(self,
-                             traj_type="figure8",
+                             traj_type='figure8',
                              traj_length=10.0,
                              num_cycles=1,
-                             traj_plane="xy",
+                             traj_plane='xy',
                              position_offset=np.array([0, 0]),
                              scaling=1.0,
                              sample_time=0.01):
-        """Generates a 2D trajectory.
+        '''Generates a 2D trajectory.
 
         Args:
             traj_type (str, optional): The type of trajectory (circle, square, figure8).
             traj_length (float, optional): The length of the trajectory in seconds.
             num_cycles (int, optional): The number of cycles within the length.
-            traj_plane (str, optional): The plane of the trajectory (e.g. "xz").
+            traj_plane (str, optional): The plane of the trajectory (e.g. 'xz').
             position_offset (ndarray, optional): An initial position offset in the plane.
             scaling (float, optional): Scaling factor for the trajectory.
             sample_time (float, optional): The sampling timestep of the trajectory.
@@ -479,21 +511,21 @@ class BenchmarkEnv(gym.Env, ABC):
             ndarray: The positions in x, y, z of the trajectory sampled for its entire duration.
             ndarray: The velocities in x, y, z of the trajectory sampled for its entire duration.
             ndarray: The scalar speed of the trajectory sampled for its entire duration.
+        '''
 
-        """
         # Get trajectory type.
-        valid_traj_type = ["circle", "square", "figure8"]
+        valid_traj_type = ['circle', 'square', 'figure8']
         if traj_type not in valid_traj_type:
-            raise ValueError("Trajectory type should be one of [circle, square, figure8].")
+            raise ValueError('Trajectory type should be one of [circle, square, figure8].')
         traj_period = traj_length / num_cycles
-        direction_list = ["x", "y", "z"]
+        direction_list = ['x', 'y', 'z']
         # Get coordinates indexes.
         if traj_plane[0] in direction_list and traj_plane[
                 1] in direction_list and traj_plane[0] != traj_plane[1]:
             coord_index_a = direction_list.index(traj_plane[0])
             coord_index_b = direction_list.index(traj_plane[1])
         else:
-            raise ValueError("Trajectory plane should be in form of ab, where a and b can be {x, y, z}.")
+            raise ValueError('Trajectory plane should be in form of ab, where a and b can be {x, y, z}.')
         # Generate time stamps.
         times = np.arange(0, traj_length, sample_time)
         pos_ref_traj = np.zeros((len(times), 3))
@@ -522,7 +554,7 @@ class BenchmarkEnv(gym.Env, ABC):
                          position_offset_b,
                          scaling
                          ):
-        """Computes the coordinates of a specified trajectory at time t.
+        '''Computes the coordinates of a specified trajectory at time t.
 
         Args:
             t (float): The time at which we want to sample one trajectory point.
@@ -535,18 +567,18 @@ class BenchmarkEnv(gym.Env, ABC):
             scaling (float, optional): Scaling factor for the trajectory.
 
         Returns:
-            ndarray: The position in x, y, z, at time t.
-            ndarray: The velocity in x, y, z, at time t.
+            pos_ref (ndarray): The position in x, y, z, at time t.
+            vel_ref (ndarray): The velocity in x, y, z, at time t.
+        '''
 
-        """
         # Get coordinates for the trajectory chosen.
-        if traj_type == "figure8":
+        if traj_type == 'figure8':
             coords_a, coords_b, coords_a_dot, coords_b_dot = self._figure8(
                 t, traj_period, scaling)
-        elif traj_type == "circle":
+        elif traj_type == 'circle':
             coords_a, coords_b, coords_a_dot, coords_b_dot = self._circle(
                 t, traj_period, scaling)
-        elif traj_type == "square":
+        elif traj_type == 'square':
             coords_a, coords_b, coords_a_dot, coords_b_dot = self._square(
                 t, traj_period, scaling)
         # Initialize position and velocity references.
@@ -564,7 +596,7 @@ class BenchmarkEnv(gym.Env, ABC):
                  traj_period,
                  scaling
                  ):
-        """Computes the coordinates of a figure8 trajectory at time t.
+        '''Computes the coordinates of a figure8 trajectory at time t.
 
         Args:
             t (float): The time at which we want to sample one trajectory point.
@@ -572,12 +604,12 @@ class BenchmarkEnv(gym.Env, ABC):
             scaling (float, optional): Scaling factor for the trajectory.
 
         Returns:
-            float: The position in the first coordinate.
-            float: The position in the second coordinate.
-            float: The velocity in the first coordinate.
-            float: The velocity in the second coordinate.
+            coords_a (float): The position in the first coordinate.
+            coords_b (float): The position in the second coordinate.
+            coords_a_dot (float): The velocity in the first coordinate.
+            coords_b_dot (float): The velocity in the second coordinate.
+        '''
 
-        """
         traj_freq = 2.0 * np.pi / traj_period
         coords_a = scaling * np.sin(traj_freq * t)
         coords_b = scaling * np.sin(traj_freq * t) * np.cos(traj_freq * t)
@@ -590,7 +622,7 @@ class BenchmarkEnv(gym.Env, ABC):
                 traj_period,
                 scaling
                 ):
-        """Computes the coordinates of a circle trajectory at time t.
+        '''Computes the coordinates of a circle trajectory at time t.
 
         Args:
             t (float): The time at which we want to sample one trajectory point.
@@ -598,12 +630,12 @@ class BenchmarkEnv(gym.Env, ABC):
             scaling (float, optional): Scaling factor for the trajectory.
 
         Returns:
-            float: The position in the first coordinate.
-            float: The position in the second coordinate.
-            float: The velocity in the first coordinate.
-            float: The velocity in the second coordinate.
+            coords_a (float): The position in the first coordinate.
+            coords_b (float): The position in the second coordinate.
+            coords_a_dot (float): The velocity in the first coordinate.
+            coords_b_dot (float): The velocity in the second coordinate.
+        '''
 
-        """
         traj_freq = 2.0 * np.pi / traj_period
         coords_a = scaling * np.cos(traj_freq * t)
         coords_b = scaling * np.sin(traj_freq * t)
@@ -616,7 +648,7 @@ class BenchmarkEnv(gym.Env, ABC):
                 traj_period,
                 scaling
                 ):
-        """Computes the coordinates of a square trajectory at time t.
+        '''Computes the coordinates of a square trajectory at time t.
 
         Args:
             t (float): The time at which we want to sample one trajectory point.
@@ -624,12 +656,12 @@ class BenchmarkEnv(gym.Env, ABC):
             scaling (float, optional): Scaling factor for the trajectory.
 
         Returns:
-            float: The position in the first coordinate.
-            float: The position in the second coordinate.
-            float: The velocity in the first coordinate.
-            float: The velocity in the second coordinate.
+            coords_a (float): The position in the first coordinate.
+            coords_b (float): The position in the second coordinate.
+            coords_a_dot (float): The velocity in the first coordinate.
+            coords_b_dot (float): The velocity in the second coordinate.
+        '''
 
-        """
         # Compute time for each segment to complete.
         segment_period = traj_period / 4.0
         traverse_speed = scaling / segment_period
@@ -676,36 +708,36 @@ class BenchmarkEnv(gym.Env, ABC):
                          vel_ref_traj,
                          speed_traj
                          ):
-        """Plots a trajectory along x, y, z, and in a 3D projection.
+        '''Plots a trajectory along x, y, z, and in a 3D projection.
 
         Args:
             traj_type (str, optional): The type of trajectory (circle, square, figure8).
-            traj_plane (str, optional): The plane of the trajectory (e.g. "xz").
+            traj_plane (str, optional): The plane of the trajectory (e.g. 'xz').
             traj_length (float, optional): The length of the trajectory in seconds.
             num_cycles (int, optional): The number of cycles within the length.
             pos_ref_traj (ndarray): The positions in x, y, z of the trajectory sampled for its entire duration.
             vel_ref_traj (ndarray): The velocities in x, y, z of the trajectory sampled for its entire duration.
             speed_traj (ndarray): The scalar speed of the trajectory sampled for its entire duration.
+        '''
 
-        """
         # Print basic properties.
-        print("Trajectory type: %s" % traj_type)
-        print("Trajectory plane: %s" % traj_plane)
-        print("Trajectory length: %s sec" % traj_length)
-        print("Number of cycles: %d" % num_cycles)
-        print("Trajectory period: %.2f sec" % (traj_length / num_cycles))
-        print("Angular speed: %.2f rad/sec" % (2.0 * np.pi / (traj_length / num_cycles)))
+        print('Trajectory type: %s' % traj_type)
+        print('Trajectory plane: %s' % traj_plane)
+        print('Trajectory length: %s sec' % traj_length)
+        print('Number of cycles: %d' % num_cycles)
+        print('Trajectory period: %.2f sec' % (traj_length / num_cycles))
+        print('Angular speed: %.2f rad/sec' % (2.0 * np.pi / (traj_length / num_cycles)))
         print(
-            "Position bounds: x [%.2f, %.2f] m, y [%.2f, %.2f] m, z [%.2f, %.2f] m"
+            'Position bounds: x [%.2f, %.2f] m, y [%.2f, %.2f] m, z [%.2f, %.2f] m'
             % (min(pos_ref_traj[:, 0]), max(pos_ref_traj[:, 0]),
                min(pos_ref_traj[:, 1]), max(pos_ref_traj[:, 1]),
                min(pos_ref_traj[:, 2]), max(pos_ref_traj[:, 2])))
         print(
-            "Velocity bounds: vx [%.2f, %.2f] m/s, vy [%.2f, %.2f] m/s, vz [%.2f, %.2f] m/s"
+            'Velocity bounds: vx [%.2f, %.2f] m/s, vy [%.2f, %.2f] m/s, vz [%.2f, %.2f] m/s'
             % (min(vel_ref_traj[:, 0]), max(vel_ref_traj[:, 0]),
                min(vel_ref_traj[:, 1]), max(vel_ref_traj[:, 1]),
                min(vel_ref_traj[:, 2]), max(vel_ref_traj[:, 2])))
-        print("Speed: min %.2f m/s max %.2f m/s mean %.2f" %
+        print('Speed: min %.2f m/s max %.2f m/s mean %.2f' %
               (min(speed_traj), max(speed_traj), np.mean(speed_traj)))
         # Plot in x, y, z.
         fig, axs = plt.subplots(3, 2)

@@ -1,7 +1,7 @@
-"""PID control class for Crazyflies.
+'''PID control class for Crazyflies.
 
 Based on work conducted at UTIAS' DSL by SiQi Zhou and James Xu.
-"""
+'''
 
 import os
 import numpy as np
@@ -14,7 +14,7 @@ from safe_control_gym.envs.benchmark_env import Task, Environment
 
 
 class PID(BaseController):
-    """ PID Class. """
+    ''' PID Class. '''
 
     def __init__(self,
                  env_func=None,
@@ -33,23 +33,23 @@ class PID(BaseController):
                  max_pwm: float = 65535,
                  **kwargs
                  ):
-        """Common control classes __init__ method.
+        '''Common control classes __init__ method.
 
         Args:
             g (float, optional): The gravitational acceleration in m/s^2.
-            kf (float, optional): thrust coefficient.
-            km (float, optional): torque coefficient.
-            p_coeff_for (ndarray, optional): position proportional coefficients.
-            i_coeff_for (ndarray, optional): position integral coefficients.
-            d_coeff_for (ndarray, optional): position derivative coefficients.
-            p_coeff_tor (ndarray, optional): attitude proportional coefficients.
-            i_coeff_tor (ndarray, optional): attitude integral coefficients.
-            d_coeff_tor (ndarray, optional): attitude derivative coefficients.
+            kf (float, optional): Thrust coefficient.
+            km (float, optional): Torque coefficient.
+            p_coeff_for (ndarray, optional): Position proportional coefficients.
+            i_coeff_for (ndarray, optional): Position integral coefficients.
+            d_coeff_for (ndarray, optional): Position derivative coefficients.
+            p_coeff_tor (ndarray, optional): Attitude proportional coefficients.
+            i_coeff_tor (ndarray, optional): Attitude integral coefficients.
+            d_coeff_tor (ndarray, optional): Attitude derivative coefficients.
             pwm2rpm_scale (float, optional): PWM-to-RPM scale factor.
             pwm2rpm_const (float, optional): PWM-to-RPM constant factor.
-            min_pwm (float, optional): minimum PWM.
-            max_pwm (float, optional): maximum PWM.
-        """
+            min_pwm (float, optional): Minimum PWM.
+            max_pwm (float, optional): Maximum PWM.
+        '''
 
         super().__init__(env_func, **kwargs)
 
@@ -81,15 +81,15 @@ class PID(BaseController):
         self.reset()
 
     def select_action(self, obs, info=None):
-        """Determine the action to take at the current timestep.
+        '''Determine the action to take at the current timestep.
 
         Args:
-            obs (np.array): the observation at this timestep
-            info (list): the info at this timestep
-        
+            obs (ndarray): The observation at this timestep.
+            info (dict): The info at this timestep.
+
         Returns:
-            action (np.array): the action chosen by the controller
-        """
+            action (ndarray): The action chosen by the controller.
+        '''
 
         step = self.extract_step(info)
 
@@ -127,7 +127,7 @@ class PID(BaseController):
             elif self.env.TASK == Task.STABILIZATION:
                 target_pos=np.array([self.reference[0], self.reference[2], self.reference[4]])
                 target_vel=np.array([0, 0, 0 ])
-        
+
         target_rpy = np.zeros(3)
         target_rpy_rates = np.zeros(3)
 
@@ -145,14 +145,14 @@ class PID(BaseController):
                                             target_rpy_rates
                                             )
         cur_rpy = p.getEulerFromQuaternion(cur_quat)
-        
+
         action = rpm
         action = self.KF * action**2
         if self.env.QUAD_TYPE == 2:
             action = np.array([action[0]+action[3], action[1]+action[2]])
 
         return action
-    
+
     def _dslPIDPositionControl(self,
                                cur_pos,
                                cur_quat,
@@ -161,7 +161,7 @@ class PID(BaseController):
                                target_rpy,
                                target_vel
                                ):
-        """DSL's CF2.x PID position control.
+        '''DSL's CF2.x PID position control.
 
         Args:
             cur_pos (ndarray): (3,1)-shaped array of floats containing the current position.
@@ -172,18 +172,18 @@ class PID(BaseController):
             target_vel (ndarray): (3,1)-shaped array of floats containing the desired velocity.
 
         Returns:
-            float: The target thrust along the drone z-axis.
-            ndarray: (3,1)-shaped array of floats containing the target roll, pitch, and yaw.
-            float: The current position error.
+            thrust (float): The target thrust along the drone z-axis.
+            target_euler (ndarray): (3,1)-shaped array of floats containing the target roll, pitch, and yaw.
+            pos_e (float): The current position error.
+        '''
 
-        """
         cur_rotation = np.array(p.getMatrixFromQuaternion(cur_quat)).reshape(3, 3)
         pos_e = target_pos - cur_pos
         vel_e = target_vel - cur_vel
         self.integral_pos_e = self.integral_pos_e + pos_e*self.control_timestep
         self.integral_pos_e = np.clip(self.integral_pos_e, -2., 2.)
         self.integral_pos_e[2] = np.clip(self.integral_pos_e[2], -0.15, .15)
-        
+
         # PID target thrust.
         target_thrust = np.multiply(self.P_COEFF_FOR, pos_e) \
                         + np.multiply(self.I_COEFF_FOR, self.integral_pos_e) \
@@ -195,22 +195,22 @@ class PID(BaseController):
         target_y_ax = np.cross(target_z_ax, target_x_c) / np.linalg.norm(np.cross(target_z_ax, target_x_c))
         target_x_ax = np.cross(target_y_ax, target_z_ax)
         target_rotation = (np.vstack([target_x_ax, target_y_ax, target_z_ax])).transpose()
-        
+
         # Target rotation.
         target_euler = (Rotation.from_matrix(target_rotation)).as_euler('XYZ', degrees=False)
-        
+
         if np.any(np.abs(target_euler) > math.pi):
             raise ValueError('\n[ERROR] ctrl it', self.control_counter, 'in Control._dslPIDPositionControl(), values outside range [-pi,pi]')
-        
+
         return thrust, target_euler, pos_e
-    
+
     def _dslPIDAttitudeControl(self,
                                thrust,
                                cur_quat,
                                target_euler,
                                target_rpy_rates
                                ):
-        """DSL's CF2.x PID attitude control.
+        '''DSL's CF2.x PID attitude control.
 
         Args:
             thrust (float): The target thrust along the drone z-axis.
@@ -219,22 +219,22 @@ class PID(BaseController):
             target_rpy_rates (ndarray): (3,1)-shaped array of floats containing the desired roll, pitch, and yaw rates.
 
         Returns:
-            ndarray: (4,1)-shaped array of integers containing the RPMs to apply to each of the 4 motors.
+            rpm (ndarray): (4,1)-shaped array of integers containing the RPMs to apply to each of the 4 motors.
+        '''
 
-        """
         cur_rotation = np.array(p.getMatrixFromQuaternion(cur_quat)).reshape(3, 3)
         cur_rpy = np.array(p.getEulerFromQuaternion(cur_quat))
         target_quat = (Rotation.from_euler('XYZ', target_euler, degrees=False)).as_quat()
         w,x,y,z = target_quat
         target_rotation = (Rotation.from_quat([w, x, y, z])).as_matrix()
         rot_matrix_e = np.dot((target_rotation.transpose()),cur_rotation) - np.dot(cur_rotation.transpose(),target_rotation)
-        rot_e = np.array([rot_matrix_e[2, 1], rot_matrix_e[0, 2], rot_matrix_e[1, 0]]) 
+        rot_e = np.array([rot_matrix_e[2, 1], rot_matrix_e[0, 2], rot_matrix_e[1, 0]])
         rpy_rates_e = target_rpy_rates - (cur_rpy - self.last_rpy)/self.control_timestep
         self.last_rpy = cur_rpy
         self.integral_rpy_e = self.integral_rpy_e - rot_e*self.control_timestep
         self.integral_rpy_e = np.clip(self.integral_rpy_e, -1500., 1500.)
         self.integral_rpy_e[0:2] = np.clip(self.integral_rpy_e[0:2], -1., 1.)
-        
+
         # PID target torques.
         target_torques = - np.multiply(self.P_COEFF_TOR, rot_e) \
                          + np.multiply(self.D_COEFF_TOR, rpy_rates_e) \
@@ -242,18 +242,18 @@ class PID(BaseController):
         target_torques = np.clip(target_torques, -3200, 3200)
         pwm = thrust + np.dot(self.MIXER_MATRIX, target_torques)
         pwm = np.clip(pwm, self.MIN_PWM, self.MAX_PWM)
-        
+
         return self.PWM2RPM_SCALE * pwm + self.PWM2RPM_CONST
 
     def reset(self):
-        """Resets the control classes. The previous step's and integral 
-        errors for both position and attitude are set to zero.
-        """
+        '''Resets the control classes. The previous step's and integral
+           errors for both position and attitude are set to zero.
+        '''
         self.env.reset()
         self.reset_before_run()
 
     def reset_before_run(self, obs=None, info=None, env=None):
-        """Reinitialize just the controller before a new run. """
+        '''Reinitialize just the controller before a new run. '''
         # Clear PID control variables.
         self.integral_pos_e = np.zeros(3)
         self.last_rpy = np.zeros(3)
@@ -267,23 +267,23 @@ class PID(BaseController):
         self.setup_results_dict()
 
     def close(self):
-        """Shuts down and cleans up lingering resources. """
+        '''Shuts down and cleans up lingering resources. '''
         self.env.close()
 
     def save(self, path):
-        """Saves integral errors to checkpoint path.
+        '''Saves integral errors to checkpoint path.
 
         Args:
-            path (str): the path where to the saved integral errors
-        """
+            path (str): The path where to the saved integral errors.
+        '''
         path_dir = os.path.dirname(path)
         os.makedirs(path_dir, exist_ok=True)
         np.save(path, (self.integral_pos_e, self.last_rpy, self.integral_rpy_e))
 
     def load(self, path):
-        """Restores integral errors given checkpoint path.
+        '''Restores integral errors given checkpoint path.
 
         Args:
-            path (str): the path where the integral errors are saved
-        """
+            path (str): The path where the integral errors are saved.
+        '''
         self.integral_pos_e, self.last_rpy, self.integral_rpy_e = np.load(path)

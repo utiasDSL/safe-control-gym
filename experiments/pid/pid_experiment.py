@@ -14,7 +14,6 @@ def run(gui=True, n_episodes=2, n_steps=None, save_data=True):
 
     Args:
         gui (bool): Whether to display the gui and plot graphs.
-        training (bool): Whether to train the algorithms before execution.
         n_episodes (int): The number of episodes to execute.
         n_steps (int): The total number of steps to execute.
         save_data (bool): Whether to save the collected experiment data.

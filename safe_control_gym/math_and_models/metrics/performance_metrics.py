@@ -1,21 +1,23 @@
-import numpy as np 
+'''Methods to calculate various metrics. '''
+
+import numpy as np
 
 
 def compute_cvar(data, alpha, lower_range=True):
-    """CVaR as mean of the lower-alpha-percentile of data.
+    '''CVaR as mean of the lower-alpha-percentile of data.
         adapted from https://github.com/nuria95/O-RAAC/blob/57347bc682798ff9f5600131c606517832efe864/oraaclib/util/utilities.py
-    
+
     Args:
-        data (np.array): the trajectory RMSE collected by the Experiment class
+        data (ndarray): the trajectory RMSE collected by the Experiment class
         alpha (float): the percentile upper bound to use
         lower_range (bool): ???
-    
+
     Returns:
         cvar (float): the resulting CVaR
-    """
+    '''
 
     data = np.atleast_2d(data)
-    batch_size, N = data.shape
+    _, N = data.shape
     sorted_data = np.sort(data)
 
     # NOTE: what does it do?

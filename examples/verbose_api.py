@@ -1,9 +1,9 @@
-"""A simple script to demonstrate safe-control-gym API.
+'''A simple script to demonstrate safe-control-gym API.
 
 Example:
     $ python3 verbose_api.py --task cartpole --overrides verbose_api.yaml
     $ python3 verbose_api.py --task quadrotor --overrides verbose_api.yaml
-"""
+'''
 
 import time
 import inspect
@@ -14,14 +14,15 @@ from safe_control_gym.utils.registration import make
 
 
 def run():
-    """The main function creating, running, and closing an environment.
+    '''The main function running the API example. '''
 
-    """
     # Set iterations and episode counter.
     num_episodes = 1
     ITERATIONS = int(2)
+
     # Start a timer.
     START = time.time()
+
     # Create an environment
     CONFIG_FACTORY = ConfigFactory()
     config = CONFIG_FACTORY.merge()
@@ -29,9 +30,11 @@ def run():
         env = make(config.task, **config.cartpole_config)
     elif config.task == 'quadrotor':
         env = make(config.task, **config.quadrotor_config)
+
     # Reset the environment, obtain and print the initial observations.
     initial_obs, initial_info = env.reset()
     print('\n\n')
+
     # Dynamics info
     print_str_with_style('PyBullet dynamics info:', 7)
     if config.task == 'cartpole':
@@ -42,7 +45,7 @@ def run():
     print_str_with_style('Initial reset.\n', 7)
     print_str_with_style('Open AI gym API:', 2)
     print_str_with_style('\tInitial observation: ' + str(initial_obs), 2)
-    # 
+
     print_str_with_style('safe-control-gym API:', 0)
     print_str_with_style('\tA priori symbolic model:', 0)
     out = '\t\tState: ' + str(initial_info['symbolic_model'].x_sym).strip('vertcat')
@@ -67,15 +70,14 @@ def run():
     out = '\t\t' + str(initial_info['u_reference'])
     print_str_with_style(out, 0)
     print('\n\n')
+
     # Run an experiment.
     for i in range(ITERATIONS):
-        # Step by keyboard input
-        # _ = input('Press any key to continue.')
         # Sample a random action.
         action = env.action_space.sample()
         # Step the environment and print all returned information.
         obs, reward, done, info = env.step(action)
-        #
+
         print_str_with_style(str(i)+'-th step.', 7)
         out = '\tApplied action: ' + str(action) + '\n'
         print(out)
@@ -108,14 +110,13 @@ def run():
     # Close the environment and print timing statistics.
     env.close()
     elapsed_sec = time.time() - START
-    out = str("\n{:d} iterations (@{:d}Hz) and {:d} episodes in {:.2f} seconds, i.e. {:.2f} steps/sec for a {:.2f}x speedup.\n\n"
+    out = str('\n{:d} iterations (@{:d}Hz) and {:d} episodes in {:.2f} seconds, i.e. {:.2f} steps/sec for a {:.2f}x speedup.\n\n'
           .format(ITERATIONS, env.CTRL_FREQ, num_episodes, elapsed_sec, ITERATIONS/elapsed_sec, (ITERATIONS*env.CTRL_TIMESTEP)/elapsed_sec))
     print_str_with_style(out,7)
 
-class bcolors:
-    """Support for color output.
 
-    """
+class bcolors:
+    '''Support for color output. '''
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
     OKCYAN = '\033[96m'
@@ -128,9 +129,12 @@ class bcolors:
 
 
 def print_str_with_style(string: str='', style: int=0):
-    """Function to convert to string and print in color.
+    '''Function to convert to string and print in color.
 
-    """
+    Args:
+        string (str): The string to print.
+        style (int): The style representing a color in bcolors.
+    '''
     string = str(string)
     if style == 0:
         print(bcolors.HEADER + string + bcolors.ENDC)
@@ -152,5 +156,5 @@ def print_str_with_style(string: str='', style: int=0):
         raise ValueError('[ERROR] unknown style!')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     run()
