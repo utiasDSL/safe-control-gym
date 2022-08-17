@@ -1,32 +1,56 @@
-'''Implements a set of trajectory-based similarity metrics, either based on
+"""Implements a set of trajectory-based similarity metrics, either based on
 one-to-one trajectory comparisons or set-to-set trajectory comparisons (distriubtion metric).
-'''
 
-import numpy as np
-import torch
+Metrics:
+* MMD
+* DFD
+* LCSS
+* EDR
+* DTW
+
+References:
+* [similaritymeasures](https://github.com/cjekel/similarity_measures): DTW, discrete Frechet
+* [ts-dist](https://github.com/ymtoo/ts-dist): DTW, LCSS, EDR
+* [Robust and Fast Similarity Search for Moving Object Trajectories](https://cs.uwaterloo.ca/~tozsu/publications/spatial/sigmod05-leichen.pdf): ED, DTW, LCSS, EDR
+
+Todos:
+* Normalization/masking on input data.
+* Test effectiveness of the metrics and computation time.
+* Use numba for some metric implementations to accelerate (refer to similaritymeasures).
+
+"""
+import numpy as np 
+import torch 
 
 
-def encode_data(data, tuple_length=1):
-    '''Processes trajectory data into step tuples, each is treated as a sample for MMD comparison.
+
+def encode_data(data, tuple_length=1, include_action=True):
+    """Processes trajectory data into step tuples, each is treated as a sample for MMD comparison.
 
     Args:
         data (dict): Must contain keys `obs`, `act`, `n_trajs`.
             the values for `obs` and `act` are list of list of np.arrays.
-        tuple_length (int): Length of each tuple as 1 sample.
-
+        tuple_length (int): length of each tuple as 1 sample.
+        include_action (bool): if to include action in each tuple sample.
+        
     Returns:
-        encoded_data (np.array): Shape is (#tuples, obs_dim*(l+1)_act_dim*l) where l is tuple length.
-    '''
+        encoded_data (np.array): shape is (#tuples, obs_dim*(l+1)+act_dim*l) or 
+            (#tuples, obs_dim*(l+1)) where l is tuple length.
+    """
     # data = Munch(dict(n_steps=n_steps, obs=ep_obs_list, act=ep_act_list))
     sas_tuples = []
-    for i in range(data['n_trajs']):
-        ep_obs, ep_act = data['obs'][i], data['act'][i]
+    for i in range(data["n_trajs"]):
+        ep_obs = data["obs"][i]
         ep_obs_tuples = [ep_obs[j:j+tuple_length+1] for j in range(len(ep_obs) - tuple_length)]
-        ep_act_tuples = [ep_act[j:j+tuple_length] for j in range(len(ep_act) - tuple_length + 1)]
-        ep_tuples = [np.concatenate(o_tp + a_tp)
-                     for o_tp, a_tp in zip(ep_obs_tuples, ep_act_tuples)]
+        if include_action:
+            ep_act = data["act"][i]
+            ep_act_tuples = [ep_act[j:j+tuple_length] for j in range(len(ep_act) - tuple_length + 1)]
+            ep_tuples = [np.concatenate(o_tp + a_tp) 
+                        for o_tp, a_tp in zip(ep_obs_tuples, ep_act_tuples)]
+        else:
+            ep_tuples = [np.concatenate(o_tp) for o_tp in ep_obs_tuples]
         sas_tuples.extend(ep_tuples)
-    # shape (#tuples, O*(l+1)+A*l)
+    # shape (#tuples, O*(l+1)+A*l) or (#tuples, O*(l+1))
     encoded_data = np.asarray(sas_tuples)
     return encoded_data
 
@@ -62,3 +86,151 @@ def mmd_loss(samples1, samples2, mode='gaussian', sigma=0.2):
 
     overall_loss = (diff_x_x + diff_y_y - 2.0 * diff_x_y + 1e-6).sqrt()
     return overall_loss
+
+
+def mse(traj1, traj2):
+    """Mean squared error/Euclidean distance.
+
+    Args:
+        traj1 (np.array): shape (T1,D).
+        traj1 (np.array): shape (T2,D).
+    
+    Returns:
+        cost (float): final MSE cost.
+    """
+    if len(traj1) != len(traj2):
+        raise ValueError("Input trajectories must have the same length.")
+    # normalize by the length of trajectory, then square root
+    cost = np.sqrt(((traj1 - traj2)**2).sum()/len(traj1))
+    return cost
+
+
+def dtw(traj1, traj2, w=np.inf, distance_func=euclidean_distance):
+    """Dynamic time wrapper. 
+    Reference: https://github.com/ymtoo/ts-dist/blob/30de6eba0969611cda58754e212bddef2b28772e/ts_dist.py#L8
+    Reference2: https://github.com/cjekel/similarity_measures/blob/bfcd744a052ea50c4a318f5b38b275b3f93b67d5/similaritymeasures/similaritymeasures.py#L671
+    Reference3: https://www.cs.unm.edu/~mueen/DTW.pdf
+
+    Args:
+        traj1 (np.array): shape (T1,D).
+        traj1 (np.array): shape (T2,D).
+        w (int): window size (default inf, meaning to compare all pairs).
+        distance_func (Callable): distance function for pair of elements (default is Eucleadian distance).
+
+    Returns:
+        cost (float): final DTW cost.
+    """
+    nx, ny = len(traj1), len(traj2)
+    D = np.full((nx+1, ny+1), np.inf)
+    D[0, 0]= 0
+    w = max(w, abs(nx-ny))
+    for i in range(1, nx+1):
+        for j in range(max(1, i-w), min(ny+1, i+w+1)):
+            subcost = distance_func(traj1[:, i-1], traj2[:, j-1])
+            D[i, j] = subcost + min(D[i-1, j], D[i, j-1], D[i-1, j-1])
+    # final DTW cost, not normalized since it depends on the distance_func used
+    cost = D[nx, ny]
+    return cost
+
+
+def edr(traj1, traj2, epsilon=0.05):
+    """Edit distance on real sequences.
+    Reference: https://github.com/ymtoo/ts-dist/blob/30de6eba0969611cda58754e212bddef2b28772e/ts_dist.py#L88
+    
+    Args:
+        traj1 (np.array): shape (T1,D).
+        traj1 (np.array): shape (T2,D).
+        epsilon (float): threshold to decide if 2 elements are "equal".
+        
+    Returns:
+        cost (float): final EDR cost.
+    """
+    nx, ny = len(traj1), len(traj2)
+    D = np.full((nx+1, ny+1), np.inf)
+    # base cases 
+    D[:, 0] = np.arange(nx+1)
+    D[0, :] = np.arange(ny+1)
+    for i in range(1, nx+1):
+        for j in range(1, ny+1):
+            if np.all(np.abs(traj1[:, i-1]-traj2[:, j-1]) < epsilon):
+                subcost = 0
+            else:
+                subcost = 1 
+        D[i, j] = min(D[i-1, j-1]+subcost, D[i-1, j]+1, D[i, j-1]+1)
+    # final EDR cost (normalized to [0,1])
+    cost = D[nx, ny] / max(nx, ny)
+    return cost 
+    
+    
+def lcss(traj1, traj2, delta, epsilon=0.05):
+    """Longest common subsequence. 
+    Reference: https://github.com/ymtoo/ts-dist/blob/30de6eba0969611cda58754e212bddef2b28772e/ts_dist.py#L52
+    
+    Args:
+        traj1 (np.array): shape (T1,D).
+        traj1 (np.array): shape (T2,D).
+        delta (float): time shreshold to decide if 2 timestamps are "equal".
+        epsilon (float): threshold to decide if 2 elements are "equal".
+    Returns:
+        cost (float): final LCSS cost.
+    """
+    nx, ny = len(traj1), len(traj2)
+    S = np.zeros((nx+1, ny+1))
+    for i in range(1, nx+1):
+        for j in range(1, ny+1):
+            if np.all(np.abs(traj1[:, i-1]-traj2[:, j-1]) < epsilon) and (
+                np.abs(i-j) < delta):
+                S[i, j] = S[i-1, j-1]+1
+            else:
+                S[i, j] = max(S[i, j-1], S[i-1, j])
+    # final LCSS cost (normalized to [0,1], lower the better/more similar)
+    cost = 1 - S[nx, ny] / min(nx, ny)
+    return cost 
+
+
+def discrete_frechet(traj1, traj2, p=2):
+    """Discrete Frechet distance. 
+    Reference: https://github.com/cjekel/similarity_measures/blob/bfcd744a052ea50c4a318f5b38b275b3f93b67d5/similaritymeasures/similaritymeasures.py#L430
+    
+    Args: 
+        traj1 (np.array): shape (T1,D).
+        traj1 (np.array): shape (T2,D).
+        p (float): 1 <= p <= inf, which Minkowski p-norm to use, default 2 is Euclidean.
+    
+    Returns:
+        cost (float): final DF cost.
+    """
+    nx, ny = len(traj1), len(traj2)
+    D = np.full((nx, ny), -1)
+    # base case
+    D[0, 0] = minkowski_distance(traj1[0], traj2[0], p=p)
+    for i in range(1, nx):
+        D[i, 0] = max(D[i-1, 0], minkowski_distance(traj1[i], traj2[0], p=p))
+    for j in range(1, ny):
+        D[0, j] = max(D[0, j-1], minkowski_distance(traj1[0], traj2[j], p=p))
+    for i in range(1, nx):
+        for j in range(1, ny):
+            D[i, j] = max(min(D[i-1, j], D[i, j-1], D[i-1, j-1]),
+                           minkowski_distance(traj1[i], traj2[j], p=p))
+    # final DF cost, not normalized
+    cost = D[nx-1, ny-1]
+    return cost 
+
+
+
+def euclidean_distance(u, v):
+    """ Euclidean distance, or use https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.euclidean.html
+    
+    Args:
+        u, v (np.array): 1D array, shape (D,). 
+    """
+    return np.sqrt(((u-v)**2).sum())
+
+
+def minkowski_distance(u, v, p):
+    """Minkowski distance, or use https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.minkowski.html
+    
+    Args:
+        u, v (np.array): 1D array, shape (D,). 
+    """
+    return np.pow((np.abs(u-v)**p).sum(), 1./p)
