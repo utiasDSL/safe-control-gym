@@ -9,7 +9,7 @@ import numpy as np
 from termcolor import colored
 
 from safe_control_gym.utils.utils import is_wrapped
-from safe_control_gym.math_and_models.metrics import compute_cvar
+from safe_control_gym.math_and_models.metrics.performance_metrics import compute_cvar
 
 
 class Experiment:
