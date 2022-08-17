@@ -359,10 +359,11 @@ class Quadrotor(BaseAviary):
 
         # IROS 2022 - Create maze.
         self.OBSTACLES_IDS = []
-        rand_info_copy = deepcopy(self.GATES_AND_OBS_RAND_INFO)
-        distrib = getattr(self.np_random, rand_info_copy["obstacles"].pop("distrib"))
-        d_args = rand_info_copy["obstacles"].pop("args", [])
-        d_kwargs = rand_info_copy["obstacles"]
+        if self.RANDOMIZED_GATES_AND_OBS:
+            rand_info_copy = deepcopy(self.GATES_AND_OBS_RAND_INFO)
+            distrib = getattr(self.np_random, rand_info_copy["obstacles"].pop("distrib"))
+            d_args = rand_info_copy["obstacles"].pop("args", [])
+            d_kwargs = rand_info_copy["obstacles"]
         for obstacle in self.OBSTACLES:
             offset = np.array([0, 0, 0])
             if self.RANDOMIZED_GATES_AND_OBS:
@@ -375,10 +376,11 @@ class Quadrotor(BaseAviary):
                        physicsClientId=self.PYB_CLIENT)
             self.OBSTACLES_IDS.append(TMP_ID)
         self.GATES_IDS = []
-        rand_info_copy = deepcopy(self.GATES_AND_OBS_RAND_INFO)
-        distrib = getattr(self.np_random, rand_info_copy["gates"].pop("distrib"))
-        d_args = rand_info_copy["gates"].pop("args", [])
-        d_kwargs = rand_info_copy["gates"]
+        if self.RANDOMIZED_GATES_AND_OBS:
+            rand_info_copy = deepcopy(self.GATES_AND_OBS_RAND_INFO)
+            distrib = getattr(self.np_random, rand_info_copy["gates"].pop("distrib"))
+            d_args = rand_info_copy["gates"].pop("args", [])
+            d_kwargs = rand_info_copy["gates"]
         for gate in self.GATES:
             offset = np.array([0, 0, 0])
             if self.RANDOMIZED_GATES_AND_OBS:
