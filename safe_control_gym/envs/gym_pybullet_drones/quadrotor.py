@@ -116,7 +116,7 @@ class Quadrotor(BaseAviary):
             'low': -0.01,
             'high': 0.01
         },
-        "init_theta_dot": {  # TODO: replace with q.
+        "init_theta_dot": {  # Only used in 2D quad.
             'distrib': "uniform",
             'low': -0.01,
             'high': 0.01
@@ -406,7 +406,7 @@ class Quadrotor(BaseAviary):
         if self.QUAD_TYPE == QuadType.TWO_D:
             INIT_ANG_VEL = [0, init_values.get("init_theta_dot", 0.), 0]
         else:
-            INIT_ANG_VEL = [init_values.get("init_"+k, 0.) for k in ["p", "q", "r"]]  # TODO: transform from body rates.
+            INIT_ANG_VEL = [init_values.get("init_"+k, 0.) for k in ["p", "q", "r"]]
         p.resetBasePositionAndOrientation(self.DRONE_IDS[0], INIT_XYZ,
                                           p.getQuaternionFromEuler(INIT_RPY),
                                           physicsClientId=self.PYB_CLIENT)
@@ -835,8 +835,6 @@ class Quadrotor(BaseAviary):
 
         # Control cost.
         if self.COST == Cost.QUADRATIC:
-            if self.QUAD_TYPE == QuadType.THREE_D:
-                return -1  # TODO: add self.symbolic to 3D quad
             if self.TASK == Task.STABILIZATION:
                 return float(-1 * self.symbolic.loss(x=self.state,
                                                      Xr=self.X_GOAL,
