@@ -1,0 +1,48 @@
+task_config:
+  seed: 1337
+  info_in_reset: True
+  ctrl_freq: 50
+  pyb_freq: 1000
+  gui: False
+  physics: pyb
+  quad_type: 2
+
+  init_state_randomization_info:
+    init_x:
+      distrib: 'uniform'
+      low: -1
+      high: 1
+    init_x_dot:
+      distrib: 'uniform'
+      low: -0.1
+      high: 0.1
+    init_z:
+      distrib: 'uniform'
+      low: 0.5
+      high: 1.5
+    init_z_dot:
+      distrib: 'uniform'
+      low: -0.1
+      high: 0.1
+    init_theta:
+      distrib: 'uniform'
+      low: -0.2
+      high: 0.2
+    init_theta_dot:
+      distrib: 'uniform'
+      low: -0.1
+      high: 0.1
+  randomized_init: True
+  randomized_inertial_prop: False
+
+  task: traj_tracking
+  task_info:
+    trajectory_type: figure8
+    num_cycles: 1
+    trajectory_plane: 'xz'
+    trajectory_position_offset: [0, 1]
+    trajectory_scale: 0.75
+
+  episode_len_sec: 6
+  cost: quadratic
+  done_on_out_of_bound: True

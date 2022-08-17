@@ -791,8 +791,6 @@ class Quadrotor(BaseAviary):
 
         # Control cost.
         if self.COST == Cost.QUADRATIC:
-            if self.QUAD_TYPE == QuadType.THREE_D:
-                return -1  # TODO: add self.symbolic to 3D quad
             if self.TASK == Task.STABILIZATION:
                 return float(-1 * self.symbolic.loss(x=self.state,
                                                      Xr=self.X_GOAL,

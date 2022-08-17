@@ -569,8 +569,7 @@ class CartPole(BenchmarkEnv):
         if self.COST == Cost.RL_REWARD:
             # negative quadratic reward with angle wrapped around
             state = deepcopy(self.state)
-            # TODO: should use angle wrapping
-            # state[2] = normalize_angle(state[2])
+            state[2] = normalize_angle(state[2])
             act = np.asarray(self.current_noisy_physical_action)
             if self.TASK == Task.STABILIZATION:
                 state_error = state - self.X_GOAL

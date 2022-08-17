@@ -1,8 +1,8 @@
 task_config:
   seed: 1337
   info_in_reset: True
-  ctrl_freq: 60
-  pyb_freq: 240
+  ctrl_freq: 50
+  pyb_freq: 1000
   gui: False
   physics: pyb
   quad_type: 2
@@ -39,7 +39,7 @@ task_config:
   task_info:
     stabilization_goal: [0, 1]
     stabilization_goal_tolerance: 0.0
-    
+
   episode_len_sec: 6
   cost: quadratic
   done_on_out_of_bound: True
