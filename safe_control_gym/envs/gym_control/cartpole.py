@@ -219,9 +219,7 @@ class CartPole(BenchmarkEnv):
         if self.TASK == Task.STABILIZATION:
             self.X_GOAL = np.hstack([self.TASK_INFO['stabilization_goal'][0], 0., 0., 0.])  # x = {x, x_dot, theta, theta_dot}.
         elif self.TASK == Task.TRAJ_TRACKING:
-            POS_REF, \
-            VEL_REF, \
-            SPEED = self._generate_trajectory(traj_type=self.TASK_INFO['trajectory_type'],
+            POS_REF, VEL_REF, _ = self._generate_trajectory(traj_type=self.TASK_INFO['trajectory_type'],
                                               traj_length=self.EPISODE_LEN_SEC,
                                               num_cycles=self.TASK_INFO['num_cycles'],
                                               traj_plane=self.TASK_INFO['trajectory_plane'],
@@ -298,7 +296,7 @@ class CartPole(BenchmarkEnv):
         OVERRIDDEN_POLE_INERTIA = (1 / 12) * self.OVERRIDDEN_POLE_MASS * (2 * self.OVERRIDDEN_EFFECTIVE_POLE_LENGTH)**2
         # Load the cartpole with new urdf.
         override_urdf_tree = self._create_urdf(self.URDF_PATH, length=self.OVERRIDDEN_EFFECTIVE_POLE_LENGTH, inertia=OVERRIDDEN_POLE_INERTIA)
-        self.override_path = os.path.join(self.output_dir, 'pid-{}_id-{}_cartpole.urdf'.format(os.getpid(), self.id))
+        self.override_path = os.path.join(self.output_dir, f'pid-{os.getpid()}_id-{self.id}_cartpole.urdf')
         override_urdf_tree.write(self.override_path)
         self.CARTPOLE_ID = p.loadURDF(
             self.override_path,

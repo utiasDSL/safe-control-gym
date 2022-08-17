@@ -17,8 +17,7 @@ from safe_control_gym.envs.constraints import GENERAL_CONSTRAINTS
 from safe_control_gym.math_and_models.symbolic_systems import SymbolicModel
 from safe_control_gym.envs.gym_pybullet_drones.base_aviary import BaseAviary
 from safe_control_gym.envs.gym_pybullet_drones.quadrotor_utils import QuadType, cmd2pwm, pwm2rpm
-from safe_control_gym.math_and_models.normalization import normalize_angle
-from safe_control_gym.math_and_models.transformations import projection_matrix, transform_trajectory, csRotXYZ
+from safe_control_gym.math_and_models.transformations import transform_trajectory, csRotXYZ
 
 class Quadrotor(BaseAviary):
     '''1D, 2D, and 3D quadrotor environment task.
@@ -275,11 +274,9 @@ class Quadrotor(BaseAviary):
                     self.TASK_INFO['stabilization_goal'][1], 0.0,
                     self.TASK_INFO['stabilization_goal'][2], 0.0,
                     0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-                ])  # x = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
+                ])  # x = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p_body, q_body, r_body}.
         elif self.TASK == Task.TRAJ_TRACKING:
-            POS_REF, \
-            VEL_REF, \
-            SPEED = self._generate_trajectory(traj_type=self.TASK_INFO['trajectory_type'],
+            POS_REF, VEL_REF, _ = self._generate_trajectory(traj_type=self.TASK_INFO['trajectory_type'],
                                               traj_length=self.EPISODE_LEN_SEC,
                                               num_cycles=self.TASK_INFO['num_cycles'],
                                               traj_plane=self.TASK_INFO['trajectory_plane'],
@@ -458,7 +455,7 @@ class Quadrotor(BaseAviary):
             frame (ndarray): A multidimensional array with the RGB frame captured by PyBullet's camera.
         '''
 
-        [w, h, rgb, dep, seg] = p.getCameraImage(width=self.RENDER_WIDTH,
+        [w, h, rgb, _, _] = p.getCameraImage(width=self.RENDER_WIDTH,
                                                  height=self.RENDER_HEIGHT,
                                                  shadow=1,
                                                  viewMatrix=self.CAM_VIEW,
@@ -525,14 +522,14 @@ class Quadrotor(BaseAviary):
             psi = cs.MX.sym('psi')  # Yaw
             x_dot = cs.MX.sym('x_dot')
             y_dot = cs.MX.sym('y_dot')
-            p = cs.MX.sym('p')  # Body frame roll rate
-            q = cs.MX.sym('q')  # body frame pith rate
-            r = cs.MX.sym('r')  # body frame yaw rate
+            p_body = cs.MX.sym('p')  # Body frame roll rate
+            q_body = cs.MX.sym('q')  # body frame pith rate
+            r_body = cs.MX.sym('r')  # body frame yaw rate
             # PyBullet Euler angles use the SDFormat for rotation matrices.
             Rob = csRotXYZ(phi, theta, psi)  # rotation matrix transforming a vector in the body frame to the world frame.
 
             # Define state variables.
-            X = cs.vertcat(x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r)
+            X = cs.vertcat(x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p_body, q_body, r_body)
 
             # Define inputs.
             f1 = cs.MX.sym('f1')
@@ -553,13 +550,13 @@ class Quadrotor(BaseAviary):
             Mb = cs.vertcat(l/cs.sqrt(2.0)*(f1+f2-f3-f4),
                             l/cs.sqrt(2.0)*(-f1+f2+f3-f4),
                             gamma*(-f1+f2-f3+f4))
-            rate_dot = Jinv @ (Mb - (cs.skew(cs.vertcat(p,q,r)) @ J @ cs.vertcat(p,q,r)))
+            rate_dot = Jinv @ (Mb - (cs.skew(cs.vertcat(p_body, q_body, r_body)) @ J @ cs.vertcat(p_body, q_body, r_body)))
             ang_dot = cs.blockcat([[1, cs.sin(phi)*cs.tan(theta), cs.cos(phi)*cs.tan(theta)],
                                    [0, cs.cos(phi), -cs.sin(phi)],
-                                   [0, cs.sin(phi)/cs.cos(theta), cs.cos(phi)/cs.cos(theta)]]) @ cs.vertcat(p, q, r)
+                                   [0, cs.sin(phi)/cs.cos(theta), cs.cos(phi)/cs.cos(theta)]]) @ cs.vertcat(p_body, q_body, r_body)
             X_dot = cs.vertcat(pos_dot[0], pos_ddot[0], pos_dot[1], pos_ddot[1], pos_dot[2], pos_ddot[2], ang_dot, rate_dot)
 
-            Y = cs.vertcat(x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r)
+            Y = cs.vertcat(x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p_body, q_body, r_body)
         # Define cost (quadratic form).
         Q = cs.MX.sym('Q', nx, nx)
         R = cs.MX.sym('R', nu, nu)
@@ -647,7 +644,7 @@ class Quadrotor(BaseAviary):
             self.STATE_LABELS = ['x', 'x_dot', 'z', 'z_dot', 'theta', 'theta_dot']
             self.STATE_UNITS = ['m', 'm/s', 'm', 'm/s', 'rad', 'rad/s']
         elif self.QUAD_TYPE == QuadType.THREE_D:
-            # obs/state = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
+            # obs/state = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p_body, q_body, r_body}.
             low = np.array([
                 -self.x_threshold, -np.finfo(np.float32).max,
                 -self.y_threshold, -np.finfo(np.float32).max,
@@ -743,7 +740,7 @@ class Quadrotor(BaseAviary):
             Rob = np.array(p.getMatrixFromQuaternion(self.quat[0])).reshape((3,3))
             Rbo = Rob.T
             ang_v_body_frame = Rbo @ ang_v
-            # {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
+            # {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p_body, q_body, r_body}.
             self.state = np.hstack(
                 # [pos[0], vel[0], pos[1], vel[1], pos[2], vel[2], rpy, ang_v]  # Note: world ang_v != body frame pqr
                 [pos[0], vel[0], pos[1], vel[1], pos[2], vel[2], rpy, ang_v_body_frame]
