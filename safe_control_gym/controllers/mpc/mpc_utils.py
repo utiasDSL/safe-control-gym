@@ -29,7 +29,7 @@ def discretize_linear_system(A,
                              exact=False
                              ):
     """Discretize a linear system.
-    
+
     dx/dt = A x + B u
     --> xd[k+1] = Ad xd[k] + Bd ud[k] where xd[k] = x(k*dt)
 
@@ -121,5 +121,5 @@ def reset_constraints(constraints):
     state_constraints_sym = constraints_list.get_state_constraint_symbolic_models()
     input_constraints_sym = constraints_list.get_input_constraint_symbolic_models()
     if len(constraints_list.input_state_constraints) > 0:
-        raise NotImplementedError('MPSC cannot handle combined state input constraints yet.')
+        raise NotImplementedError('[Error] Cannot handle combined state input constraints yet.')
     return constraints_list, state_constraints_sym, input_constraints_sym
