@@ -32,13 +32,13 @@ from safe_control_gym.controllers.sac.sac_utils import SACAgent, SACBuffer
 class SAC(BaseController):
     """soft actor critic."""
 
-    def __init__(self, 
-                 env_func, 
-                 training=True, 
-                 checkpoint_path="model_latest.pt", 
-                 output_dir="temp", 
+    def __init__(self,
+                 env_func,
+                 training=True,
+                 checkpoint_path="model_latest.pt",
+                 output_dir="temp",
                  use_gpu=False,
-                 seed=0, 
+                 seed=0,
                  **kwargs):
         super().__init__(env_func, training, checkpoint_path, output_dir, use_gpu, seed, **kwargs)
 
@@ -192,18 +192,19 @@ class SAC(BaseController):
 
     def select_action(self, obs, info=None):
         """Determine the action to take at the current timestep.
+
         Args:
-            obs (np.array): the observation at this timestep
-            info (list): the info at this timestep
-        
+            obs (ndarray): The observation at this timestep.
+            info (dict): The info at this timestep.
+
         Returns:
-            action (np.array): the action chosen by the controller
+            action (ndarray): The action chosen by the controller.
         """
-        
+
         with torch.no_grad():
             obs = torch.FloatTensor(obs).to(self.device)
             action = self.agent.ac.act(obs, deterministic=True)
-            
+
         return action
 
     def run(self, env=None, render=False, n_episodes=10, verbose=False, **kwargs):
@@ -341,10 +342,10 @@ class SAC(BaseController):
         if "policy_loss" in results:
             self.logger.add_scalars(
                 {
-                    k: results[k] 
+                    k: results[k]
                     for k in ["policy_loss", "critic_loss", "entropy_loss"]
-                }, 
-                step, 
+                },
+                step,
                 prefix="loss")
 
         # performance stats

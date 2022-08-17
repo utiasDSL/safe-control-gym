@@ -19,10 +19,10 @@ class LQR(BaseController):
         '''Creates task and controller.
 
         Args:
-            env_func (Callable): function to instantiate task/environment.
-            q_lqr (list): diagonals of state cost weight.
-            r_lqr (list): diagonals of input/action cost weight.
-            discrete_dynamics (bool): if to use discrete or continuous dynamics.
+            env_func (Callable): Function to instantiate task/environment.
+            q_lqr (list): Diagonals of state cost weight.
+            r_lqr (list): Diagonals of input/action cost weight.
+            discrete_dynamics (bool): If to use discrete or continuous dynamics.
         '''
 
         super().__init__(env_func, **kwargs)
@@ -50,12 +50,13 @@ class LQR(BaseController):
 
     def select_action(self, obs, info=None):
         '''Determine the action to take at the current timestep.
+
         Args:
-            obs (ndarray): the observation at this timestep.
-            info (list): the info at this timestep.
+            obs (ndarray): The observation at this timestep.
+            info (dict): The info at this timestep.
 
         Returns:
-            action (ndarray): the action chosen by the controller.
+            action (ndarray): The action chosen by the controller.
         '''
 
         step = self.extract_step(info)
@@ -67,27 +68,3 @@ class LQR(BaseController):
                                          self.env.U_GOAL, self.Q, self.R,
                                          self.discrete_dynamics)
             return -self.gain @ (obs - self.env.X_GOAL[step]) + self.env.U_GOAL
-
-    def run(self, env=None, max_steps=500):
-        '''Runs evaluation with current policy.
-
-        Args:
-            env (gym.Env): environment for the task.
-            max_steps (int): maximum number of steps.
-        '''
-
-        if env is None:
-            env = self.env
-
-        # Reseed for batch-wise consistency.
-        obs, info = env.reset()
-
-        for step in range(max_steps):
-            # Select action.
-            action = self.select_action(obs=obs, info=info)
-            # Step forward.
-            obs, _, done, info = env.step(action)
-
-            if done:
-                print(f'SUCCESS: Reached goal on step {step}. Terminating...')
-                break

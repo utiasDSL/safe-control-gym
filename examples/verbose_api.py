@@ -14,7 +14,8 @@ from safe_control_gym.utils.registration import make
 
 
 def run():
-    '''The main function creating, running, and closing an environment. '''
+    '''The main function running the API example. '''
+
     # Set iterations and episode counter.
     num_episodes = 1
     ITERATIONS = int(2)
@@ -128,7 +129,12 @@ class bcolors:
 
 
 def print_str_with_style(string: str='', style: int=0):
-    '''Function to convert to string and print in color. '''
+    '''Function to convert to string and print in color.
+
+    Args:
+        string (str): The string to print.
+        style (int): The style representing a color in bcolors.
+    '''
     string = str(string)
     if style == 0:
         print(bcolors.HEADER + string + bcolors.ENDC)

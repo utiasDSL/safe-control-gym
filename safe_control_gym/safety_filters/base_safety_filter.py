@@ -15,9 +15,9 @@ class BaseSafetyFilter(ABC):
         '''Initializes controller agent.
 
         Args:
-            env_func (callable): function to instantiate task/env.
-            output_dir (str): folder to write outputs.
-            seed (int): random seed.
+            env_func (callable): Function to instantiate task/env.
+            output_dir (str): Folder to write outputs.
+            seed (int): Random seed.
         '''
 
         # Base args.
@@ -38,24 +38,24 @@ class BaseSafetyFilter(ABC):
         '''Determines a safe action from the current state and proposed action.
 
         Args:
-            current_state (ndarray): current state/observation.
-            uncertified_action (ndarray): the uncertified_controller's action.
-            info (list): the info at this timestep.
+            current_state (ndarray): Current state/observation.
+            uncertified_action (ndarray): The uncertified_controller's action.
+            info (dict): The info at this timestep.
 
         Returns:
-            action (ndarray): the certified action.
-            success (bool): whether the safety filtering was successful or not.
+            action (ndarray): The certified action.
+            success (bool): Whether the safety filtering was successful or not.
         '''
-        return
+        raise NotImplementedError
 
     def extract_step(self, info=None):
         '''Extracts the current step from the info.
 
         Args:
-            info (list): the info list returned from the environment.
+            info (dict): The info list returned from the environment.
 
         Returns:
-            step (int): the current step/iteration of the environment.
+            step (int): The current step/iteration of the environment.
         '''
 
         if info is not None:
@@ -72,25 +72,27 @@ class BaseSafetyFilter(ABC):
         '''Performs learning (pre-training, training, fine-tuning, etc).
 
         Args:
-            env (gym.Env): the environment to be used for training.
+            env (BenchmarkEnv): The environment to be used for training.
         '''
         return
 
+    @abstractmethod
     def reset(self):
         '''Do initializations for training or evaluation. '''
-        return
+        raise NotImplementedError
 
     def reset_before_run(self, env=None):
         '''Reinitialize just the safety filter before a new run.
 
         Args:
-            env (gym.Env): the environment to be used for the new run
+            env (BenchmarkEnv): The environment to be used for the new run.
         '''
         self.setup_results_dict()
 
+    @abstractmethod
     def close(self):
         '''Shuts down and cleans up lingering resources. '''
-        return
+        raise NotImplementedError
 
     def save(self,
              path
@@ -98,7 +100,7 @@ class BaseSafetyFilter(ABC):
         '''Saves model params and experiment state to checkpoint path.
 
         Args:
-            path (str): the path where to save the model params/experiment state.
+            path (str): The path where to save the model params/experiment state.
         '''
         return
 
@@ -108,7 +110,7 @@ class BaseSafetyFilter(ABC):
         '''Restores model and experiment given checkpoint path.
 
         Args:
-            path (str): the path where the model params/experiment state are saved.
+            path (str): The path where the model params/experiment state are saved.
         '''
         return
 

@@ -40,7 +40,7 @@ class MPSC(BaseSafetyFilter, ABC):
         '''Initialize the MPSC.
 
         Args:
-            env_func (partial gym.Env): Environment for the task.
+            env_func (partial BenchmarkEnv): Environment for the task.
             horizon (int): The MPC horizon.
             q_lin, r_lin (list): Q and R gain matrices for linear controller.
             integration_algo (str): The algorithm used for integrating the dynamics,
@@ -48,7 +48,7 @@ class MPSC(BaseSafetyFilter, ABC):
             warmstart (bool): If the previous MPC soln should be used to warmstart the next mpc step.
             additional_constraints (list): List of additional constraints to consider.
             use_terminal_set (bool): Whether to use a terminal set constraint or not.
-            cost_function (str): a string (from Cost_Function) representing the cost function to be used.
+            cost_function (str): A string (from Cost_Function) representing the cost function to be used.
         '''
 
         # Store all params/args.
@@ -99,19 +99,19 @@ class MPSC(BaseSafetyFilter, ABC):
 
     @abstractmethod
     def set_dynamics(self):
-        '''Compute the dynamics.'''
-        return
+        '''Compute the dynamics. '''
+        raise NotImplementedError
 
     @abstractmethod
     def setup_optimizer(self):
-        '''Setup the certifying MPC problem.'''
-        return
+        '''Setup the certifying MPC problem. '''
+        raise NotImplementedError
 
     def before_optimization(self, obs):
         '''Setup the optimization.
 
         Args:
-            obs (ndarray): current state/observation.
+            obs (ndarray): Current state/observation.
         '''
         return
 
@@ -123,13 +123,13 @@ class MPSC(BaseSafetyFilter, ABC):
         '''Solve the MPC optimization problem for a given observation and uncertified input.
 
         Args:
-            obs (ndarray): current state/observation.
-            uncertified_action (ndarray): the uncertified_controller's action
-            iteration (int): the current iteration, used for trajectory tracking.
+            obs (ndarray): Current state/observation.
+            uncertified_action (ndarray): The uncertified_controller's action.
+            iteration (int): The current iteration, used for trajectory tracking.
 
         Returns:
-            action (ndarray): the certified action
-            feasible (bool): whether the safety filtering was feasible or not
+            action (ndarray): The certified action.
+            feasible (bool): Whether the safety filtering was feasible or not.
         '''
 
         opti_dict = self.opti_dict
@@ -185,13 +185,13 @@ class MPSC(BaseSafetyFilter, ABC):
         '''Algorithm 1 from Wabsersich 2019.
 
         Args:
-            current_state (ndarray): current state/observation.
-            uncertified_action (ndarray): the uncertified_controller's action
-            info (list): the info at this timestep.
+            current_state (ndarray): Current state/observation.
+            uncertified_action (ndarray): The uncertified_controller's action.
+            info (dict): The info at this timestep.
 
         Returns:
-            action (ndarray): the certified action
-            success (bool): whether the safety filtering was successful or not
+            action (ndarray): The certified action
+            success (bool): Whether the safety filtering was successful or not.
         '''
 
         self.results_dict['uncertified_action'].append(uncertified_action)
@@ -251,13 +251,14 @@ class MPSC(BaseSafetyFilter, ABC):
     def reset(self):
         '''Prepares for training or evaluation. '''
         self.env.reset()
+        self.training_env.reset()
         self.reset_before_run()
 
     def reset_before_run(self, env=None):
         '''Reinitialize just the controller before a new run.
 
         Args:
-            env (gym.Env): the environment to be used for the new run
+            env (BenchmarkEnv): The environment to be used for the new run.
         '''
         self.z_prev = None
         self.v_prev = None

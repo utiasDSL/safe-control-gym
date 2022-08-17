@@ -4,16 +4,16 @@ from safe_control_gym.safety_filters.mpsc.mpsc_cost_function.abstract_cost impor
 
 
 class ONE_STEP_COST(MPSC_COST):
-    '''Standard one step MPSC Cost Function.'''
+    '''Standard one step MPSC Cost Function. '''
 
     def get_cost(self, opti_dict):
         '''Returns the cost function for the MPSC optimization in symbolic form.
 
         Args:
-            opti_dict (dict): The dictionary of optimization variables
+            opti_dict (dict): The dictionary of optimization variables.
 
         Returns:
-            cost (casadi symbolic expression): The symbolic cost function using casadi
+            cost (casadi symbolic expression): The symbolic cost function using casadi.
         '''
 
         next_u = opti_dict['next_u']

@@ -25,7 +25,6 @@ from safe_control_gym.envs.benchmark_env import Task, Environment
 class LINEAR_MPSC(MPSC):
     '''Model Predictive Safety Certification Class. '''
 
-
     def __init__(self,
                  env_func,
                  horizon: int = 10,
@@ -57,7 +56,7 @@ class LINEAR_MPSC(MPSC):
             additional_constraints (list): List of additional constraints to consider.
             use_terminal_set (bool): Whether to use a terminal set constraint or not.
             learn_terminal_set (bool): Whether to learn a terminal set or not.
-            cost_function (str): a string (from Cost_Function) representing the cost function to be used.
+            cost_function (str): A string (from Cost_Function) representing the cost function to be used.
         '''
 
         # Store all params/args.
@@ -179,10 +178,10 @@ class LINEAR_MPSC(MPSC):
     def load(self,
              path,
              ):
-        '''Load values used by the MPC
+        '''Load values used by the MPC.
 
         Args:
-            path (str): path to the file containing the P matrix and terminal set.
+            path (str): Path to the file containing the P matrix and terminal set.
         '''
 
         with open(path, 'rb') as file:
@@ -206,10 +205,10 @@ class LINEAR_MPSC(MPSC):
     def save(self,
              path,
              ):
-        '''Saves the values used by the MPC
+        '''Saves the values used by the MPC.
 
         Args:
-            path (str): path to where to save the P matrix and terminal set.
+            path (str): Path to where to save the P matrix and terminal set.
         '''
 
         parameters = {}
@@ -347,7 +346,7 @@ class LINEAR_MPSC(MPSC):
         '''Setup the optimization.
 
         Args:
-            obs (ndarray): current state/observation.
+            obs (ndarray): Current state/observation.
         '''
 
         if self.env.NAME == Environment.CARTPOLE:

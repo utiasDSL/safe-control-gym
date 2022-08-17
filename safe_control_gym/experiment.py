@@ -9,7 +9,7 @@ import numpy as np
 from termcolor import colored
 
 from safe_control_gym.utils.utils import is_wrapped
-from safe_control_gym.math_and_models.metrics import compute_cvar
+from safe_control_gym.math_and_models.metrics.performance_metrics import compute_cvar
 
 
 class Experiment:
@@ -24,10 +24,10 @@ class Experiment:
         '''Creates a generic experiment class to run evaluations and collect standard metrics.
 
         Args:
-            env (gym.Env): the environment for the task.
-            ctrl (BaseController): the controller for the task.
-            train_env (gym.Env): the environment used for training.
-            safety_filter (BaseSafetyFilter): the safety filter to filter the controller.
+            env (BenchmarkEnv): The environment for the task.
+            ctrl (BaseController): The controller for the task.
+            train_env (BenchmarkEnv): The environment used for training.
+            safety_filter (BaseSafetyFilter): The safety filter to filter the controller.
         '''
 
         self.env = env
@@ -46,14 +46,14 @@ class Experiment:
         '''Evaluate a trained controller.
 
         Args:
-            training (bool): whether run_evaluation is being run as part of a training loop or not.
-            n_episodes (int): number of runs to execute.
-            n_steps (int): the number of steps to collect in total.
-            log_freq (int): the frequency with which to log information.
+            training (bool): Whether run_evaluation is being run as part of a training loop or not.
+            n_episodes (int): Number of runs to execute.
+            n_steps (int): The number of steps to collect in total.
+            log_freq (int): The frequency with which to log information.
 
         Returns:
-            trajs_data (dict): the raw data from the executed runs.
-            metrics (dict): the metrics calculated from the raw data.
+            trajs_data (dict): The raw data from the executed runs.
+            metrics (dict): The metrics calculated from the raw data.
         '''
 
         if not training:
@@ -71,12 +71,12 @@ class Experiment:
         '''Runs the experiments and collects all the required data.
 
         Args:
-            n_episodes (int): number of runs to execute.
-            n_steps (int): the number of steps to collect in total.
-            log_freq (int): the frequency with which to log information.
+            n_episodes (int): Number of runs to execute.
+            n_steps (int): The number of steps to collect in total.
+            log_freq (int): The frequency with which to log information.
 
         Returns:
-            trajs_data (defaultdict(list)): the raw data from the executed runs.
+            trajs_data (defaultdict(list)): The raw data from the executed runs.
         '''
 
         if n_episodes is None and n_steps is None:
@@ -130,11 +130,11 @@ class Experiment:
         '''Determines the executed action using the controller and safety filter.
 
         Args:
-            obs (ndarray): the observation at this timestep.
-            info (list): the info at this timestep.
+            obs (ndarray): The observation at this timestep.
+            info (dict): The info at this timestep.
 
         Returns:
-            action (ndarray): the action chosen by the controller and safety filter.
+            action (ndarray): The action chosen by the controller and safety filter.
         '''
         action = self.ctrl.select_action(obs, info)
         physical_action = self.env.denormalize_action(action)
@@ -151,12 +151,12 @@ class Experiment:
         '''Resets the evaluation between runs.
 
         Args:
-            ctrl_data (defaultdict): the controller specific data collected during execution.
-            sf_data (defaultdict): the safety filter specific data collected during execution.
+            ctrl_data (defaultdict): The controller specific data collected during execution.
+            sf_data (defaultdict): The safety filter specific data collected during execution.
 
         Returns:
-            obs (ndarray): the initial observation.
-            info (list): the initial info.
+            obs (ndarray): The initial observation.
+            info (dict): The initial info.
         '''
         if self.env.INFO_IN_RESET:
             obs, info = self.env.reset()
@@ -175,7 +175,11 @@ class Experiment:
         return obs, info
 
     def launch_training(self, **kwargs):
-        '''Since the learning loop varies among controllers, can only delegate to its own `learn()` method. '''
+        '''Since the learning loop varies among controllers, can only delegate to its own `learn()` method.
+
+        Returns:
+            trajs_data (defaultdict(list)): The raw data from the training.
+        '''
 
         self.reset()
         self.ctrl.learn(env=self.train_env, **kwargs)
@@ -183,7 +187,7 @@ class Experiment:
         if self.safety_filter:
             self.safety_filter.learn(env=self.train_env, **kwargs)
 
-        print("Training done.")
+        print('Training done.')
 
         trajs_data = {}
         if self.train_env is not None:
@@ -194,10 +198,10 @@ class Experiment:
         '''Compute all standard metrics on the given trajectory data.
 
         Args:
-            trajs_data (defaultdict(list)): the raw data from the executed runs.
+            trajs_data (defaultdict(list)): The raw data from the executed runs.
 
         Returns:
-            metrics (dict): the metrics calculated from the raw data.
+            metrics (dict): The metrics calculated from the raw data.
         '''
 
         met = MetricExtractor(trajs_data)
@@ -244,8 +248,8 @@ class Experiment:
         '''Restores model of the controller and/or safety filter given checkpoint paths.
 
         Args:
-            ctrl_path (str): the path used to load the controller's model.
-            safety_filter_path (str): the path used to load the safety_filter's model.
+            ctrl_path (str): The path used to load the controller's model.
+            safety_filter_path (str): The path used to load the safety_filter's model.
         '''
 
         if ctrl_path is not None:
@@ -257,8 +261,8 @@ class Experiment:
         '''Saves the model of the controller and/or safety filter given checkpoint paths.
 
         Args:
-            ctrl_path (str): the path used to save the controller's model.
-            safety_filter_path (str): the path used to save the safety_filter's model.
+            ctrl_path (str): The path used to save the controller's model.
+            safety_filter_path (str): The path used to save the safety_filter's model.
         '''
 
         if ctrl_path is not None:
@@ -268,14 +272,13 @@ class Experiment:
 
 
 class RecordDataWrapper(gym.Wrapper):
-    """A wrapper to standardizes logging for benchmark envs.
+    '''A wrapper to standardizes logging for benchmark envs.
 
     currently saved info
     * obs, reward, done, info, action
     * env.state, env.current_physical_action,
     env.current_noisy_physical_action, env.current_clipped_action
-
-    """
+    '''
 
     def __init__(self, env):
         super().__init__(env)
@@ -295,7 +298,7 @@ class RecordDataWrapper(gym.Wrapper):
             self.episode_data = defaultdict(list)
 
     def clear_data(self):
-        '''Clears all data in self.data and self.episode_data'''
+        '''Clears all data in self.data and self.episode_data. '''
         self.data = defaultdict(list)
         self.episode_data = defaultdict(list)
 
@@ -364,7 +367,7 @@ class MetricExtractor:
         '''Creates a class to extract metrics from standard trajectory data.
 
         Args:
-            data (defaultdict(list)): the raw data from the executed runs, in standard form from the Experiment class.
+            data (defaultdict(list)): The raw data from the executed runs, in standard form from the Experiment class.
         '''
         self.data = data
 
@@ -372,11 +375,11 @@ class MetricExtractor:
         '''Extract data field from recorded trajectory data, optionally postprocess each episode data (e.g. get sum).
 
         Args:
-            key (str): the key of the data to retrieve.
-            postprocess_func (lambda): a function to process the outgoing data.
+            key (str): The key of the data to retrieve.
+            postprocess_func (lambda): A function to process the outgoing data.
 
         Returns:
-            episode_data (list): the desired data.
+            episode_data (list): The desired data.
         '''
 
         if key in self.data:

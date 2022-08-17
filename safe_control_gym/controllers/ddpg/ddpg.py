@@ -6,7 +6,7 @@ Reference paper & code:
     * [DeepRL - ddpg](https://github.com/ShangtongZhang/DeepRL/blob/master/deep_rl/agent/DDPG_agent.py)
 
 Example:
-    $ python experiments/main.py --algo ddpg --task cartpole --output_dir results --tag test/cartpole_ddpg --seed 6 
+    $ python experiments/main.py --algo ddpg --task cartpole --output_dir results --tag test/cartpole_ddpg --seed 6
 """
 
 import os
@@ -29,13 +29,13 @@ from safe_control_gym.controllers.ddpg.ddpg_utils import DDPGAgent, DDPGBuffer, 
 class DDPG(BaseController):
     """deep deterministic policy gradient."""
 
-    def __init__(self, 
-                 env_func, 
-                 training=True, 
-                 checkpoint_path="model_latest.pt", 
-                 output_dir="temp", 
-                 use_gpu=False, 
-                 seed=0, 
+    def __init__(self,
+                 env_func,
+                 training=True,
+                 checkpoint_path="model_latest.pt",
+                 output_dir="temp",
+                 use_gpu=False,
+                 seed=0,
                  **kwargs):
         super().__init__(env_func, training, checkpoint_path, output_dir, use_gpu, seed, **kwargs)
 
@@ -97,7 +97,7 @@ class DDPG(BaseController):
             obs, _ = self.env.reset()
             self.obs = self.obs_normalizer(obs)
             self.buffer = DDPGBuffer(self.env.observation_space, self.env.action_space, self.max_buffer_size, self.train_batch_size)
-            # reset/initial noise process 
+            # reset/initial noise process
             if self.noise_process:
                 self.noise_process.reset_states()
         else:
@@ -134,7 +134,7 @@ class DDPG(BaseController):
             # but intermediate checkpoint shoud not, to save storage (buffer is large)
             if save_buffer:
                 exp_state["buffer"] = self.buffer.state_dict()
-            # noise process is also stateful 
+            # noise process is also stateful
             if self.noise_process:
                 exp_state["noise_process"] = self.noise_process.state_dict()
             state_dict.update(exp_state)
@@ -197,14 +197,15 @@ class DDPG(BaseController):
 
     def select_action(self, obs, info=None):
         """Determine the action to take at the current timestep.
+
         Args:
-            obs (np.array): the observation at this timestep
-            info (list): the info at this timestep
-        
+            obs (ndarray): The observation at this timestep.
+            info (dict): The info at this timestep.
+
         Returns:
-            action (np.array): the action chosen by the controller
+            action (ndarray): The action chosen by the controller.
         """
-        
+
         with torch.no_grad():
             obs = torch.FloatTensor(obs).to(self.device)
             action = self.agent.ac.act(obs)
@@ -350,10 +351,10 @@ class DDPG(BaseController):
         if "policy_loss" in results:
             self.logger.add_scalars(
                 {
-                    k: results[k] 
+                    k: results[k]
                     for k in ["policy_loss", "critic_loss"]
-                }, 
-                step, 
+                },
+                step,
                 prefix="loss")
 
         # performance stats

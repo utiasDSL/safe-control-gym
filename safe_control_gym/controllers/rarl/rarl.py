@@ -7,9 +7,8 @@ References papers & code:
     * [rllab-adv](https://github.com/lerrel/rllab-adv)
     * [Robust Reinforcement Learning via adversary pools](https://github.com/eugenevinitsky/robust_RL_multi_adversary)
 
-Example: 
+Example:
     train on cartpole with disturbance::
-    
         $ python mains/main.py --algo rarl --task cartpole --overrides benchmark/configs/overrides/rarl_cartpole.yaml
 """
 
@@ -32,12 +31,12 @@ from safe_control_gym.controllers.ppo.ppo_utils import PPOAgent, PPOBuffer, comp
 class RARL(BaseController):
     """robust adversarial reinforcement learning with PPO."""
 
-    def __init__(self, 
-                 env_func, 
-                 training=True, 
-                 checkpoint_path="model_latest.pt", 
-                 output_dir="temp", 
-                 use_gpu=False, 
+    def __init__(self,
+                 env_func,
+                 training=True,
+                 checkpoint_path="model_latest.pt",
+                 output_dir="temp",
+                 use_gpu=False,
                  seed=0,
                  **kwargs):
         super().__init__(env_func, training, checkpoint_path, output_dir, use_gpu, seed, **kwargs)
@@ -68,7 +67,7 @@ class RARL(BaseController):
         self.agent = PPOAgent(self.env.observation_space, self.env.action_space, **shared_agent_args)
         self.agent.to(self.device)
 
-        # fetch adversary specs from env 
+        # fetch adversary specs from env
         if self.training:
             self.adv_obs_space = self.env.get_attr("adversary_observation_space")[0]
             self.adv_act_space = self.env.get_attr("adversary_action_space")[0]
@@ -105,7 +104,7 @@ class RARL(BaseController):
             self.env.add_tracker("constraint_violation", 0, mode="queue")
             self.eval_env.add_tracker("constraint_violation", 0, mode="queue")
             self.eval_env.add_tracker("mse", 0, mode="queue")
-            
+
             self.total_steps = 0
             obs, _ = self.env.reset()
             self.obs = self.obs_normalizer(obs)
@@ -197,12 +196,13 @@ class RARL(BaseController):
 
     def select_action(self, obs, info=None):
         """Determine the action to take at the current timestep.
+
         Args:
-            obs (np.array): the observation at this timestep
-            info (list): the info at this timestep
-        
+            obs (ndarray): The observation at this timestep.
+            info (dict): The info at this timestep.
+
         Returns:
-            action (np.array): the action chosen by the controller
+            action (ndarray): The action chosen by the controller.
         """
 
         with torch.no_grad():
@@ -301,17 +301,17 @@ class RARL(BaseController):
         # learning stats
         self.logger.add_scalars(
             {
-                k: results[k] 
+                k: results[k]
                 for k in ["policy_loss", "value_loss", "entropy_loss"]
-            }, 
-            step, 
+            },
+            step,
             prefix="loss")
         self.logger.add_scalars(
             {
-                k: results[k + "_adv"] 
+                k: results[k + "_adv"]
                 for k in ["policy_loss", "value_loss", "entropy_loss"]
-            }, 
-            step, 
+            },
+            step,
             prefix="loss_adv")
 
         # performance stats

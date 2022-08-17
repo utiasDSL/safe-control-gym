@@ -191,12 +191,13 @@ class PPO(BaseController):
 
     def select_action(self, obs, info=None):
         """Determine the action to take at the current timestep.
+
         Args:
-            obs (np.array): the observation at this timestep
-            info (list): the info at this timestep
+            obs (ndarray): The observation at this timestep.
+            info (dict): The info at this timestep.
 
         Returns:
-            action (np.array): the action chosen by the controller
+            action (ndarray): The action chosen by the controller.
         """
 
         with torch.no_grad():

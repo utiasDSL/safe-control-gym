@@ -20,12 +20,12 @@ class BaseController(ABC):
         '''Initializes controller agent.
 
         Args:
-            env_func (callable): function to instantiate task/env.
-            training (bool): training flag.
-            checkpoint_path (str): file to save trained model & experiment state.
-            output_dir (str): folder to write outputs.
+            env_func (callable): Function to instantiate task/env.
+            training (bool): Training flag.
+            checkpoint_path (str): File to save trained model & experiment state.
+            output_dir (str): Folder to write outputs.
             use_gpu (bool): False (use cpu) True (use cuda).
-            seed (int): random seed.
+            seed (int): Random seed.
         '''
 
         # Base args.
@@ -49,22 +49,22 @@ class BaseController(ABC):
         '''Determine the action to take at the current timestep.
 
         Args:
-            obs (ndarray): the observation at this timestep.
-            info (list): the info at this timestep.
+            obs (ndarray): The observation at this timestep.
+            info (dict): The info at this timestep.
 
         Returns:
-            action (ndarray): the action chosen by the controller.
+            action (ndarray): The action chosen by the controller.
         '''
-        return
+        raise NotImplementedError
 
     def extract_step(self, info=None):
         '''Extracts the current step from the info.
 
         Args:
-            info (list): the info list returned from the environment.
+            info (dict): The info list returned from the environment.
 
         Returns:
-            step (int): the current step/iteration of the environment.
+            step (int): The current step/iteration of the environment.
         '''
 
         if info is not None:
@@ -81,27 +81,29 @@ class BaseController(ABC):
         '''Performs learning (pre-training, training, fine-tuning, etc).
 
         Args:
-            env (gym.Env): the environment to be used for training
+            env (BenchmarkEnv): The environment to be used for training.
         '''
         return
 
+    @abstractmethod
     def reset(self):
         '''Do initializations for training or evaluation. '''
-        return
+        raise NotImplementedError
 
     def reset_before_run(self, obs=None, info=None, env=None):
         '''Reinitialize just the controller before a new run.
 
         Args:
-            obs (ndarray): the initial observation for the new run
-            info (list): the first info of the new run
-            env (gym.Env): the environment to be used for the new run
+            obs (ndarray): The initial observation for the new run.
+            info (dict): The first info of the new run.
+            env (BenchmarkEnv): The environment to be used for the new run.
         '''
         self.setup_results_dict()
 
+    @abstractmethod
     def close(self):
         '''Shuts down and cleans up lingering resources. '''
-        return
+        raise NotImplementedError
 
     def save(self,
              path
@@ -109,7 +111,7 @@ class BaseController(ABC):
         '''Saves model params and experiment state to checkpoint path.
 
         Args:
-            path (str): the path where to save the model params/experiment state
+            path (str): The path where to save the model params/experiment state.
         '''
         return
 
@@ -119,7 +121,7 @@ class BaseController(ABC):
         '''Restores model and experiment given checkpoint path.
 
         Args:
-            path (str): the path where the model params/experiment state are saved
+            path (str): The path where the model params/experiment state are saved.
         '''
         return
 

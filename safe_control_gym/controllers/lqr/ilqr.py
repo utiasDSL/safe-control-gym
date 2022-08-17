@@ -31,11 +31,14 @@ class iLQR(BaseController):
         '''Creates task and controller.
 
         Args:
-            env_func (Callable): function to instantiate task/environment.
-            q_lqr (list): diagonals of state cost weight.
-            r_lqr (list): diagonals of input/action cost weight.
-            discrete_dynamics (bool): if to use discrete or continuous dynamics.
-            max_iterations, lamb_factor, lamb_max, epsilon: iLQR parameters.
+            env_func (Callable): Function to instantiate task/environment.
+            q_lqr (list): Diagonals of state cost weight.
+            r_lqr (list): Diagonals of input/action cost weight.
+            discrete_dynamics (bool): If to use discrete or continuous dynamics.
+            max_iterations (int): The number of iterations to train iLQR.
+            lamb_factor (float): The amount for which to increase lambda when training fails.
+            lamb_max (float): The maximum lambda allowed.
+            epsilon (float): The convergence tolerance.
         '''
 
         super().__init__(env_func, **kwargs)
@@ -80,10 +83,10 @@ class iLQR(BaseController):
         self.env.close()
 
     def learn(self, env=None, **kwargs):
-        '''Run iLQR to iteratively update policy for each time step
+        '''Run iLQR to iteratively update policy for each time step.
 
         Args:
-            env (gym.Env): the environment to be used for training
+            env (BenchmarkEnv): The environment to be used for training.
         '''
 
         if env is None:
@@ -181,7 +184,7 @@ class iLQR(BaseController):
         '''Updates policy.
 
         Args:
-            env (gym.Env): the environment to be used for training
+            env (BenchmarkEnv): The environment to be used for training.
         '''
 
         # Get symbolic loss function which also contains the necessary Jacobian
@@ -276,11 +279,11 @@ class iLQR(BaseController):
         '''Determine the action to take at the current timestep.
 
         Args:
-            obs (ndarray): the observation at this timestep.
-            info (list): the info at this timestep.
+            obs (ndarray): The observation at this timestep.
+            info (dict): The info at this timestep.
 
         Returns:
-            action (ndarray): the action chosen by the controller.
+            action (ndarray): The action chosen by the controller.
         '''
 
         step = self.extract_step(info)
@@ -309,13 +312,13 @@ class iLQR(BaseController):
            action = -self.gain @ (x - self.x_0) + self.u_0
 
         Args:
-            obs (ndarray): the observation at this timestep.
-            step (int): the timestep.
+            obs (ndarray): The observation at this timestep.
+            step (int): The timestep.
 
         Returns:
             action (ndarray): The calculated action.
-            gains_fb (ndarray): the feedback gains.
-            input_ff (ndarray): the feedforward term.
+            gains_fb (ndarray): The feedback gains.
+            input_ff (ndarray): The feedforward term.
         '''
         if self.env.TASK == Task.STABILIZATION:
             gains_fb = -self.gain
@@ -341,9 +344,9 @@ class iLQR(BaseController):
         '''Runs evaluation with current policy.
 
         Args:
-            env (gym.Env): environment for the task.
-            max_steps (int): maximum number of steps
-            training (bool): whether the algorithm is training or evaluating
+            env (BenchmarkEnv): Environment for the task.
+            max_steps (int): Maximum number of steps.
+            training (bool): Whether the algorithm is training or evaluating.
         '''
 
         if env is None:

@@ -20,8 +20,6 @@ task_config:
 
   task: traj_tracking
   task_info:
-    stabilization_goal: [0, 1]
-    stabilization_goal_tolerance: 0.01
     trajectory_type: figure8
     num_cycles: 1
     trajectory_plane: 'xz'
@@ -29,7 +27,7 @@ task_config:
     trajectory_scale: 1
     proj_point: [0, 0, 0.5]
     proj_normal: [0, 1, 1]
+
   episode_len_sec: 10
   cost: quadratic
-
   done_on_out_of_bound: False

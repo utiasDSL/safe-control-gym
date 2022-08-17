@@ -13,7 +13,7 @@ from safe_control_gym.envs.benchmark_env import Task
 
 
 class Cost_Function(str, Enum):
-    '''MPSC Cost functions enumeration class.'''
+    '''MPSC Cost functions enumeration class. '''
 
     ONE_STEP_COST = 'one_step_cost'         # Default MPSC cost function.
     LQR_COST = 'lqr_cost'                   # Smooth cost based on LQR policy assumption
@@ -70,7 +70,7 @@ def ellipse_bounding_box(P):
         P (ndarray): n by n array defining the ellipse.
 
     Returns:
-        vertices (ndarray): An vertical of the vertices (number of verts by dim of space).
+        vertices (ndarray): A vertical of the vertices (number of verts by dim of space).
     '''
 
     c = np.eye(P.shape[0])
@@ -125,12 +125,12 @@ def get_trajectory_on_horizon(env, iteration, horizon):
     '''Gets the trajectory segment for the next horizon steps.
 
     Args:
-        env (gym.Env): environment for the task.
-        iteration (int): the current iteration, used for trajectory tracking
+        env (BenchmarkEnv): Environment for the task.
+        iteration (int): The current iteration, used for trajectory tracking.
         horizon (int): The MPC horizon.
 
     Returns:
-        clipped_X_GOAL (ndarray): the trajectory for the next horizon steps
+        clipped_X_GOAL (ndarray): The trajectory for the next horizon steps.
     '''
 
     if env.TASK == Task.TRAJ_TRACKING:

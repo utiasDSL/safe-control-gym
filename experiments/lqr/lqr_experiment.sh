@@ -3,7 +3,8 @@
 # LQR Experiment.
 
 # SYS='cartpole'
-SYS='quadrotor'
+SYS='quadrotor_2D'
+# SYS='quadrotor_3D'
 
 # TASK='stabilization'
 TASK='tracking'
@@ -11,4 +12,10 @@ TASK='tracking'
 # ALGO='lqr'
 ALGO='ilqr'
 
-python3 ./lqr_experiment.py --task ${SYS} --algo ${ALGO} --overrides ./config_overrides/${SYS}/${SYS}_${TASK}.yaml ./config_overrides/${SYS}/${ALGO}_${SYS}_${TASK}.yaml
+if [ "$SYS" == 'cartpole' ]; then
+    SYS_NAME=$SYS
+else
+    SYS_NAME='quadrotor'
+fi
+
+python3 ./lqr_experiment.py --task ${SYS_NAME} --algo ${ALGO} --overrides ./config_overrides/${SYS}/${SYS}_${TASK}.yaml ./config_overrides/${SYS}/${ALGO}_${SYS}_${TASK}.yaml
