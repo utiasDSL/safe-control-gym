@@ -81,7 +81,6 @@ class Controller():
             else:
                 waypoints.append((x, y-0.3, initial_info["gate_dimensions"]["height"]))
                 waypoints.append((x, y+0.3, initial_info["gate_dimensions"]["height"]))
-        #waypoints.append((x+0.25, y+1.5, initial_info["gate_dimensions"]["height"]))
         waypoints.append([initial_info["x_reference"][0], initial_info["x_reference"][2], initial_info["x_reference"][4]])
         waypoints = np.array(waypoints)
         deg = 6

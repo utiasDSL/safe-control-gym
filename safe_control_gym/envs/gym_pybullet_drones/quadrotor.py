@@ -1011,8 +1011,10 @@ class Quadrotor(BaseAviary):
             info["current_target_gate"] = -1
         #
         # Final goal position reached - TODO
+        info["at_goal"] = False
         if self.CURRENT_GATE == self.NUM_GATES:
-            pass
+            at_goal = bool(np.linalg.norm(self.state - self.X_GOAL) < self.TASK_INFO["stabilization_goal_tolerance"])
+            info["at_goal"] = at_goal
 
         return info
 
