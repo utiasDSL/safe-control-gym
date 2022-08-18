@@ -2,13 +2,18 @@
 
 from abc import ABC, abstractmethod
 
+import torch
+
 
 class BaseSafetyFilter(ABC):
     '''Template for safety filter, implement the following methods as needed. '''
 
     def __init__(self,
                  env_func,
+                 training=True,
+                 checkpoint_path='temp/model_latest.pt',
                  output_dir: str='temp',
+                 use_gpu=False,
                  seed: int=0,
                  **kwargs
                  ):
@@ -16,13 +21,20 @@ class BaseSafetyFilter(ABC):
 
         Args:
             env_func (callable): Function to instantiate task/env.
+            training (bool): Training flag.
+            checkpoint_path (str): File to save trained model & experiment state.
             output_dir (str): Folder to write outputs.
+            use_gpu (bool): False (use cpu) True (use cuda).
             seed (int): Random seed.
         '''
 
         # Base args.
         self.env_func = env_func
+        self.training = training
+        self.checkpoint_path = checkpoint_path
         self.output_dir = output_dir
+        self.use_gpu = use_gpu and torch.cuda.is_available()
+        self.device = 'cpu' if self.use_gpu is False else 'cuda'
         self.seed = seed
 
         # Algorithm specific args.
@@ -43,7 +55,7 @@ class BaseSafetyFilter(ABC):
             info (dict): The info at this timestep.
 
         Returns:
-            action (ndarray): The certified action.
+            certified_action (ndarray): The certified action.
             success (bool): Whether the safety filtering was successful or not.
         '''
         raise NotImplementedError

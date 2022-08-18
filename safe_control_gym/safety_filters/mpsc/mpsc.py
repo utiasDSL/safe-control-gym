@@ -12,7 +12,6 @@ from copy import deepcopy
 from abc import ABC, abstractmethod
 
 import numpy as np
-from munch import munchify
 
 from safe_control_gym.safety_filters.base_safety_filter import BaseSafetyFilter
 from safe_control_gym.safety_filters.mpsc.mpsc_utils import get_trajectory_on_horizon
@@ -190,7 +189,7 @@ class MPSC(BaseSafetyFilter, ABC):
             info (dict): The info at this timestep.
 
         Returns:
-            action (ndarray): The certified action
+            certified_action (ndarray): The certified action
             success (bool): Whether the safety filtering was successful or not.
         '''
 
@@ -204,6 +203,7 @@ class MPSC(BaseSafetyFilter, ABC):
 
         if feasible:
             self.kinf = 0
+            certified_action = action
         else:
             self.kinf += 1
             if (self.kinf <= self.horizon-1 and
@@ -218,7 +218,7 @@ class MPSC(BaseSafetyFilter, ABC):
 
                 if np.linalg.norm(clipped_action - action) >= 0.01:
                     success = False
-                action = clipped_action
+                certified_action = clipped_action
             else:
                 action = np.squeeze(self.lqr_gain @ (current_state - self.X_EQ))
                 if self.integration_algo == 'LTI':
@@ -226,13 +226,13 @@ class MPSC(BaseSafetyFilter, ABC):
                 clipped_action = np.clip(action, self.constraints.input_constraints[0].lower_bounds, self.constraints.input_constraints[0].upper_bounds)
 
                 success = False
-                action = clipped_action
+                certified_action = clipped_action
 
         self.results_dict['kinf'].append(self.kinf)
-        self.results_dict['action'].append(action)
-        self.results_dict['correction'].append(np.linalg.norm(action-uncertified_action))
+        self.results_dict['certified_action'].append(certified_action)
+        self.results_dict['correction'].append(np.linalg.norm(certified_action-uncertified_action))
 
-        return action, success
+        return certified_action, success
 
     def setup_results_dict(self):
         '''Setup the results dictionary to store run information. '''
@@ -240,7 +240,7 @@ class MPSC(BaseSafetyFilter, ABC):
         self.results_dict['feasible'] = []
         self.results_dict['kinf'] = []
         self.results_dict['uncertified_action'] = []
-        self.results_dict['action'] = []
+        self.results_dict['certified_action'] = []
         self.results_dict['correction'] = []
 
     def close(self):

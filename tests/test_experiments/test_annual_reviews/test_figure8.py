@@ -11,4 +11,4 @@ def test_figure8():
                         './experiments/annual_reviews/figure8/config_overrides/mpsc_config.yaml',
                         './experiments/annual_reviews/figure8/config_overrides/ppo_config.yaml',
                         './experiments/annual_reviews/figure8/config_overrides/cartpole_config.yaml']
-    run(plot=False, training=False, max_steps=5, curr_path='./experiments/annual_reviews/figure8')
+    run(plot=False, training=False, n_steps=5, curr_path='./experiments/annual_reviews/figure8')

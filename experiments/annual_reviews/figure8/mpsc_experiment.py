@@ -15,12 +15,14 @@ from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.configuration import ConfigFactory
 
 
-def run(plot=True, training=True, max_steps=30, curr_path='.'):
+def run(plot=True, training=True, n_steps=30, curr_path='.'):
     '''MPSC experiment recreating Figure 8 in https://arxiv.org/pdf/2108.06266.pdf.
 
     Args:
-        plot (bool): whether to plot the results.
-        max_steps (int): how many steps to run the experiment.
+        plot (bool): Whether to plot the results.
+        training (bool): Whether to train the MPSC or load pre-trained values.
+        n_steps (int): How many steps to run the experiment.
+        curr_path (str): The current relative path to the experiment folder.
     '''
 
     # Define arguments.
@@ -29,8 +31,7 @@ def run(plot=True, training=True, max_steps=30, curr_path='.'):
     env_func = partial(make,
                        config.task,
                        **config.task_config)
-    uncertified_env = env_func()
-    certified_env = env_func()
+    env = env_func()
 
     # Setup PPO controller.
     ctrl = make(config.algo,
@@ -46,9 +47,8 @@ def run(plot=True, training=True, max_steps=30, curr_path='.'):
     shutil.rmtree(os.path.dirname(os.path.abspath(__file__))+'/temp', ignore_errors=True)
 
     # Run without safety filter
-    experiment = Experiment(uncertified_env, ctrl)
-    results, _ = experiment.run_evaluation(n_steps=max_steps)
-    uncertified_env.close()
+    experiment = Experiment(env, ctrl)
+    results, _ = experiment.run_evaluation(n_steps=n_steps)
 
     # Setup MPSC.
     safety_filter = make(config.safety_filter,
@@ -57,15 +57,14 @@ def run(plot=True, training=True, max_steps=30, curr_path='.'):
     safety_filter.reset()
 
     if training is True:
-        train_env = env_func(init_state=None)
+        train_env = env_func(init_state=None, randomized_init=True)
         safety_filter.learn(env=train_env)
     else:
         safety_filter.load(f'{curr_path}/mpsc_data.pkl')
 
     # Run with safety filter
-    experiment = Experiment(certified_env, ctrl, safety_filter=safety_filter)
-    certified_results, _ = experiment.run_evaluation(n_steps=max_steps)
-    certified_env.close()
+    experiment = Experiment(env, ctrl, safety_filter=safety_filter)
+    certified_results, _ = experiment.run_evaluation(n_steps=n_steps)
     ctrl.close()
     mpsc_results = certified_results['safety_filter_data'][0]
     safety_filter.close()
