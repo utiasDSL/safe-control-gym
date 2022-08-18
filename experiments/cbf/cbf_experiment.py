@@ -58,9 +58,9 @@ def run(plot=True, training=True, n_episodes=1, n_steps=None, curr_path='.'):
         train_env = env_func(init_state=None, randomized_init=True)
         safety_filter.uncertified_controller = ctrl
         safety_filter.learn(env=train_env)
-        safety_filter.save(path=curr_path+f'/{config.safety_filter}_model_{config.task}.pt')
+        safety_filter.save(path=curr_path+f'/models/{config.safety_filter}_model_{config.task}.pt')
     else:
-        safety_filter.load(path=curr_path+f'/{config.safety_filter}_model_{config.task}.pt')
+        safety_filter.load(path=curr_path+f'/models/{config.safety_filter}_model_{config.task}.pt')
 
     # Run with safety filter
     experiment = Experiment(env, ctrl, safety_filter=safety_filter)
