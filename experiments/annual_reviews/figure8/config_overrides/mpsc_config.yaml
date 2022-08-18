@@ -12,4 +12,4 @@ sf_config:
   tau: 0.95
   use_terminal_set: True
   learn_terminal_set: False
-  integration_algo: cvodes
+  integration_algo: rk4

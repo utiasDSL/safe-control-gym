@@ -1,4 +1,5 @@
 task_config:
+  seed: 42
   ctrl_freq: 10
   pyb_freq: 1000
   info_in_reset: True
