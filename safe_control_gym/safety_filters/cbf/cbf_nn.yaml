@@ -1,0 +1,16 @@
+slope: 0.1
+
+soft_constrained: True
+slack_weight: 10000.0
+slack_tolerance: 1.0E-3
+
+# NN Parameters
+max_num_steps: 250
+
+hidden_dims: [256, 256]
+learning_rate: 0.001
+
+num_episodes: 20
+max_buffer_size: 1.0E+6
+train_batch_size: 64
+train_iterations: 200
