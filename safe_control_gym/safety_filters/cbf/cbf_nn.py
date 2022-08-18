@@ -249,7 +249,7 @@ class CBF_NN(CBF):
         self.opt.step()
 
     def save(self, path):
-        '''Saves model params and experiment state to checkpoint path.
+        '''Saves model params and experiment state to path.
 
         Args:
             path (str): The path where to save the model params/experiment state.
@@ -268,7 +268,7 @@ class CBF_NN(CBF):
         torch.save(state_dict, path)
 
     def load(self, path):
-        '''Restores model and experiment given checkpoint path.
+        '''Restores model and experiment given path.
 
         Args:
             path (str): The path where the model params/experiment state are saved.
@@ -361,7 +361,3 @@ class CBF_NN(CBF):
             for _ in range(self.train_iterations):
                 batch = self.buffer.sample(self.train_batch_size)
                 self.update(batch)
-
-            # Save model parameters
-            print('Saving current model parameters at:', self.checkpoint_path)
-            self.save(self.checkpoint_path)
