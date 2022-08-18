@@ -23,6 +23,7 @@ class Cost(str, Enum):
 
     RL_REWARD = "rl_reward"  # Default RL reward function.
     QUADRATIC = "quadratic"  # Quadratic cost.
+    COMPETITION = "competition"  # IROS 2022 competition sparse reward.
 
 
 class Task(str, Enum):

@@ -885,6 +885,10 @@ class Quadrotor(BaseAviary):
                                                      Q=self.Q,
                                                      R=self.R)["l"])
 
+        # IROS 2022 - Competition sparse reward signal.
+        if self.COST == Cost.COMPETITION:
+            return 99
+
     def _get_done(self):
         """Computes the conditions for termination of an episode.
 
@@ -1011,10 +1015,10 @@ class Quadrotor(BaseAviary):
             info["current_target_gate"] = -1
         #
         # Final goal position reached - TODO
-        info["at_goal"] = False
+        info["at_goal_position"] = False
         if self.CURRENT_GATE == self.NUM_GATES:
             at_goal = bool(np.linalg.norm(self.state - self.X_GOAL) < self.TASK_INFO["stabilization_goal_tolerance"])
-            info["at_goal"] = at_goal
+            info["at_goal_position"] = at_goal
 
         return info
 

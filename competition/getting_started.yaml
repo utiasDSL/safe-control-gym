@@ -18,7 +18,7 @@ quadrotor_config:
   task_info:
     stabilization_goal: [0.5, 6., 0.75]
     stabilization_goal_tolerance: 0.1
-  cost: quadratic
+  cost: competition
   done_on_out_of_bound: False
   done_on_violation: False
   verbose: False

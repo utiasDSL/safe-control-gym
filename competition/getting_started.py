@@ -115,7 +115,7 @@ def main():
                 print('\tConstraints evaluations: ' + str(info['constraint_values']))
                 print('\tConstraints violation: ' + str(bool(info['constraint_violation'])))
             print('\tCurrent target gate: ' + str(info['current_target_gate']))
-            print('\tAt goal position: ' + str(info['at_goal']))
+            print('\tAt goal position: ' + str(info['at_goal_position']))
             print('\tCollisions: ' + str(collisions_count))
             print('\tCollided objects: ' + str(collided_objects))
 
