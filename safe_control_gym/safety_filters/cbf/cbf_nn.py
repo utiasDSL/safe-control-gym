@@ -82,7 +82,6 @@ class CBF_NN(CBF):
 
     def setup_optimizer(self):
         '''Setup the certifying CBF problem. '''
-
         nx, nu = self.model.nx, self.model.nu
 
         # Define optimizer
@@ -104,10 +103,9 @@ class CBF_NN(CBF):
         learned_residual = cs.dot(a_var.T, u_var) + b_var
 
         right_hand_side = 0.0
+        slack_var = opti.variable(1, 1)
 
         if self.soft_constrained:
-            slack_var = opti.variable(1, 1)
-
             # Quadratic objective
             cost = 0.5 * cs.norm_2(uncertified_action_var - u_var) ** 2 + self.slack_weight * slack_var**2
 
@@ -117,7 +115,8 @@ class CBF_NN(CBF):
             # Non-negativity constraint on slack variable
             opti.subject_to(slack_var >= 0.0)
         else:
-            # quadratic objective
+            opti.subject_to(slack_var == 0.0)
+            # Quadratic objective
             cost = 0.5 * cs.norm_2(uncertified_action_var - u_var) ** 2
 
         # CBF constraint
@@ -146,9 +145,6 @@ class CBF_NN(CBF):
             'b_var': b_var,
             'cost': cost
         }
-
-        if self.soft_constrained:
-            self.opti_dict['slack_var'] = slack_var
 
     def solve_optimization(self,
                            current_state,
@@ -195,9 +191,9 @@ class CBF_NN(CBF):
             feasible = True
             certified_action = sol.value(u_var)
             if self.soft_constrained:
-                slack_var = sol.value(slack_var)
-                if slack_var > self.slack_tolerance:
-                    print('Slack:', slack_var)
+                slack_val = sol.value(slack_var)
+                if slack_val > self.slack_tolerance:
+                    print('Slack:', slack_val)
                     feasible = False
             cost = sol.value(cost)
         except RuntimeError as e:
@@ -207,7 +203,7 @@ class CBF_NN(CBF):
             print('Certified_action:', certified_action)
             if self.soft_constrained:
                 slack_val = opti.debug.value(slack_var)
-                print('Slack: ', slack_val)
+                print('Slack:', slack_val)
             print(self.lie_derivative(X=current_state, u=certified_action)['LfV'])
             print(self.linear_func(x=self.cbf(X=current_state)['cbf'])['y'])
             print('------------------------------------------------')

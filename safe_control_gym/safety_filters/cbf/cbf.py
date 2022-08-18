@@ -203,10 +203,10 @@ class CBF(BaseSafetyFilter):
             print(e)
             feasible = False
             certified_action = opti.debug.value(u_var)
-            print('Certified_action: ', certified_action)
+            print('Certified_action:', certified_action)
             if self.soft_constrained:
                 slack_val = opti.debug.value(slack_var)
-                print('Slack: ', slack_val)
+                print('Slack:', slack_val)
             print(self.lie_derivative(X=current_state, u=certified_action)['LfV'])
             print(self.linear_func(x=self.cbf(X=current_state)['cbf'])['y'])
             print('------------------------------------------------')
