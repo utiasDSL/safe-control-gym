@@ -52,5 +52,12 @@ $ python3 getting_started.py --overrides ./getting_started.yaml
 ```
 **Modify file [`edit_this.py`](https://github.com/utiasDSL/safe-control-gym/blob/alpha-iros-competition/competition/edit_this.py) to customize your planning and control**
 
+## Submission
+
+- Fork this repo ([help](https://docs.github.com/en/get-started/quickstart/fork-a-repo))
+- Checkout this branch (`alpha-iros-competition`)
+- Create a Pull Request into `utiasDSL/safe-control-gym:alpha-iros-competition` from your fork ([help](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork))
+- Tag @JacopoPan in the Pull Request's Conversation tab
+
 -----
 > University of Toronto's [Dynamic Systems Lab](https://github.com/utiasDSL) / [Vector Institute for Artificial Intelligence](https://github.com/VectorInstitute)
