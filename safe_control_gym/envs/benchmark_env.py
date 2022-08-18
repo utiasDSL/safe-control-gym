@@ -187,7 +187,7 @@ class BenchmarkEnv(gym.Env):
         else:
             self.state_dim = self.obs_dim
         # Default Q and R matrices for quadratic cost.
-        if self.COST == Cost.QUADRATIC:
+        if self.COST == Cost.QUADRATIC or self.COST == Cost.COMPETITION:
             self.Q = np.eye(self.observation_space.shape[0])
             self.R = np.eye(self.action_space.shape[0])
         # Set constraint info.

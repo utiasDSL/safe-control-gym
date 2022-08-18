@@ -6,8 +6,9 @@ Run as:
 
 """
 import time
-from functools import partial
 import numpy as np
+
+from functools import partial
 
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
@@ -42,7 +43,8 @@ def main():
     # Create environment.
     if config.use_firmware:
         if "observation" in config.quadrotor_config.disturbances:
-            raise NotImplementedError("Observation noise not supported with firmware wrapper.")
+            # raise NotImplementedError("Observation noise not supported with firmware wrapper.")
+            del config.quadrotor_config.disturbances['observation']
 
         pyb_freq = config.quadrotor_config['pyb_freq']
         ctrl_freq = config.quadrotor_config['ctrl_freq']
@@ -86,6 +88,7 @@ def main():
     # Create a logger and counters
     logger = Logger(logging_freq_hz=ctrl_freq)
     episodes_count = 1
+    cumulative_reward = 0
     collisions_count = 0
     collided_objects = set()
 
@@ -123,6 +126,10 @@ def main():
             action = ctrl.cmdSimOnly(curr_time, obs)
             obs, reward, done, info = env.step(action)
 
+        # Update the controller internal state and models.
+        ctrl.learn(action, obs, reward, done, info)
+
+        cumulative_reward += reward
         if info["collision"][1]:
             collisions_count += 1
             collided_objects.add(info["collision"][0])
@@ -132,7 +139,7 @@ def main():
             print('\n'+str(i)+'-th step.')
             print('\tApplied action: ' + str(action))
             print('\tObservation: ' + str(obs))
-            print('\tReward: ' + str(reward))
+            print('\tReward: ' + str(reward) + ' (Cumulative: ' + str(cumulative_reward) +')')
             print('\tDone: ' + str(done))
             if 'constraint_values' in info:
                 print('\tConstraints evaluations: ' + str(info['constraint_values']))
@@ -166,6 +173,7 @@ def main():
             episodes_count += 1
             if episodes_count > config.num_episodes:
                 break
+            cumulative_reward = 0
             collisions_count = 0
             collided_objects = set()
 

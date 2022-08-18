@@ -6,10 +6,12 @@ Then run:
 
 """
 import os
-from enum import Enum
 import numpy as np
 import pybullet as p
 import matplotlib.pyplot as plt
+
+from enum import Enum
+from collections import deque
 
 from safe_control_gym.envs.gym_pybullet_drones.quadrotor_utils import PIDController
 
@@ -40,11 +42,20 @@ class Controller():
     def __init__(self,
                  initial_obs,
                  initial_info,
-                 use_firmware: bool = False
+                 use_firmware: bool = False,
+                 buffer_size: int = 100
                  ):
         """Initialization of the controller.
 
         """
+
+        # Save environment parameters.
+        self.CTRL_TIMESTEP = initial_info["ctrl_timestep"]
+        self.CTRL_FREQ = initial_info["ctrl_freq"]
+
+        # Store a priori scenario information.
+        self.NOMINAL_GATES = initial_info["nominal_gates_pos"]
+        self.NOMINAL_OBSTACLES = initial_info["nominal_obstacles_pos"]
 
         if use_firmware:
             if not FIRMWARE_INSTALLED:
@@ -53,13 +64,15 @@ class Controller():
         else:
             # Simple PID Controller.
             self.ctrl = PIDController()
+            # Save additonal environment parameters.
+            self.KF = initial_info["quadrotor_kf"]
 
-        # Save environment parameters.
-        self.CTRL_TIMESTEP = initial_info["ctrl_timestep"]
-        self.CTRL_FREQ = initial_info["ctrl_freq"]
-        self.KF = initial_info["quadrotor_kf"]
-        self.NOMINAL_GATES = initial_info["nominal_gates_pos"]
-        self.NOMINAL_OBSTACLES = initial_info["nominal_obstacles_pos"]
+        # Data buffers.
+        self.action_buffer = deque([], maxlen=buffer_size)
+        self.obs_buffer = deque([], maxlen=buffer_size)
+        self.reward_buffer = deque([], maxlen=buffer_size)
+        self.done_buffer = deque([], maxlen=buffer_size)
+        self.info_buffer = deque([], maxlen=buffer_size)
 
         #########################
         # REPLACE THIS (START) ##
@@ -200,10 +213,20 @@ class Controller():
         #     print("[WARNING] Using method 'cmdSimOnly' but module 'cffirmware' is available.")
 
         iteration = int(time*self.CTRL_FREQ)
+
+        #########################
+        # REPLACE THIS (START) ##
+        #########################
+
         if iteration < len(self.ref_x):
             target = np.array([self.ref_x[iteration], self.ref_y[iteration], self.ref_z[iteration]])
         else:
             target = np.array([self.ref_x[-1], self.ref_y[-1], self.ref_z[-1]])
+
+        #########################
+        # REPLACE THIS (END) ####
+        #########################
+
         rpms, _, _ = self.ctrl.compute_control(control_timestep=self.CTRL_TIMESTEP,
                                                cur_pos=np.array([obs[0],obs[2],obs[4]]),
                                                cur_quat=np.array(p.getQuaternionFromEuler([obs[6],obs[7],obs[8]])),
@@ -213,3 +236,30 @@ class Controller():
                                                target_vel=np.zeros(3)
                                                )
         return self.KF * rpms**2
+
+    def learn(self,
+              action,
+              obs,
+              reward,
+              done,
+              info):
+        """Learning and controller updates.
+
+        """
+
+        self.action_buffer.append(action)
+        self.obs_buffer.append(obs)
+        self.reward_buffer.append(reward)
+        self.done_buffer.append(done)
+        self.info_buffer.append(info)
+
+        #########################
+        # REPLACE THIS (START) ##
+        #########################
+
+        pass
+
+        #########################
+        # REPLACE THIS (END) ####
+        #########################
+

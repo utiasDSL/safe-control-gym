@@ -397,7 +397,7 @@ class Quadrotor(BaseAviary):
             self.GATES_IDS.append(TMP_ID)
         #
         self.NUM_GATES = len(self.GATES)
-        self.CURRENT_GATE = 0
+        self.current_gate = 0
         #
         # Deactivate select collisions, e.g. between the ground plane and the drone
         # p.setCollisionFilterPair(bodyUniqueIdA=self.PLANE_ID,
@@ -406,6 +406,11 @@ class Quadrotor(BaseAviary):
         #                          linkIndexB=-1,
         #                          enableCollision=0,
         #                          physicsClientId=self.PYB_CLIENT)
+        # 
+        # Initialize IROS-specific attributes.
+        self.stepped_through_gate = False
+        self.at_goal_pos = False
+        self.currently_collided = False
         
         # Choose randomized or deterministic inertial properties.
         prop_values = {
@@ -507,9 +512,10 @@ class Quadrotor(BaseAviary):
         super()._advance_simulation(rpm, disturb_force)
         # Standard Gym return.
         obs = self._get_observation()
-        rew = self._get_reward()
+        # rew = self._get_reward()
         done = self._get_done()
         info = self._get_info()
+        rew = self._get_reward()  # IROS 2022 - After _get_info() to use this step's 'self' attributes.
         obs, rew, done, info = super().after_step(obs, rew, done, info)
         return obs, rew, done, info
     
@@ -885,9 +891,26 @@ class Quadrotor(BaseAviary):
                                                      Q=self.Q,
                                                      R=self.R)["l"])
 
-        # IROS 2022 - Competition sparse reward signal.
+        # IROS 2022 - Competition sparse reward signal. 
         if self.COST == Cost.COMPETITION:
-            return 99
+            reward = 0
+            # Reward stepping through the right next gate.
+            if self.stepped_through_gate:
+                reward += 100
+            # Reward reaching goal position (after navigating the gates in the correct order).
+            if self.at_goal_pos:
+                reward += 1000
+            # Penalize by collision
+            if self.currently_collided:
+                reward -= 1000
+            # Penalize by loss from X_GOAL, U_GOAL state.
+            # reward += float(-1 * self.symbolic.loss(x=self.state,
+            #                                         Xr=self.X_GOAL,
+            #                                         u=self.current_preprocessed_action,
+            #                                         Ur=self.U_GOAL,
+            #                                         Q=self.Q,
+            #                                         R=self.R)["l"])
+            return reward
 
     def _get_done(self):
         """Computes the conditions for termination of an episode.
@@ -979,13 +1002,15 @@ class Quadrotor(BaseAviary):
                                      physicsClientId=self.PYB_CLIENT)
             if ret:
                 info["collision"] = (GATE_OBS_ID, True)
+                self.currently_collided = True
                 break  # Note: only returning the first collision per step.
         else:
             info["collision"] = (None, False)
+            self.currently_collided = False
         #
         # Gates progress.
-        if self.pyb_step_counter > 0.5*self.PYB_FREQ and self.NUM_GATES > 0 and self.CURRENT_GATE < self.NUM_GATES:
-            x, y, _, _, _, rot = self.EFFECTIVE_GATES_POSITIONS[self.CURRENT_GATE]
+        if self.pyb_step_counter > 0.5*self.PYB_FREQ and self.NUM_GATES > 0 and self.current_gate < self.NUM_GATES:
+            x, y, _, _, _, rot = self.EFFECTIVE_GATES_POSITIONS[self.current_gate]
             height = 0.7
             delta_x = 0.08*np.cos(rot)
             delta_y = 0.08*np.sin(rot)
@@ -1005,20 +1030,22 @@ class Quadrotor(BaseAviary):
             rays = p.rayTestBatch(rayFromPositions=fr,
                                   rayToPositions=to,
                                   physicsClientId=self.PYB_CLIENT)
+            self.stepped_through_gate = False
             for r in rays:
                 if r[2] < .9999:
-                    self.CURRENT_GATE += 1
+                    self.current_gate += 1
+                    self.stepped_through_gate = True
                     break
-        if self.CURRENT_GATE < self.NUM_GATES:
-            info["current_target_gate"] = self.CURRENT_GATE
+        if self.current_gate < self.NUM_GATES:
+            info["current_target_gate"] = self.current_gate
         else:
             info["current_target_gate"] = -1
         #
         # Final goal position reached - TODO
         info["at_goal_position"] = False
-        if self.CURRENT_GATE == self.NUM_GATES:
-            at_goal = bool(np.linalg.norm(self.state - self.X_GOAL) < self.TASK_INFO["stabilization_goal_tolerance"])
-            info["at_goal_position"] = at_goal
+        if self.current_gate == self.NUM_GATES:
+            self.at_goal_pos = bool(np.linalg.norm(self.state - self.X_GOAL) < self.TASK_INFO["stabilization_goal_tolerance"])
+            info["at_goal_position"] = self.at_goal_pos
 
         return info
 

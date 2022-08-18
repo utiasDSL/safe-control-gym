@@ -11,12 +11,8 @@ Links:
 
 Complete this [Google Form](https://forms.gle/vEmVK99n1SyaE4Zw9) to register you interest and receive e-mail updates
 
-## Latest Update: August 17
-- Full YAML template
-- Gates' progress and goal reached computation
-
-## Next Update: August 18 (approx.)
-- `cffirmare` Python module
+## Latest Update: August 18
+- `pycffirmare` Python module
 - Training script example
 
 ## Install on Ubuntu/macOS
@@ -41,6 +37,9 @@ Install the `safe-control-gym` repository
 pip install --upgrade pip
 pip install -e .
 ```
+
+(recommended) Install [`pycffirmware`](https://github.com/utiasDSL/pycffirmware)
+
 
 ## Getting Started
 Run the scripts in [`competition/`](https://github.com/utiasDSL/safe-control-gym/tree/main/competition)
