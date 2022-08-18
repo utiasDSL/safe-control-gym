@@ -157,7 +157,7 @@ class CBF_NN(CBF):
         '''Solve the MPC optimization problem for a given observation and uncertified input.
 
         Args:
-            obs (ndarray): Current state/observation.
+            current_state (ndarray): Current state/observation.
             uncertified_action (ndarray): The uncertified_controller's action.
 
         Returns:

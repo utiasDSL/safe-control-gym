@@ -1,7 +1,7 @@
 '''Control barrier function (CBF) quadratic programming (QP) safety filter.
 
 Reference:
-    * [Learning for Safety-Critical Control with Control Barrier Functions](https://arxiv.org/abs/1912.10099)
+    * [Control Barrier Functions: Theory and Applications](https://arxiv.org/abs/1903.11199)
 '''
 
 import numpy as np
@@ -22,8 +22,8 @@ class CBF(BaseSafetyFilter):
                  slack_tolerance: float=1.0E-3,
                  **kwargs):
         '''
-        CBF-QP Safety Filter: The CBF's superlevel set defines a positively control invariant
-        set. A QP based on the CBF's Lie derivative with respect to the dynamics allows to filter arbitrary control
+        CBF-QP Safety Filter: The CBF's superlevel set defines a positively control invariant set.
+        A QP based on the CBF's Lie derivative with respect to the dynamics allows to filter arbitrary control
         inputs to keep the system inside the CBF's superlevel set.
 
         Args:
@@ -38,13 +38,13 @@ class CBF(BaseSafetyFilter):
         # TODO: Currently specific for cartpole! Make more general for other systems, e.g., extend to quadrotor
         #  environment
 
+        super().__init__(env_func=env_func, **kwargs)
+        self.env = self.env_func()
+
         self.slope = slope
         self.soft_constrained = soft_constrained
         self.slack_weight = slack_weight
         self.slack_tolerance = slack_tolerance
-
-        super().__init__(env_func=env_func, **kwargs)
-        self.env = self.env_func()
 
         self.input_constraints_sym = self.env.constraints.get_input_constraint_symbolic_models()
         self.state_constraints_sym = self.env.constraints.get_state_constraint_symbolic_models()
@@ -68,12 +68,7 @@ class CBF(BaseSafetyFilter):
         self.u = self.model.u_sym
 
         if self.env.NAME == 'cartpole':
-            self.u_max = min(abs(self.input_constraint.upper_bounds[0]), abs(self.input_constraint.lower_bounds[0]))
-            self.x_pos_max = min(abs(self.state_constraint.upper_bounds[0]), abs(self.state_constraint.lower_bounds[0]))
-            self.x_vel_max = min(abs(self.state_constraint.upper_bounds[1]), abs(self.state_constraint.lower_bounds[1]))
-            self.theta_max = min(abs(self.state_constraint.upper_bounds[2]), abs(self.state_constraint.lower_bounds[2]))
-            self.theta_dot_max = min(abs(self.state_constraint.upper_bounds[3]), abs(self.state_constraint.lower_bounds[3]))
-            self.state_limits = [self.x_pos_max, self.x_vel_max, self.theta_max, self.theta_dot_max]
+            self.state_limits = [min(abs(self.state_constraint.upper_bounds[i]), abs(self.state_constraint.lower_bounds[i])) for i in range(self.model.nx)]
             self.cbf = cbf_cartpole(self.X, self.state_limits)
         else:
             raise NotImplementedError('[Error] Currently CBF is only implemented for the cartpole system.')
@@ -90,8 +85,7 @@ class CBF(BaseSafetyFilter):
         # Setup Optimizer
         self.setup_optimizer()
 
-        # Setup result dictionary
-        self.setup_results_dict()
+        self.reset()
 
     def get_lie_derivative(self):
         '''Determines the Lie derivative of the CBF with respect to the known dynamics. '''
@@ -165,9 +159,6 @@ class CBF(BaseSafetyFilter):
             'cost': cost
         }
 
-        if self.soft_constrained:
-            self.opti_dict['slack_var'] = slack_var
-
     def solve_optimization(self,
                            current_state,
                            uncertified_action,
@@ -175,7 +166,7 @@ class CBF(BaseSafetyFilter):
         '''Solve the MPC optimization problem for a given observation and uncertified input.
 
         Args:
-            obs (ndarray): Current state/observation.
+            current_state (ndarray): Current state/observation.
             uncertified_action (ndarray): The uncertified_controller's action.
 
         Returns:
@@ -194,7 +185,6 @@ class CBF(BaseSafetyFilter):
         opti.set_value(current_state_var, current_state)
         opti.set_value(uncertified_action_var, uncertified_action)
 
-        success = False
         try:
             # Solve optimization problem
             sol = opti.solve()
@@ -262,7 +252,7 @@ class CBF(BaseSafetyFilter):
         valid_cbf = False
 
         # Select the states to check the CBF condition
-        max_bounds = np.array([self.x_pos_max, self.x_vel_max, self.theta_max, self.theta_dot_max])
+        max_bounds = np.array(self.state_limits)
         # Add some tolerance to the bounds to also check the condition outside of the superlevel set
         max_bounds += tolerance
         min_bounds = -max_bounds
