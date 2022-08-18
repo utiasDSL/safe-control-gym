@@ -1,0 +1,128 @@
+task_config:
+  seed: 1337
+  info_in_reset: True
+  ctrl_freq: 50
+  pyb_freq: 1000
+  physics: pyb
+  quad_type: 3
+
+  init_state:
+    init_x: 0.5
+    init_x_dot: 0
+    init_y: 0.5
+    init_y_dot: 0
+    init_z: 1.5
+    init_z_dot: 0
+    init_phi: 0
+    init_theta: 0
+    init_psi: 0
+    init_p: 0
+    init_q: 0
+    init_r: 0
+  randomized_init: True
+  randomized_inertial_prop: False
+  normalized_rl_action_space: True
+
+  init_state_randomization_info:
+    init_x:
+      distrib: 'uniform'
+      low: -1
+      high: 1
+    init_x_dot:
+      distrib: 'uniform'
+      low: -0.1
+      high: 0.1
+    init_y:
+      distrib: 'uniform'
+      low: -1
+      high: 1
+    init_y_dot:
+      distrib: 'uniform'
+      low: -0.1
+      high: 0.1
+    init_z:
+      distrib: 'uniform'
+      low: 1
+      high: 2
+    init_z_dot:
+      distrib: 'uniform'
+      low: -0.1
+      high: 0.1
+    init_phi:
+      distrib: 'uniform'
+      low: -0.2
+      high: 0.2
+    init_theta:
+      distrib: 'uniform'
+      low: -0.2
+      high: 0.2
+    init_psi:
+      distrib: 'uniform'
+      low: -0.2
+      high: 0.2
+    init_p:
+      distrib: 'uniform'
+      low: -0.1
+      high: 0.1
+    init_q:
+      distrib: 'uniform'
+      low: -0.1
+      high: 0.1
+    init_r:
+      distrib: 'uniform'
+      low: -0.1
+      high: 0.1
+
+  task: stabilization
+  task_info:
+    stabilization_goal: [0, 0, 1]
+    stabilization_goal_tolerance: 0.1
+
+  inertial_prop:
+    M: 0.027
+    Ixx: 1.4e-5
+    Iyy: 1.4e-5
+    Izz: 2.17e-5
+
+  episode_len_sec: 6
+  cost: rl_reward
+  obs_goal_horizon: 1
+
+  # RL Reward
+  rew_state_weight: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+  rew_act_weight: 0.1
+  rew_exponential: True
+  
+  constraints:
+    - constraint_form: default_constraint
+      constrained_variable: state
+      upper_bounds:
+        - 2
+        - 2
+        - 2
+        - 2
+        - 2
+        - 2
+        - 0.2
+        - 1
+        - 0.2
+        - 1
+        - 0.2
+        - 1
+      lower_bounds:
+        - -2
+        - -2
+        - -2
+        - -2
+        - 0
+        - -2
+        - -0.2
+        - -1
+        - -0.2
+        - -1
+        - -0.2
+        - -1
+    - constraint_form: default_constraint
+      constrained_variable: input
+  done_on_out_of_bound: True
+  done_on_violation: False
