@@ -109,10 +109,6 @@ class FirmwareWrapper(BaseController):
         self.control = firm.control_t()
         self.setpoint = firm.setpoint_t()
         self.sensorData = firm.sensorData_t()
-        # self.gyro_axis_vals = [0.11791842430830002, 0.11791842430830002, 0.11791842430830002]
-        # self.acc_axis_vals = [0.2663819491863251, 0.2663819491863251, 0.2663819491863251]
-        self.gyro_axis_vals = [0, 0, 0]
-        self.acc_axis_vals = [0, 0, 0]
         self.state = firm.state_t()
         self.tick = 0
         self.pwms = [0, 0, 0, 0]
@@ -138,6 +134,10 @@ class FirmwareWrapper(BaseController):
         firm.crtpCommanderHighLevelInit()
         firm.crtpCommanderHighLevelTellState(self.state)
 
+        try: 
+            self.close()
+        except:
+            pass
         self.env = self.env_func()
         self.env.reset()
         self.ctrl_dt = 1 / self.ctrl_freq
@@ -153,23 +153,16 @@ class FirmwareWrapper(BaseController):
                         'action': [],
                         }
 
-        # self.sendTakeoffYawCmd(1, 4, 0)
-        # self.sendTakeoffCmd(0.5, 4)
-        # self.sendFullStateCmd([0, 0, 1], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], 0)
-
-
 
     def close(self):
         self.env.close()
 
 
-    def step(self, i, action):
+    def step(self, sim_time, action):
         '''
         Step is to be called at a rate of env.CTRL_FREQ. This corresponds to the rate we can send commands through 
         the CF radio, typically below 60Hz. 
         '''
-        # Runs at rate of self.env.CTRL_FREQ --- need to make sure different actions are called appropriate number of times 
-        sim_time = i*self.ctrl_dt
         self.process_command_queue()
         
         count = 0
@@ -295,8 +288,8 @@ class FirmwareWrapper(BaseController):
 
             
             # time.sleep(0.05)
-
-            obs, reward, done, info, action = self.step(i, action)
+            raise NotImplementedError("Check code here.")
+            obs, reward, done, info, action = self.step(i, action) #TODO: i should be sim_time
             
             # Record iteration results 
             self.results_dict['obs'].append(obs)
@@ -356,21 +349,13 @@ class FirmwareWrapper(BaseController):
         axis3f.x = firm.lpf2pApply(self.gyrolpf[0], x)
         axis3f.y = firm.lpf2pApply(self.gyrolpf[1], y)
         axis3f.z = firm.lpf2pApply(self.gyrolpf[2], z)
-        # _axis = firm.floatArray(3)
-        # _axis[0] = axis3f.x
-        # _axis[1] = axis3f.y
-        # _axis[2] = axis3f.z
-        # axis3f.axis = _axis
+
         
     def _update_acc(self, axis3f, x, y, z):
         axis3f.x = firm.lpf2pApply(self.acclpf[0], x)
         axis3f.y = firm.lpf2pApply(self.acclpf[1], y)
         axis3f.z = firm.lpf2pApply(self.acclpf[2], z)
-        # _axis = firm.floatArray(3)
-        # _axis[0] = axis3f.x
-        # _axis[1] = axis3f.y
-        # _axis[2] = axis3f.z
-        # axis3f.axis = _axis
+
 
     def _update_baro(self, baro, pressure, temperature):
         '''
@@ -471,12 +456,12 @@ class FirmwareWrapper(BaseController):
             return 
 
 
-        cur_time = self.tick / self.ctrl_freq
-        if cur_time - self.last_pos_pid_call > 0.002 and cur_time - self.last_att_pid_call > 0.01:
+        cur_time = self.tick / self.firmware_freq
+        if (cur_time - self.last_att_pid_call > 0.002) and (cur_time - self.last_pos_pid_call > 0.01):
             _tick = 0
             self.last_pos_pid_call = cur_time
             self.last_att_pid_call = cur_time
-        elif cur_time - self.last_att_pid_call > 0.01:
+        elif (cur_time - self.last_att_pid_call > 0.002):
             self.last_att_pid_call = cur_time
             _tick = 2
         else:
@@ -527,8 +512,6 @@ class FirmwareWrapper(BaseController):
 
     def _sendFullStateCmd(self, pos, vel, acc, rpy, rpy_rate, timestep):
         # print(f"INFO_{self.tick}: Full state command sent.")
-        self.queued_full_state_command = None
-
         self.setpoint.position.x = pos[0]
         self.setpoint.position.y = pos[1]
         self.setpoint.position.z = pos[2]
@@ -687,144 +670,4 @@ def _get_quaternion_from_euler(roll, pitch, yaw):
     
     return [qx, qy, qz, qw]
 
-def _get_euler_from_quaternion(q1, q2, q3, q4):
-    """
-    Convert an Euler angle to a quaternion.
-    
-    Input
-        :param roll: The roll (rotation around x-axis) angle in radians.
-        :param pitch: The pitch (rotation around y-axis) angle in radians.
-        :param yaw: The yaw (rotation around z-axis) angle in radians.
-    
-    Output
-        :return qx, qy, qz, qw: The orientation in quaternion [x,y,z,w] format
-    """
-    qx = np.sin(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) - np.cos(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
-    qy = np.cos(roll/2) * np.sin(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.cos(pitch/2) * np.sin(yaw/2)
-    qz = np.cos(roll/2) * np.cos(pitch/2) * np.sin(yaw/2) - np.sin(roll/2) * np.sin(pitch/2) * np.cos(yaw/2)
-    qw = np.cos(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
-    
-    return [qx, qy, qz, qw]
-#endregion
-
-#region Legacy
-    # def _():
-    # # def update_control(self, roll, yaw, pitch, thrust):
-    # #     '''
-    # #         int16_t roll;
-    # #         int16_t pitch;
-    # #         int16_t yaw;
-    # #         float thrust;
-    # #     '''
-    # #     self.control.roll = roll 
-    # #     self.control.yaw = yaw 
-    # #     self.control.pitch = pitch 
-    # #     self.control.thrust = thrust
-
-
-    # # def update_setpoint(self, thrust, set_rpy, set_rpy_rate, set_pos, set_vel, set_acc, velocity_body):
-    # #     '''
-    # #         uint32_t timestamp;
-
-    # #         attitude_t attitude;      // deg
-    # #         attitude_t attitudeRate;  // deg/s
-    # #         quaternion_t attitudeQuaternion;
-    # #         float thrust;
-    # #         point_t position;         // m
-    # #         velocity_t velocity;      // m/s
-    # #         acc_t acceleration;       // m/s^2
-    # #         bool velocity_body;       // true if velocity is given in body frame; false if velocity is given in world frame
-
-    # #         struct {
-    # #             stab_mode_t x;
-    # #             stab_mode_t y;
-    # #             stab_mode_t z;
-    # #             stab_mode_t roll;
-    # #             stab_mode_t pitch;
-    # #             stab_mode_t yaw;
-    # #             stab_mode_t quat;
-    # #         } mode;
-    # #     '''
-    # #     self.setpoint.timestamp = self.tick
-
-    # #     _update_attitude_t(self.setpoint.attitude, self.tick, *set_rpy)
-    # #     _update_attitude_t(self.setpoint.attitudeRate, self.tick, *set_rpy_rate)
-    # #     _update_attitudeQuaternion(self.setpoint.attitudeQuaternion, self.tick, *set_rpy)
-
-    # #     self.setpoint.thrust = thrust
-    # #     _update_3D_vec(self.setpoint.position, self.tick, *set_pos)
-    # #     _update_3D_vec(self.setpoint.velocity, self.tick, *set_vel)
-    # #     _update_3D_vec(self.setpoint.acceleration, self.tick, *set_acc)
-    # #     self.setpoint.velocity_body = velocity_body
-
-    # #     # self.setpoint.mode.x = 0 update_stab_mode_t(self.setpoint.mode.x)
-    # #     # self.setpoint.mode.y = 0 update_stab_mode_t(self.setpoint.mode.y)
-    # #     # self.setpoint.mode.z = firm.modeAbs #update_stab_mode_t(self.setpoint.mode.z)
-    # #     # self.setpoint.mode.roll = 0 update_stab_mode_t(self.setpoint.mode.roll)
-    # #     # self.setpoint.mode.pitch = 0 update_stab_mode_t(self.setpoint.mode.pitch)
-    # #     # self.setpoint.mode.yaw = 0 update_stab_mode_t(self.setpoint.mode.yaw)
-    # #     # self.setpoint.mode.quat = 0 update_stab_mode_t(self.setpoint.mode.quat)
-
-    # #     self.setpoint.mode.z = firm.modeAbs #update_stab_mode_t(self.setpoint.mode.z)
-
-
-    # # M_SQRT1_2 = 0.70710678118654752440
-    # # def _quatdecompress(self, comp):
-    # #     # quatcompress.h
-    # #     mask = (1 << 9) - 1 
-    # #     i_largest = comp >> 30
-    # #     sum_squares = 0
-    # #     for i in range(3, 0, -1):
-    # #         if (i != i_largest):
-    # #             mag = comp & mask
-    # #             negbit = (comp >> 9) & 1
-    # #             comp = comp >> 10 
-    # #             self.setpoint.attitudeQuaternion[i] = self.M_SQRT1_2 * mag / mask
-    # #             if negbit == 1:
-    # #                 self.setpoint.attitudeQuaternion[i] *= -1
-    # #             sum_squares += self.setpoint.attitudeQuaternion[i]**2
-
-    # #     self.setpoint.attitudeQuaternion[i_largest] = (1 - sum_squares)**0.5
-
-
-    # # def _quatcompress(self, q):
-    # #     # quatcompress.h
-    # #     i_largest = 0
-    # #     for i in range(1, 4):
-    # #         if abs(q[i]) > abs(q[i_largest]):
-    # #             i_largest = i
-
-    # #     negate = q[i_largest] < 0
-
-    # #     comp = i_largest
-    # #     for i in range(4):
-    # #         if i != i_largest:
-    # #             negbit = (q[i] < 0) ^ negate
-    # #             mag = int(((1 << 9) - 1) * abs(q[i]) / self.M_SQRT1_2 + 0.5)
-    # #             comp = (comp << 10) | (negbit << 9) | mag
-    # #     print(f"Compressed quat: {int(comp):b}, {type(int(comp))}")
-    # #     return int(comp)
-
-
-    # # def sendFullStateCmd(self, pos, vel, acc, rpy, rpy_rate, timestep):
-    # #     packet = firm.fullStatePacket_s() # stabilizer_types.h
-        
-    # #     packet.x = int(1000*pos[0])
-    # #     packet.y = int(1000*pos[1])
-    # #     packet.z = int(1000*pos[2])
-    # #     packet.vx = int(1000*vel[0])
-    # #     packet.vy = int(1000*vel[1])
-    # #     packet.vz = int(1000*vel[2])
-    # #     packet.ax = int(1000*acc[0])
-    # #     packet.ay = int(1000*acc[1])
-    # #     packet.az = int(1000*acc[2])
-    # #     print(type(self._quatcompress(_get_quaternion_from_euler(*rpy))))
-    # #     packet._quat = self._quatcompress(_get_quaternion_from_euler(*rpy))
-    # #     print(type(packet.rateRoll), rpy_rate)
-    # #     packet.rateRoll = int(rpy_rate[0])
-    # #     packet.ratePitch = int(rpy_rate[1])
-    # #     packet.rateYaw = int(rpy_rate[2])
-
-    # #     self._fullStateDecoder(packet, timestep)
-    #     pass
 #endregion

@@ -16,7 +16,7 @@ from safe_control_gym.envs.gym_pybullet_drones.Logger import Logger
 from edit_this import Controller, Command
 
 try:
-    import cffirmware
+    import pycffirmware
 except ImportError:
     FIRMWARE_INSTALLED = False
 else:
@@ -41,9 +41,13 @@ def main():
 
     # Create environment.
     if config.use_firmware:
+        if "observation" in config.quadrotor_config.disturbances:
+            raise NotImplementedError("Observation noise not supported with firmware wrapper.")
+
         pyb_freq = config.quadrotor_config['pyb_freq']
         ctrl_freq = config.quadrotor_config['ctrl_freq']
         firmware_freq = config.quadrotor_config['firmware_freq']
+        ctrl_dt = 1/ctrl_freq
 
         assert(pyb_freq % firmware_freq == 0), "pyb_freq must be a multiple of firmware freq"
 
@@ -57,36 +61,42 @@ def main():
                     env_func, firmware_freq, ctrl_freq
                     ) 
         env = firmware_wrapper.env
+
         action = np.zeros(4)
     else:
         env = make('quadrotor', **config.quadrotor_config)
         ctrl_freq = env.CTRL_FREQ
+        ctrl_dt = env.CTRL_TIMESTEP
 
     # Reset the environment, obtain the initial observations and info dictionary.
     obs, info = env.reset()
 
-    # Create controller.
-    ctrl = Controller(obs, info, config.use_firmware)
-
     # Initialize firmware.
     if config.use_firmware:
+        info['ctrl_timestep'] = ctrl_dt
+        info['ctrl_freq'] = ctrl_freq
+        
+        # Create controller.
+        ctrl = Controller(obs, info, config.use_firmware)
         firmware_wrapper.update_initial_state(obs)
+    else:
+        # Create controller.
+        ctrl = Controller(obs, info, config.use_firmware)
 
-    # Set episode counters.
-    num_episodes = 2
+    # Create a logger and counters
+    logger = Logger(logging_freq_hz=ctrl_freq)
     episodes_count = 1
-
-    # Create a logger.
-    logger = Logger(logging_freq_hz=env.CTRL_FREQ)
+    collisions_count = 0
+    collided_objects = set()
 
     # Run an experiment.
-    for i in range(num_episodes*ctrl_freq*env.EPISODE_LEN_SEC):
+    for i in range(config.num_episodes*ctrl_freq*env.EPISODE_LEN_SEC):
 
         # Step by keyboard input.
-        # _ = input('Press any key to continue.')
+        # _ = input()
 
         # Elapsed sim time.
-        curr_time = (i%(ctrl_freq*env.EPISODE_LEN_SEC))*env.CTRL_TIMESTEP
+        curr_time = (i%(ctrl_freq*env.EPISODE_LEN_SEC))*ctrl_dt
 
         # Compute control input.
         if config.use_firmware:
@@ -108,7 +118,7 @@ def main():
                 raise ValueError("[ERROR] Invalid command_type.")
 
             # Step the environment.
-            obs, reward, done, info, action = firmware_wrapper.step(i%(env.CTRL_FREQ*env.EPISODE_LEN_SEC), action)
+            obs, reward, done, info, action = firmware_wrapper.step(curr_time, action)
         else:
             action = ctrl.cmdSimOnly(curr_time, obs)
             obs, reward, done, info = env.step(action)
@@ -136,7 +146,7 @@ def main():
         vel = [obs[1],obs[3],obs[5]]
         ang_vel = [obs[9],obs[10],obs[11]]
         logger.log(drone=0,
-                   timestamp=i/env.CTRL_FREQ,
+                   timestamp=i/ctrl_freq,
                    state=np.hstack([pos, np.zeros(4), rpy, vel, ang_vel, np.sqrt(action/env.KF)]),
                    )
 
@@ -149,7 +159,7 @@ def main():
             logger.save_as_csv(comment="get_start-episode-"+str(episodes_count))
 
             # Create a new logger.
-            logger = Logger(logging_freq_hz=env.CTRL_FREQ)
+            logger = Logger(logging_freq_hz=ctrl_freq)
 
             episodes_count += 1
             if episodes_count > config.num_episodes:
@@ -165,6 +175,7 @@ def main():
 
             # Re-initialize firmware.
             if config.use_firmware:
+                firmware_wrapper.reset()
                 firmware_wrapper.update_initial_state(new_initial_obs)
                 action = np.zeros(4)
 
@@ -177,7 +188,7 @@ def main():
                   config.num_episodes,
                   elapsed_sec,
                   i/elapsed_sec,
-                  (i*env.CTRL_TIMESTEP)/elapsed_sec
+                  (i*ctrl_dt)/elapsed_sec
                   )))
 
 if __name__ == "__main__":
