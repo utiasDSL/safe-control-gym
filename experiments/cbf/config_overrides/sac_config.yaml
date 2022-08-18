@@ -1,7 +1,7 @@
 algo: sac
 algo_config:
   # model args
-  hidden_dim: 64
+  hidden_dim: 256
   use_entropy_tuning: False
 
   # optim args

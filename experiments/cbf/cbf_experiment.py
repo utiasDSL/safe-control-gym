@@ -12,7 +12,7 @@ from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.configuration import ConfigFactory
 
 
-def run(plot=True, training=True, n_episodes=1, n_steps=None, curr_path='.'):
+def run(plot=True, training=True, n_episodes=1, n_steps=None, curr_path='.', save_data=True):
     '''The main function running CBF experiments.
 
     Args:
@@ -41,9 +41,6 @@ def run(plot=True, training=True, n_episodes=1, n_steps=None, curr_path='.'):
     model_dir = os.path.dirname(os.path.abspath(__file__))+'/models'
     ctrl.load(os.path.join(model_dir, f'{config.algo}_model_{config.task}.pt'))
 
-    # Remove temporary files and directories
-    shutil.rmtree(os.path.dirname(os.path.abspath(__file__))+'/temp', ignore_errors=True)
-
     # Run without safety filter
     experiment = Experiment(env, ctrl)
     results, _ = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
@@ -51,16 +48,21 @@ def run(plot=True, training=True, n_episodes=1, n_steps=None, curr_path='.'):
     # Setup CBF.
     safety_filter = make(config.safety_filter,
                 env_func,
-                **config.sf_config)
+                **config.sf_config,
+                output_dir=curr_path+'/temp')
     safety_filter.reset()
 
-    if training is True:
+    if training is True and config.safety_filter == 'cbf_nn':
         train_env = env_func(init_state=None, randomized_init=True)
         safety_filter.uncertified_controller = ctrl
         safety_filter.learn(env=train_env)
-        safety_filter.save(path=curr_path+f'/models/{config.safety_filter}_model_{config.task}.pt')
+        if save_data is True:
+            safety_filter.save(path=curr_path+f'/models/{config.safety_filter}_{config.algo}_model_{config.task}.pt')
     else:
-        safety_filter.load(path=curr_path+f'/models/{config.safety_filter}_model_{config.task}.pt')
+        safety_filter.load(path=curr_path+f'/models/{config.safety_filter}_{config.algo}_model_{config.task}.pt')
+
+    # Remove temporary files and directories
+    shutil.rmtree(os.path.dirname(os.path.abspath(__file__))+'/temp', ignore_errors=True)
 
     # Run with safety filter
     experiment = Experiment(env, ctrl, safety_filter=safety_filter)

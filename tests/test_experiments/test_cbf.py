@@ -12,7 +12,12 @@ def test_cbf(SYS, ALGO, SAFETY_FILTER):
                     '--task', SYS,
                     '--safety filter', SAFETY_FILTER,
                     '--overrides',
-                        f'./config_overrides/{SYS}_config.yaml',
-                        f'./config_overrides/{ALGO}_config.yaml',
-                        f'./config_overrides/{SAFETY_FILTER}_config.yaml']
-    run(plot=False, training=True, n_episodes=None, n_steps=10)
+                        f'./experiments/cbf/config_overrides/{SYS}_config.yaml',
+                        f'./experiments/cbf/config_overrides/{ALGO}_config.yaml',
+                        f'./experiments/cbf/config_overrides/{SAFETY_FILTER}_config.yaml',
+                    '--kv_overrides',
+                        'sf_config.max_num_steps=10',
+                        'sf_config.num_episodes=2',
+                        'sf_config.train_iterations=10']
+
+    run(plot=False, training=True, n_episodes=None, n_steps=10, curr_path='./experiments/cbf', save_data=False)
