@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from safe_control_gym.envs.gym_pybullet_drones.quadrotor_utils import PIDController
 
 try:
-    import cffirmware
+    import pycffirmware
 except ImportError:
     FIRMWARE_INSTALLED = False
 else:
@@ -179,7 +179,7 @@ class Controller():
         target_rpy_rates = np.zeros(3)
 
         command_type = Command(1)
-        args = [target_pos, target_vel, target_acc, target_rpy, target_rpy_rates, iteration]
+        args = [target_pos, target_vel, target_acc, target_rpy, target_rpy_rates, time]
 
         #########################
         # REPLACE THIS (END) ####
