@@ -38,7 +38,10 @@ pip install --upgrade pip
 pip install -e .
 ```
 
-(recommended) Install [`pycffirmware`](https://github.com/utiasDSL/pycffirmware)
+## (recommended) Install `pycffirmware`
+
+See [`pycffirmware`](https://github.com/utiasDSL/pycffirmware)'s `README.md`
+
 
 
 ## Getting Started
