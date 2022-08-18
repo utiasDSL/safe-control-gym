@@ -114,6 +114,7 @@ def main():
             if 'constraint_values' in info:
                 print('\tConstraints evaluations: ' + str(info['constraint_values']))
                 print('\tConstraints violation: ' + str(bool(info['constraint_violation'])))
+            print('\tCurrent target gate: ' + str(info['current_target_gate']))
             print('\tCollisions: ' + str(collisions_count))
             print('\tCollided objects: ' + str(collided_objects))
 

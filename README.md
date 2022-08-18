@@ -11,13 +11,13 @@ Links:
 
 Complete this [Google Form](https://forms.gle/vEmVK99n1SyaE4Zw9) to register you interest and receive e-mail updates
 
-## Latest Update: August 15
-- Collisions count
+## Latest Update: August 17
+- Full YAML template
+- Gates' progress and goal reached computation
 
 ## Next Update: August 18 (approx.)
-- Goal position reached, gate progress metrics
-- Training script template
 - `cffirmare` Python module
+- Training script example
 
 ## Install on Ubuntu/macOS
 

@@ -375,7 +375,9 @@ class Quadrotor(BaseAviary):
                        p.getQuaternionFromEuler(obstacle[3:6]),
                        physicsClientId=self.PYB_CLIENT)
             self.OBSTACLES_IDS.append(TMP_ID)
+        #
         self.GATES_IDS = []
+        self.EFFECTIVE_GATES_POSITIONS = []
         if self.RANDOMIZED_GATES_AND_OBS:
             rand_info_copy = deepcopy(self.GATES_AND_OBS_RAND_INFO)
             distrib = getattr(self.np_random, rand_info_copy["gates"].pop("distrib"))
@@ -387,11 +389,16 @@ class Quadrotor(BaseAviary):
                 offset = np.array([distrib(*d_args, **d_kwargs), distrib(*d_args, **d_kwargs), 0])
             else:
                 offset = np.array([0, 0, 0])
+            self.EFFECTIVE_GATES_POSITIONS.append(list(np.array(gate[0:3]) + offset) + gate[3:6])
             TMP_ID = p.loadURDF(os.path.join(self.URDF_DIR, "portal.urdf"),
                        np.array(gate[0:3]) + offset,
                        p.getQuaternionFromEuler(gate[3:6]),
                        physicsClientId=self.PYB_CLIENT)
             self.GATES_IDS.append(TMP_ID)
+        #
+        self.NUM_GATES = len(self.GATES)
+        self.CURRENT_GATE = 0
+        #
         # Deactivate select collisions, e.g. between the ground plane and the drone
         # p.setCollisionFilterPair(bodyUniqueIdA=self.PLANE_ID,
         #                          bodyUniqueIdB=self.DRONE_IDS[0],
@@ -971,7 +978,41 @@ class Quadrotor(BaseAviary):
                 break  # Note: only returning the first collision per step.
         else:
             info["collision"] = (None, False)
-        # Gates progress - TODO
+        #
+        # Gates progress.
+        if self.pyb_step_counter > 0.5*self.PYB_FREQ and self.NUM_GATES > 0 and self.CURRENT_GATE < self.NUM_GATES:
+            x, y, _, _, _, rot = self.EFFECTIVE_GATES_POSITIONS[self.CURRENT_GATE]
+            height = 0.7
+            delta_x = 0.08*np.cos(rot)
+            delta_y = 0.08*np.sin(rot)
+            fr = [[x,y, height-0.1875]]
+            to = [[x,y, height+0.1875]]
+            for i in [1,2]:
+                fr.append([x+i*delta_x, y+i*delta_y, height-0.1875])
+                fr.append([x-i*delta_x, y-i*delta_y, height-0.1875])
+                to.append([x+i*delta_x, y+i*delta_y, height+0.1875])
+                to.append([x-i*delta_x, y-i*delta_y, height+0.1875])
+            # for i in range(len(fr)):
+            #     p.addUserDebugLine(lineFromXYZ=fr[i],
+            #                        lineToXYZ=to[i],
+            #                        lineColorRGB=[1, 0, 0],
+            #                        lifeTime=100 * self.CTRL_TIMESTEP,
+            #                        physicsClientId=self.PYB_CLIENT)
+            rays = p.rayTestBatch(rayFromPositions=fr,
+                                  rayToPositions=to,
+                                  physicsClientId=self.PYB_CLIENT)
+            for r in rays:
+                if r[2] < .9999:
+                    self.CURRENT_GATE += 1
+                    break
+        if self.CURRENT_GATE < self.NUM_GATES:
+            info["current_target_gate"] = self.CURRENT_GATE
+        else:
+            info["current_target_gate"] = -1
+        #
+        # Final goal position reached - TODO
+        if self.CURRENT_GATE == self.NUM_GATES:
+            pass
 
         return info
 
