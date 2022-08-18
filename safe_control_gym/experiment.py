@@ -331,7 +331,7 @@ class RecordDataWrapper(gym.Wrapper):
         # save to episode data container
         step_data = dict(
             obs=obs,
-            action=action,
+            action=self.env.current_raw_action,
             done=float(done),
             info=info,
             reward=reward,
