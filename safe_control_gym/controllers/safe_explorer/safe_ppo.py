@@ -3,9 +3,10 @@
 """
 import os
 import time
+from collections import defaultdict
+
 import numpy as np
 import torch
-from collections import defaultdict
 
 from safe_control_gym.utils.logging import ExperimentLogger
 from safe_control_gym.utils.utils import get_random_state, set_random_state, is_wrapped
@@ -232,11 +233,11 @@ class SafeExplorerPPO(BaseController):
         Returns:
             action (ndarray): The action chosen by the controller.
         """
-
+        c = info["constraint_values"]
         with torch.no_grad():
-                obs = torch.FloatTensor(obs).to(self.device)
-                c = torch.FloatTensor(c).to(self.device)
-                action = self.agent.ac.act(obs, c=c)
+            obs = torch.FloatTensor(obs).to(self.device)
+            c = torch.FloatTensor(c).to(self.device)
+            action = self.agent.ac.act(obs, c=c)
 
         return action
 
@@ -245,7 +246,6 @@ class SafeExplorerPPO(BaseController):
             render=False,
             n_episodes=10,
             verbose=False,
-            **kwargs
             ):
         """Runs evaluation with current policy.
 
@@ -262,12 +262,11 @@ class SafeExplorerPPO(BaseController):
                 env.add_tracker("mse", 0, mode="queue")
         obs, info = env.reset()
         obs = self.obs_normalizer(obs)
-        c = info["constraint_values"]
         ep_returns, ep_lengths = [], []
         frames = []
         while len(ep_returns) < n_episodes:
             action = self.select_action(obs, info)
-            obs, reward, done, info = env.step(action)
+            obs, _, done, info = env.step(action)
             if render:
                 env.render()
                 frames.append(env.render("rgb_array"))
@@ -279,7 +278,6 @@ class SafeExplorerPPO(BaseController):
                 ep_lengths.append(info["episode"]["l"])
                 obs, info = env.reset()
             obs = self.obs_normalizer(obs)
-            c = info["constraint_values"]
         # Collect evaluation results.
         ep_lengths = np.asarray(ep_lengths)
         ep_returns = np.asarray(ep_returns)
@@ -327,7 +325,7 @@ class SafeExplorerPPO(BaseController):
         obs = self.obs
         c = self.c
         start = time.time()
-        for step in range(self.rollout_steps):
+        for _ in range(self.rollout_steps):
             with torch.no_grad():
                 act, v, logp = self.agent.ac.step(torch.FloatTensor(obs).to(self.device), c=torch.FloatTensor(c).to(self.device))
             next_obs, rew, done, info = self.env.step(act)
