@@ -137,10 +137,10 @@ class Experiment:
             action (ndarray): The action chosen by the controller and safety filter.
         '''
         action = self.ctrl.select_action(obs, info)
-        physical_action = self.env.denormalize_action(action)
-        unextended_obs = obs[:self.env.symbolic.nx]
 
         if self.safety_filter is not None:
+            physical_action = self.env.denormalize_action(action)
+            unextended_obs = obs[:self.env.symbolic.nx]
             certified_action, success = self.safety_filter.certify_action(unextended_obs, physical_action, info)
             if success:
                 action = self.env.normalize_action(certified_action)

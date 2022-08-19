@@ -85,7 +85,7 @@ def run(plot=True, training=True, n_steps=30, curr_path='.'):
         ax_obs.set_box_aspect(0.5)
 
         _, ax_act = plt.subplots()
-        ax_act.plot(certified_results['action'][0][:], 'b-', label='Certified Inputs')
+        ax_act.plot(certified_results['current_physical_action'][0][:], 'b-', label='Certified Inputs')
         ax_act.plot(mpsc_results['uncertified_action'][0][:], 'r--', label='Uncertified Input')
         ax_act.legend()
         ax_act.set_title('Input comparison')
