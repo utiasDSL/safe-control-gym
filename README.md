@@ -11,9 +11,8 @@ Links:
 
 Complete this [Google Form](https://forms.gle/vEmVK99n1SyaE4Zw9) to register you interest and receive e-mail updates
 
-## Latest Update: August 18
-- `pycffirmare` Python module
-- Training script example
+## Latest Update: August 20
+- Docstrings, instructions, and in-line comments
 
 ## Install on Ubuntu/macOS
 

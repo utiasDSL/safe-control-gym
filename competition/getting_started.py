@@ -1,4 +1,4 @@
-"""Demo script.
+"""Base script.
 
 Run as:
 
@@ -43,7 +43,6 @@ def main():
     # Create environment.
     if config.use_firmware:
         if "observation" in config.quadrotor_config.disturbances:
-            # pass
             # raise NotImplementedError("Observation noise not supported with firmware wrapper.")
             del config.quadrotor_config.disturbances['observation']
 
@@ -84,7 +83,7 @@ def main():
         firmware_wrapper.update_initial_state(obs)
     else:
         # Create controller.
-        ctrl = Controller(obs, info, config.use_firmware)
+        ctrl = Controller(obs, info, config.use_firmware, verbose=config.verbose)
 
     # Create a logger and counters
     logger = Logger(logging_freq_hz=ctrl_freq)
@@ -96,7 +95,7 @@ def main():
     # Run an experiment.
     for i in range(config.num_episodes*ctrl_freq*env.EPISODE_LEN_SEC):
 
-        # Step by keyboard input.
+        # Step by keyboard press.
         # _ = input()
 
         # Elapsed sim time.
@@ -106,6 +105,7 @@ def main():
         if config.use_firmware:
             command_type, args = ctrl.cmdFirmware(curr_time, obs)
 
+            # Select interface.
             if command_type == Command.FULLSTATE:
                 firmware_wrapper.sendFullStateCmd(*args)
             elif command_type == Command.TAKEOFF:
@@ -124,12 +124,14 @@ def main():
             # Step the environment.
             obs, reward, done, info, action = firmware_wrapper.step(curr_time, action)
         else:
-            action = ctrl.cmdSimOnly(curr_time, obs)
+            target_pos, target_vel = ctrl.cmdSimOnly(curr_time, obs)
+            action = ctrl._thrusts(obs, target_pos, target_vel)
             obs, reward, done, info = env.step(action)
 
         # Update the controller internal state and models.
         ctrl.learn(action, obs, reward, done, info)
 
+        # Add up reward and collisions.
         cumulative_reward += reward
         if info["collision"][1]:
             collisions_count += 1
@@ -157,7 +159,7 @@ def main():
         bf_rates = [obs[9],obs[10],obs[11]]
         logger.log(drone=0,
                    timestamp=i/ctrl_freq,
-                   state=np.hstack([pos, np.zeros(4), rpy, vel, bf_rates, np.sqrt(action/env.KF)]),
+                   state=np.hstack([pos, np.zeros(4), rpy, vel, bf_rates, np.sqrt(action/env.KF)])
                    )
 
         # If an episode is complete, reset the environment.
@@ -171,6 +173,7 @@ def main():
             # Create a new logger.
             logger = Logger(logging_freq_hz=ctrl_freq)
 
+            # Reset/update counters.
             episodes_count += 1
             if episodes_count > config.num_episodes:
                 break
@@ -201,7 +204,8 @@ def main():
                   elapsed_sec,
                   i/elapsed_sec,
                   (i*ctrl_dt)/elapsed_sec
-                  )))
+                  )
+          ))
 
 if __name__ == "__main__":
     main()

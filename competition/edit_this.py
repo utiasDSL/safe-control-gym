@@ -1,8 +1,21 @@
-"""Create a controller.
+"""Write your control strategy.
 
 Then run:
 
     $ python3 getting_started.py --overrides ./getting_started.yaml
+
+Tips:
+    Search for strings `INSTRUCTIONS:` and `REPLACE THIS (START)` in this file.
+
+    Change the code between the 4 blocks starting with
+        #########################
+        # REPLACE THIS (START) ##
+        #########################
+    and ending with
+        #########################
+        # REPLACE THIS (END) ####
+        #########################
+    with your own code.
 
 """
 import os
@@ -27,7 +40,6 @@ finally:
 
 class Command(Enum):
     NONE = 0 # Args: Empty
-        # 
     FULLSTATE = 1 # Args: [pos, vel, acc, rpy, rpy_rate, iteration] 
         # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.cmdFullState
     TAKEOFF = 2 # Args: [height, duration]
@@ -41,7 +53,7 @@ class Command(Enum):
 
 
 class Controller():
-    """Editable controller class.
+    """Template controller class.
 
     """
 
@@ -54,15 +66,20 @@ class Controller():
                  ):
         """Initialization of the controller.
 
-        Args:
-            param1 (int): The first parameter.
-            param2 (:obj:`str`, optional): The second parameter. Defaults to None.
-                Second line of description should be indented.
-            *args: Variable length argument list.
-            **kwargs: Arbitrary keyword arguments.
+        INSTRUCTIONS:
+            The controller's constructor has access the initial state `initial_obs` and the a priori infromation
+            contained in dictionary `initial_info`. Use this method to initialize constants, counters, pre-plan
+            trajectories, etc.
 
-        Returns:
-            bool: True if successful, False otherwise.
+        Args:
+            initial_obs (ndarray): The initial observation of the quadrotor's state
+                [x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r].
+            initial_info (dict): The a priori information as a dictionary with keys
+                'symbolic_model', 'nominal_physical_parameters', 'nominal_gates_pos', etc.
+            use_firmware (bool, optional): Choice between the on-board controll in `pycffirmware`
+                or simplified software-only alternative.
+            buffer_size (int, optional): Size of the data buffers used in method `learn()`.
+            verbose (bool, optional): Turn on and off additional printouts and plots.
 
         """
 
@@ -179,20 +196,24 @@ class Controller():
                     est_rpy=None,
                     est_rpy_rates=None
                     ):
-        """
-        This function should return the target position, velocity, acceleration, attitude, and attitude rates to be sent
-        from crazyswarm to the crazyflie using a cmdFullState call. 
+        """Pick command sent to the quadrotor through a Crazyswarm/Crazyradio-like interface.
+
+        INSTRUCTIONS:
+            Re-implement this function to return the target position, velocity, acceleration, attitude, and attitude rates to be sent
+            from Crazyswarm to the Crazyflie using, e.g., a `cmdFullState` call. 
 
         Args:
-            * time (s)
-            * vicon_pos - contains feedback from the vicon tracking system about where your drone marker is (mm)
-            * est_vel - estimation of drone velocity from vicon system
-            * est_acc - estimation of drone acceleration from vicon system
-            * est_rpy - estimation of drone attitude from vicon system
-            * est_rpy_rates - estimation of drone body rates from vicon system
+            time (float): Episode's elapsed time, in seconds.
+            obs (ndarray): The quadrotor's state [x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r].
+            vicon_pos (ndarray, optional): Feedback from the vicon tracking system about where your drone marker is (mm).
+            est_vel (ndarray, optional): Estimation of drone velocity from Vicon system.
+            est_acc (ndarray, optional): Estimation of drone acceleration from Vicon system.
+            est_rpy (ndarray, optional): Estimation of drone attitude from Vicon system
+            est_rpy_rates (ndarray, optional): Estimation of drone body rates from vicon system.
 
         Returns:
-            ...
+            Command: selected type of command (takeOff, cmdFullState, etc., see Enum-like class `Command`).
+            List: arguments for the type of command (see comments in class `Command`)
 
         """
         if self.ctrl is not None:
@@ -228,9 +249,18 @@ class Controller():
                    time,
                    obs
                    ):
-        """Action selection.
+        """PID per-propeller thrusts with a simplified, software-only PID quadrotor controller.
 
-        ...
+        INSTRUCTIONS:
+            Re-implement this function to return the target position and velocity.
+
+        Args:
+            time (float): Episode's elapsed time, in seconds.
+            obs (ndarray): The quadrotor's state [x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r].
+
+        Returns:
+            List: thrusts (in m, len == 3) to be commanded to each motor.
+            List: thrusts (in m/s, len == 3) to be commanded to each motor.
 
         """
         if self.ctrl is None:
@@ -245,23 +275,17 @@ class Controller():
         #########################
 
         if iteration < len(self.ref_x):
-            target = np.array([self.ref_x[iteration], self.ref_y[iteration], self.ref_z[iteration]])
+            target_p = np.array([self.ref_x[iteration], self.ref_y[iteration], self.ref_z[iteration]])
         else:
-            target = np.array([self.ref_x[-1], self.ref_y[-1], self.ref_z[-1]])
+            target_p = np.array([self.ref_x[-1], self.ref_y[-1], self.ref_z[-1]])
+
+        target_v = np.zeros(3)
 
         #########################
         # REPLACE THIS (END) ####
         #########################
 
-        rpms, _, _ = self.ctrl.compute_control(control_timestep=self.CTRL_TIMESTEP,
-                                               cur_pos=np.array([obs[0],obs[2],obs[4]]),
-                                               cur_quat=np.array(p.getQuaternionFromEuler([obs[6],obs[7],obs[8]])),
-                                               cur_vel=np.array([obs[1],obs[3],obs[5]]),
-                                               cur_ang_vel=np.array([obs[9],obs[10],obs[11]]),
-                                               target_pos=target,
-                                               target_vel=np.zeros(3)
-                                               )
-        return self.KF * rpms**2
+        return target_p, target_v
 
     def learn(self,
               action,
@@ -271,15 +295,16 @@ class Controller():
               info):
         """Learning and controller updates.
 
-        Args:
-            param1 (int): The first parameter.
-            param2 (:obj:`str`, optional): The second parameter. Defaults to None.
-                Second line of description should be indented.
-            *args: Variable length argument list.
-            **kwargs: Arbitrary keyword arguments.
+        INSTRUCTIONS:
+            Use the historically collected information in the five data buffers of actions, observations,
+            rewards, done flags, and information dictionaries to learn, adapt, and/or re-plan.
 
-        Returns:
-            bool: True if successful, False otherwise.
+        Args:
+            action (List): Most recent applied action.
+            obs (List): Most recent observation of the quadrotor state.
+            reward (float): Most recent reward.
+            done (bool): Most recent done flag.
+            info (dict): Most recent information dictionary.
 
         """
 
@@ -299,3 +324,20 @@ class Controller():
         # REPLACE THIS (END) ####
         #########################
 
+    def _thrusts(self,
+                    obs,
+                   target,
+                   target_v
+                   ):
+        """Do not modify this.
+
+        """
+        rpms, _, _ = self.ctrl.compute_control(control_timestep=self.CTRL_TIMESTEP,
+                                               cur_pos=np.array([obs[0],obs[2],obs[4]]),
+                                               cur_quat=np.array(p.getQuaternionFromEuler([obs[6],obs[7],obs[8]])),
+                                               cur_vel=np.array([obs[1],obs[3],obs[5]]),
+                                               cur_ang_vel=np.array([obs[9],obs[10],obs[11]]),
+                                               target_pos=target,
+                                               target_vel=target_v
+                                               )
+        return self.KF * rpms**2
