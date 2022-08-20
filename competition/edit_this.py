@@ -27,11 +27,17 @@ finally:
 
 class Command(Enum):
     NONE = 0 # Args: Empty
-    FULLSTATE = 1 # Args: [pos, vel, acc, rpy, rpy_rate, iteration]
+        # 
+    FULLSTATE = 1 # Args: [pos, vel, acc, rpy, rpy_rate, iteration] 
+        # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.cmdFullState
     TAKEOFF = 2 # Args: [height, duration]
+        # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.takeoff
     LAND = 3 # Args: [height, duration]
+        # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.land
     STOP = 4 # Args: Empty
+        # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.stop
     GOTO = 5 # Args: [x, y, z, yaw, duration, relative (bool)]
+        # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.goTo
 
 
 class Controller():
@@ -43,9 +49,20 @@ class Controller():
                  initial_obs,
                  initial_info,
                  use_firmware: bool = False,
-                 buffer_size: int = 100
+                 buffer_size: int = 100,
+                 verbose: bool = False
                  ):
         """Initialization of the controller.
+
+        Args:
+            param1 (int): The first parameter.
+            param2 (:obj:`str`, optional): The second parameter. Defaults to None.
+                Second line of description should be indented.
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+            bool: True if successful, False otherwise.
 
         """
 
@@ -59,13 +76,15 @@ class Controller():
 
         if use_firmware:
             if not FIRMWARE_INSTALLED:
-                raise RuntimeError("[ERROR] Module 'cffirmware' not installed.")
+                raise RuntimeError("[ERROR] Module 'cffirmware' not installed, try set 'use_firmware' to False in 'getting_started.yaml'.")
             self.ctrl = None
         else:
             # Simple PID Controller.
             self.ctrl = PIDController()
             # Save additonal environment parameters.
             self.KF = initial_info["quadrotor_kf"]
+
+        self.VERBOSE = verbose
 
         # Data buffers.
         self.action_buffer = deque([], maxlen=buffer_size)
@@ -109,25 +128,26 @@ class Controller():
         self.ref_y = fy(t_scaled)
         self.ref_z = fz(t_scaled)
 
-        # Plot each dimension.
-        _, axs = plt.subplots(3, 1)
-        axs[0].plot(t_scaled, self.ref_x)
-        axs[0].set_ylabel('x (m)')
-        axs[1].plot(t_scaled, self.ref_y)
-        axs[1].set_ylabel('y (m)')
-        axs[2].plot(t_scaled, self.ref_z)
-        axs[2].set_ylabel('z (m)')
-        plt.show(block=False)
-        plt.pause(2)
-        plt.close()
+        if self.VERBOSE:
+            # Plot each dimension.
+            _, axs = plt.subplots(3, 1)
+            axs[0].plot(t_scaled, self.ref_x)
+            axs[0].set_ylabel('x (m)')
+            axs[1].plot(t_scaled, self.ref_y)
+            axs[1].set_ylabel('y (m)')
+            axs[2].plot(t_scaled, self.ref_z)
+            axs[2].set_ylabel('z (m)')
+            plt.show(block=False)
+            plt.pause(2)
+            plt.close()
 
-        # Plot in 3D.
-        ax = plt.axes(projection='3d')
-        ax.plot3D(self.ref_x, self.ref_y, self.ref_z)
-        ax.scatter3D(waypoints[:,0], waypoints[:,1], waypoints[:,2])
-        plt.show(block=False)
-        plt.pause(2)
-        plt.close()
+            # Plot in 3D.
+            ax = plt.axes(projection='3d')
+            ax.plot3D(self.ref_x, self.ref_y, self.ref_z)
+            ax.scatter3D(waypoints[:,0], waypoints[:,1], waypoints[:,2])
+            plt.show(block=False)
+            plt.pause(2)
+            plt.close()
 
         # Draw trajectory.
         for point in waypoints:
@@ -163,13 +183,17 @@ class Controller():
         This function should return the target position, velocity, acceleration, attitude, and attitude rates to be sent
         from crazyswarm to the crazyflie using a cmdFullState call. 
 
-        Arguments
-        * time (s)
-        * vicon_pos - contains feedback from the vicon tracking system about where your drone marker is (mm)
-        * est_vel - estimation of drone velocity from vicon system
-        * est_acc - estimation of drone acceleration from vicon system
-        * est_rpy - estimation of drone attitude from vicon system
-        * est_rpy_rates - estimation of drone body rates from vicon system
+        Args:
+            * time (s)
+            * vicon_pos - contains feedback from the vicon tracking system about where your drone marker is (mm)
+            * est_vel - estimation of drone velocity from vicon system
+            * est_acc - estimation of drone acceleration from vicon system
+            * est_rpy - estimation of drone attitude from vicon system
+            * est_rpy_rates - estimation of drone body rates from vicon system
+
+        Returns:
+            ...
+
         """
         if self.ctrl is not None:
             raise RuntimeError("[ERROR] Using method 'cmdFirmware' but Controller was created with 'use_firmware' = False.")
@@ -205,6 +229,8 @@ class Controller():
                    obs
                    ):
         """Action selection.
+
+        ...
 
         """
         if self.ctrl is None:
@@ -244,6 +270,16 @@ class Controller():
               done,
               info):
         """Learning and controller updates.
+
+        Args:
+            param1 (int): The first parameter.
+            param2 (:obj:`str`, optional): The second parameter. Defaults to None.
+                Second line of description should be indented.
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+            bool: True if successful, False otherwise.
 
         """
 

@@ -27,7 +27,7 @@ finally:
 
 
 def main():
-    """The main function creating, running, and closing an environment.
+    """The main function creating, running, and closing an environment over N episodes.
 
     """
 
@@ -43,6 +43,7 @@ def main():
     # Create environment.
     if config.use_firmware:
         if "observation" in config.quadrotor_config.disturbances:
+            # pass
             # raise NotImplementedError("Observation noise not supported with firmware wrapper.")
             del config.quadrotor_config.disturbances['observation']
 
@@ -79,7 +80,7 @@ def main():
         info['ctrl_freq'] = ctrl_freq
         
         # Create controller.
-        ctrl = Controller(obs, info, config.use_firmware)
+        ctrl = Controller(obs, info, config.use_firmware, verbose=config.verbose)
         firmware_wrapper.update_initial_state(obs)
     else:
         # Create controller.
@@ -135,7 +136,7 @@ def main():
             collided_objects.add(info["collision"][0])
 
         # Printouts.
-        if i%100 == 0:
+        if config.verbose and i%100 == 0:
             print('\n'+str(i)+'-th step.')
             print('\tApplied action: ' + str(action))
             print('\tObservation: ' + str(obs))
@@ -153,10 +154,10 @@ def main():
         pos = [obs[0],obs[2],obs[4]]
         rpy = [obs[6],obs[7],obs[8]]
         vel = [obs[1],obs[3],obs[5]]
-        ang_vel = [obs[9],obs[10],obs[11]]
+        bf_rates = [obs[9],obs[10],obs[11]]
         logger.log(drone=0,
                    timestamp=i/ctrl_freq,
-                   state=np.hstack([pos, np.zeros(4), rpy, vel, ang_vel, np.sqrt(action/env.KF)]),
+                   state=np.hstack([pos, np.zeros(4), rpy, vel, bf_rates, np.sqrt(action/env.KF)]),
                    )
 
         # If an episode is complete, reset the environment.
@@ -179,9 +180,10 @@ def main():
 
             # Reset the environment.
             new_initial_obs, new_initial_info = env.reset()
-            print(str(episodes_count)+'-th reset.')
-            print('Reset obs' + str(new_initial_obs))
-            print('Reset info' + str(new_initial_info))
+            if config.verbose:
+                print(str(episodes_count)+'-th reset.')
+                print('Reset obs' + str(new_initial_obs))
+                print('Reset info' + str(new_initial_info))
 
             # Re-initialize firmware.
             if config.use_firmware:

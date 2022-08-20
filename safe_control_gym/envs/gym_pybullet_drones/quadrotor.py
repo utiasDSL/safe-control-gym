@@ -686,7 +686,7 @@ class Quadrotor(BaseAviary):
                                            high=np.ones(action_dim), 
                                            dtype=np.float32)
         else:
-            # Direct thrust control .
+            # Direct thrust control.
             n_motors = 4 / action_dim
             a_low = self.KF * n_motors * (self.PWM2RPM_SCALE * self.MIN_PWM + self.PWM2RPM_CONST)**2
             a_high = self.KF * n_motors * (self.PWM2RPM_SCALE * self.MAX_PWM + self.PWM2RPM_CONST)**2
@@ -701,9 +701,9 @@ class Quadrotor(BaseAviary):
             gym.spaces: The bounded observation (state) space, of size 2, 6, or 12 depending on QUAD_TYPE.
 
         """
-        self.x_threshold = 2
-        self.y_threshold = 2
-        self.z_threshold = 2
+        self.x_threshold = 5
+        self.y_threshold = 5
+        self.z_threshold = 2.5
         self.phi_threshold_radians = 85 * math.pi / 180
         self.theta_threshold_radians = 85 * math.pi / 180
         self.psi_threshold_radians = 180 * math.pi / 180  # Do not bound yaw.
@@ -899,7 +899,7 @@ class Quadrotor(BaseAviary):
                 reward += 100
             # Reward reaching goal position (after navigating the gates in the correct order).
             if self.at_goal_pos:
-                reward += 1000
+                reward += 100
             # Penalize by collision
             if self.currently_collided:
                 reward -= 1000
@@ -949,9 +949,9 @@ class Quadrotor(BaseAviary):
             out_of_bound = np.any(out_of_bound * mask)
             # Early terminate if needed.
             if out_of_bound:
-                return True 
+                return True
 
-        return False 
+        return False
 
     def _get_info(self):
         """Generates the info dictionary returned by every call to .step().
@@ -1012,11 +1012,11 @@ class Quadrotor(BaseAviary):
         if self.pyb_step_counter > 0.5*self.PYB_FREQ and self.NUM_GATES > 0 and self.current_gate < self.NUM_GATES:
             x, y, _, _, _, rot = self.EFFECTIVE_GATES_POSITIONS[self.current_gate]
             height = 0.7
-            delta_x = 0.08*np.cos(rot)
-            delta_y = 0.08*np.sin(rot)
+            delta_x = 0.05*np.cos(rot)
+            delta_y = 0.05*np.sin(rot)
             fr = [[x,y, height-0.1875]]
             to = [[x,y, height+0.1875]]
-            for i in [1,2]:
+            for i in [1,2, 3]:
                 fr.append([x+i*delta_x, y+i*delta_y, height-0.1875])
                 fr.append([x-i*delta_x, y-i*delta_y, height-0.1875])
                 to.append([x+i*delta_x, y+i*delta_y, height+0.1875])
@@ -1041,7 +1041,7 @@ class Quadrotor(BaseAviary):
         else:
             info["current_target_gate"] = -1
         #
-        # Final goal position reached - TODO
+        # Final goal position reached
         info["at_goal_position"] = False
         if self.current_gate == self.NUM_GATES:
             self.at_goal_pos = bool(np.linalg.norm(self.state - self.X_GOAL) < self.TASK_INFO["stabilization_goal_tolerance"])

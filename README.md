@@ -50,7 +50,7 @@ Run the scripts in [`competition/`](https://github.com/utiasDSL/safe-control-gym
 $ cd ./competition/
 $ python3 getting_started.py --overrides ./getting_started.yaml
 ```
-**Modify file [`edit_this.py`](https://github.com/utiasDSL/safe-control-gym/blob/alpha-iros-competition/competition/edit_this.py) to customize your planning and control**
+**Modify file [`edit_this.py`](https://github.com/utiasDSL/safe-control-gym/blob/alpha-iros-competition/competition/edit_this.py) to customize your planning and control based on [Crazyswarm's cmdFullState() interface](https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.cmdFullState)**
 
 ## Submission
 
