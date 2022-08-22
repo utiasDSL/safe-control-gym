@@ -40,66 +40,51 @@ def main():
     if config.use_firmware and not FIRMWARE_INSTALLED:
         raise RuntimeError("[ERROR] Module 'cffirmware' not installed.")
 
+    CTRL_FREQ = config.quadrotor_config['ctrl_freq']
+    CTRL_DT = 1/CTRL_FREQ
+
     # Create environment.
     if config.use_firmware:
-        if "observation" in config.quadrotor_config.disturbances:
-            # raise NotImplementedError("Observation noise not supported with firmware wrapper.")
-            del config.quadrotor_config.disturbances['observation']
-
-        pyb_freq = config.quadrotor_config['pyb_freq']
-        ctrl_freq = config.quadrotor_config['ctrl_freq']
-        firmware_freq = config.quadrotor_config['firmware_freq']
-        ctrl_dt = 1/ctrl_freq
-
-        assert(pyb_freq % firmware_freq == 0), "pyb_freq must be a multiple of firmware freq"
-
+        FIRMWARE_FREQ = config.quadrotor_config['firmware_freq']
+        assert(config.quadrotor_config['pyb_freq'] % FIRMWARE_FREQ == 0), "pyb_freq must be a multiple of firmware freq"
         # The env.step is called at a firmware_freq rate, but this is not as intuitive to the end user, and so 
         # we abstract the difference. This allows ctrl_freq to be the rate at which the user sends ctrl signals, 
         # not the firmware. 
-        config.quadrotor_config['ctrl_freq'] = firmware_freq
+        config.quadrotor_config['ctrl_freq'] = FIRMWARE_FREQ
 
         env_func = partial(make, 'quadrotor', **config.quadrotor_config)
         firmware_wrapper = make('firmware',
-                    env_func, firmware_freq, ctrl_freq
+                    env_func, FIRMWARE_FREQ, CTRL_FREQ
                     ) 
-        env = firmware_wrapper.env
-
+        obs, info = firmware_wrapper.reset()
+        firmware_wrapper.update_initial_state(obs)
         action = np.zeros(4)
+        info['ctrl_timestep'] = CTRL_DT
+        info['ctrl_freq'] = CTRL_FREQ
+        env = firmware_wrapper.env
     else:
         env = make('quadrotor', **config.quadrotor_config)
-        ctrl_freq = env.CTRL_FREQ
-        ctrl_dt = env.CTRL_TIMESTEP
-
-    # Reset the environment, obtain the initial observations and info dictionary.
-    obs, info = env.reset()
-
-    # Initialize firmware.
-    if config.use_firmware:
-        info['ctrl_timestep'] = ctrl_dt
-        info['ctrl_freq'] = ctrl_freq
-        
-        # Create controller.
-        ctrl = Controller(obs, info, config.use_firmware, verbose=config.verbose)
-        firmware_wrapper.update_initial_state(obs)
-    else:
-        # Create controller.
-        ctrl = Controller(obs, info, config.use_firmware, verbose=config.verbose)
+        # Reset the environment, obtain the initial observations and info dictionary.
+        obs, info = env.reset()
+    
+    # Create controller.
+    ctrl = Controller(obs, info, config.use_firmware, verbose=config.verbose)
 
     # Create a logger and counters
-    logger = Logger(logging_freq_hz=ctrl_freq)
+    logger = Logger(logging_freq_hz=CTRL_FREQ)
     episodes_count = 1
     cumulative_reward = 0
     collisions_count = 0
     collided_objects = set()
 
     # Run an experiment.
-    for i in range(config.num_episodes*ctrl_freq*env.EPISODE_LEN_SEC):
+    for i in range(config.num_episodes*CTRL_FREQ*env.EPISODE_LEN_SEC):
 
         # Step by keyboard press.
         # _ = input()
 
         # Elapsed sim time.
-        curr_time = (i%(ctrl_freq*env.EPISODE_LEN_SEC))*ctrl_dt
+        curr_time = (i%(CTRL_FREQ*env.EPISODE_LEN_SEC))*CTRL_DT
 
         # Compute control input.
         if config.use_firmware:
@@ -138,7 +123,7 @@ def main():
             collided_objects.add(info["collision"][0])
 
         # Printouts.
-        if config.verbose and i%int(ctrl_freq/2) == 0:
+        if config.verbose and i%int(CTRL_FREQ/2) == 0:
             print('\n'+str(i)+'-th step.')
             print('\tApplied action: ' + str(action))
             print('\tObservation: ' + str(obs))
@@ -160,7 +145,7 @@ def main():
         vel = [obs[1],obs[3],obs[5]]
         bf_rates = [obs[9],obs[10],obs[11]]
         logger.log(drone=0,
-                   timestamp=i/ctrl_freq,
+                   timestamp=i/CTRL_FREQ,
                    state=np.hstack([pos, np.zeros(4), rpy, vel, bf_rates, np.sqrt(action/env.KF)])
                    )
 
@@ -173,7 +158,7 @@ def main():
             logger.save_as_csv(comment="get_start-episode-"+str(episodes_count))
 
             # Create a new logger.
-            logger = Logger(logging_freq_hz=ctrl_freq)
+            logger = Logger(logging_freq_hz=CTRL_FREQ)
 
             # Reset/update counters.
             episodes_count += 1
@@ -184,17 +169,18 @@ def main():
             collided_objects = set()
 
             # Reset the environment.
-            new_initial_obs, new_initial_info = env.reset()
+            if config.use_firmware:
+                # Re-initialize firmware.
+                new_initial_obs, new_initial_info = firmware_wrapper.reset()
+                firmware_wrapper.update_initial_state(new_initial_obs)
+                action = np.zeros(4)
+            else:
+                new_initial_obs, new_initial_info = env.reset()
+
             if config.verbose:
                 print(str(episodes_count)+'-th reset.')
                 print('Reset obs' + str(new_initial_obs))
                 print('Reset info' + str(new_initial_info))
-
-            # Re-initialize firmware.
-            if config.use_firmware:
-                firmware_wrapper.reset()
-                firmware_wrapper.update_initial_state(new_initial_obs)
-                action = np.zeros(4)
 
     # Close the environment and print timing statistics.
     env.close()
@@ -205,7 +191,7 @@ def main():
                   config.num_episodes,
                   elapsed_sec,
                   i/elapsed_sec,
-                  (i*ctrl_dt)/elapsed_sec
+                  (i*CTRL_DT)/elapsed_sec
                   )
           ))
 

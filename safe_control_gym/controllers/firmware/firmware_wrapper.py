@@ -49,7 +49,7 @@ class FirmwareWrapper(BaseController):
         self.MAX_PWM = float(MAX_PWM)
         self.verbose = verbose
 
-        self.reset()
+        self.env = self.env_func()
 
     def __repr__(self):
         ret = ""
@@ -96,7 +96,6 @@ class FirmwareWrapper(BaseController):
         self.sensor_history = [[[0, 0, 0], [0, 0, 0]] for _ in range(self.SENSOR_DELAY)]
         self.state_history = [[[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]] for _ in range(self.STATE_DELAY)]
 
-
         # Initialize gyro lpf 
         self.acclpf = [firm.lpf2pData() for _ in range(3)]
         self.gyrolpf = [firm.lpf2pData() for _ in range(3)]
@@ -134,17 +133,12 @@ class FirmwareWrapper(BaseController):
         firm.crtpCommanderHighLevelInit()
         firm.crtpCommanderHighLevelTellState(self.state)
 
-        try: 
-            self.close()
-        except:
-            pass
-        self.env = self.env_func()
-        self.env.reset()
+        init_obs, init_info = self.env.reset()
         self.ctrl_dt = 1 / self.ctrl_freq
         self.firmware_dt = 1 / self.firmware_freq
         # initialize emulator state objects 
-        if self.env.NUM_DRONES > 1: 
-            raise NotImplementedError("Firmware controller wrapper does not support multiple drones.")
+        # if self.env.NUM_DRONES > 1: 
+        #     raise NotImplementedError("Firmware controller wrapper does not support multiple drones.")
 
         self.results_dict = { 'obs': [],
                         'reward': [],
@@ -152,6 +146,8 @@ class FirmwareWrapper(BaseController):
                         'info': [],
                         'action': [],
                         }
+
+        return init_obs, init_info
 
 
     def close(self):
@@ -246,7 +242,6 @@ class FirmwareWrapper(BaseController):
         action = np.zeros(4)
         # action = np.array([38727, 38727, 38727, 38727]) # hover to start 
         # action = self.KF * (self.PWM2RPM_SCALE * np.clip(np.array(action), self.MIN_PWM, self.MAX_PWM) + self.PWM2RPM_CONST)**2
-
         
         s = time.time()
         obs = self.env._get_observation()
@@ -285,7 +280,6 @@ class FirmwareWrapper(BaseController):
                 posx, posy, posz, yaw = traj[i]
                 # print("Traj sent", traj[i], i)
                 self.sendFullStateCmd([posx, posy, posz], [0, 0, 0], [0, 0, 0], [0, 0, yaw], [0, 0, 0], i)
-
             
             # time.sleep(0.05)
             raise NotImplementedError("Check code here.")
@@ -430,7 +424,6 @@ class FirmwareWrapper(BaseController):
         quaternion_t.z = qz
         quaternion_t.w = qw
 
-
     def _update_attitude_t(self, attitude_t, timestamp, roll, pitch, yaw):
         attitude_t.timestamp = timestamp
         attitude_t.roll = roll
@@ -454,7 +447,6 @@ class FirmwareWrapper(BaseController):
             self.tick += 1
             self._error = True
             return 
-
 
         cur_time = self.tick / self.firmware_freq
         if (cur_time - self.last_att_pid_call > 0.002) and (cur_time - self.last_pos_pid_call > 0.01):
@@ -616,14 +608,12 @@ class FirmwareWrapper(BaseController):
         else: 
             raise NotImplementedError("Emulator does not support the brushless motor configuration at this time.")
 
-
     def _limitThrust(self, val):
         if val > 65535:
             return 65535
         elif val < 0:
             return 0
         return val
-
 
     def _powerDistribution(self, control_t):
         motor_pwms = []

@@ -1,5 +1,5 @@
 # Configuration
-num_episodes: 2
+num_episodes: 5
 use_firmware: True
 verbose: True
 
@@ -8,10 +8,10 @@ quadrotor_config:
   seed: 1337
   ctrl_freq: 60
   firmware_freq: 240
-  pyb_freq: 240
+  pyb_freq: 240 # Multiple of ctrl_freq and firmware_freq
   quad_type: 3  # 3D quadrotor
   physics: pyb
-  gui: True
+  gui: False
   camera_view: [5, -40, -55, 1.5, 2, 0.5]
   info_in_reset: True
   normalized_rl_action_space: False
@@ -155,10 +155,6 @@ quadrotor_config:
 
   # Disturbances
   disturbances:
-    # Additive noise on the observation vector (the quadrotor's state)
-    observation:  # Note: NOT applied when use_firmware == True
-      - disturbance_func: white_noise
-        std: 0.01
     # Additive noise on the commanded input action
     action:
       - disturbance_func: white_noise
