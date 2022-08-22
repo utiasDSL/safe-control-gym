@@ -138,7 +138,7 @@ def main():
             collided_objects.add(info["collision"][0])
 
         # Printouts.
-        if config.verbose and i%100 == 0:
+        if config.verbose and i%int(ctrl_freq/2) == 0:
             print('\n'+str(i)+'-th step.')
             print('\tApplied action: ' + str(action))
             print('\tObservation: ' + str(obs))
@@ -147,7 +147,9 @@ def main():
             if 'constraint_values' in info:
                 print('\tConstraints evaluations: ' + str(info['constraint_values']))
                 print('\tConstraints violation: ' + str(bool(info['constraint_violation'])))
-            print('\tCurrent target gate: ' + str(info['current_target_gate']))
+            print('\tCurrent target gate ID: ' + str(info['current_target_gate_id']))
+            print('\tCurrent target gate in range: ' + str(info['current_target_gate_in_range']))
+            print('\tCurrent target gate position: ' + str(info['current_target_gate_pos']))
             print('\tAt goal position: ' + str(info['at_goal_position']))
             print('\tCollisions: ' + str(collisions_count))
             print('\tCollided objects: ' + str(collided_objects))

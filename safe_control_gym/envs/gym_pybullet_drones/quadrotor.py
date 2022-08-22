@@ -1037,9 +1037,23 @@ class Quadrotor(BaseAviary):
                     self.stepped_through_gate = True
                     break
         if self.current_gate < self.NUM_GATES:
-            info["current_target_gate"] = self.current_gate
+            VISIBILITY_RANGE = 0.45
+            info["current_target_gate_id"] = self.current_gate
+            closest_points = p.getClosestPoints(bodyA=self.GATES_IDS[self.current_gate],
+                                                bodyB=self.DRONE_IDS[0],
+                                                distance=VISIBILITY_RANGE,
+                                                # linkIndexA=-1, linkIndexB=-1,
+                                                physicsClientId=self.PYB_CLIENT)
+            if len(closest_points) > 0:
+                info["current_target_gate_in_range"] = True
+                info["current_target_gate_pos"] = self.EFFECTIVE_GATES_POSITIONS[self.current_gate]
+            else:
+                info["current_target_gate_in_range"] = False
+                info["current_target_gate_pos"] = self.GATES[self.current_gate]
         else:
-            info["current_target_gate"] = -1
+            info["current_target_gate_id"] = -1
+            info["current_target_gate_in_range"] = False
+            info["current_target_gate_pos"] = []
         #
         # Final goal position reached
         info["at_goal_position"] = False
@@ -1087,6 +1101,12 @@ class Quadrotor(BaseAviary):
         }
         info["nominal_gates_pos"] = self.GATES
         info["nominal_obstacles_pos"] = self.OBSTACLES
+
+        if self.RANDOMIZED_INERTIAL_PROP:
+            info["inertial_prop_randomization"] = self.INERTIAL_PROP_RAND_INFO
+        if self.RANDOMIZED_GATES_AND_OBS:
+            info["gates_and_obs_randomization"] = self.GATES_AND_OBS_RAND_INFO
+        info["disturbances"] = self.DISTURBANCES
 
         # INFO 2022 - Debugging.
         info["urdf_dir"] = self.URDF_DIR
