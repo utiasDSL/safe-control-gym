@@ -496,7 +496,7 @@ class FirmwareWrapper(BaseController):
             command, args = self.command_queue.pop(0)
             getattr(self, command)(*args)
 
-    def sendFullStateCmd(self, pos, vel, acc, rpy, rpy_rate, timestep):
+    def sendFullStateCmd(self, pos, vel, acc, yaw, rpy_rate, timestep):
         '''
         Adds a fullstate command to processing queue
 
@@ -504,13 +504,13 @@ class FirmwareWrapper(BaseController):
         pos -- (list) position of the CF (m) 
         vel -- (list) velocity of the CF (m/s)
         acc -- (list) acceleration of the CF (m/s^2)
-        rpy -- (list) roll, pitch, and yaw (rad)
+        yaw -- yaw (rad)
         rpy_rate -- (list) roll, pitch, yaw rates (deg/s)
         timestep -- (s)
         '''
-        self.command_queue += [['_sendFullStateCmd', [pos, vel, acc, rpy, rpy_rate, timestep]]]
+        self.command_queue += [['_sendFullStateCmd', [pos, vel, acc, yaw, rpy_rate, timestep]]]
 
-    def _sendFullStateCmd(self, pos, vel, acc, rpy, rpy_rate, timestep):
+    def _sendFullStateCmd(self, pos, vel, acc, yaw, rpy_rate, timestep):
         # print(f"INFO_{self.tick}: Full state command sent.")
         self.setpoint.position.x = pos[0]
         self.setpoint.position.y = pos[1]
@@ -526,13 +526,13 @@ class FirmwareWrapper(BaseController):
         self.setpoint.attitudeRate.pitch = rpy_rate[1]
         self.setpoint.attitudeRate.yaw = rpy_rate[2]
 
-        quat = _get_quaternion_from_euler(*rpy)
+        quat = _get_quaternion_from_euler(0, 0, yaw)
         self.setpoint.attitudeQuaternion.x = quat[0]
         self.setpoint.attitudeQuaternion.y = quat[1]
         self.setpoint.attitudeQuaternion.z = quat[2]
         self.setpoint.attitudeQuaternion.w = quat[3]
 
-        self.setpoint.attitude.yaw = rpy[2] * 180 / math.pi
+        self.setpoint.attitude.yaw = yaw * 180 / math.pi
 
         # initilize setpoint modes to match cmdFullState 
         self.setpoint.mode.x = firm.modeAbs

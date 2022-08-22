@@ -40,7 +40,7 @@ finally:
 
 class Command(Enum):
     NONE = 0 # Args: Empty
-    FULLSTATE = 1 # Args: [pos, vel, acc, rpy, rpy_rate, iteration] 
+    FULLSTATE = 1 # Args: [pos, vel, acc, yaw, rpy_rate, iteration] 
         # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.cmdFullState
     TAKEOFF = 2 # Args: [height, duration]
         # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.takeoff
@@ -48,7 +48,7 @@ class Command(Enum):
         # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.land
     STOP = 4 # Args: Empty
         # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.stop
-    GOTO = 5 # Args: [x, y, z, yaw, duration, relative (bool)]
+    GOTO = 5 # Args: [[x, y, z], yaw, duration, relative (bool)]
         # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.goTo
 
 
@@ -58,9 +58,10 @@ class Controller():
     """
 
     def __init__(self,
-                 initial_obs,
+                 initial_pos,
                  initial_info,
                  use_firmware: bool = False,
+                 use_hardware: bool = False,
                  buffer_size: int = 100,
                  verbose: bool = False
                  ):
@@ -78,10 +79,14 @@ class Controller():
                 'symbolic_model', 'nominal_physical_parameters', 'nominal_gates_pos', etc.
             use_firmware (bool, optional): Choice between the on-board controll in `pycffirmware`
                 or simplified software-only alternative.
+            use_hardware (bool, optional): ...
             buffer_size (int, optional): Size of the data buffers used in method `learn()`.
             verbose (bool, optional): Turn on and off additional printouts and plots.
 
         """
+
+        self.use_hardware = use_hardware
+        self.initial_pos = initial_pos
 
         # Save environment parameters.
         self.CTRL_TIMESTEP = initial_info["ctrl_timestep"]
@@ -91,9 +96,11 @@ class Controller():
         self.NOMINAL_GATES = initial_info["nominal_gates_pos"]
         self.NOMINAL_OBSTACLES = initial_info["nominal_obstacles_pos"]
 
-        if use_firmware:
+        if use_firmware and not use_hardware:
             if not FIRMWARE_INSTALLED:
                 raise RuntimeError("[ERROR] Module 'cffirmware' not installed, try set 'use_firmware' to False in 'getting_started.yaml'.")
+            self.ctrl = None
+        elif use_hardware:
             self.ctrl = None
         else:
             # Simple PID Controller.
@@ -216,10 +223,11 @@ class Controller():
             List: arguments for the type of command (see comments in class `Command`)
 
         """
-        if self.ctrl is not None:
-            raise RuntimeError("[ERROR] Using method 'cmdFirmware' but Controller was created with 'use_firmware' = False.")
-        if not FIRMWARE_INSTALLED:
-            raise RuntimeError("[ERROR] Module 'cffirmware' not installed.")
+        if not self.use_hardware:
+            if self.ctrl is not None:
+                raise RuntimeError("[ERROR] Using method 'cmdFirmware' but Controller was created with 'use_firmware' = False.")
+            if not FIRMWARE_INSTALLED:
+                raise RuntimeError("[ERROR] Module 'cffirmware' not installed.")
 
         iteration = int(time*self.CTRL_FREQ)
 
@@ -233,11 +241,11 @@ class Controller():
             target_pos = np.array([self.ref_x[-1], self.ref_y[-1], self.ref_z[-1]])
         target_vel = np.zeros(3)
         target_acc = np.zeros(3)
-        target_rpy = np.zeros(3)
+        target_yaw = 0
         target_rpy_rates = np.zeros(3)
 
         command_type = Command(1)
-        args = [target_pos, target_vel, target_acc, target_rpy, target_rpy_rates, time]
+        args = [target_pos, target_vel, target_acc, target_yaw, target_rpy_rates, time]
 
         #########################
         # REPLACE THIS (END) ####
@@ -263,6 +271,8 @@ class Controller():
             List: thrusts (in m/s, len == 3) to be commanded to each motor.
 
         """
+        if self.use_hardware:
+            raise NotImplementedError("Must control hardware through cmdFullState. Action space commands not supported.")
         if self.ctrl is None:
             raise RuntimeError("[ERROR] Attempting to use method 'cmdSimOnly' but Controller was created with 'use_firmware' = True.")
         # if FIRMWARE_INSTALLED:
