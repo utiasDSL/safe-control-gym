@@ -79,7 +79,7 @@ class Controller():
                 'symbolic_model', 'nominal_physical_parameters', 'nominal_gates_pos', etc.
             use_firmware (bool, optional): Choice between the on-board controll in `pycffirmware`
                 or simplified software-only alternative.
-            use_hardware (bool, optional): ...
+            use_hardware (bool, optional): Choice between simulation or hardware evaluation.
             buffer_size (int, optional): Size of the data buffers used in method `learn()`.
             verbose (bool, optional): Turn on and off additional printouts and plots.
 
@@ -211,7 +211,7 @@ class Controller():
 
         Args:
             time (float): Episode's elapsed time, in seconds.
-            obs (ndarray): The quadrotor's state [x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r].
+            obs (ndarray): The quadrotor's Vicon data [x, 0, y, 0, z, 0, phi, theta, psi, 0, 0, 0].
             vicon_pos (ndarray, optional): Feedback from the vicon tracking system about where your drone marker is (mm).
             est_vel (ndarray, optional): Estimation of drone velocity from Vicon system.
             est_acc (ndarray, optional): Estimation of drone acceleration from Vicon system.

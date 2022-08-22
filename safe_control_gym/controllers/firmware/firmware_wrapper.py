@@ -140,6 +140,8 @@ class FirmwareWrapper(BaseController):
         # if self.env.NUM_DRONES > 1: 
         #     raise NotImplementedError("Firmware controller wrapper does not support multiple drones.")
 
+        self.first_motor_killed_print = True
+
         self.results_dict = { 'obs': [],
                         'reward': [],
                         'done': [],
@@ -226,7 +228,9 @@ class FirmwareWrapper(BaseController):
 
             if self._error:
                 action = np.zeros(4)
-                print("Drone firmware error. Motors are killed.")
+                if self.first_motor_killed_print:
+                    print("Drone firmware error. Motors are killed.")
+                    self.first_motor_killed_print = False
 
             self.action = action 
         return obs, reward, done, info, action

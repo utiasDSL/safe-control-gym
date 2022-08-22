@@ -1,7 +1,7 @@
 # Configuration
 num_episodes: 5
 use_firmware: True
-verbose: True
+verbose: False
 
 # Environment
 quadrotor_config:
