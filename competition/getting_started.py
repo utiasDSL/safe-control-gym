@@ -1,4 +1,4 @@
-"""Demo script.
+"""Base script.
 
 Run as:
 
@@ -6,8 +6,9 @@ Run as:
 
 """
 import time
-from functools import partial
 import numpy as np
+
+from functools import partial
 
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
@@ -26,7 +27,7 @@ finally:
 
 
 def main():
-    """The main function creating, running, and closing an environment.
+    """The main function creating, running, and closing an environment over N episodes.
 
     """
 
@@ -42,7 +43,8 @@ def main():
     # Create environment.
     if config.use_firmware:
         if "observation" in config.quadrotor_config.disturbances:
-            raise NotImplementedError("Observation noise not supported with firmware wrapper.")
+            # raise NotImplementedError("Observation noise not supported with firmware wrapper.")
+            del config.quadrotor_config.disturbances['observation']
 
         pyb_freq = config.quadrotor_config['pyb_freq']
         ctrl_freq = config.quadrotor_config['ctrl_freq']
@@ -77,22 +79,23 @@ def main():
         info['ctrl_freq'] = ctrl_freq
         
         # Create controller.
-        ctrl = Controller(obs, info, config.use_firmware)
+        ctrl = Controller(obs, info, config.use_firmware, verbose=config.verbose)
         firmware_wrapper.update_initial_state(obs)
     else:
         # Create controller.
-        ctrl = Controller(obs, info, config.use_firmware)
+        ctrl = Controller(obs, info, config.use_firmware, verbose=config.verbose)
 
     # Create a logger and counters
     logger = Logger(logging_freq_hz=ctrl_freq)
     episodes_count = 1
+    cumulative_reward = 0
     collisions_count = 0
     collided_objects = set()
 
     # Run an experiment.
     for i in range(config.num_episodes*ctrl_freq*env.EPISODE_LEN_SEC):
 
-        # Step by keyboard input.
+        # Step by keyboard press.
         # _ = input()
 
         # Elapsed sim time.
@@ -102,6 +105,7 @@ def main():
         if config.use_firmware:
             command_type, args = ctrl.cmdFirmware(curr_time, obs)
 
+            # Select interface.
             if command_type == Command.FULLSTATE:
                 firmware_wrapper.sendFullStateCmd(*args)
             elif command_type == Command.TAKEOFF:
@@ -120,23 +124,33 @@ def main():
             # Step the environment.
             obs, reward, done, info, action = firmware_wrapper.step(curr_time, action)
         else:
-            action = ctrl.cmdSimOnly(curr_time, obs)
+            target_pos, target_vel = ctrl.cmdSimOnly(curr_time, obs)
+            action = ctrl._thrusts(obs, target_pos, target_vel)
             obs, reward, done, info = env.step(action)
 
+        # Update the controller internal state and models.
+        ctrl.learn(action, obs, reward, done, info)
+
+        # Add up reward and collisions.
+        cumulative_reward += reward
         if info["collision"][1]:
             collisions_count += 1
             collided_objects.add(info["collision"][0])
 
         # Printouts.
-        if i%100 == 0:
+        if config.verbose and i%int(ctrl_freq/2) == 0:
             print('\n'+str(i)+'-th step.')
             print('\tApplied action: ' + str(action))
             print('\tObservation: ' + str(obs))
-            print('\tReward: ' + str(reward))
+            print('\tReward: ' + str(reward) + ' (Cumulative: ' + str(cumulative_reward) +')')
             print('\tDone: ' + str(done))
             if 'constraint_values' in info:
                 print('\tConstraints evaluations: ' + str(info['constraint_values']))
                 print('\tConstraints violation: ' + str(bool(info['constraint_violation'])))
+            print('\tCurrent target gate ID: ' + str(info['current_target_gate_id']))
+            print('\tCurrent target gate in range: ' + str(info['current_target_gate_in_range']))
+            print('\tCurrent target gate position: ' + str(info['current_target_gate_pos']))
+            print('\tAt goal position: ' + str(info['at_goal_position']))
             print('\tCollisions: ' + str(collisions_count))
             print('\tCollided objects: ' + str(collided_objects))
 
@@ -144,10 +158,10 @@ def main():
         pos = [obs[0],obs[2],obs[4]]
         rpy = [obs[6],obs[7],obs[8]]
         vel = [obs[1],obs[3],obs[5]]
-        ang_vel = [obs[9],obs[10],obs[11]]
+        bf_rates = [obs[9],obs[10],obs[11]]
         logger.log(drone=0,
                    timestamp=i/ctrl_freq,
-                   state=np.hstack([pos, np.zeros(4), rpy, vel, ang_vel, np.sqrt(action/env.KF)]),
+                   state=np.hstack([pos, np.zeros(4), rpy, vel, bf_rates, np.sqrt(action/env.KF)])
                    )
 
         # If an episode is complete, reset the environment.
@@ -161,17 +175,20 @@ def main():
             # Create a new logger.
             logger = Logger(logging_freq_hz=ctrl_freq)
 
+            # Reset/update counters.
             episodes_count += 1
             if episodes_count > config.num_episodes:
                 break
+            cumulative_reward = 0
             collisions_count = 0
             collided_objects = set()
 
             # Reset the environment.
             new_initial_obs, new_initial_info = env.reset()
-            print(str(episodes_count)+'-th reset.')
-            print('Reset obs' + str(new_initial_obs))
-            print('Reset info' + str(new_initial_info))
+            if config.verbose:
+                print(str(episodes_count)+'-th reset.')
+                print('Reset obs' + str(new_initial_obs))
+                print('Reset info' + str(new_initial_info))
 
             # Re-initialize firmware.
             if config.use_firmware:
@@ -189,7 +206,8 @@ def main():
                   elapsed_sec,
                   i/elapsed_sec,
                   (i*ctrl_dt)/elapsed_sec
-                  )))
+                  )
+          ))
 
 if __name__ == "__main__":
     main()

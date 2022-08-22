@@ -335,6 +335,13 @@ class Quadrotor(BaseAviary):
             self.OBSTACLES = kwargs['obstacles']
         if 'gates' in kwargs:
             self.GATES = kwargs['gates']
+        if 'randomized_gates_and_obstacles' in kwargs and kwargs['randomized_gates_and_obstacles']:
+            self.RANDOMIZED_GATES_AND_OBS = True
+            if 'gates_and_obstacles_randomization_info' not in kwargs:
+                raise ValueError("[ERROR] Missing 'gates_and_obstacles_randomization_info' in YAML configuration.")
+            self.GATES_AND_OBS_RAND_INFO = kwargs['gates_and_obstacles_randomization_info']
+        else:
+            self.RANDOMIZED_GATES_AND_OBS = False
 
     def reset(self):
         """(Re-)initializes the environment to start an episode.
@@ -351,19 +358,47 @@ class Quadrotor(BaseAviary):
         super()._reset_simulation()
 
         # IROS 2022 - Create maze.
-        self.OBSTACLES_IDS = [
-            p.loadURDF(os.path.join(self.URDF_DIR, "obstacle.urdf"),
-                       np.array(obstacle[0:3]) + np.array([0.1*np.random.rand(), 0.1*np.random.rand(), 0]), # TODO - Parametrize distribution
+        self.OBSTACLES_IDS = []
+        if self.RANDOMIZED_GATES_AND_OBS:
+            rand_info_copy = deepcopy(self.GATES_AND_OBS_RAND_INFO)
+            distrib = getattr(self.np_random, rand_info_copy["obstacles"].pop("distrib"))
+            d_args = rand_info_copy["obstacles"].pop("args", [])
+            d_kwargs = rand_info_copy["obstacles"]
+        for obstacle in self.OBSTACLES:
+            offset = np.array([0, 0, 0])
+            if self.RANDOMIZED_GATES_AND_OBS:
+                offset = np.array([distrib(*d_args, **d_kwargs), distrib(*d_args, **d_kwargs), 0])
+            else:
+                offset = np.array([0, 0, 0])
+            TMP_ID = p.loadURDF(os.path.join(self.URDF_DIR, "obstacle.urdf"),
+                       np.array(obstacle[0:3]) + offset,
                        p.getQuaternionFromEuler(obstacle[3:6]),
                        physicsClientId=self.PYB_CLIENT)
-            for obstacle in self.OBSTACLES]
-        
-        self.GATES_IDS = [
-            p.loadURDF(os.path.join(self.URDF_DIR, "portal.urdf"),
-                       np.array(gate[0:3]) + np.array([0.1*np.random.rand(), 0.1*np.random.rand(), 0]), # TODO - Parametrize distribution
+            self.OBSTACLES_IDS.append(TMP_ID)
+        #
+        self.GATES_IDS = []
+        self.EFFECTIVE_GATES_POSITIONS = []
+        if self.RANDOMIZED_GATES_AND_OBS:
+            rand_info_copy = deepcopy(self.GATES_AND_OBS_RAND_INFO)
+            distrib = getattr(self.np_random, rand_info_copy["gates"].pop("distrib"))
+            d_args = rand_info_copy["gates"].pop("args", [])
+            d_kwargs = rand_info_copy["gates"]
+        for gate in self.GATES:
+            offset = np.array([0, 0, 0])
+            if self.RANDOMIZED_GATES_AND_OBS:
+                offset = np.array([distrib(*d_args, **d_kwargs), distrib(*d_args, **d_kwargs), 0])
+            else:
+                offset = np.array([0, 0, 0])
+            self.EFFECTIVE_GATES_POSITIONS.append(list(np.array(gate[0:3]) + offset) + gate[3:6])
+            TMP_ID = p.loadURDF(os.path.join(self.URDF_DIR, "portal.urdf"),
+                       np.array(gate[0:3]) + offset,
                        p.getQuaternionFromEuler(gate[3:6]),
                        physicsClientId=self.PYB_CLIENT)
-            for gate in self.GATES]
+            self.GATES_IDS.append(TMP_ID)
+        #
+        self.NUM_GATES = len(self.GATES)
+        self.current_gate = 0
+        #
         # Deactivate select collisions, e.g. between the ground plane and the drone
         # p.setCollisionFilterPair(bodyUniqueIdA=self.PLANE_ID,
         #                          bodyUniqueIdB=self.DRONE_IDS[0],
@@ -371,6 +406,11 @@ class Quadrotor(BaseAviary):
         #                          linkIndexB=-1,
         #                          enableCollision=0,
         #                          physicsClientId=self.PYB_CLIENT)
+        # 
+        # Initialize IROS-specific attributes.
+        self.stepped_through_gate = False
+        self.at_goal_pos = False
+        self.currently_collided = False
         
         # Choose randomized or deterministic inertial properties.
         prop_values = {
@@ -472,9 +512,10 @@ class Quadrotor(BaseAviary):
         super()._advance_simulation(rpm, disturb_force)
         # Standard Gym return.
         obs = self._get_observation()
-        rew = self._get_reward()
+        # rew = self._get_reward()
         done = self._get_done()
         info = self._get_info()
+        rew = self._get_reward()  # IROS 2022 - After _get_info() to use this step's 'self' attributes.
         obs, rew, done, info = super().after_step(obs, rew, done, info)
         return obs, rew, done, info
     
@@ -645,7 +686,7 @@ class Quadrotor(BaseAviary):
                                            high=np.ones(action_dim), 
                                            dtype=np.float32)
         else:
-            # Direct thrust control .
+            # Direct thrust control.
             n_motors = 4 / action_dim
             a_low = self.KF * n_motors * (self.PWM2RPM_SCALE * self.MIN_PWM + self.PWM2RPM_CONST)**2
             a_high = self.KF * n_motors * (self.PWM2RPM_SCALE * self.MAX_PWM + self.PWM2RPM_CONST)**2
@@ -660,9 +701,9 @@ class Quadrotor(BaseAviary):
             gym.spaces: The bounded observation (state) space, of size 2, 6, or 12 depending on QUAD_TYPE.
 
         """
-        self.x_threshold = 2
-        self.y_threshold = 2
-        self.z_threshold = 2
+        self.x_threshold = 5
+        self.y_threshold = 5
+        self.z_threshold = 2.5
         self.phi_threshold_radians = 85 * math.pi / 180
         self.theta_threshold_radians = 85 * math.pi / 180
         self.psi_threshold_radians = 180 * math.pi / 180  # Do not bound yaw.
@@ -850,6 +891,27 @@ class Quadrotor(BaseAviary):
                                                      Q=self.Q,
                                                      R=self.R)["l"])
 
+        # IROS 2022 - Competition sparse reward signal. 
+        if self.COST == Cost.COMPETITION:
+            reward = 0
+            # Reward stepping through the right next gate.
+            if self.stepped_through_gate:
+                reward += 100
+            # Reward reaching goal position (after navigating the gates in the correct order).
+            if self.at_goal_pos:
+                reward += 100
+            # Penalize by collision
+            if self.currently_collided:
+                reward -= 1000
+            # Penalize by loss from X_GOAL, U_GOAL state.
+            # reward += float(-1 * self.symbolic.loss(x=self.state,
+            #                                         Xr=self.X_GOAL,
+            #                                         u=self.current_preprocessed_action,
+            #                                         Ur=self.U_GOAL,
+            #                                         Q=self.Q,
+            #                                         R=self.R)["l"])
+            return reward
+
     def _get_done(self):
         """Computes the conditions for termination of an episode.
 
@@ -887,9 +949,9 @@ class Quadrotor(BaseAviary):
             out_of_bound = np.any(out_of_bound * mask)
             # Early terminate if needed.
             if out_of_bound:
-                return True 
+                return True
 
-        return False 
+        return False
 
     def _get_info(self):
         """Generates the info dictionary returned by every call to .step().
@@ -940,10 +1002,64 @@ class Quadrotor(BaseAviary):
                                      physicsClientId=self.PYB_CLIENT)
             if ret:
                 info["collision"] = (GATE_OBS_ID, True)
+                self.currently_collided = True
                 break  # Note: only returning the first collision per step.
         else:
             info["collision"] = (None, False)
-        # Gates progress - TODO
+            self.currently_collided = False
+        #
+        # Gates progress.
+        if self.pyb_step_counter > 0.5*self.PYB_FREQ and self.NUM_GATES > 0 and self.current_gate < self.NUM_GATES:
+            x, y, _, _, _, rot = self.EFFECTIVE_GATES_POSITIONS[self.current_gate]
+            height = 0.7
+            delta_x = 0.05*np.cos(rot)
+            delta_y = 0.05*np.sin(rot)
+            fr = [[x,y, height-0.1875]]
+            to = [[x,y, height+0.1875]]
+            for i in [1,2, 3]:
+                fr.append([x+i*delta_x, y+i*delta_y, height-0.1875])
+                fr.append([x-i*delta_x, y-i*delta_y, height-0.1875])
+                to.append([x+i*delta_x, y+i*delta_y, height+0.1875])
+                to.append([x-i*delta_x, y-i*delta_y, height+0.1875])
+            # for i in range(len(fr)):
+            #     p.addUserDebugLine(lineFromXYZ=fr[i],
+            #                        lineToXYZ=to[i],
+            #                        lineColorRGB=[1, 0, 0],
+            #                        lifeTime=100 * self.CTRL_TIMESTEP,
+            #                        physicsClientId=self.PYB_CLIENT)
+            rays = p.rayTestBatch(rayFromPositions=fr,
+                                  rayToPositions=to,
+                                  physicsClientId=self.PYB_CLIENT)
+            self.stepped_through_gate = False
+            for r in rays:
+                if r[2] < .9999:
+                    self.current_gate += 1
+                    self.stepped_through_gate = True
+                    break
+        if self.current_gate < self.NUM_GATES:
+            VISIBILITY_RANGE = 0.45
+            info["current_target_gate_id"] = self.current_gate
+            closest_points = p.getClosestPoints(bodyA=self.GATES_IDS[self.current_gate],
+                                                bodyB=self.DRONE_IDS[0],
+                                                distance=VISIBILITY_RANGE,
+                                                # linkIndexA=-1, linkIndexB=-1,
+                                                physicsClientId=self.PYB_CLIENT)
+            if len(closest_points) > 0:
+                info["current_target_gate_in_range"] = True
+                info["current_target_gate_pos"] = self.EFFECTIVE_GATES_POSITIONS[self.current_gate]
+            else:
+                info["current_target_gate_in_range"] = False
+                info["current_target_gate_pos"] = self.GATES[self.current_gate]
+        else:
+            info["current_target_gate_id"] = -1
+            info["current_target_gate_in_range"] = False
+            info["current_target_gate_pos"] = []
+        #
+        # Final goal position reached
+        info["at_goal_position"] = False
+        if self.current_gate == self.NUM_GATES:
+            self.at_goal_pos = bool(np.linalg.norm(self.state - self.X_GOAL) < self.TASK_INFO["stabilization_goal_tolerance"])
+            info["at_goal_position"] = self.at_goal_pos
 
         return info
 
@@ -985,6 +1101,12 @@ class Quadrotor(BaseAviary):
         }
         info["nominal_gates_pos"] = self.GATES
         info["nominal_obstacles_pos"] = self.OBSTACLES
+
+        if self.RANDOMIZED_INERTIAL_PROP:
+            info["inertial_prop_randomization"] = self.INERTIAL_PROP_RAND_INFO
+        if self.RANDOMIZED_GATES_AND_OBS:
+            info["gates_and_obs_randomization"] = self.GATES_AND_OBS_RAND_INFO
+        info["disturbances"] = self.DISTURBANCES
 
         # INFO 2022 - Debugging.
         info["urdf_dir"] = self.URDF_DIR

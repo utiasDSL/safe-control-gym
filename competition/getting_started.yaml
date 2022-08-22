@@ -1,30 +1,30 @@
 # Configuration
-num_episodes: 3
-use_firmware: False
+num_episodes: 2
+use_firmware: True
+verbose: True
+
 # Environment
 quadrotor_config:
   seed: 1337
-  camera_view: [5, -40, -55, 1.5, 2, 0.5]
-  info_in_reset: True
   ctrl_freq: 60
   firmware_freq: 240
   pyb_freq: 240
-  gui: True
+  quad_type: 3  # 3D quadrotor
   physics: pyb
-  quad_type: 3
+  gui: True
+  camera_view: [5, -40, -55, 1.5, 2, 0.5]
+  info_in_reset: True
   normalized_rl_action_space: False
-  episode_len_sec: 15
-  task: stabilization
-  task_info:
-    stabilization_goal: [0.5, 6., 0.75]
-    stabilization_goal_tolerance: 0.05
-  cost: quadratic
+  cost: competition  # Sparse reward function
   done_on_out_of_bound: False
   done_on_violation: False
-  verbose: False
-  gates: [[1.5, 0.5, 0.8, 0, 0, 1.57], [3, 1.5, 0.8, 0, 0, 0], [1, 3, 0.8, 0, 0, 1.57], [0.5, 4.5, 0.8, 0, 0, 0]]
-  obstacles: [[2.5, 0.5, 0.35, 0, 0, 0], [1.5, 2, 0.35, 0, 0, 0], [2.5, 3, 0.35, 0, 0, 0], [0, 3, 0.35, 0, 0, 0]]
-# Randomization
+  episode_len_sec: 15  # Episode duration in seconds
+  task: stabilization
+  task_info:
+    stabilization_goal: [0.5, 6., 0.75]  # Final goal/target position in x-y-z to hover at
+    stabilization_goal_tolerance: 0.1
+
+  # Nominal (pre-randomization) initial state
   init_state:
     init_x: 0.1
     init_x_dot: 0
@@ -38,6 +38,26 @@ quadrotor_config:
     init_p: 0
     init_q: 0
     init_r: 0
+
+  # Nominal (pre-randomization) positions of gates and obstacles
+  gates:
+    [
+      # x, y, z, _, _, yaw
+      [1.5, 0.5, 0.8, 0, 0, 1.57],
+      [3, 1.5, 0.8, 0, 0, 0],
+      [1, 3, 0.8, 0, 0, 1.57],
+      [0.5, 4.5, 0.8, 0, 0, 0]
+    ]
+  obstacles:
+    [
+      # x, y, z, _, _, yaw
+      [2.5, 0.5, 0.35, 0, 0, 0],
+      [1.5, 2, 0.35, 0, 0, 0],
+      [2.5, 3, 0.35, 0, 0, 0],
+      [0, 3, 0.35, 0, 0, 0]
+    ]
+
+  # Randomization of the initial state
   randomized_init: True
   init_state_randomization_info:
     init_x: 
@@ -65,6 +85,8 @@ quadrotor_config:
       low: -0.1
       high: 0.1
   randomized_inertial_prop: True
+
+  # Randomizaation of the quadrotor inertial properties
   inertial_prop_randomization_info:
     M:
       distrib: "uniform"
@@ -82,11 +104,25 @@ quadrotor_config:
       distrib: "uniform"
       low: 0.0
       high: 0.0
-  # TODO - SET DISTR. TO RANDOMIZE OBSTACLES/GATES
-# Constraints
+  randomized_gates_and_obstacles: True
+
+  # Randomization of the gates and obstacles positions
+  gates_and_obstacles_randomization_info:
+    gates:
+      distrib: "uniform"
+      low: -0.1
+      high: 0.1
+    obstacles:
+      distrib: "uniform"
+      low: -0.1
+      high: 0.1
+
+  # Constraints
   constraints:
+    # Input constraints
     - constraint_form: default_constraint
       constrained_variable: input
+    # State constraints
     - constraint_form: bounded_constraint
       constrained_variable: state
       active_dims: [0, 2, 4]
@@ -116,14 +152,18 @@ quadrotor_config:
       # - -10  # p
       # - -10  # q
       # - -10  # r
-# Disturbances
+
+  # Disturbances
   disturbances:
-    observation:
+    # Additive noise on the observation vector (the quadrotor's state)
+    observation:  # Note: NOT applied when use_firmware == True
       - disturbance_func: white_noise
         std: 0.01
+    # Additive noise on the commanded input action
     action:
       - disturbance_func: white_noise
         std: 0.001
+    # Random external force applied to the quadrotor (e.g. a push or wind)
     dynamics:
       - disturbance_func: uniform
         low: [-0.1, -0.1, -0.1]

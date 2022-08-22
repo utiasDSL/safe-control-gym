@@ -7,22 +7,18 @@ Links:
 
 ## Registration Form
 
-*Note: alpha release subject to change throughout the month of August, 2022; register for updates*
+*Note: beta release subject to change throughout the month of August, 2022; register for updates*
 
 Complete this [Google Form](https://forms.gle/vEmVK99n1SyaE4Zw9) to register you interest and receive e-mail updates
 
-## Latest Update: August 15
-- Collisions count
-
-## Next Update: August 18 (approx.)
-- Goal position reached, gate progress metrics
-- Training script template
-- `cffirmare` Python module
+## Latest Update: August 21
+- Exact next gate position, in `info`, set if discoverable by range
 
 ## Install on Ubuntu/macOS
 
 ```bash
 git clone https://github.com/utiasDSL/safe-control-gym.git
+git checkout beta-iros-competition
 cd safe-control-gym
 ```
 
@@ -41,13 +37,26 @@ pip install --upgrade pip
 pip install -e .
 ```
 
+## Install `pycffirmware` (optional, recommended) 
+
+See [`pycffirmware`](https://github.com/utiasDSL/pycffirmware)'s `README.md`
+
+
+
 ## Getting Started
 Run the scripts in [`competition/`](https://github.com/utiasDSL/safe-control-gym/tree/main/competition)
 ```
 $ cd ./competition/
 $ python3 getting_started.py --overrides ./getting_started.yaml
 ```
-**Modify file [`edit_this.py`](https://github.com/utiasDSL/safe-control-gym/blob/alpha-iros-competition/competition/edit_this.py) to customize your planning and control**
+**Modify file [`edit_this.py`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py) to customize your planning and control based on [Crazyswarm's cmdFullState() interface](https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.cmdFullState)**
+
+## Submission
+
+- Fork this repo ([help](https://docs.github.com/en/get-started/quickstart/fork-a-repo))
+- Checkout this branch (`beta-iros-competition`)
+- Create a Pull Request into `utiasDSL/safe-control-gym:beta-iros-competition` from your fork ([help](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork))
+- Tag @JacopoPan in the Pull Request's Conversation tab
 
 -----
 > University of Toronto's [Dynamic Systems Lab](https://github.com/utiasDSL) / [Vector Institute for Artificial Intelligence](https://github.com/VectorInstitute)

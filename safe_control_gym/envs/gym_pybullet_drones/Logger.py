@@ -245,34 +245,46 @@ class Logger(object):
         for j in range(self.NUM_DRONES):
             axs[row, col].plot(t, self.states[j, 6, :], label="drone_"+str(j))
         axs[row, col].set_xlabel('time')
-        axs[row, col].set_ylabel('r (rad)')
+        axs[row, col].set_ylabel('phi (rad)')
         row = 4
         for j in range(self.NUM_DRONES):
             axs[row, col].plot(t, self.states[j, 7, :], label="drone_"+str(j))
         axs[row, col].set_xlabel('time')
-        axs[row, col].set_ylabel('p (rad)')
+        axs[row, col].set_ylabel('theta (rad)')
         row = 5
         for j in range(self.NUM_DRONES):
             axs[row, col].plot(t, self.states[j, 8, :], label="drone_"+str(j))
         axs[row, col].set_xlabel('time')
-        axs[row, col].set_ylabel('y (rad)')
+        axs[row, col].set_ylabel('psi (rad)')
 
-        #### Ang Vel ###############################################
+        #### BF Rates ##############################################
+        # row = 6
+        # for j in range(self.NUM_DRONES):
+        #     axs[row, col].plot(t, self.states[j, 9, :], label="drone_"+str(j))
+        # axs[row, col].set_xlabel('time')
+        # axs[row, col].set_ylabel('p (rad/s)')
+        # row = 7
+        # for j in range(self.NUM_DRONES):
+        #     axs[row, col].plot(t, self.states[j, 10, :], label="drone_"+str(j))
+        # axs[row, col].set_xlabel('time')
+        # axs[row, col].set_ylabel('q (rad/s)')
+        # row = 8
+        # for j in range(self.NUM_DRONES):
+        #     axs[row, col].plot(t, self.states[j, 11, :], label="drone_"+str(j))
+        # axs[row, col].set_xlabel('time')
+        # axs[row, col].set_ylabel('r (rad/s)')
         row = 6
-        for j in range(self.NUM_DRONES):
-            axs[row, col].plot(t, self.states[j, 9, :], label="drone_"+str(j))
+        axs[row, col].plot(t, t, label="time")
         axs[row, col].set_xlabel('time')
-        axs[row, col].set_ylabel('wx')
+        axs[row, col].set_ylabel('time')
         row = 7
-        for j in range(self.NUM_DRONES):
-            axs[row, col].plot(t, self.states[j, 10, :], label="drone_"+str(j))
+        axs[row, col].plot(t, t, label="time")
         axs[row, col].set_xlabel('time')
-        axs[row, col].set_ylabel('wy')
+        axs[row, col].set_ylabel('time')
         row = 8
-        for j in range(self.NUM_DRONES):
-            axs[row, col].plot(t, self.states[j, 11, :], label="drone_"+str(j))
+        axs[row, col].plot(t, t, label="time")
         axs[row, col].set_xlabel('time')
-        axs[row, col].set_ylabel('wz')
+        axs[row, col].set_ylabel('time')
 
         #### Time ##################################################
         row = 9
@@ -301,24 +313,41 @@ class Logger(object):
         axs[row, col].set_ylabel('vz (m/s)')
 
         #### RPY Rates #############################################
+        # row = 3
+        # for j in range(self.NUM_DRONES):
+        #     rdot = np.hstack([0, (self.states[j, 6, 1:] - self.states[j, 6, 0:-1]) * self.LOGGING_FREQ_HZ ])
+        #     axs[row, col].plot(t, rdot, label="drone_"+str(j))
+        # axs[row, col].set_xlabel('time')
+        # axs[row, col].set_ylabel('rdot (rad/s)')
+        # row = 4
+        # for j in range(self.NUM_DRONES):
+        #     pdot = np.hstack([0, (self.states[j, 7, 1:] - self.states[j, 7, 0:-1]) * self.LOGGING_FREQ_HZ ])
+        #     axs[row, col].plot(t, pdot, label="drone_"+str(j))
+        # axs[row, col].set_xlabel('time')
+        # axs[row, col].set_ylabel('pdot (rad/s)')
+        # row = 5
+        # for j in range(self.NUM_DRONES):
+        #     ydot = np.hstack([0, (self.states[j, 8, 1:] - self.states[j, 8, 0:-1]) * self.LOGGING_FREQ_HZ ])
+        #     axs[row, col].plot(t, ydot, label="drone_"+str(j))
+        # axs[row, col].set_xlabel('time')
+        # axs[row, col].set_ylabel('ydot (rad/s)')
+
+        #### BF Rates ##############################################
         row = 3
         for j in range(self.NUM_DRONES):
-            rdot = np.hstack([0, (self.states[j, 6, 1:] - self.states[j, 6, 0:-1]) * self.LOGGING_FREQ_HZ ])
-            axs[row, col].plot(t, rdot, label="drone_"+str(j))
+            axs[row, col].plot(t, self.states[j, 9, :], label="drone_"+str(j))
         axs[row, col].set_xlabel('time')
-        axs[row, col].set_ylabel('rdot (rad/s)')
+        axs[row, col].set_ylabel('p (rad/s)')
         row = 4
         for j in range(self.NUM_DRONES):
-            pdot = np.hstack([0, (self.states[j, 7, 1:] - self.states[j, 7, 0:-1]) * self.LOGGING_FREQ_HZ ])
-            axs[row, col].plot(t, pdot, label="drone_"+str(j))
+            axs[row, col].plot(t, self.states[j, 10, :], label="drone_"+str(j))
         axs[row, col].set_xlabel('time')
-        axs[row, col].set_ylabel('pdot (rad/s)')
+        axs[row, col].set_ylabel('q (rad/s)')
         row = 5
         for j in range(self.NUM_DRONES):
-            ydot = np.hstack([0, (self.states[j, 8, 1:] - self.states[j, 8, 0:-1]) * self.LOGGING_FREQ_HZ ])
-            axs[row, col].plot(t, ydot, label="drone_"+str(j))
+            axs[row, col].plot(t, self.states[j, 11, :], label="drone_"+str(j))
         axs[row, col].set_xlabel('time')
-        axs[row, col].set_ylabel('ydot (rad/s)')
+        axs[row, col].set_ylabel('r (rad/s)')
 
         ### This IF converts RPM into PWM for all drones ###########
         #### except drone_0 (only used in examples/compare.py) #####
@@ -376,6 +405,7 @@ class Logger(object):
                             hspace=0.0
                             )
         plt.savefig(os.path.join('results', comment+'-output_figure.png'))
-        plt.show(block=False)
-        plt.pause(3)
-        plt.close()
+        plt.show()
+        # plt.show(block=False)
+        # plt.pause(3)
+        # plt.close()
