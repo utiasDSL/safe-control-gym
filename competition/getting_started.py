@@ -76,6 +76,7 @@ def main():
     cumulative_reward = 0
     collisions_count = 0
     collided_objects = set()
+    episode_start_iter = 0
 
     # Run an experiment.
     for i in range(config.num_episodes*CTRL_FREQ*env.EPISODE_LEN_SEC):
@@ -84,7 +85,7 @@ def main():
         # _ = input()
 
         # Elapsed sim time.
-        curr_time = (i%(CTRL_FREQ*env.EPISODE_LEN_SEC))*CTRL_DT
+        curr_time = (i-episode_start_iter)*CTRL_DT
 
         # Compute control input.
         if config.use_firmware:
@@ -154,6 +155,8 @@ def main():
 
         # If an episode is complete, reset the environment.
         if done:
+            episode_start_iter = i
+
             # Plot logging (comment as desired).
             logger.plot(comment="get_start-episode-"+str(episodes_count))
 

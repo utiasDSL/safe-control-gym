@@ -231,6 +231,7 @@ class FirmwareWrapper(BaseController):
                 if self.first_motor_killed_print:
                     print("Drone firmware error. Motors are killed.")
                     self.first_motor_killed_print = False
+                done = True
 
             self.action = action 
         return obs, reward, done, info, action
