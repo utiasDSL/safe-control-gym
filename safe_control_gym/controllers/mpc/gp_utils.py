@@ -260,7 +260,7 @@ class GaussianProcessCollection:
             print("#      Training GP dimension %s         #" % self.target_mask[gp_ind])
             print("#########################################")
             print("Train iterations: %s" % n_t)
-            print("Learning Rate:: %s" % lr)
+            print("Learning Rate: %s" % lr)
             gp.train(train_x_raw,
                      train_y_raw[:,self.target_mask[gp_ind]],
                      test_x_raw,
@@ -439,7 +439,7 @@ class GaussianProcess:
                   normalize=False
                   ):
         """Initialize Gaussian Process.
-       
+
         Args:
             model_type (gpytorch model class): Model class for the GP (ZeroMeanIndependentMultitaskGPModel).
             likelihood (gpytorch.likelihood): likelihood function.

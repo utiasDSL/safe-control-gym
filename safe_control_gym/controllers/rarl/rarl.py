@@ -8,8 +8,7 @@ References papers & code:
     * [Robust Reinforcement Learning via adversary pools](https://github.com/eugenevinitsky/robust_RL_multi_adversary)
 
 Example:
-    train on cartpole with disturbance::
-
+    train on cartpole with disturbance:
         $ python mains/main.py --algo rarl --task cartpole --overrides benchmark/configs/overrides/rarl_cartpole.yaml
 """
 

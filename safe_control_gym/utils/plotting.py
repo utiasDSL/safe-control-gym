@@ -197,7 +197,7 @@ def load_from_logs(log_dir):
 
 def plot_from_logs(src_dir, out_dir, window=None, keys=None):
     """Generate a plot for each stat in an experiment `logs` folder.
-    
+
     Args:
         src_dir (str): folder to read logs.
         out_dir (str): folder to save figures.
@@ -237,7 +237,7 @@ def plot_from_tensorboard_log(src_dir,
                               keys=None,
                               xlabel="step"):
     """Generates a plot for each stat from tfb log file in source folder.
-    
+
     """
     event_acc = EventAccumulator(src_dir)
     event_acc.Reload()
@@ -273,15 +273,15 @@ def plot_from_experiments(legend_dir_specs,
                           use_tb_log=True
                           ):
     """Generates plot among algos, each with several seed runs.
-    
-    Example: 
-        make a plot on average reward for gnn and mlp:: 
-        
+
+    Example:
+        make a plot on average reward for gnn and mlp:
+
         > plot_from_experiments(
             {
                 "gnn": [
-                    "results/algo1/seed0", 
-                    "results/algo1/seed1", 
+                    "results/algo1/seed0",
+                    "results/algo1/seed1",
                     "results/algo1/seed2"
                 ],
                 "mlp": [
@@ -366,9 +366,9 @@ def get_log_dirs(all_logdirs,
     All 3 arguments can be exposed as list args from command line.
 
     For every entry in all_logdirs,
-        1) check if the entry is a real directory and if it is, 
-           pull data from it; 
-        2) if not, check to see if the entry is a prefix for a 
+        1) check if the entry is a real directory and if it is,
+           pull data from it;
+        2) if not, check to see if the entry is a prefix for a
            real directory, and pull data from that.
 
     """

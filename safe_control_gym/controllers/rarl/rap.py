@@ -7,16 +7,11 @@ References papers & code:
     * [rllab-adv](https://github.com/lerrel/rllab-adv)
     * [Robust Reinforcement Learning via adversary pools](https://github.com/eugenevinitsky/robust_RL_multi_adversary)
 
-Example: 
-    train on cartpole_adversary::
-    
+Example:
+    train on cartpole_adversary:
         $ python tests/test_main.py --mode train_two_phase --exp_id rap_cartpole_adv \
         --algo rap --task cartpole_adversary --num_workers 2 --max_env_steps 2000000 \
         --tensorboard --use_gae --num_adversaries 2
-
-Todo:
-    *
-
 """
 import os
 import time
@@ -38,13 +33,13 @@ from safe_control_gym.controllers.rarl.rarl_utils import split_obs_by_adversary
 class RAP(BaseController):
     """rarl via adersarial population with PPO."""
 
-    def __init__(self, 
-                 env_func, 
-                 training=True, 
-                 checkpoint_path="model_latest.pt", 
-                 output_dir="temp", 
-                 use_gpu=False, 
-                 seed=0, 
+    def __init__(self,
+                 env_func,
+                 training=True,
+                 checkpoint_path="model_latest.pt",
+                 output_dir="temp",
+                 use_gpu=False,
+                 seed=0,
                  **kwargs):
         super().__init__(env_func, training, checkpoint_path, output_dir, use_gpu, seed, **kwargs)
         # task
@@ -73,7 +68,7 @@ class RAP(BaseController):
         self.agent = PPOAgent(self.env.observation_space, self.env.action_space, **shared_agent_args)
         self.agent.to(self.device)
 
-        # fetch adversary specs from env 
+        # fetch adversary specs from env
         if self.training:
             self.adv_obs_space = self.env.get_attr("adversary_observation_space")[0]
             self.adv_act_space = self.env.get_attr("adversary_action_space")[0]
@@ -111,7 +106,7 @@ class RAP(BaseController):
             self.env.add_tracker("constraint_violation", 0, mode="queue")
             self.eval_env.add_tracker("constraint_violation", 0, mode="queue")
             self.eval_env.add_tracker("mse", 0, mode="queue")
-            
+
             self.total_steps = 0
             obs, _ = self.env.reset()
             self.obs = self.obs_normalizer(obs)
@@ -305,15 +300,15 @@ class RAP(BaseController):
         # learning stats
         self.logger.add_scalars(
             {
-                k: results[k] 
+                k: results[k]
                 for k in ["policy_loss", "value_loss", "entropy_loss"]
-            }, 
-            step, 
+            },
+            step,
             prefix="loss")
         for adv_idx in results["adv_indices"]:
             self.logger.add_scalars(
                 {
-                    k: results[k + "_adv{}".format(adv_idx)] 
+                    k: results[k + "_adv{}".format(adv_idx)]
                     for k in ["policy_loss", "value_loss", "entropy_loss"]
                 },
                 step,
