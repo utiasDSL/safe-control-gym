@@ -25,11 +25,11 @@ finally:
 
 class Command(Enum):
     NONE = 0 # Args: Empty
-    FULLSTATE = 1 # Args: [pos, vel, acc, rpy, rpy_rate, iteration]
+    FULLSTATE = 1 # Args: [pos, vel, acc, yaw, rpy_rate, iteration]
     TAKEOFF = 2 # Args: [height, duration]
     LAND = 3 # Args: [height, duration]
     STOP = 4 # Args: Empty
-    GOTO = 5 # Args: [x, y, z, yaw, duration, relative (bool)]
+    GOTO = 5 # Args: [[x, y, z], yaw, duration, relative (bool)]
 
 
 class Controller():
@@ -38,17 +38,21 @@ class Controller():
     """
 
     def __init__(self,
-                 initial_obs,
+                 initial_pos,
                  initial_info,
-                 use_firmware: bool = False
+                 use_firmware: bool = False,
+                 use_hardware: bool = False
                  ):
         """Initialization of the controller.
 
         """
-
-        if use_firmware:
+        self.use_hardware = use_hardware
+        self.initial_pos = initial_pos
+        if use_firmware and not use_hardware:
             if not FIRMWARE_INSTALLED:
                 raise RuntimeError("[ERROR] Module 'cffirmware' not installed.")
+            self.ctrl = None
+        elif use_hardware:
             self.ctrl = None
         else:
             # Simple PID Controller.
@@ -159,10 +163,11 @@ class Controller():
         * est_rpy - estimation of drone attitude from vicon system
         * est_rpy_rates - estimation of drone body rates from vicon system
         """
-        if self.ctrl is not None:
-            raise RuntimeError("[ERROR] Using method 'cmdFirmware' but Controller was created with 'use_firmware' = False.")
-        if not FIRMWARE_INSTALLED:
-            raise RuntimeError("[ERROR] Module 'cffirmware' not installed.")
+        if not self.use_hardware:
+            if self.ctrl is not None:
+                raise RuntimeError("[ERROR] Using method 'cmdFirmware' but Controller was created with 'use_firmware' = False.")
+            if not FIRMWARE_INSTALLED:
+                raise RuntimeError("[ERROR] Module 'cffirmware' not installed.")
 
         iteration = int(time*self.CTRL_FREQ)
 
@@ -176,11 +181,11 @@ class Controller():
             target_pos = np.array([self.ref_x[-1], self.ref_y[-1], self.ref_z[-1]])
         target_vel = np.zeros(3)
         target_acc = np.zeros(3)
-        target_rpy = np.zeros(3)
+        target_yaw = 0
         target_rpy_rates = np.zeros(3)
 
         command_type = Command(1)
-        args = [target_pos, target_vel, target_acc, target_rpy, target_rpy_rates, time]
+        args = [target_pos, target_vel, target_acc, target_yaw, target_rpy_rates, time]
 
         #########################
         # REPLACE THIS (END) ####
@@ -195,6 +200,8 @@ class Controller():
         """Action selection.
 
         """
+        if self.use_hardware:
+            raise NotImplementedError("Must control hardware through cmdFullState. Action space commands not supported.")
         if self.ctrl is None:
             raise RuntimeError("[ERROR] Attempting to use method 'cmdSimOnly' but Controller was created with 'use_firmware' = True.")
         # if FIRMWARE_INSTALLED:
