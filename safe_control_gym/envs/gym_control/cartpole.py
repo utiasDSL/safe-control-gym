@@ -569,8 +569,7 @@ class CartPole(BenchmarkEnv):
         if self.COST == Cost.RL_REWARD:
             # negative quadratic reward with angle wrapped around
             state = deepcopy(self.state)
-            # TODO: should use angle wrapping
-            # state[2] = normalize_angle(state[2])
+            state[2] = normalize_angle(state[2])
             act = np.asarray(self.current_noisy_physical_action)
             if self.TASK == Task.STABILIZATION:
                 state_error = state - self.X_GOAL
@@ -631,7 +630,9 @@ class CartPole(BenchmarkEnv):
         if self.done_on_out_of_bound:
             x, _, theta, _ = self.state
             if x < -self.x_threshold or x > self.x_threshold or theta < -self.theta_threshold_radians or theta > self.theta_threshold_radians:
+                self.out_of_bounds = True
                 return True
+        self.out_of_bounds = False
         return False
 
     def _get_info(self):
@@ -643,6 +644,8 @@ class CartPole(BenchmarkEnv):
         info = {}
         if self.TASK == Task.STABILIZATION and self.COST == Cost.QUADRATIC:
             info['goal_reached'] = self.goal_reached  # Add boolean flag for the goal being reached.
+        if self.done_on_out_of_bound:
+            info['out_of_bounds'] = self.out_of_bounds
         # if self.constraints is not None:
         #     info['constraint_values'] = self.constraints.get_values(self)
         #     violation = np.any(np.greater(info['constraint_values'], 0.))

@@ -1,0 +1,36 @@
+task_config:
+  seed: 42
+  info_in_reset: True
+  ctrl_freq: 15
+  pyb_freq: 750
+  physics: pyb
+
+  init_state_randomization_info:
+    init_x:
+      distrib: 'uniform'
+      low: -1
+      high: 1
+    init_x_dot:
+      distrib: 'uniform'
+      low: -0.1
+      high: 0.1
+    init_theta:
+      distrib: 'uniform'
+      low: -0.2
+      high: 0.2
+    init_theta_dot:
+      distrib: 'uniform'
+      low: -0.1
+      high: 0.1
+
+  task: traj_tracking
+  task_info:
+    trajectory_type: 'circle'
+    num_cycles: 2
+    trajectory_plane: 'zx'
+    trajectory_position_offset: [0, 0]
+    trajectory_scale: 1
+
+  episode_len_sec: 6
+  cost: quadratic
+  done_on_out_of_bound: True

@@ -7,9 +7,9 @@ import casadi as cs
 from copy import deepcopy
 
 from safe_control_gym.controllers.base_controller import BaseController
-from safe_control_gym.controllers.mpc.mpc_utils import get_cost_weight_matrix, compute_discrete_lqr_gain_from_cont_linear_system, rk_discrete, compute_state_rmse
+from safe_control_gym.controllers.mpc.mpc_utils import get_cost_weight_matrix, compute_discrete_lqr_gain_from_cont_linear_system, rk_discrete, compute_state_rmse, reset_constraints
 from safe_control_gym.envs.benchmark_env import Task
-from safe_control_gym.envs.constraints import ConstraintList, GENERAL_CONSTRAINTS, create_constraint_list
+from safe_control_gym.envs.constraints import GENERAL_CONSTRAINTS, create_constraint_list
 
 
 class MPC(BaseController):
@@ -64,9 +64,9 @@ class MPC(BaseController):
                                                                 GENERAL_CONSTRAINTS,
                                                                 self.env)
             self.additional_constraints = additional_ConstraintsList.constraints
-            self.reset_constraints(self.env.constraints.constraints + self.additional_constraints)
+            self.constraints, self.state_constraints_sym, self.input_constraints_sym = reset_constraints(self.env.constraints.constraints + self.additional_constraints)
         else:
-            self.reset_constraints(self.env.constraints.constraints)
+            self.constraints, self.state_constraints_sym, self.input_constraints_sym = reset_constraints(self.env.constraints.constraints)
             self.additional_constraints = []
         # Model parameters
         self.model = self.env.symbolic
@@ -84,21 +84,6 @@ class MPC(BaseController):
         # logging
         #self.logger = ExperimentLogger(output_dir)
 
-    def reset_constraints(self,
-                          constraints
-                          ):
-        """ Setup the constraints list.
-
-        Args:
-            constraints (list): List of constraints controller is subject to.
-
-        """
-        self.constraints = ConstraintList(constraints)
-        self.state_constraints_sym = self.constraints.get_state_constraint_symbolic_models()
-        self.input_constraints_sym = self.constraints.get_input_constraint_symbolic_models()
-        if len(self.constraints.input_state_constraints) > 0:
-            raise NotImplementedError('MPC cannot handle combined state input constraints yet.')
-
     def add_constraints(self,
                         constraints
                         ):
@@ -108,7 +93,7 @@ class MPC(BaseController):
             constraints (list): List of constraints controller is subject too.
 
         """
-        self.reset_constraints(constraints + self.constraints.constraints)
+        self.constraints, self.state_constraints_sym, self.input_constraints_sym = reset_constraints(constraints + self.constraints.constraints)
 
     def remove_constraints(self,
                            constraints
@@ -124,7 +109,7 @@ class MPC(BaseController):
             assert constraint in self.constraints.constraints,\
                 ValueError("This constraint is not in the current list of constraints")
             old_constraints_list.remove(constraint)
-        self.reset_constraints(old_constraints_list)
+        self.constraints, self.state_constraints_sym, self.input_constraints_sym = reset_constraints(old_constraints_list)
 
     def close(self):
         """Cleans up resources.
@@ -276,17 +261,19 @@ class MPC(BaseController):
         }
 
     def select_action(self,
-                      obs
+                      obs,
+                      info=None
                       ):
         """Solves nonlinear mpc problem to get next action.
 
         Args:
-            obs (np.array): current state/observation. 
-        
-        Returns:
-            np.array: input/action to the task/env. 
+            obs (ndarray): Current state/observation.
+            info (dict): Current info
 
+        Returns:
+            action (ndarray): Input/action to the task/env.
         """
+
         opti_dict = self.opti_dict
         opti = opti_dict["opti"]
         x_var = opti_dict["x_var"]
@@ -377,13 +364,13 @@ class MPC(BaseController):
             terminate_run_on_done=None
             ):
         """Runs evaluation with current policy.
-        
+
         Args:
-            render (bool): if to do real-time rendering. 
+            render (bool): if to do real-time rendering.
             logging (bool): if to log on terminal.
-            
+
         Returns:
-            dict: evaluation statisitcs, rendered frames. 
+            dict: evaluation statisitcs, rendered frames.
 
         """
         if env is None:

@@ -14,19 +14,19 @@ cartpole_config:
   randomized_init: True
   init_state_randomization_info:
     init_x:
-      distrib: "uniform"
+      distrib: 'uniform'
       low: -0.05
       high: 0.05
     init_x_dot:
-      distrib: "uniform"
+      distrib: 'uniform'
       low: -0.05
       high: 0.05
     init_theta:
-      distrib: "uniform"
+      distrib: 'uniform'
       low: -0.05
       high: 0.05
     init_theta_dot:
-      distrib: "uniform"
+      distrib: 'uniform'
       low: -0.05
       high: 0.05
   prior_prop:
@@ -40,15 +40,15 @@ cartpole_config:
   randomized_inertial_prop: True
   inertial_prop_randomization_info:
     pole_length:
-      distrib: "uniform"
+      distrib: 'uniform'
       low: -0.25
       high: 0.0
     cart_mass:
-      distrib: "uniform"
+      distrib: 'uniform'
       low: 0.5
       high: 1.5
     pole_mass:
-      distrib: "uniform"
+      distrib: 'uniform'
       low: 0.05
       high: 0.15
 #
@@ -63,9 +63,9 @@ cartpole_config:
   task_info:
     stabilization_goal: [0]
     stabilization_goal_tolerance: 0.01
-    trajectory_type: "circle"
+    trajectory_type: 'circle'
     num_cycles: 1
-    trajectory_plane: "zx"
+    trajectory_plane: 'zx'
     trajectory_position_offset: [0, 0]
     trajectory_scale: 0.2
   episode_len_sec: 10
@@ -112,28 +112,28 @@ quadrotor_config:
     init_theta_dot: 0
   randomized_init: True
   init_state_randomization_info:
-    init_x: 
-      distrib: "uniform"
+    init_x:
+      distrib: 'uniform'
       low: -0.5
       high: 0.5
     init_x_dot:
-      distrib: "uniform"
+      distrib: 'uniform'
       low: -0.01
       high: 0.01
     init_z:
-      distrib: "uniform"
+      distrib: 'uniform'
       low: 0.1
       high: 1.5
     init_z_dot:
-      distrib: "uniform"
+      distrib: 'uniform'
       low: -0.01
       high: 0.01
     init_theta:
-      distrib: "uniform"
+      distrib: 'uniform'
       low: -0.3
       high: 0.3
     init_theta_dot:
-      distrib: "uniform"
+      distrib: 'uniform'
       low: -0.01
       high: 0.01
   inertial_prop:
@@ -142,11 +142,11 @@ quadrotor_config:
   randomized_inertial_prop: True
   inertial_prop_randomization_info:
     M:
-      distrib: "uniform"
+      distrib: 'uniform'
       low: 0.022
       high: 0.032
     Iyy:
-      distrib: "uniform"
+      distrib: 'uniform'
       low: 1.3e-5
       high: 1.5e-5
 #
@@ -160,9 +160,9 @@ quadrotor_config:
   task_info:
     stabilization_goal: [0, 1]
     stabilization_goal_tolerance: 0.01
-    trajectory_type: "circle"
+    trajectory_type: 'circle'
     num_cycles: 1
-    trajectory_plane: "zx"
+    trajectory_plane: 'zx'
     trajectory_position_offset: [0.5, 0]
     trajectory_scale: -0.5
   episode_len_sec: 10

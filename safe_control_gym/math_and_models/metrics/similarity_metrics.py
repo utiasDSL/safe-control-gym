@@ -15,7 +15,7 @@ def encode_data(data, tuple_length=1):
         tuple_length (int): Length of each tuple as 1 sample.
 
     Returns:
-        encoded_data (np.array): Shape is (#tuples, obs_dim*(l+1)_act_dim*l) where l is tuple length.
+        encoded_data (ndarray): Shape is (#tuples, obs_dim*(l+1)_act_dim*l) where l is tuple length.
     '''
     # data = Munch(dict(n_steps=n_steps, obs=ep_obs_list, act=ep_act_list))
     sas_tuples = []

@@ -3,14 +3,14 @@
 """
 import os
 import time
+from collections import defaultdict
+
 import numpy as np
 import torch
-from collections import defaultdict
 
 from safe_control_gym.utils.logging import ExperimentLogger
 from safe_control_gym.utils.utils import get_random_state, set_random_state, is_wrapped
 from safe_control_gym.envs.env_wrappers.vectorized_env import make_vec_envs
-from safe_control_gym.envs.env_wrappers.vectorized_env.vec_env_utils import _flatten_obs
 from safe_control_gym.envs.env_wrappers.record_episode_statistics import RecordEpisodeStatistics, VecRecordEpisodeStatistics
 from safe_control_gym.math_and_models.normalization import BaseNormalizer, MeanStdNormalizer, RewardStdNormalizer
 
@@ -223,12 +223,29 @@ class SafeExplorerPPO(BaseController):
             if self.log_interval and self.total_steps % self.log_interval == 0:
                 self.log_step(results)
 
+    def select_action(self, obs, info=None):
+        """Determine the action to take at the current timestep.
+
+        Args:
+            obs (ndarray): The observation at this timestep.
+            info (dict): The info at this timestep.
+
+        Returns:
+            action (ndarray): The action chosen by the controller.
+        """
+        c = info["constraint_values"]
+        with torch.no_grad():
+            obs = torch.FloatTensor(obs).to(self.device)
+            c = torch.FloatTensor(c).to(self.device)
+            action = self.agent.ac.act(obs, c=c)
+
+        return action
+
     def run(self,
             env=None,
             render=False,
             n_episodes=10,
             verbose=False,
-            **kwargs
             ):
         """Runs evaluation with current policy.
 
@@ -245,15 +262,11 @@ class SafeExplorerPPO(BaseController):
                 env.add_tracker("mse", 0, mode="queue")
         obs, info = env.reset()
         obs = self.obs_normalizer(obs)
-        c = info["constraint_values"]
         ep_returns, ep_lengths = [], []
         frames = []
         while len(ep_returns) < n_episodes:
-            with torch.no_grad():
-                obs = torch.FloatTensor(obs).to(self.device)
-                c = torch.FloatTensor(c).to(self.device)
-                action = self.agent.ac.act(obs, c=c)
-            obs, reward, done, info = env.step(action)
+            action = self.select_action(obs, info)
+            obs, _, done, info = env.step(action)
             if render:
                 env.render()
                 frames.append(env.render("rgb_array"))
@@ -265,7 +278,6 @@ class SafeExplorerPPO(BaseController):
                 ep_lengths.append(info["episode"]["l"])
                 obs, info = env.reset()
             obs = self.obs_normalizer(obs)
-            c = info["constraint_values"]
         # Collect evaluation results.
         ep_lengths = np.asarray(ep_lengths)
         ep_returns = np.asarray(ep_returns)
@@ -313,7 +325,7 @@ class SafeExplorerPPO(BaseController):
         obs = self.obs
         c = self.c
         start = time.time()
-        for step in range(self.rollout_steps):
+        for _ in range(self.rollout_steps):
             with torch.no_grad():
                 act, v, logp = self.agent.ac.step(torch.FloatTensor(obs).to(self.device), c=torch.FloatTensor(c).to(self.device))
             next_obs, rew, done, info = self.env.step(act)
@@ -393,10 +405,10 @@ class SafeExplorerPPO(BaseController):
             # Learning stats.
             self.logger.add_scalars(
                 {
-                    k: results[k] 
+                    k: results[k]
                     for k in ["policy_loss", "value_loss", "entropy_loss", "approx_kl"]
-                }, 
-                step, 
+                },
+                step,
                 prefix="loss")
             # Performance stats.
             ep_lengths = np.asarray(self.env.length_queue)

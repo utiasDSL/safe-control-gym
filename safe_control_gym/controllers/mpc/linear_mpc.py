@@ -2,7 +2,7 @@
 
 Based on:
     * https://people.eecs.berkeley.edu/~pabbeel/cs287-fa12/slides/LQR.pdf
-    * https://pythonrobotics.readthedocs.io/en/latest/modules/path_tracking.html#mpc-modeling 
+    * https://pythonrobotics.readthedocs.io/en/latest/modules/path_tracking.html#mpc-modeling
     * https://github.com/AtsushiSakai/PythonRobotics/blob/master/PathTracking/model_predictive_speed_and_steer_control/model_predictive_speed_and_steer_control.py
 
 """
@@ -19,7 +19,7 @@ from safe_control_gym.envs.benchmark_env import Task
 
 class LinearMPC(MPC):
     """ Simple linear MPC.
-    
+
     """
 
     def __init__(
@@ -220,17 +220,19 @@ class LinearMPC(MPC):
         }
 
     def select_action(self,
-                      obs
+                      obs,
+                      info=None
                       ):
         """Solve nonlinear mpc problem to get next action.
-        
-        Args:
-            obs (np.array): current state/observation. 
-        
-        Returns:
-            action (np.array): input/action to the task/env.
 
+        Args:
+            obs (ndarray): Current state/observation.
+            info (dict): Current info.
+
+        Returns:
+            action (ndarray): Input/action to the task/env.
         """
+
         nx, nu = self.model.nx, self.model.nu
         T = self.T
         opti_dict = self.opti_dict

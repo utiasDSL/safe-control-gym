@@ -10,14 +10,10 @@ References papers & code:
     * [rlkit - sac](https://github.com/vitchyr/rlkit/tree/7daf34b0ef2277d545a0ee792399a2ae6c3fb6ad/rlkit/torch/sac)
     * [ray rllib - sac](https://github.com/ray-project/ray/tree/master/rllib/agents/sac)
     * [curl - curl_sac](https://github.com/MishaLaskin/curl/blob/master/curl_sac.py)
-
-Todo:
-    * 
-
 """
+
 import os
 import time
-import copy
 import numpy as np
 import torch
 from collections import defaultdict
@@ -36,13 +32,13 @@ from safe_control_gym.controllers.sac.sac_utils import SACAgent, SACBuffer
 class SAC(BaseController):
     """soft actor critic."""
 
-    def __init__(self, 
-                 env_func, 
-                 training=True, 
-                 checkpoint_path="model_latest.pt", 
-                 output_dir="temp", 
-                 use_gpu=False, 
-                 seed=0, 
+    def __init__(self,
+                 env_func,
+                 training=True,
+                 checkpoint_path="model_latest.pt",
+                 output_dir="temp",
+                 use_gpu=False,
+                 seed=0,
                  **kwargs):
         super().__init__(env_func, training, checkpoint_path, output_dir, use_gpu, seed, **kwargs)
 
@@ -194,6 +190,23 @@ class SAC(BaseController):
             if self.log_interval and self.total_steps % self.log_interval == 0:
                 self.log_step(results)
 
+    def select_action(self, obs, info=None):
+        """Determine the action to take at the current timestep.
+
+        Args:
+            obs (ndarray): The observation at this timestep.
+            info (dict): The info at this timestep.
+
+        Returns:
+            action (ndarray): The action chosen by the controller.
+        """
+
+        with torch.no_grad():
+            obs = torch.FloatTensor(obs).to(self.device)
+            action = self.agent.ac.act(obs, deterministic=True)
+
+        return action
+
     def run(self, env=None, render=False, n_episodes=10, verbose=False, **kwargs):
         """Runs evaluation with current policy."""
         self.agent.eval()
@@ -214,9 +227,7 @@ class SAC(BaseController):
         frames = []
 
         while len(ep_returns) < n_episodes:
-            with torch.no_grad():
-                obs = torch.FloatTensor(obs).to(self.device)
-                action = self.agent.ac.act(obs, deterministic=True)
+            action = self.select_action(obs=obs, info=info)
 
             obs, reward, done, info = env.step(action)
             if render:
@@ -331,10 +342,10 @@ class SAC(BaseController):
         if "policy_loss" in results:
             self.logger.add_scalars(
                 {
-                    k: results[k] 
+                    k: results[k]
                     for k in ["policy_loss", "critic_loss", "entropy_loss"]
-                }, 
-                step, 
+                },
+                step,
                 prefix="loss")
 
         # performance stats

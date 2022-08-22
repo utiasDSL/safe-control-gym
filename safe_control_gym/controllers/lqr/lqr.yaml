@@ -2,66 +2,7 @@
 q_lqr: [1]
 r_lqr: [0.1]
 
-# Verbose
-verbose: True
-
 # Model arguments
 # Note: Higher simulation frequency is required if using controller designed
-# based on the continuous-time model
-discrete_dynamics: 1
-
-# Runner arguments
-deque_size: 10
-
-# Number of test runs
-eval_batch_size: 10
-
-# Model step (step with analytical model for debugging)
-model_step_chk: False
-
-# Plot
-plot_traj: False
-save_plot: True
-plot_dir: "./results/lqr_baseline/"
-
-# Export csv files
-save_data: True
-data_dir: "./results/lqr_baseline/"
-
-
-
-
-
-
-
-
-# Task (options: stabilization, traj_tracking)
-task: stabilization
-episode_len_sec: 5 # episode maximum length in seconds
-task_info: {
-        "stabilization_goal": [0, 1],
-        "trajectory_type": "circle",
-        "num_cycles": 1,
-        "trajectory_plane": "zx",
-        "trajectory_position_offset": [0.5, 0],
-        "trajectory_scale": -0.5,
-        "stabilization_goal_tolerance": 0.01
-}
-
-# Use random initial state
-random_init: True
-
-# Control and simulation frequency
-ctrl_freq: 50
-pyb_freq: 1000
-
-# Initial state sampling
-init_state_randomization_info:
-  init_theta:
-    distrib: uniform
-    high: 0.1
-    low: -0.1
-  init_x:
-    distrib: uniform
-    high: 0.3
-    low: -0.3
+#       based on the continuous-time model
+discrete_dynamics: True

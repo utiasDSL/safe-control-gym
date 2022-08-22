@@ -8,7 +8,7 @@ def compute_cvar(data, alpha, lower_range=True):
         adapted from https://github.com/nuria95/O-RAAC/blob/57347bc682798ff9f5600131c606517832efe864/oraaclib/util/utilities.py
 
     Args:
-        data (np.array): the trajectory RMSE collected by the Experiment class
+        data (ndarray): the trajectory RMSE collected by the Experiment class
         alpha (float): the percentile upper bound to use
         lower_range (bool): ???
 
