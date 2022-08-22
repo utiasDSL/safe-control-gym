@@ -6,6 +6,7 @@ This module also contains enumerations for cost functions, tasks, disturbances, 
 import os
 import copy
 from enum import Enum
+from abc import ABC, abstractmethod
 
 import gym
 from gym import spaces
@@ -38,7 +39,7 @@ class Environment(str, Enum):
     QUADROTOR = 'quadrotor'  # Quadrotor, both 1D and 2D
 
 
-class BenchmarkEnv(gym.Env):
+class BenchmarkEnv(gym.Env, ABC):
     '''Benchmark environment base class.
 
     Attributes:
@@ -127,7 +128,6 @@ class BenchmarkEnv(gym.Env):
 
         Attributes:
             id (int): Unique identifier of the current env instance (among other instances).
-
         '''
         # Assign unique ID based on env instance count.
         self.id = self.__class__._count
@@ -297,6 +297,7 @@ class BenchmarkEnv(gym.Env):
                 randomized_values[key] += distrib(*d_args, **d_kwargs)
         return randomized_values
 
+    @abstractmethod
     def _setup_symbolic(self):
         '''Creates a symbolic (CasADi) model for dynamics and cost. '''
         raise NotImplementedError
@@ -327,10 +328,12 @@ class BenchmarkEnv(gym.Env):
             self.constraints = create_constraint_list(self.CONSTRAINTS, self.AVAILABLE_CONSTRAINTS, self)
             self.num_constraints = self.constraints.num_constraints
 
+    @abstractmethod
     def _set_action_space(self):
         '''Defines the action space of the environment. '''
         raise NotImplementedError
 
+    @abstractmethod
     def _set_observation_space(self):
         '''Defines the observation space of the environment.
 
@@ -373,6 +376,7 @@ class BenchmarkEnv(gym.Env):
             info['constraint_values'] = self.constraints.get_values(self, only_state=True)
         return obs, info
 
+    @abstractmethod
     def _preprocess_control(self, action):
         '''Pre-processes the action passed to `.step()`, default is identity.
 

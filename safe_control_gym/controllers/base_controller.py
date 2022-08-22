@@ -1,9 +1,11 @@
-'''Base classes. '''
+'''Base controller. '''
+
+from abc import ABC, abstractmethod
 
 import torch
 
 
-class BaseController:
+class BaseController(ABC):
     '''Template for controller/agent, implement the following methods as needed. '''
 
     def __init__(self,
@@ -34,23 +36,42 @@ class BaseController:
         self.use_gpu = use_gpu and torch.cuda.is_available()
         self.device = 'cpu' if self.use_gpu is False else 'cuda'
         self.seed = seed
+
         # Algorithm specific args.
         for key, value in kwargs.items():
             self.__dict__[key] = value
 
         self.setup_results_dict()
 
+    @abstractmethod
     def select_action(self, obs, info=None):
         '''Determine the action to take at the current timestep.
 
         Args:
-            obs (np.array): The observation at this timestep.
+            obs (ndarray): The observation at this timestep.
             info (dict): The info at this timestep.
 
         Returns:
-            action (np.array): The action chosen by the controller.
+            action (ndarray): The action chosen by the controller.
         '''
         raise NotImplementedError
+
+    def extract_step(self, info=None):
+        '''Extracts the current step from the info.
+
+        Args:
+            info (dict): the info list returned from the environment.
+
+        Returns:
+            step (int): the current step/iteration of the environment.
+        '''
+
+        if info is not None:
+            step = info['current_step']
+        else:
+            step = 0
+
+        return step
 
     def learn(self,
               env=None,
@@ -59,10 +80,11 @@ class BaseController:
         '''Performs learning (pre-training, training, fine-tuning, etc).
 
         Args:
-            env (gym.Env): The environment to be used for training.
+            env (BenchmarkEnv): The environment to be used for training.
         '''
         return
 
+    @abstractmethod
     def reset(self):
         '''Do initializations for training or evaluation. '''
         raise NotImplementedError
@@ -71,12 +93,13 @@ class BaseController:
         '''Reinitialize just the controller before a new run.
 
         Args:
-            obs (np.array): The initial observation for the new run.
+            obs (ndarray): The initial observation for the new run.
             info (dict): The first info of the new run.
-            env (gym.Env): The environment to be used for the new run.
+            env (BenchmarkEnv): The environment to be used for the new run.
         '''
         self.setup_results_dict()
 
+    @abstractmethod
     def close(self):
         '''Shuts down and cleans up lingering resources. '''
         raise NotImplementedError

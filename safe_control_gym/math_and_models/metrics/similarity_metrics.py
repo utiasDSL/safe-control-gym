@@ -34,7 +34,7 @@ def encode_data(data, tuple_length=1, include_action=True):
         include_action (bool): if to include action in each tuple sample.
         
     Returns:
-        encoded_data (np.array): shape is (#tuples, obs_dim*(l+1)+act_dim*l) or 
+        encoded_data (ndarray): Shape is (#tuples, obs_dim*(l+1)+act_dim*l) or 
             (#tuples, obs_dim*(l+1)) where l is tuple length.
     """
     # data = Munch(dict(n_steps=n_steps, obs=ep_obs_list, act=ep_act_list))
@@ -56,7 +56,7 @@ def encode_data(data, tuple_length=1, include_action=True):
 
 
 def mmd_loss(samples1, samples2, mode='gaussian', sigma=0.2):
-    '''Computes the MMD loss as similarity metric between 2 sets of trajectories..
+    """Computes the MMD loss as similarity metric between 2 sets of trajectories..
 
     adapted from https://github.com/aviralkumar2907/BEAR/blob/f2e31c1b5f81c4fb0e692a34949c7d8b48582d8f/algos.py#L326
 
@@ -68,7 +68,7 @@ def mmd_loss(samples1, samples2, mode='gaussian', sigma=0.2):
 
     Returns:
         overall_loss (float): MMD value.
-    '''
+    """
     diff_x_x = samples1.unsqueeze(2) - samples1.unsqueeze(1)  # B x N x N x d
     diff_x_y = samples1.unsqueeze(2) - samples2.unsqueeze(1)
     diff_y_y = samples2.unsqueeze(2) - samples2.unsqueeze(1)  # B x N x N x d
