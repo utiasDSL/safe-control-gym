@@ -226,6 +226,7 @@ class FirmwareWrapper(BaseController):
 
             if self._error:
                 action = np.zeros(4)
+                done = True
                 print("Drone firmware error. Motors are killed.")
 
             self.action = action 
