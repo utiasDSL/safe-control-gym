@@ -129,8 +129,8 @@ class Controller():
             rot = g[5]
             if rot > 0.5*1.57:
                 if idx == 2:
-                    waypoints.append((x+0.3, y, initial_info["gate_dimensions"]["height"]))
-                    waypoints.append((x-0.3, y, initial_info["gate_dimensions"]["height"]))
+                    waypoints.append((x+0.3, y-0.2, initial_info["gate_dimensions"]["height"]))
+                    waypoints.append((x-0.3, y-0.2, initial_info["gate_dimensions"]["height"]))
                 else:
                     waypoints.append((x-0.3, y, initial_info["gate_dimensions"]["height"]))
                     waypoints.append((x+0.3, y, initial_info["gate_dimensions"]["height"]))

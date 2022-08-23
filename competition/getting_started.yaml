@@ -1,5 +1,5 @@
 # Configuration
-num_episodes: 5
+num_episodes: 10
 use_firmware: True
 verbose: True
 
@@ -45,7 +45,7 @@ quadrotor_config:
       # x, y, z, _, _, yaw
       [1.5, 0.5, 0.8, 0, 0, 1.57],
       [3, 1.5, 0.8, 0, 0, 0],
-      [1, 3, 0.8, 0, 0, 1.57],
+      [1, 3.2, 0.8, 0, 0, 1.57],
       [0.5, 4.5, 0.8, 0, 0, 0]
     ]
   obstacles:
