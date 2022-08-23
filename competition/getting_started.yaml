@@ -1,7 +1,7 @@
 # Configuration
 num_episodes: 5
 use_firmware: True
-verbose: False
+verbose: True
 
 # Environment
 quadrotor_config:
@@ -11,7 +11,7 @@ quadrotor_config:
   pyb_freq: 240 # Multiple of ctrl_freq and firmware_freq
   quad_type: 3  # 3D quadrotor
   physics: pyb
-  gui: False
+  gui: True
   camera_view: [5, -40, -55, 1.5, 2, 0.5]
   info_in_reset: True
   normalized_rl_action_space: False
@@ -84,9 +84,9 @@ quadrotor_config:
       distrib: "uniform"
       low: -0.1
       high: 0.1
-  randomized_inertial_prop: True
 
   # Randomizaation of the quadrotor inertial properties
+  randomized_inertial_prop: True
   inertial_prop_randomization_info:
     M:
       distrib: "uniform"

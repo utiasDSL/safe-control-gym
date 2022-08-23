@@ -92,7 +92,7 @@ def main():
             # obs = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
             # vicon_obs = {x, 0, y, 0, z, 0, phi, theta, psi, 0, 0, 0}.
             vicon_obs = [obs[0], 0, obs[2], 0, obs[4], 0, obs[6], obs[7], obs[8], 0, 0, 0]
-            command_type, args = ctrl.cmdFirmware(curr_time, obs)
+            command_type, args = ctrl.cmdFirmware(curr_time, vicon_obs)
 
             # Select interface.
             if command_type == Command.FULLSTATE:

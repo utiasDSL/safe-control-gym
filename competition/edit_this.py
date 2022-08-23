@@ -335,10 +335,10 @@ class Controller():
         #########################
 
     def _thrusts(self,
-                    obs,
-                   target,
-                   target_v
-                   ):
+                 obs,
+                 target,
+                 target_v
+                 ):
         """Do not modify this.
 
         """
