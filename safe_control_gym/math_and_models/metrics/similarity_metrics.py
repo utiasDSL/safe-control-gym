@@ -21,6 +21,7 @@ Todos:
 """
 import numpy as np 
 import torch 
+from safe_control_gym.math_and_models.transformations import npRotXYZ
 
 
 
@@ -92,8 +93,8 @@ def mse(traj1, traj2):
     """Mean squared error/Euclidean distance.
 
     Args:
-        traj1 (np.array): shape (T1,D).
-        traj1 (np.array): shape (T2,D).
+        traj1 (ndarray): shape (T1,D).
+        traj1 (ndarray): shape (T2,D).
     
     Returns:
         cost (float): final MSE cost.
@@ -105,15 +106,15 @@ def mse(traj1, traj2):
     return cost
 
 
-def dtw(traj1, traj2, w=np.inf, distance_func=euclidean_distance):
+def dtw(traj1, traj2, w=np.inf, distance_func=euclidean_distance, distance_func_kwargs={}):
     """Dynamic time wrapper. 
     Reference: https://github.com/ymtoo/ts-dist/blob/30de6eba0969611cda58754e212bddef2b28772e/ts_dist.py#L8
     Reference2: https://github.com/cjekel/similarity_measures/blob/bfcd744a052ea50c4a318f5b38b275b3f93b67d5/similaritymeasures/similaritymeasures.py#L671
     Reference3: https://www.cs.unm.edu/~mueen/DTW.pdf
 
     Args:
-        traj1 (np.array): shape (T1,D).
-        traj1 (np.array): shape (T2,D).
+        traj1 (ndarray): shape (T1,D).
+        traj1 (ndarray): shape (T2,D).
         w (int): window size (default inf, meaning to compare all pairs).
         distance_func (Callable): distance function for pair of elements (default is Eucleadian distance).
 
@@ -126,20 +127,21 @@ def dtw(traj1, traj2, w=np.inf, distance_func=euclidean_distance):
     w = max(w, abs(nx-ny))
     for i in range(1, nx+1):
         for j in range(max(1, i-w), min(ny+1, i+w+1)):
-            subcost = distance_func(traj1[:, i-1], traj2[:, j-1])
+            # adapt a custom state-pair distance metric here
+            subcost = distance_func(traj1[i-1], traj2[j-1], **distance_func_kwargs)
             D[i, j] = subcost + min(D[i-1, j], D[i, j-1], D[i-1, j-1])
     # final DTW cost, not normalized since it depends on the distance_func used
     cost = D[nx, ny]
     return cost
 
 
-def edr(traj1, traj2, epsilon=0.05):
+def edr(traj1, traj2, epsilon=0.05, distance_func=euclidean_distance, distance_func_kwargs={}):
     """Edit distance on real sequences.
     Reference: https://github.com/ymtoo/ts-dist/blob/30de6eba0969611cda58754e212bddef2b28772e/ts_dist.py#L88
     
     Args:
-        traj1 (np.array): shape (T1,D).
-        traj1 (np.array): shape (T2,D).
+        traj1 (ndarray): shape (T1,D).
+        traj1 (ndarray): shape (T2,D).
         epsilon (float): threshold to decide if 2 elements are "equal".
         
     Returns:
@@ -152,7 +154,10 @@ def edr(traj1, traj2, epsilon=0.05):
     D[0, :] = np.arange(ny+1)
     for i in range(1, nx+1):
         for j in range(1, ny+1):
-            if np.all(np.abs(traj1[:, i-1]-traj2[:, j-1]) < epsilon):
+            # if np.all(np.abs(traj1[i-1]-traj2[j-1]) < epsilon):
+            # adapt a custom state-pair distance metric here
+            # TODO: should we also adapt subcost to be continuous instead of discrete
+            if distance_func(traj1[i-1], traj2[j-1], **distance_func_kwargs) < epsilon:
                 subcost = 0
             else:
                 subcost = 1 
@@ -162,13 +167,13 @@ def edr(traj1, traj2, epsilon=0.05):
     return cost 
     
     
-def lcss(traj1, traj2, delta, epsilon=0.05):
+def lcss(traj1, traj2, delta=np.inf, epsilon=0.05, distance_func=euclidean_distance, distance_func_kwargs={}):
     """Longest common subsequence. 
     Reference: https://github.com/ymtoo/ts-dist/blob/30de6eba0969611cda58754e212bddef2b28772e/ts_dist.py#L52
     
     Args:
-        traj1 (np.array): shape (T1,D).
-        traj1 (np.array): shape (T2,D).
+        traj1 (ndarray): shape (T1,D).
+        traj1 (ndarray): shape (T2,D).
         delta (float): time shreshold to decide if 2 timestamps are "equal".
         epsilon (float): threshold to decide if 2 elements are "equal".
     Returns:
@@ -178,8 +183,10 @@ def lcss(traj1, traj2, delta, epsilon=0.05):
     S = np.zeros((nx+1, ny+1))
     for i in range(1, nx+1):
         for j in range(1, ny+1):
-            if np.all(np.abs(traj1[:, i-1]-traj2[:, j-1]) < epsilon) and (
-                np.abs(i-j) < delta):
+            # if np.all(np.abs(traj1[i-1]-traj2[j-1]) < epsilon) and (np.abs(i-j) < delta):
+            # adapt a custom state-pair distance metric here
+            # TODO: should we also adapt the +1 to be continuous state distance
+            if distance_func(traj1[i-1], traj2[j-1], **distance_func_kwargs) < epsilon:
                 S[i, j] = S[i-1, j-1]+1
             else:
                 S[i, j] = max(S[i, j-1], S[i-1, j])
@@ -188,13 +195,13 @@ def lcss(traj1, traj2, delta, epsilon=0.05):
     return cost 
 
 
-def discrete_frechet(traj1, traj2, p=2):
+def discrete_frechet(traj1, traj2, p=2, distance_func=euclidean_distance, distance_func_kwargs={}):
     """Discrete Frechet distance. 
     Reference: https://github.com/cjekel/similarity_measures/blob/bfcd744a052ea50c4a318f5b38b275b3f93b67d5/similaritymeasures/similaritymeasures.py#L430
     
     Args: 
-        traj1 (np.array): shape (T1,D).
-        traj1 (np.array): shape (T2,D).
+        traj1 (ndarray): shape (T1,D).
+        traj1 (ndarray): shape (T2,D).
         p (float): 1 <= p <= inf, which Minkowski p-norm to use, default 2 is Euclidean.
     
     Returns:
@@ -203,34 +210,142 @@ def discrete_frechet(traj1, traj2, p=2):
     nx, ny = len(traj1), len(traj2)
     D = np.full((nx, ny), -1)
     # base case
-    D[0, 0] = minkowski_distance(traj1[0], traj2[0], p=p)
+    # D[0, 0] = minkowski_distance(traj1[0], traj2[0], p=p)
+    D[0, 0] = distance_func(traj1[0], traj2[0], **distance_func_kwargs)
+    # build DP table 
     for i in range(1, nx):
-        D[i, 0] = max(D[i-1, 0], minkowski_distance(traj1[i], traj2[0], p=p))
+        # D[i, 0] = max(D[i-1, 0], minkowski_distance(traj1[i], traj2[0], p=p))
+        D[i, 0] = max(D[i-1, 0], distance_func(traj1[i], traj2[0], **distance_func_kwargs))
     for j in range(1, ny):
-        D[0, j] = max(D[0, j-1], minkowski_distance(traj1[0], traj2[j], p=p))
+        # D[0, j] = max(D[0, j-1], minkowski_distance(traj1[0], traj2[j], p=p))
+        D[0, j] = max(D[0, j-1], distance_func(traj1[0], traj2[j], **distance_func_kwargs))
     for i in range(1, nx):
         for j in range(1, ny):
+            # D[i, j] = max(min(D[i-1, j], D[i, j-1], D[i-1, j-1]),
+            #                minkowski_distance(traj1[i], traj2[j], p=p))
             D[i, j] = max(min(D[i-1, j], D[i, j-1], D[i-1, j-1]),
-                           minkowski_distance(traj1[i], traj2[j], p=p))
+                           distance_func(traj1[i], traj2[j], **distance_func_kwargs))
     # final DF cost, not normalized
     cost = D[nx-1, ny-1]
     return cost 
 
 
 
-def euclidean_distance(u, v):
+def euclidean_distance(u, v, weights=None):
     """ Euclidean distance, or use https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.euclidean.html
     
     Args:
-        u, v (np.array): 1D array, shape (D,). 
+        u, v (ndarray): 1D array, shape (D,). 
+        weights (float|ndarray): weights for each vector dimension.
     """
-    return np.sqrt(((u-v)**2).sum())
+    weights = np.array(weights) if weights else 1
+    return np.sqrt((weights * (u-v)**2).sum())
 
 
-def minkowski_distance(u, v, p):
+def minkowski_distance(u, v, p=2, weights=None):
     """Minkowski distance, or use https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.minkowski.html
     
     Args:
-        u, v (np.array): 1D array, shape (D,). 
+        u, v (ndarray): 1D array, shape (D,). 
+        p (float): order of the norm.
+        weights (float|ndarray): weights for each vector dimension.
     """
-    return np.pow((np.abs(u-v)**p).sum(), 1./p)
+    weights = np.array(weights) if weights else 1
+    return np.pow((weights * np.abs(u-v)**p).sum(), 1./p)
+
+
+def rotation_distance(rot1, rot2, mode="geodesic"):
+    """Metrics for 3D Rotations. 
+    Reference: https://www.cs.cmu.edu/~cga/dynopt/readings/Rmetric.pdf
+    
+    Args:
+        rot1, rot2 (ndarray): rotation matrices, shape (3,3).
+        mode (str): options from geodesic|dev_id|inner_unit_quad2|inner_unit_quad|norm_diff_quad.
+    """
+    # eqn 23 in reference, range [0,pi]
+    # use clipping to avoid NaNs for rounding errors
+    # reference: https://github.com/utiasSTARS/liegroups/blob/fe1d376b7d33809dec78724b456f01833507c305/liegroups/numpy/so3.py#L180
+    rot_d = np.arccos(np.clip(0.5*np.trace(rot1 @ np.transpose(rot2))-0.5, -1., 1.))
+    # can derive other metrics using their functional equivalence 
+    if mode == "geodesic":
+        pass
+    elif mode == "dev_id":
+        # # eqn 25 in reference 
+        # rot_d = np.sqrt(2* (3 - np.trace(rot1 @ np.transpose(rot2))))
+        # eqn 33, range [0, 2*sqrt(2)]
+        rot_d = 2 * np.sqrt(2) * np.sin(rot_d/2)
+    elif mode == "inner_unit_quad":
+        # eqn 34, range [0, pi/2]
+        rot_d = rot_d / 2
+    elif mode == "inner_unit_quad2":
+        # eqn 32, range [0, 1]
+        rot_d = 1 - np.cos(rot_d/2)
+    elif mode == "norm_diff_quad":
+        # eqn 31, range [0, sqrt(2)]
+        rot_d = np.sqrt(2 * (1 - np.cos(rot_d/2)))
+    else:
+        raise NotImplementedError("The given rotation metric is not available.")
+    return rot_d 
+
+
+def state_distance(state1, state2, weights=None, rot_mode="geodesic", task="cartpole", quad_type=3):
+    """Metric distance between two env states.
+    
+    Args:
+        state1, state2 (ndarray): trajectory states, shape (D,).
+        weights (list|ndarray): weights to different elements/groups in state.
+        rot_mode (str): rotation metric mode.
+
+    Returns:
+        state_d (float): distance metric between the 2 states.
+    """    
+    if task == "cartpole":
+        # state is [x, x_dot, theta, theta_dot]
+        state_d = euclidean_distance(state1, state2, weights)
+    elif task == "quadrotor":
+        if quad_type == 1:
+            # state is [z, z_dot]
+            if weights:
+                assert len(weights) == 2, "weights must have shape (2,)"
+            state_d = euclidean_distance(state1, state2, weights)
+        elif quad_type == 2:
+            # state is [x, x_dot, z, z_dot, theta, theta_dot]
+            if weights:
+                assert len(weights) == 4, "weights must have shape (4,)"
+            else:
+                weights = np.ones(4)
+            # extract state
+            pos1, pos2 = state1[[0,2]], state2[[0,2]] 
+            vel1, vel2 = state1[[1,3]], state2[[1,3]] 
+            ang1, ang2 = state1[4], state2[4] 
+            angvel1, angvel2 = state1[5], state2[5]
+            # convert euler angles to rotation matrices 
+            rot1, rot2 = npRotXYZ(0, ang1, 0), npRotXYZ(0, ang2, 0)
+            # compose total state distance
+            state_d = weights[0] * euclidean_distance(pos1, pos2) + \
+                    weights[1] * euclidean_distance(vel1, vel2) + \
+                    weights[2] * rotation_distance(rot1, rot2, rot_mode) + \
+                    weights[3] * euclidean_distance(angvel1, angvel2)
+        else:
+            # state is [x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p_body, q_body, r_body]
+            if weights:
+                assert len(weights) == 4, "weights must have shape (4,)"
+            else:
+                weights = np.ones(4)
+            # extract state
+            pos1, pos2 = state1[[0,2,4]], state2[[0,2,4]] 
+            vel1, vel2 = state1[[1,3,5]], state2[[1,3,5]] 
+            ang1, ang2 = state1[6:9], state2[6:9] 
+            angvel1_body, angvel2_body = state1[9:12], state2[9:12]
+            # convert euler angles to rotation matrices 
+            rot1, rot2 = npRotXYZ(*ang1), npRotXYZ(*ang2)
+            # convert body rates to angular velocities w.r.t inertial frame
+            angvel1, angvel2 = rot1 @ angvel1_body, rot2 @ angvel2_body
+            # compose total state distance
+            state_d = weights[0] * euclidean_distance(pos1, pos2) + \
+                    weights[1] * euclidean_distance(vel1, vel2) + \
+                    weights[2] * rotation_distance(rot1, rot2, rot_mode) + \
+                    weights[3] * euclidean_distance(angvel1, angvel2)
+    else:
+        raise NotImplementedError("The given task state distance is not available.")
+    return state_d

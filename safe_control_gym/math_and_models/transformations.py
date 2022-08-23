@@ -195,3 +195,42 @@ def RotXYZ(phi, theta,psi):
     """
     R = csRotXYZ(phi, theta, psi).toarray()
     return R
+
+
+
+
+def npRotZ(psi):
+    """Numpy version of csRotZ."""
+    R = np.array([[np.cos(psi), -np.sin(psi), 0],
+                  [np.sin(psi),  np.cos(psi), 0],
+                  [          0,            0, 1]])
+    return R
+
+def npRotY(theta):
+    """Numpy version of csRotY."""
+    R = np.array([[ np.cos(theta), 0, np.sin(theta)],
+                  [             0, 1,             0],
+                  [-np.sin(theta), 0, np.cos(theta)]])
+    return R
+
+def npRotX(phi):
+    """Numpy version of csRotX."""
+    R = np.array([[ 1,           0,            0],
+                  [ 0, np.cos(phi), -np.sin(phi)],
+                  [ 0, np.sin(phi),  np.cos(phi)]])
+    return R
+
+def npRotXYZ(phi, theta, psi):
+    """Rotation matrix from euller angles  following SDFormat http://sdformat.org/tutorials?tut=specify_pose&cat=specification&.
+    This represents the extrinsic X-Y-Z (or quivalently the intrinsic Z-Y-X (3-2-1)) euler angle rotation.
+
+    Args:
+      phi: roll (or rotation about X).
+      theta: pitch (or rotation about Y).
+      psi: yaw (or rotation about Z).
+
+    Returns:
+      R: Rotation matrix
+    """
+    R = npRotZ(psi) @ npRotY(theta) @ npRotX(phi)
+    return R
