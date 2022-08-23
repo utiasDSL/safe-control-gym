@@ -2,6 +2,7 @@
 import numpy as np
 import time
 import math
+import os
 
 import pybullet as p
 from munch import munchify
@@ -14,6 +15,7 @@ class FirmwareWrapper(BaseController):
     ACTION_DELAY = 0 # max 2
     SENSOR_DELAY = 0 # doesn't affect ideal environment 
     STATE_DELAY = 0 # anything breaks 
+    CONTROLLER = 'mellinger'
 
     GYRO_LPF_CUTOFF_FREQ = 80
     ACCEL_LPF_CUTOFF_FREQ = 30
@@ -100,6 +102,7 @@ class FirmwareWrapper(BaseController):
         self.acclpf = [firm.lpf2pData() for _ in range(3)]
         self.gyrolpf = [firm.lpf2pData() for _ in range(3)]
         for i in range(3):
+            # TODO: Account for sub 1000 frimware freq in low pass sensor filters
             firm.lpf2pInit(self.acclpf[i], self.firmware_freq, self.GYRO_LPF_CUTOFF_FREQ)
             firm.lpf2pInit(self.gyrolpf[i], self.firmware_freq, self.ACCEL_LPF_CUTOFF_FREQ)
         self._error = False
@@ -124,16 +127,27 @@ class FirmwareWrapper(BaseController):
         self.last_pos_pid_call = 0
         self.last_att_pid_call = 0
 
-        # Initialize PID controller 
-        # TODO: add support for other controllers 
-        firm.controllerPidInit()
-        print('Controller init test:', firm.controllerPidTest())
+        # Initialize controller
+        if self.CONTROLLER == 'pid':
+            firm.controllerPidInit()
+            print('PID controller init test:', firm.controllerPidTest())
+        elif self.CONTROLLER == 'mellinger':
+            firm.controllerMellingerInit()
+            print('Mellinger controller init test:', firm.controllerMellingerTest())
+        
+        init_obs, init_info = self.env.reset()
+        init_pos=np.array([init_obs[0], init_obs[2], init_obs[4]]) # global coord, m
+        init_vel=np.array([init_obs[1], init_obs[3], init_obs[5]]) # global coord, m/s
+        init_rpy = np.array([init_obs[6], init_obs[7], init_obs[8]]) # body coord?, rad 
+        self.pyb_clinet = init_info['pyb_client']
+        self.last_visualized_setpoint = None
 
         # Initilaize high level commander 
         firm.crtpCommanderHighLevelInit()
+        self._update_state(0, init_pos, init_vel, np.array([0.0, 0.0, 1.0]), init_rpy * self.RAD_TO_DEG)
+        self._update_initial_state(init_obs)
         firm.crtpCommanderHighLevelTellState(self.state)
-
-        init_obs, init_info = self.env.reset()
+        
         self.ctrl_dt = 1 / self.ctrl_freq
         self.firmware_dt = 1 / self.firmware_freq
         # initialize emulator state objects 
@@ -209,6 +223,15 @@ class FirmwareWrapper(BaseController):
             # Update setpoint 
             self._updateSetpoint(self.tick / self.firmware_freq) # setpoint looks right 
 
+            # Draws setpoint for debugging purposes 
+            if self.verbose:
+                if self.last_visualized_setpoint is not None:
+                    p.removeBody(self.last_visualized_setpoint)
+                self.last_visualized_setpoint = p.loadURDF("/home/spencer/Documents/DSL/safe-control-gym/safe_control_gym/envs/gym_pybullet_drones/assets/sphere.urdf",
+                       [self.setpoint.position.x, self.setpoint.position.y, self.setpoint.position.z],
+                       p.getQuaternionFromEuler([0,0,0]),
+                       physicsClientId=self.pyb_clinet)
+
 
             # Step controller 
             self.step_controller()
@@ -236,7 +259,7 @@ class FirmwareWrapper(BaseController):
             self.action = action 
         return obs, reward, done, info, action
 
-    def update_initial_state(self, obs):
+    def _update_initial_state(self, obs):
         self.prev_vel = np.array([obs[1], obs[3], obs[5]])
         self.prev_rpy = np.array([obs[6], obs[7], obs[8]])
 
@@ -332,8 +355,8 @@ class FirmwareWrapper(BaseController):
             uint64_t interruptTimestamp;   // microseconds 
         '''
         ## ONLY USES ACC AND GYRO IN CONTROLLER --- REST IS USED IN STATE ESTIMATION
-        self._update_acc(self.sensorData.acc, *acc_vals)
-        self._update_gyro(self.sensorData.gyro, *gyro_vals)
+        self._update_acc(*acc_vals)
+        self._update_gyro(*gyro_vals)
         # self._update_gyro(self.sensorData.mag, *mag_vals)
         # self._update_baro(self.sensorData.baro, *baro_vals)
 
@@ -344,16 +367,16 @@ class FirmwareWrapper(BaseController):
         self.sensorData.interruptTimestamp = timestamp
         self.sensorData_set = True
     
-    def _update_gyro(self, axis3f, x, y, z):
-        axis3f.x = firm.lpf2pApply(self.gyrolpf[0], x)
-        axis3f.y = firm.lpf2pApply(self.gyrolpf[1], y)
-        axis3f.z = firm.lpf2pApply(self.gyrolpf[2], z)
+    def _update_gyro(self, x, y, z):
+        self.sensorData.gyro.x = firm.lpf2pApply(self.gyrolpf[0], x)
+        self.sensorData.gyro.y = firm.lpf2pApply(self.gyrolpf[1], y)
+        self.sensorData.gyro.z = firm.lpf2pApply(self.gyrolpf[2], z)
 
         
-    def _update_acc(self, axis3f, x, y, z):
-        axis3f.x = firm.lpf2pApply(self.acclpf[0], x)
-        axis3f.y = firm.lpf2pApply(self.acclpf[1], y)
-        axis3f.z = firm.lpf2pApply(self.acclpf[2], z)
+    def _update_acc(self, x, y, z):
+        self.sensorData.acc.x = firm.lpf2pApply(self.acclpf[0], x)
+        self.sensorData.acc.y = firm.lpf2pApply(self.acclpf[1], y)
+        self.sensorData.acc.z = firm.lpf2pApply(self.acclpf[2], z)
 
 
     def _update_baro(self, baro, pressure, temperature):
@@ -382,11 +405,11 @@ class FirmwareWrapper(BaseController):
             velocity_t velocity;      // m/s
             acc_t acc;                // Gs (but acc.z without considering gravity)
         '''
-        self._update_attitude_t(self.state.attitude, timestamp, *rpy)
-        # if quat is None:
-        #     self._update_attitudeQuaternion(self.state.attitudeQuaternion, timestamp, *rpy)
-        # else:
-        #     self._update_attitudeQuaternion(self.state.attitudeQuaternion, timestamp, *quat)
+        if self.CONTROLLER == 'pid':
+            self._update_attitude_t(self.state.attitude, timestamp, *rpy) # RPY required for PID 
+        elif self.CONTROLLER == 'mellinger':
+            self._update_attitudeQuaternion(self.state.attitudeQuaternion, timestamp, *rpy) # Quat required for Mellinger 
+
         self._update_3D_vec(self.state.position, timestamp, *pos)
         self._update_3D_vec(self.state.velocity, timestamp, *vel)
         # TODO: state->acc is used in sitaw freefall detection, and state estimation. Both of which are not included 
@@ -401,7 +424,7 @@ class FirmwareWrapper(BaseController):
 
     def _update_attitudeQuaternion(self, quaternion_t, timestamp, qx, qy, qz, qw=None):
         '''
-        if q4 is present, input is taken as a quat. Else, as roll, pitch, and yaw in rad
+        if q4 is present, input is taken as a quat. Else, as roll, pitch, and yaw in deg
             uint32_t timestamp;
 
             union {
@@ -422,7 +445,7 @@ class FirmwareWrapper(BaseController):
         quaternion_t.timestamp = timestamp
 
         if qw is None: # passed roll, pitch, yaw 
-            qx, qy, qz, qw = _get_quaternion_from_euler(qx, qy, qz) 
+            qx, qy, qz, qw = _get_quaternion_from_euler(qx/self.RAD_TO_DEG, qy/self.RAD_TO_DEG, qz/self.RAD_TO_DEG) 
 
         quaternion_t.x = qx
         quaternion_t.y = qy
@@ -464,13 +487,22 @@ class FirmwareWrapper(BaseController):
         else:
             _tick = 1
 
-        firm.controllerPid(
-            self.control,
-            self.setpoint,
-            self.sensorData,
-            self.state,
-            _tick
-        )
+        if self.CONTROLLER == 'pid':
+            firm.controllerPid(
+                self.control,
+                self.setpoint,
+                self.sensorData,
+                self.state,
+                _tick
+            )
+        elif self.CONTROLLER == 'mellinger':
+            firm.controllerMellinger(
+                self.control,
+                self.setpoint,
+                self.sensorData,
+                self.state,
+                _tick
+            )
         '''
         Tick should increment self.firmware_freq times / s. Position updates run at 100Hz, attitude runs at 500Hz 
 
@@ -529,7 +561,9 @@ class FirmwareWrapper(BaseController):
         self.setpoint.attitudeQuaternion.z = quat[2]
         self.setpoint.attitudeQuaternion.w = quat[3]
 
-        self.setpoint.attitude.yaw = yaw * 180 / math.pi
+        # self.setpoint.attitude.yaw = yaw * 180 / math.pi
+        # self.setpoint.attitude.pitch = 0
+        # self.setpoint.attitude.roll = 0
 
         # initilize setpoint modes to match cmdFullState 
         self.setpoint.mode.x = firm.modeAbs
@@ -539,7 +573,7 @@ class FirmwareWrapper(BaseController):
         self.setpoint.mode.quat = firm.modeAbs
         self.setpoint.mode.roll = firm.modeDisable
         self.setpoint.mode.pitch = firm.modeDisable
-        self.setpoint.mode.yaw = firm.modeAbs
+        self.setpoint.mode.yaw = firm.modeDisable
 
         self.setpoint.timestamp = int(timestep*1000) # TODO: This may end up skipping control loops 
         self.full_state_cmd_override = True

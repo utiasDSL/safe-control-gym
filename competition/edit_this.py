@@ -138,12 +138,12 @@ class Controller():
                 waypoints.append((x, y-0.3, initial_info["gate_dimensions"]["height"]))
                 waypoints.append((x, y+0.3, initial_info["gate_dimensions"]["height"]))
         waypoints.append([initial_info["x_reference"][0], initial_info["x_reference"][2], initial_info["x_reference"][4]])
-        waypoints = np.array(waypoints)
+        self.waypoints = np.array(waypoints)
         deg = 6
-        t = np.arange(waypoints.shape[0])
-        fit_x = np.polyfit(t, waypoints[:,0], deg)
-        fit_y = np.polyfit(t, waypoints[:,1], deg)
-        fit_z = np.polyfit(t, waypoints[:,2], deg)
+        t = np.arange(self.waypoints.shape[0])
+        fit_x = np.polyfit(t, self.waypoints[:,0], deg)
+        fit_y = np.polyfit(t, self.waypoints[:,1], deg)
+        fit_z = np.polyfit(t, self.waypoints[:,2], deg)
         fx = np.poly1d(fit_x)
         fy = np.poly1d(fit_y)
         fz = np.poly1d(fit_z)
@@ -151,6 +151,12 @@ class Controller():
         self.ref_x = fx(t_scaled)
         self.ref_y = fy(t_scaled)
         self.ref_z = fz(t_scaled)
+
+        #########################
+        # REPLACE THIS (END) ####
+        #########################
+
+        self.draw_trajectory(initial_info)
 
         if self.VERBOSE:
             # Plot each dimension.
@@ -168,13 +174,15 @@ class Controller():
             # Plot in 3D.
             ax = plt.axes(projection='3d')
             ax.plot3D(self.ref_x, self.ref_y, self.ref_z)
-            ax.scatter3D(waypoints[:,0], waypoints[:,1], waypoints[:,2])
+            ax.scatter3D(self.waypoints[:,0], self.waypoints[:,1], self.waypoints[:,2])
             plt.show(block=False)
             plt.pause(2)
             plt.close()
 
+
+    def draw_trajectory(self, initial_info):
         # Draw trajectory.
-        for point in waypoints:
+        for point in self.waypoints:
             p.loadURDF(os.path.join(initial_info["urdf_dir"], "sphere.urdf"),
                        [point[0], point[1], point[2]],
                        p.getQuaternionFromEuler([0,0,0]),
@@ -190,9 +198,7 @@ class Controller():
                            lineColorRGB=[1, 0, 0],
                            physicsClientId=initial_info["pyb_client"])
 
-        #########################
-        # REPLACE THIS (END) ####
-        #########################
+        
 
     def cmdFirmware(self,
                     time,

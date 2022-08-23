@@ -57,7 +57,6 @@ def main():
                     env_func, FIRMWARE_FREQ, CTRL_FREQ
                     ) 
         obs, info = firmware_wrapper.reset()
-        firmware_wrapper.update_initial_state(obs)
         action = np.zeros(4)
         info['ctrl_timestep'] = CTRL_DT
         info['ctrl_freq'] = CTRL_FREQ
@@ -178,10 +177,11 @@ def main():
             if config.use_firmware:
                 # Re-initialize firmware.
                 new_initial_obs, new_initial_info = firmware_wrapper.reset()
-                firmware_wrapper.update_initial_state(new_initial_obs)
                 action = np.zeros(4)
             else:
                 new_initial_obs, new_initial_info = env.reset()
+
+            ctrl.draw_trajectory(new_initial_info)
 
             if config.verbose:
                 print(str(episodes_count)+'-th reset.')
