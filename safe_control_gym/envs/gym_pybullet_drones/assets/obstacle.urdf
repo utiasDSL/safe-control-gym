@@ -29,5 +29,32 @@
 
   </link>
 
+  <link name="box_link"> 
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 -0.4"/>
+      <mass value="0.25"/>
+      <inertia ixx="0" ixy="0.0" ixz="0.0" iyy="0" iyz="0.0" izz="0"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 -0.4"/>
+      <geometry>
+        <box size=".15 .15 .25" />
+      </geometry> 
+      <material name="brown">
+        <color rgba=".92 .87 .79 1"/>
+      </material> 
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.4"/>
+      <geometry>
+        <box size=".15 .15 .25" />
+      </geometry>
+    </collision>  
+  </link>
+  <joint name="box_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="box_link"/>
+  </joint>
+
 </robot>
 
