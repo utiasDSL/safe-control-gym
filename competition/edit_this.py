@@ -224,30 +224,15 @@ class Controller():
         #########################
 
         if iteration == 0:
-            height = 0.75
+            height = 1.0
             duration = 2
 
             command_type = Command(2)  # Take-off.
             args = [height, duration]
 
-        elif iteration < 2*self.CTRL_FREQ:
-            
-            command_type = Command(0)  # None.
-            args = []
-
-        elif iteration < len(self.ref_x):
-            step = iteration-2*self.CTRL_FREQ
+        elif iteration >= 2*self.CTRL_FREQ and iteration-4*self.CTRL_FREQ < len(self.ref_x):
+            step = min(iteration-2*self.CTRL_FREQ, len(self.ref_x) -1)
             target_pos = np.array([self.ref_x[step], self.ref_y[step], self.ref_z[step]])
-            target_vel = np.zeros(3)
-            target_acc = np.zeros(3)
-            target_yaw = 0.
-            target_rpy_rates = np.zeros(3)
-
-            command_type = Command(1)  # cmdFullState.
-            args = [target_pos, target_vel, target_acc, target_yaw, target_rpy_rates, time]
-
-        elif iteration < 19*self.CTRL_FREQ:
-            target_pos = np.array([self.ref_x[-1], self.ref_y[-1], self.ref_z[-1]])
             target_vel = np.zeros(3)
             target_acc = np.zeros(3)
             target_yaw = 0.
@@ -259,51 +244,35 @@ class Controller():
         elif iteration == 19*self.CTRL_FREQ:
             x = self.ref_x[-1]
             y = self.ref_y[-1]
-            z = 1.5
+            z = 1.75
             yaw = 0.
-            duration = 2
+            duration = 2.5
 
             command_type = Command(5)  # goTo.
             args = [x, y, z, yaw, duration, False]
 
-        elif iteration < 21*self.CTRL_FREQ:
-            
-            command_type = Command(0)  # None.
-            args = []
-
-        elif iteration == 21*self.CTRL_FREQ:
+        elif iteration == 22*self.CTRL_FREQ:
             x = 0.
             y = 0.
-            z = 1.5
+            z = 1.75
             yaw = 0.
             duration = 7
 
             command_type = Command(5)  # goTo.
             args = [x, y, z, yaw, duration, False]
 
-        elif iteration < 28*self.CTRL_FREQ:
+        elif iteration == 28*self.CTRL_FREQ:
+            height = 0.
+            duration = 2
 
+            command_type = Command(3)  # Land.
+            args = [height, duration]
+
+        elif iteration < 30*self.CTRL_FREQ:
             command_type = Command(0)  # None.
             args = []
 
-        elif iteration == 28*self.CTRL_FREQ:
-            # height = 0.
-            # duration = 2
-
-            # command_type = Command(4)  # Land.
-            # args = [height, duration]
-
-            x = 0.
-            y = 0.
-            z = 0.
-            yaw = 0.
-            duration = 2
-
-            command_type = Command(5)  # goTo.
-            args = [x, y, z, yaw, duration, False]
-
         else:
-
             command_type = Command(0)  # None.
             args = []
 

@@ -12,7 +12,7 @@ quadrotor_config:
   quad_type: 3  # 3D quadrotor
   physics: pyb
   gui: True
-  camera_view: [5, -40, -45, 1.5, 2, 0.5]
+  camera_view: [5, -40, -40, 1.5, 2, 0.5]
   info_in_reset: True
   normalized_rl_action_space: False
   cost: competition  # Sparse reward function
