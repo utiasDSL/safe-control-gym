@@ -39,7 +39,38 @@ pip install -e .
 
 ## Install `pycffirmware` (optional, recommended) 
 
-See [`pycffirmware`](https://github.com/utiasDSL/pycffirmware)'s `README.md`
+```bash
+git clone https://github.com/utiasDSL/pycffirmware.git
+cd pycffirmware/
+git submodule update --init --recursive
+```
+
+### On Ubuntu
+
+```
+sudo apt update
+sudo apt -y install swig
+sudo apt install build-essential
+cd wrapper
+chmod +x build_linux.sh
+conda activate safe
+./build_linux.sh
+```
+
+### On macOS
+
+Install [`brew`](https://brew.sh/), then
+```
+brew install swig
+brew install gcc            # Also run `xcode-select --install` if prompted
+brew install make
+cd wrapper
+chmod +x build_osx.sh       # Assumes `gcc` is at `/usr/local/bin/gcc-12`
+conda activate safe
+./build_osx.sh
+```
+
+Also see [`pycffirmware`](https://github.com/utiasDSL/pycffirmware)'s `README.md`
 
 
 
