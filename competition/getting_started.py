@@ -12,6 +12,7 @@ from functools import partial
 
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
+from safe_control_gym.utils.utils import sync
 from safe_control_gym.envs.gym_pybullet_drones.Logger import Logger
 
 from edit_this import Controller, Command
@@ -151,6 +152,11 @@ def main():
                    timestamp=i/CTRL_FREQ,
                    state=np.hstack([pos, np.zeros(4), rpy, vel, bf_rates, np.sqrt(action/env.KF)])
                    )
+
+        # Sync the simulation.
+        if config.quadrotor_config.gui:
+            sync(i, START, CTRL_DT)
+
 
         # If an episode is complete, reset the environment.
         if done:
