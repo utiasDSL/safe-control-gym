@@ -58,5 +58,7 @@ $ python3 getting_started.py --overrides ./getting_started.yaml
 - Create a Pull Request into `utiasDSL/safe-control-gym:beta-iros-competition` from your fork ([help](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork))
 - Tag @JacopoPan in the Pull Request's Conversation tab
 
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/TzxycGeu_OM/maxresdefault.jpg)](https://www.youtube.com/watch?v=TzxycGeu_OM)
+
 -----
 > University of Toronto's [Dynamic Systems Lab](https://github.com/utiasDSL) / [Vector Institute for Artificial Intelligence](https://github.com/VectorInstitute)
