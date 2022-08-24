@@ -34,7 +34,6 @@ def main():
 
     # Start a timer.
     START = time.time()
-    ep_start = START
 
     # Load configuration.
     CONFIG_FACTORY = ConfigFactory()
@@ -78,6 +77,9 @@ def main():
     collisions_count = 0
     collided_objects = set()
     episode_start_iter = 0
+
+    input("Press ENTER to start")
+    ep_start = time.time() 
 
     # Run an experiment.
     for i in range(config.num_episodes*CTRL_FREQ*env.EPISODE_LEN_SEC):

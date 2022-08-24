@@ -18,7 +18,7 @@ quadrotor_config:
   cost: competition  # Sparse reward function
   done_on_out_of_bound: False
   done_on_violation: False
-  episode_len_sec: 30  # Episode duration in seconds
+  episode_len_sec: 33  # Episode duration in seconds
   task: stabilization
   task_info:
     stabilization_goal: [0.5, 6., 0.75]  # Final goal/target position in x-y-z to hover at
