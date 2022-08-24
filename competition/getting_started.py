@@ -34,6 +34,7 @@ def main():
 
     # Start a timer.
     START = time.time()
+    ep_start = START
 
     # Load configuration.
     CONFIG_FACTORY = ConfigFactory()
@@ -155,12 +156,13 @@ def main():
 
         # Sync the simulation.
         if config.quadrotor_config.gui:
-            sync(i, START, CTRL_DT)
+            sync(i-episode_start_iter, ep_start, CTRL_DT)
 
 
         # If an episode is complete, reset the environment.
         if done:
             episode_start_iter = i
+            ep_start = time.time()
 
             # Plot logging (comment as desired).
             logger.plot(comment="get_start-episode-"+str(episodes_count))
