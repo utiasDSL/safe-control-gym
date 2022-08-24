@@ -18,8 +18,8 @@ Complete this [Google Form](https://forms.gle/vEmVK99n1SyaE4Zw9) to register you
 
 ```bash
 git clone https://github.com/utiasDSL/safe-control-gym.git
-git checkout beta-iros-competition
 cd safe-control-gym
+git checkout beta-iros-competition
 ```
 
 Create and access a Python 3.8 environment using

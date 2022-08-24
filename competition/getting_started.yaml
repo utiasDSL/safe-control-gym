@@ -11,7 +11,7 @@ quadrotor_config:
   pyb_freq: 500 # Multiple of ctrl_freq and firmware_freq
   quad_type: 3  # 3D quadrotor
   physics: pyb
-  gui: False
+  gui: True
   camera_view: [5, -40, -45, 1.5, 2, 0.5]
   info_in_reset: True
   normalized_rl_action_space: False
