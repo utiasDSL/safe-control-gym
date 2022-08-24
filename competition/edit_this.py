@@ -122,13 +122,16 @@ class Controller():
         #########################
 
         # Curve fitting with waypoints.
-        waypoints = [(0, 0, 0)]
+        if use_firmware:
+            waypoints = [(0.1, 0.1, .75)]  # Hardcoded scenario knowledge.
+        else:
+            waypoints = [(0.1, 0.1, .0)]  # Hardcoded scenario knowledge.
         for idx, g in enumerate(self.NOMINAL_GATES):
             x = g[0]
             y = g[1]
             rot = g[5]
-            if rot > 0.5*1.57:
-                if idx == 2:
+            if rot > 0.5*1.57 or rot < 0:  # Hardcoded scenario knowledge.
+                if idx == 2:  # Hardcoded scenario knowledge.
                     waypoints.append((x+0.3, y-0.2, initial_info["gate_dimensions"]["height"]))
                     waypoints.append((x-0.3, y-0.2, initial_info["gate_dimensions"]["height"]))
                 else:
@@ -147,16 +150,10 @@ class Controller():
         fx = np.poly1d(fit_x)
         fy = np.poly1d(fit_y)
         fz = np.poly1d(fit_z)
-        t_scaled = np.linspace(t[0], t[-1], int(0.75*initial_info["episode_len_sec"]*self.CTRL_FREQ))
+        t_scaled = np.linspace(t[0], t[-1], int(0.5*initial_info["episode_len_sec"]*self.CTRL_FREQ))
         self.ref_x = fx(t_scaled)
         self.ref_y = fy(t_scaled)
         self.ref_z = fz(t_scaled)
-
-        #########################
-        # REPLACE THIS (END) ####
-        #########################
-
-        self.draw_trajectory(initial_info)
 
         if self.VERBOSE:
             # Plot each dimension.
@@ -179,26 +176,11 @@ class Controller():
             plt.pause(2)
             plt.close()
 
+        self._draw_trajectory(initial_info)
 
-    def draw_trajectory(self, initial_info):
-        # Draw trajectory.
-        for point in self.waypoints:
-            p.loadURDF(os.path.join(initial_info["urdf_dir"], "sphere.urdf"),
-                       [point[0], point[1], point[2]],
-                       p.getQuaternionFromEuler([0,0,0]),
-                       physicsClientId=initial_info["pyb_client"])
-        step = int(self.ref_x.shape[0]/50)
-        for i in range(step, self.ref_x.shape[0], step):
-            p.addUserDebugLine(lineFromXYZ=[self.ref_x[i-step], self.ref_y[i-step], self.ref_z[i-step]],
-                               lineToXYZ=[self.ref_x[i], self.ref_y[i], self.ref_z[i]],
-                               lineColorRGB=[1, 0, 0],
-                               physicsClientId=initial_info["pyb_client"])
-        p.addUserDebugLine(lineFromXYZ=[self.ref_x[i], self.ref_y[i], self.ref_z[i]],
-                           lineToXYZ=[self.ref_x[-1], self.ref_y[-1], self.ref_z[-1]],
-                           lineColorRGB=[1, 0, 0],
-                           physicsClientId=initial_info["pyb_client"])
-
-        
+        #########################
+        # REPLACE THIS (END) ####
+        #########################
 
     def cmdFirmware(self,
                     time,
@@ -241,17 +223,89 @@ class Controller():
         # REPLACE THIS (START) ##
         #########################
 
-        if iteration < len(self.ref_x):
-            target_pos = np.array([self.ref_x[iteration], self.ref_y[iteration], self.ref_z[iteration]])
-        else:
-            target_pos = np.array([self.ref_x[-1], self.ref_y[-1], self.ref_z[-1]])
-        target_vel = np.zeros(3)
-        target_acc = np.zeros(3)
-        target_yaw = 0
-        target_rpy_rates = np.zeros(3)
+        if iteration == 0:
+            height = 0.75
+            duration = 2
 
-        command_type = Command(1)
-        args = [target_pos, target_vel, target_acc, target_yaw, target_rpy_rates, time]
+            command_type = Command(2)  # Take-off.
+            args = [height, duration]
+
+        elif iteration < 2*self.CTRL_FREQ:
+            
+            command_type = Command(0)  # None.
+            args = []
+
+        elif iteration < len(self.ref_x):
+            step = iteration-2*self.CTRL_FREQ
+            target_pos = np.array([self.ref_x[step], self.ref_y[step], self.ref_z[step]])
+            target_vel = np.zeros(3)
+            target_acc = np.zeros(3)
+            target_yaw = 0.
+            target_rpy_rates = np.zeros(3)
+
+            command_type = Command(1)  # cmdFullState.
+            args = [target_pos, target_vel, target_acc, target_yaw, target_rpy_rates, time]
+
+        elif iteration < 19*self.CTRL_FREQ:
+            target_pos = np.array([self.ref_x[-1], self.ref_y[-1], self.ref_z[-1]])
+            target_vel = np.zeros(3)
+            target_acc = np.zeros(3)
+            target_yaw = 0.
+            target_rpy_rates = np.zeros(3)
+
+            command_type = Command(1)  # cmdFullState.
+            args = [target_pos, target_vel, target_acc, target_yaw, target_rpy_rates, time]
+
+        elif iteration == 19*self.CTRL_FREQ:
+            x = self.ref_x[-1]
+            y = self.ref_y[-1]
+            z = 1.5
+            yaw = 0.
+            duration = 2
+
+            command_type = Command(5)  # goTo.
+            args = [x, y, z, yaw, duration, False]
+
+        elif iteration < 21*self.CTRL_FREQ:
+            
+            command_type = Command(0)  # None.
+            args = []
+
+        elif iteration == 21*self.CTRL_FREQ:
+            x = 0.
+            y = 0.
+            z = 1.5
+            yaw = 0.
+            duration = 7
+
+            command_type = Command(5)  # goTo.
+            args = [x, y, z, yaw, duration, False]
+
+        elif iteration < 28*self.CTRL_FREQ:
+
+            command_type = Command(0)  # None.
+            args = []
+
+        elif iteration == 28*self.CTRL_FREQ:
+            # height = 0.
+            # duration = 2
+
+            # command_type = Command(4)  # Land.
+            # args = [height, duration]
+
+            x = 0.
+            y = 0.
+            z = 0.
+            yaw = 0.
+            duration = 2
+
+            command_type = Command(5)  # goTo.
+            args = [x, y, z, yaw, duration, False]
+
+        else:
+
+            command_type = Command(0)  # None.
+            args = []
 
         #########################
         # REPLACE THIS (END) ####
@@ -303,13 +357,13 @@ class Controller():
 
         return target_p, target_v
 
-    def learn(self,
-              action,
-              obs,
-              reward,
-              done,
-              info):
-        """Learning and controller updates.
+    def interStepLearn(self,
+                       action,
+                       obs,
+                       reward,
+                       done,
+                       info):
+        """Learning and controller updates called between control steps.
 
         INSTRUCTIONS:
             Use the historically collected information in the five data buffers of actions, observations,
@@ -340,6 +394,29 @@ class Controller():
         # REPLACE THIS (END) ####
         #########################
 
+    def interEpisodeLearn(self):
+        """Learning and controller updates called between episodes.
+
+        INSTRUCTIONS:
+            Use the historically collected information in the five data buffers of actions, observations,
+            rewards, done flags, and information dictionaries to learn, adapt, and/or re-plan.
+
+        """
+
+        #########################
+        # REPLACE THIS (START) ##
+        #########################
+
+        _ = self.action_buffer
+        _ = self.obs_buffer
+        _ = self.reward_buffer
+        _ = self.done_buffer
+        _ = self.info_buffer
+
+        #########################
+        # REPLACE THIS (END) ####
+        #########################
+
     def _thrusts(self,
                  obs,
                  target,
@@ -357,3 +434,21 @@ class Controller():
                                                target_vel=target_v
                                                )
         return self.KF * rpms**2
+
+    def _draw_trajectory(self, initial_info):
+        # Draw trajectory.
+        for point in self.waypoints:
+            p.loadURDF(os.path.join(initial_info["urdf_dir"], "sphere.urdf"),
+                       [point[0], point[1], point[2]],
+                       p.getQuaternionFromEuler([0,0,0]),
+                       physicsClientId=initial_info["pyb_client"])
+        step = int(self.ref_x.shape[0]/50)
+        for i in range(step, self.ref_x.shape[0], step):
+            p.addUserDebugLine(lineFromXYZ=[self.ref_x[i-step], self.ref_y[i-step], self.ref_z[i-step]],
+                               lineToXYZ=[self.ref_x[i], self.ref_y[i], self.ref_z[i]],
+                               lineColorRGB=[1, 0, 0],
+                               physicsClientId=initial_info["pyb_client"])
+        p.addUserDebugLine(lineFromXYZ=[self.ref_x[i], self.ref_y[i], self.ref_z[i]],
+                           lineToXYZ=[self.ref_x[-1], self.ref_y[-1], self.ref_z[-1]],
+                           lineColorRGB=[1, 0, 0],
+                           physicsClientId=initial_info["pyb_client"])

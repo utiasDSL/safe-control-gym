@@ -117,7 +117,7 @@ def main():
             obs, reward, done, info = env.step(action)
 
         # Update the controller internal state and models.
-        ctrl.learn(action, obs, reward, done, info)
+        ctrl.interStepLearn(action, obs, reward, done, info)
 
         # Add up reward and collisions.
         cumulative_reward += reward
@@ -165,6 +165,9 @@ def main():
             # Create a new logger.
             logger = Logger(logging_freq_hz=CTRL_FREQ)
 
+            # Update the controller internal state and models.
+            ctrl.interEpisodeLearn()
+
             # Reset/update counters.
             episodes_count += 1
             if episodes_count > config.num_episodes:
@@ -181,7 +184,7 @@ def main():
             else:
                 new_initial_obs, new_initial_info = env.reset()
 
-            ctrl.draw_trajectory(new_initial_info)
+            # ctrl.draw_trajectory(new_initial_info)
 
             if config.verbose:
                 print(str(episodes_count)+'-th reset.')

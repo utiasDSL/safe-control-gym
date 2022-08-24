@@ -1,5 +1,5 @@
 # Configuration
-num_episodes: 10
+num_episodes: 2
 use_firmware: True
 verbose: True
 
@@ -11,14 +11,14 @@ quadrotor_config:
   pyb_freq: 500 # Multiple of ctrl_freq and firmware_freq
   quad_type: 3  # 3D quadrotor
   physics: pyb
-  gui: True
-  camera_view: [5, -40, -55, 1.5, 2, 0.5]
+  gui: False
+  camera_view: [5, -40, -45, 1.5, 2, 0.5]
   info_in_reset: True
   normalized_rl_action_space: False
   cost: competition  # Sparse reward function
   done_on_out_of_bound: False
   done_on_violation: False
-  episode_len_sec: 15  # Episode duration in seconds
+  episode_len_sec: 30  # Episode duration in seconds
   task: stabilization
   task_info:
     stabilization_goal: [0.5, 6., 0.75]  # Final goal/target position in x-y-z to hover at
@@ -30,7 +30,7 @@ quadrotor_config:
     init_x_dot: 0
     init_y: 0.1
     init_y_dot: 0
-    init_z: 0.1
+    init_z: 0.0
     init_z_dot: 0
     init_phi: 0
     init_theta: 0
@@ -43,7 +43,7 @@ quadrotor_config:
   gates:
     [
       # x, y, z, _, _, yaw
-      [1.5, 0.5, 0.8, 0, 0, 1.57],
+      [1.5, 0.5, 0.8, 0, 0, -1.57],
       [3, 1.5, 0.8, 0, 0, 0],
       [1, 3.2, 0.8, 0, 0, 1.57],
       [0.5, 4.5, 0.8, 0, 0, 0]
@@ -70,8 +70,8 @@ quadrotor_config:
       high: 0.1
     init_z:
       distrib: "uniform"
-      low: -0.1
-      high: 0.1
+      low: -0.01
+      high: 0.01
     init_phi:
       distrib: "uniform"
       low: -0.1
