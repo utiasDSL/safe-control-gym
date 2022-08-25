@@ -183,7 +183,8 @@ def mmd_loss(samples1, samples2, mode='gaussian', sigma=0.2, use_numpy=True):
     adapted from https://github.com/aviralkumar2907/BEAR/blob/f2e31c1b5f81c4fb0e692a34949c7d8b48582d8f/algos.py#L326
 
     Args:
-        samples1, samples2 (ndarray|torch.FloatTensor): shape (B,N,D) or (N,D) where B is batch size, N is sample size, and D is sample dim.
+        samples1 (ndarray|torch.FloatTensor): shape (B,N1,D) or (N1,D) where B is batch size, N is sample size, and D is sample dim.
+        samples2 (ndarray|torch.FloatTensor): shape (B,N2,D) or (N2,D).
         mode (str): Kernel name to use.
         sigma (float): Std param in kernel.
         use_numpy (bool): if True, input and output are both numpy arrays, used only for evaluation;
@@ -243,6 +244,27 @@ def mse(traj1, traj2, **kwargs):
         raise ValueError("Input trajectories must have the same length.")
     # normalize by the length of trajectory, then square root
     cost = np.sqrt(((traj1 - traj2)**2).sum()/len(traj1))
+    return cost
+
+
+def lsed(traj1, traj2, distance_func=euclidean_distance, distance_func_kwargs={}):
+    """Lock-step Euclidean Distance, requires each traj pair to have same length. 
+
+    Args:
+        traj1, traj2 (ndarray): shape (T,D).
+        w (int): window size (default inf, meaning to compare all pairs).
+        distance_func (Callable): distance function for pair of elements (default is Eucleadian distance).
+
+    Returns:
+        cost (float): final LSED cost.
+    """
+    if len(traj1) != len(traj2):
+        raise ValueError("Input trajectories must have the same length.")
+    subcosts = np.array([
+        distance_func(traj1[i], traj2[i], **distance_func_kwargs) 
+        for i in range(len(traj1))
+    ])
+    cost = np.sqrt(np.sum(subcosts**2))
     return cost
 
 

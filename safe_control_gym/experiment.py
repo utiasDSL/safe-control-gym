@@ -364,7 +364,7 @@ class MetricExtractor:
     def get_episode_rmse(self):
         '''Root mean square error of episodes. '''
         return self.get_episode_data('mse',
-                                     postprocess_func=lambda x: np.sqrt(np.mean(x)))
+                                     postprocess_func=lambda x: float(np.sqrt(np.mean(x))))
 
     def get_episode_constraint_violations(self):
         '''Occurence of any violation in episodes. '''

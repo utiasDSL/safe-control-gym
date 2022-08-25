@@ -65,7 +65,7 @@ def test_trajectory_metric(config):
         
         env_func = partial(make, config.task, **v_task_config)
         env = env_func()
-        if config.metric in ["dtw", "edr", "lcss", "discrete_frechet"]:
+        if config.metric in ["lsed", "dtw", "edr", "lcss", "discrete_frechet"]:
             # requires the same initial conditions btw reference traj and variant traj
             env.seed(config.seed)           
         elif config.metric in ["mmd_loss"]:
@@ -83,7 +83,7 @@ def test_trajectory_metric(config):
         v_metrics.append(metrics_)
         
     # metrics 
-    if config.metric in ["dtw", "edr", "lcss", "discrete_frechet"]: 
+    if config.metric in ["lsed", "dtw", "edr", "lcss", "discrete_frechet"]: 
         # compute metric of each pair of ref traj and variant traj, use the average as final metric value 
         metric_func = eval(config.metric)
         metric_kwargs = {
@@ -145,7 +145,7 @@ def test_trajectory_metric(config):
         axes[0].axvline(x=float(config.reference), linewidth=1, color='r', linestyle="--", label="reference value")
         axes[0].set_xlabel(config.xlabel)
         axes[0].set_ylabel("{} distance to reference".format(config.metric))
-        axes[0].set_title("".format(config.metric))
+        axes[0].set_title("{}".format(config.metric))
         # rmse plot
         rmse_vals = [vm["average_rmse"] for vm in v_metrics]
         axes[1].plot(config.variants, rmse_vals) #, alpha=0.7)
@@ -160,7 +160,9 @@ def test_trajectory_metric(config):
     
     print("test done ...")    
     
-    
+
+
+
     
     
     
