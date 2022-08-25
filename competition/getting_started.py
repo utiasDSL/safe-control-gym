@@ -7,6 +7,7 @@ Run as:
 """
 import time
 import numpy as np
+import pybullet as p
 
 from functools import partial
 
@@ -77,18 +78,32 @@ def main():
     collisions_count = 0
     collided_objects = set()
     episode_start_iter = 0
+    text_label_id = p.addUserDebugText("", textPosition=[0, 0, 1],physicsClientId=env.PYB_CLIENT)
 
-    input("Press ENTER to start")
-    ep_start = time.time() 
+
+    # Wait for keyboard input to start.
+    # input("Press any key to start")
 
     # Run an experiment.
+    ep_start = time.time() 
     for i in range(config.num_episodes*CTRL_FREQ*env.EPISODE_LEN_SEC):
 
-        # Step by keyboard press.
-        # _ = input()
+        # Step by keyboard input.
+        # _ = input("Press any key to continue")
 
         # Elapsed sim time.
         curr_time = (i-episode_start_iter)*CTRL_DT
+
+        # Print episode time in seconds on the GUI.
+        text_label_id = p.addUserDebugText("Ep. time: {:.2f}s".format(curr_time),
+                                           textPosition=[0, 0, 1],
+                                           textColorRGB=[1, 0, 0],
+                                           lifeTime=1,
+                                           textSize=2,
+                                           parentObjectUniqueId=0,
+                                           parentLinkIndex=-1,
+                                           replaceItemUniqueId=text_label_id,
+                                           physicsClientId=env.PYB_CLIENT)
 
         # Compute control input.
         if config.use_firmware:
