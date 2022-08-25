@@ -142,7 +142,7 @@ edit_this.py : Controller.cmdFirmware(time, obs, reward, done, info)    # Select
             - GOTO's args: [x, y, z, yaw, duration, relative (bool)]
 ```
 
-Optional
+Optional, recommended
 ```
 edit_this.py : Controller.interStepLearn(...)       # Update the controller's internal state at each step
     Args:
