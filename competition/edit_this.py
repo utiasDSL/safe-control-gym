@@ -39,6 +39,9 @@ finally:
 
 
 class Command(Enum):
+    """Command types that can be used with pycffirmware.
+
+    """
     NONE = 0 # Args: Empty
     FULLSTATE = 1 # Args: [pos, vel, acc, yaw, rpy_rate, iteration] 
         # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.cmdFullState
@@ -48,7 +51,7 @@ class Command(Enum):
         # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.land
     STOP = 4 # Args: Empty
         # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.stop
-    GOTO = 5 # Args: [[x, y, z], yaw, duration, relative (bool)]
+    GOTO = 5 # Args: [x, y, z, yaw, duration, relative (bool)]
         # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.goTo
 
 
@@ -61,7 +64,6 @@ class Controller():
                  initial_obs,
                  initial_info,
                  use_firmware: bool = False,
-                 use_hardware: bool = False,
                  buffer_size: int = 100,
                  verbose: bool = False
                  ):
@@ -79,29 +81,25 @@ class Controller():
                 'symbolic_model', 'nominal_physical_parameters', 'nominal_gates_pos', etc.
             use_firmware (bool, optional): Choice between the on-board controll in `pycffirmware`
                 or simplified software-only alternative.
-            use_hardware (bool, optional): Choice between simulation or hardware evaluation.
             buffer_size (int, optional): Size of the data buffers used in method `learn()`.
             verbose (bool, optional): Turn on and off additional printouts and plots.
 
         """
 
-        self.use_hardware = use_hardware
-        self.initial_obs = initial_obs
-
         # Save environment parameters.
         self.CTRL_TIMESTEP = initial_info["ctrl_timestep"]
         self.CTRL_FREQ = initial_info["ctrl_freq"]
+        self.initial_obs = initial_obs
 
         # Store a priori scenario information.
         self.NOMINAL_GATES = initial_info["nominal_gates_pos"]
         self.NOMINAL_OBSTACLES = initial_info["nominal_obstacles_pos"]
 
-        if use_firmware and not use_hardware:
+        if use_firmware:
             if not FIRMWARE_INSTALLED:
                 raise RuntimeError("[ERROR] Module 'cffirmware' not installed, try set 'use_firmware' to False in 'getting_started.yaml'.")
-            self.ctrl = None
-        elif use_hardware:
-            self.ctrl = None
+            else:
+                self.ctrl = None
         else:
             # Simple PID Controller.
             self.ctrl = PIDController()
@@ -184,12 +182,7 @@ class Controller():
 
     def cmdFirmware(self,
                     time,
-                    obs,
-                    vicon_pos=None,
-                    est_vel=None,
-                    est_acc=None,
-                    est_rpy=None,
-                    est_rpy_rates=None
+                    obs
                     ):
         """Pick command sent to the quadrotor through a Crazyswarm/Crazyradio-like interface.
 
@@ -200,22 +193,17 @@ class Controller():
         Args:
             time (float): Episode's elapsed time, in seconds.
             obs (ndarray): The quadrotor's Vicon data [x, 0, y, 0, z, 0, phi, theta, psi, 0, 0, 0].
-            vicon_pos (ndarray, optional): Feedback from the vicon tracking system about where your drone marker is (mm).
-            est_vel (ndarray, optional): Estimation of drone velocity from Vicon system.
-            est_acc (ndarray, optional): Estimation of drone acceleration from Vicon system.
-            est_rpy (ndarray, optional): Estimation of drone attitude from Vicon system
-            est_rpy_rates (ndarray, optional): Estimation of drone body rates from vicon system.
 
         Returns:
             Command: selected type of command (takeOff, cmdFullState, etc., see Enum-like class `Command`).
             List: arguments for the type of command (see comments in class `Command`)
 
         """
-        if not self.use_hardware:
-            if self.ctrl is not None:
-                raise RuntimeError("[ERROR] Using method 'cmdFirmware' but Controller was created with 'use_firmware' = False.")
-            if not FIRMWARE_INSTALLED:
-                raise RuntimeError("[ERROR] Module 'cffirmware' not installed.")
+
+        if self.ctrl is not None:
+            raise RuntimeError("[ERROR] Using method 'cmdFirmware' but Controller was created with 'use_firmware' = False.")
+        if not FIRMWARE_INSTALLED:
+            raise RuntimeError("[ERROR] Module 'cffirmware' not installed.")
 
         iteration = int(time*self.CTRL_FREQ)
 
@@ -294,12 +282,11 @@ class Controller():
             obs (ndarray): The quadrotor's state [x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r].
 
         Returns:
-            List: thrusts (in m, len == 3) to be commanded to each motor.
-            List: thrusts (in m/s, len == 3) to be commanded to each motor.
+            List: target position (len == 3).
+            List: target velocity (len == 3).
 
         """
-        if self.use_hardware:
-            raise NotImplementedError("Must control hardware through cmdFullState. Action space commands not supported.")
+
         if self.ctrl is None:
             raise RuntimeError("[ERROR] Attempting to use method 'cmdSimOnly' but Controller was created with 'use_firmware' = True.")
         # if FIRMWARE_INSTALLED:

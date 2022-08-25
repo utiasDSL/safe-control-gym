@@ -47,7 +47,7 @@ def main():
 
     # Create environment.
     if config.use_firmware:
-        FIRMWARE_FREQ = config.quadrotor_config['firmware_freq']
+        FIRMWARE_FREQ = 500
         assert(config.quadrotor_config['pyb_freq'] % FIRMWARE_FREQ == 0), "pyb_freq must be a multiple of firmware freq"
         # The env.step is called at a firmware_freq rate, but this is not as intuitive to the end user, and so 
         # we abstract the difference. This allows ctrl_freq to be the rate at which the user sends ctrl signals, 
@@ -101,7 +101,7 @@ def main():
         text_label_id = p.addUserDebugText("Ep. time: {:.2f}s".format(curr_time),
                                            textPosition=[0, 0, 1.5],
                                            textColorRGB=[1, 0, 0],
-                                           lifeTime=CTRL_DT,
+                                           lifeTime=3*CTRL_DT,
                                            textSize=1.5,
                                            parentObjectUniqueId=0,
                                            parentLinkIndex=-1,

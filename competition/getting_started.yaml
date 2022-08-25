@@ -1,28 +1,23 @@
 # Configuration
-num_episodes: 2
-use_firmware: True
-verbose: True
+num_episodes: 3 # Number of consecutive episodes
+use_firmware: True # Whether to use pycffirmware or not
+verbose: True # Boolean passed to the Controller class, can be used to turn on and off additional printouts
 
 # Environment
 quadrotor_config:
-  seed: 1337
-  ctrl_freq: 30
-  firmware_freq: 500
-  pyb_freq: 500 # Multiple of ctrl_freq and firmware_freq
-  quad_type: 3  # 3D quadrotor
-  physics: pyb
-  gui: True
-  camera_view: [5, -40, -40, 0.5, -1, 0.5]
-  info_in_reset: True
-  normalized_rl_action_space: False
-  cost: competition  # Sparse reward function
-  done_on_out_of_bound: False
-  done_on_violation: False
+  seed: 1337 # Random seed
+  ctrl_freq: 30 # Frequency of decision making
+  pyb_freq: 500 # If `use_firmware` == True, must be multiple of 500, else must be multiple of ctrl_freq
   episode_len_sec: 33  # Episode duration in seconds
+  gui: True # Whether to spawn PyBullet's GUI
+  camera_view: [5, -40, -40, 0.5, -1, 0.5] # Distance, yaw, pitch, x, y, z target position
+  cost: competition  # Sparse reward function, if desired, re-implement it in Quadrotor._get_reward()
+                     # github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/safe_control_gym/envs/gym_pybullet_drones/quadrotor.py
+  done_on_violation: False # Wether `done` becomes True when a constraint is violated
   task: stabilization
   task_info:
-    stabilization_goal: [-0.5, 2.9, 0.75]  # Final goal/target position in x-y-z to hover at
-    stabilization_goal_tolerance: 0.1
+    stabilization_goal: [-0.5, 2.9, 0.75]  # Final goal (target position in x-y-z)
+    stabilization_goal_tolerance: 0.2
 
   # Nominal (pre-randomization) initial state
   init_state:
@@ -123,7 +118,7 @@ quadrotor_config:
     # State constraints
     - constraint_form: bounded_constraint
       constrained_variable: state
-      active_dims: [0, 2, 4]
+      active_dims: [0, 2, 4] # The uncommented entries in the upper_bounds/lower_bounds vectors below
       upper_bounds:
       - 3     # x
       # - 100 # x_dot
@@ -162,3 +157,10 @@ quadrotor_config:
       - disturbance_func: uniform
         low: [-0.1, -0.1, -0.1]
         high: [0.1, 0.1, 0.1]
+
+  # Do not change
+  quad_type: 3  # 3D quadrotor
+  info_in_reset: True 
+  normalized_rl_action_space: False
+  done_on_out_of_bound: False
+
