@@ -7,7 +7,7 @@ Then run:
 Tips:
     Search for strings `INSTRUCTIONS:` and `REPLACE THIS (START)` in this file.
 
-    Change the code between the 4 blocks starting with
+    Change the code between the 5 blocks starting with
         #########################
         # REPLACE THIS (START) ##
         #########################
@@ -16,6 +16,13 @@ Tips:
         # REPLACE THIS (END) ####
         #########################
     with your own code.
+
+    They are in methods:
+        1) __init__
+        2) cmdFirmware
+        3) cmdSimOnly (optional)
+        4) interStepLearn (optional)
+        5) interEpisodeLearn (optional)
 
 """
 import os
@@ -90,23 +97,23 @@ class Controller():
         self.CTRL_TIMESTEP = initial_info["ctrl_timestep"]
         self.CTRL_FREQ = initial_info["ctrl_freq"]
         self.initial_obs = initial_obs
+        self.VERBOSE = verbose
 
         # Store a priori scenario information.
         self.NOMINAL_GATES = initial_info["nominal_gates_pos"]
         self.NOMINAL_OBSTACLES = initial_info["nominal_obstacles_pos"]
 
+        # Check for pycffirmware.
         if use_firmware:
             if not FIRMWARE_INSTALLED:
                 raise RuntimeError("[ERROR] Module 'cffirmware' not installed, try set 'use_firmware' to False in 'getting_started.yaml'.")
             else:
                 self.ctrl = None
         else:
-            # Simple PID Controller.
+            # Initialized simple PID Controller.
             self.ctrl = PIDController()
             # Save additonal environment parameters.
             self.KF = initial_info["quadrotor_kf"]
-
-        self.VERBOSE = verbose
 
         # Data buffers.
         self.action_buffer = deque([], maxlen=buffer_size)
@@ -119,7 +126,7 @@ class Controller():
         # REPLACE THIS (START) ##
         #########################
 
-        # Curve fitting with waypoints.
+        # Example: curve fitting with waypoints.
         if use_firmware:
             waypoints = [(self.initial_obs[0], self.initial_obs[2], .75)]  # Height is hardcoded scenario knowledge.
         else:
@@ -128,8 +135,8 @@ class Controller():
             x = g[0]
             y = g[1]
             rot = g[5]
-            if rot > 0.5*1.57 or rot < 0:  # Hardcoded scenario knowledge.
-                if idx == 2:  # Hardcoded scenario knowledge.
+            if rot > 0.5*1.57 or rot < 0:
+                if idx == 2:  # Hardcoded scenario knowledge (direction in which to take gate 2.
                     waypoints.append((x+0.3, y-0.2, initial_info["gate_dimensions"]["height"]))
                     waypoints.append((x-0.3, y-0.2, initial_info["gate_dimensions"]["height"]))
                 else:
@@ -174,6 +181,7 @@ class Controller():
             plt.pause(2)
             plt.close()
 
+        # Draw the trajectory on PyBullet's GUI
         self._draw_trajectory(initial_info)
 
         #########################
@@ -210,6 +218,8 @@ class Controller():
         #########################
         # REPLACE THIS (START) ##
         #########################
+
+        # Handwritten solution for GitHub's example scenario.
 
         if iteration == 0:
             height = 0.75
@@ -289,8 +299,6 @@ class Controller():
 
         if self.ctrl is None:
             raise RuntimeError("[ERROR] Attempting to use method 'cmdSimOnly' but Controller was created with 'use_firmware' = True.")
-        # if FIRMWARE_INSTALLED:
-        #     print("[WARNING] Using method 'cmdSimOnly' but module 'cffirmware' is available.")
 
         iteration = int(time*self.CTRL_FREQ)
 
@@ -389,8 +397,12 @@ class Controller():
                                                )
         return self.KF * rpms**2
 
-    def _draw_trajectory(self, initial_info):
-        # Draw trajectory.
+    def _draw_trajectory(self,
+                         initial_info
+                         ):
+        """Do not modify this.
+
+        """
         for point in self.waypoints:
             p.loadURDF(os.path.join(initial_info["urdf_dir"], "sphere.urdf"),
                        [point[0], point[1], point[2]],
