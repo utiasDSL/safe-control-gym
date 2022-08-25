@@ -1,5 +1,7 @@
 # IROS 2022 Safe Robot Learning Competition
 
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/bWhDTNtj8EA/maxresdefault.jpg)](https://www.youtube.com/watch?v=bWhDTNtj8EA)
+
 Links:
 - [Official Webpage](https://www.dynsyslab.org/iros-2022-safe-robot-learning-competition/)
 - [IROS Competition Page](https://iros2022.org/program/competition/#toggle-id-8)
@@ -88,10 +90,6 @@ Also see [section 'Methods to Re-implement'](https://github.com/utiasDSL/safe-co
 - Checkout this branch (`beta-iros-competition`)
 - Create a Pull Request into `utiasDSL/safe-control-gym:beta-iros-competition` from your fork ([help](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork))
 - Tag @JacopoPan in the Pull Request's Conversation tab
-
-## Video
-
-[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/bWhDTNtj8EA/maxresdefault.jpg)](https://www.youtube.com/watch?v=bWhDTNtj8EA)
 
 ## Methods to Re-implement
 
