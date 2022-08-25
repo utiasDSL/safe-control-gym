@@ -174,8 +174,18 @@ class FirmwareWrapper(BaseController):
         Step is to be called at a rate of env.CTRL_FREQ. This corresponds to the rate we can send commands through 
         the CF radio, typically below 60Hz. 
         '''
-        self.process_command_queue()
+        self.process_command_queue(sim_time)
         
+        
+        # Draws setpoint for debugging purposes 
+        if self.verbose:
+            if self.last_visualized_setpoint is not None:
+                p.removeBody(self.last_visualized_setpoint)
+            self.last_visualized_setpoint = p.loadURDF("/home/spencer/Documents/DSL/safe-control-gym/safe_control_gym/envs/gym_pybullet_drones/assets/sphere.urdf",
+                    [self.setpoint.position.x, self.setpoint.position.y, self.setpoint.position.z],
+                    p.getQuaternionFromEuler([0,0,0]),
+                    physicsClientId=self.pyb_clinet)
+
         count = 0
         while self.tick / self.firmware_freq < sim_time + self.ctrl_dt:
             count += 1
@@ -222,14 +232,6 @@ class FirmwareWrapper(BaseController):
             # Update setpoint 
             self._updateSetpoint(self.tick / self.firmware_freq) # setpoint looks right 
 
-            # Draws setpoint for debugging purposes 
-            if self.verbose:
-                if self.last_visualized_setpoint is not None:
-                    p.removeBody(self.last_visualized_setpoint)
-                self.last_visualized_setpoint = p.loadURDF("/home/spencer/Documents/DSL/safe-control-gym/safe_control_gym/envs/gym_pybullet_drones/assets/sphere.urdf",
-                       [self.setpoint.position.x, self.setpoint.position.y, self.setpoint.position.z],
-                       p.getQuaternionFromEuler([0,0,0]),
-                       physicsClientId=self.pyb_clinet)
 
 
             # Step controller 
@@ -404,9 +406,8 @@ class FirmwareWrapper(BaseController):
             velocity_t velocity;      // m/s
             acc_t acc;                // Gs (but acc.z without considering gravity)
         '''
-        if self.CONTROLLER == 'pid':
-            self._update_attitude_t(self.state.attitude, timestamp, *rpy) # RPY required for PID 
-        elif self.CONTROLLER == 'mellinger':
+        self._update_attitude_t(self.state.attitude, timestamp, *rpy) # RPY required for PID and high level commander
+        if self.CONTROLLER == 'mellinger':
             self._update_attitudeQuaternion(self.state.attitudeQuaternion, timestamp, *rpy) # Quat required for Mellinger 
 
         self._update_3D_vec(self.state.position, timestamp, *pos)
@@ -519,8 +520,12 @@ class FirmwareWrapper(BaseController):
             firm.crtpCommanderHighLevelUpdateTime(timestep) # Sets commander time variable --- this is time in s from start of flight 
             firm.crtpCommanderHighLevelGetSetpoint(self.setpoint, self.state)
 
-    def process_command_queue(self):
+    def process_command_queue(self, sim_time):
         if len(self.command_queue) > 0:
+            firm.crtpCommanderHighLevelStop() # Resets planner object 
+            if self.full_state_cmd_override:
+                firm.crtpCommanderHighLevelTellState(self.state)
+            firm.crtpCommanderHighLevelUpdateTime(sim_time) # Sets commander time variable --- this is time in s from start of flight 
             command, args = self.command_queue.pop(0)
             getattr(self, command)(*args)
 
@@ -585,6 +590,7 @@ class FirmwareWrapper(BaseController):
         self.full_state_cmd_override = False
 
     def sendTakeoffYawCmd(self, height, duration, yaw):
+        # yaw in rad
         self.command_queue += [['_sendTakeoffYawCmd', [height, duration, yaw]]]
     def _sendTakeoffYawCmd(self, height, duration, yaw):
         print(f"INFO_{self.tick}: Takeoff command sent.")

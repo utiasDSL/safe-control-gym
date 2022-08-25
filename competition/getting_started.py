@@ -78,7 +78,7 @@ def main():
     collided_objects = set()
     episode_start_iter = 0
 
-    input("Press ENTER to start")
+    # input("Press ENTER to start")
     ep_start = time.time() 
 
     # Run an experiment.
@@ -163,9 +163,6 @@ def main():
 
         # If an episode is complete, reset the environment.
         if done:
-            episode_start_iter = i
-            ep_start = time.time()
-
             # Plot logging (comment as desired).
             logger.plot(comment="get_start-episode-"+str(episodes_count))
 
@@ -194,12 +191,15 @@ def main():
             else:
                 new_initial_obs, new_initial_info = env.reset()
 
-            # ctrl.draw_trajectory(new_initial_info)
+            # ctrl._draw_trajectory(new_initial_info)
 
             if config.verbose:
                 print(str(episodes_count)+'-th reset.')
                 print('Reset obs' + str(new_initial_obs))
                 print('Reset info' + str(new_initial_info))
+            
+            episode_start_iter = i+1
+            ep_start = time.time()
 
     # Close the environment and print timing statistics.
     env.close()

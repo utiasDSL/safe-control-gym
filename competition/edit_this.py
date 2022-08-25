@@ -150,7 +150,7 @@ class Controller():
         fx = np.poly1d(fit_x)
         fy = np.poly1d(fit_y)
         fz = np.poly1d(fit_z)
-        t_scaled = np.linspace(t[0], t[-1], int(0.5*initial_info["episode_len_sec"]*self.CTRL_FREQ))
+        t_scaled = np.linspace(t[0], t[-1], int(15*self.CTRL_FREQ))
         self.ref_x = fx(t_scaled)
         self.ref_y = fy(t_scaled)
         self.ref_z = fz(t_scaled)
@@ -224,7 +224,7 @@ class Controller():
         #########################
 
         if iteration == 0:
-            height = 1.0
+            height = 0.75
             duration = 2
 
             command_type = Command(2)  # Take-off.
@@ -244,22 +244,13 @@ class Controller():
         elif iteration == 20*self.CTRL_FREQ:
             x = self.ref_x[-1]
             y = self.ref_y[-1]
-            z = self.ref_z[-1]
+            z = 1.5 
             yaw = 0.
             duration = 2.5
 
             command_type = Command(5)  # goTo.
             args = [x, y, z, yaw, duration, False]
 
-        elif iteration == 20*self.CTRL_FREQ+1:
-            x = self.ref_x[-1]
-            y = self.ref_y[-1]
-            z = 1.5
-            yaw = 0.
-            duration = 2.5
-
-            command_type = Command(5)  # goTo.
-            args = [x, y, z, yaw, duration, False]
 
         elif iteration == 23*self.CTRL_FREQ:
             x = 0.
