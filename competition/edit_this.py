@@ -190,7 +190,10 @@ class Controller():
 
     def cmdFirmware(self,
                     time,
-                    obs
+                    obs,
+                    reward=None,
+                    done=None,
+                    info=None
                     ):
         """Pick command sent to the quadrotor through a Crazyswarm/Crazyradio-like interface.
 
@@ -201,6 +204,10 @@ class Controller():
         Args:
             time (float): Episode's elapsed time, in seconds.
             obs (ndarray): The quadrotor's Vicon data [x, 0, y, 0, z, 0, phi, theta, psi, 0, 0, 0].
+            reward (float, optional): The reward signal.
+            done (bool, optional): Wether the episode has terminated.
+            info (dict, optional): Current step information as a dictionary with keys
+                'constraint_violation', 'current_target_gate_pos', etc.
 
         Returns:
             Command: selected type of command (takeOff, cmdFullState, etc., see Enum-like class `Command`).
@@ -280,7 +287,10 @@ class Controller():
 
     def cmdSimOnly(self,
                    time,
-                   obs
+                   obs,
+                   reward=None,
+                   done=None,
+                   info=None
                    ):
         """PID per-propeller thrusts with a simplified, software-only PID quadrotor controller.
 
@@ -290,6 +300,10 @@ class Controller():
         Args:
             time (float): Episode's elapsed time, in seconds.
             obs (ndarray): The quadrotor's state [x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r].
+            reward (float, optional): The reward signal.
+            done (bool, optional): Wether the episode has terminated.
+            info (dict, optional): Current step information as a dictionary with keys
+                'constraint_violation', 'current_target_gate_pos', etc.
 
         Returns:
             List: target position (len == 3).
@@ -340,6 +354,7 @@ class Controller():
 
         """
 
+        # Store the last step's events.
         self.action_buffer.append(action)
         self.obs_buffer.append(obs)
         self.reward_buffer.append(reward)

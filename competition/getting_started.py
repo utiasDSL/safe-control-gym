@@ -59,7 +59,7 @@ def main():
                     env_func, FIRMWARE_FREQ, CTRL_FREQ
                     ) 
         obs, info = firmware_wrapper.reset()
-        action = np.zeros(4)
+        first_ep_iteration = True
         info['ctrl_timestep'] = CTRL_DT
         info['ctrl_freq'] = CTRL_FREQ
         env = firmware_wrapper.env
@@ -83,12 +83,12 @@ def main():
     episode_start_iter = 0
     text_label_id = p.addUserDebugText("", textPosition=[0, 0, 1],physicsClientId=env.PYB_CLIENT)
 
-
     # Wait for keyboard input to start.
     # input("Press any key to start")
 
     # Run an experiment.
-    ep_start = time.time() 
+    ep_start = time.time()
+    
     for i in range(config.num_episodes*CTRL_FREQ*env.EPISODE_LEN_SEC):
 
         # Step by keyboard input.
@@ -113,7 +113,13 @@ def main():
             vicon_obs = [obs[0], 0, obs[2], 0, obs[4], 0, obs[6], obs[7], obs[8], 0, 0, 0]
                 # obs = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
                 # vicon_obs = {x, 0, y, 0, z, 0, phi, theta, psi, 0, 0, 0}.
-            command_type, args = ctrl.cmdFirmware(curr_time, vicon_obs)
+            if first_ep_iteration:
+                action = np.zeros(4)
+                reward = 0
+                done = False
+                info = {}
+                first_ep_iteration = False
+            command_type, args = ctrl.cmdFirmware(curr_time, vicon_obs, reward, done, info)
 
             # Select interface.
             if command_type == Command.FULLSTATE:
@@ -134,7 +140,7 @@ def main():
             # Step the environment.
             obs, reward, done, info, action = firmware_wrapper.step(curr_time, action)
         else:
-            target_pos, target_vel = ctrl.cmdSimOnly(curr_time, obs)
+            target_pos, target_vel = ctrl.cmdSimOnly(curr_time, obs, reward, done, info)
             action = ctrl._thrusts(obs, target_pos, target_vel)
             obs, reward, done, info = env.step(action)
 
@@ -204,7 +210,7 @@ def main():
             if config.use_firmware:
                 # Re-initialize firmware.
                 new_initial_obs, new_initial_info = firmware_wrapper.reset()
-                action = np.zeros(4)
+                first_ep_iteration = True
             else:
                 new_initial_obs, new_initial_info = env.reset()
 
