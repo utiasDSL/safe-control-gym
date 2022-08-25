@@ -42,7 +42,7 @@ class Experiment:
 
         self.reset()
 
-    def run_evaluation(self, training=False, n_episodes=None, n_steps=None, log_freq=None, **kwargs):
+    def run_evaluation(self, training=False, n_episodes=None, n_steps=None, log_freq=None, verbose=True, **kwargs):
         '''Evaluate a trained controller.
 
         Args:
@@ -62,9 +62,10 @@ class Experiment:
         metrics = self.compute_metrics(trajs_data)
 
         # terminal printouts
-        for metric_key, metric_val in metrics.items():
-            print('{}: {:.3f}'.format(colored(metric_key, 'yellow'), metric_val))
-        print('Evaluation done.')
+        if verbose:
+            for metric_key, metric_val in metrics.items():
+                print('{}: {:.3f}'.format(colored(metric_key, 'yellow'), metric_val))
+            print('Evaluation done.')
         return dict(trajs_data), metrics
 
     def _execute_evaluations(self, n_episodes=None, n_steps=None, log_freq=None):

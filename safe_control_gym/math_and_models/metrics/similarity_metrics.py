@@ -25,12 +25,132 @@ from safe_control_gym.math_and_models.transformations import npRotXYZ
 
 
 
+def euclidean_distance(u, v, weights=None):
+    """ Euclidean distance, or use https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.euclidean.html
+    
+    Args:
+        u, v (ndarray): 1D array, shape (D,). 
+        weights (float|ndarray): weights for each vector dimension.
+    """
+    weights = np.array(weights) if weights else 1
+    return np.sqrt((weights * (u-v)**2).sum())
+
+
+def minkowski_distance(u, v, p=2, weights=None):
+    """Minkowski distance, or use https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.minkowski.html
+    
+    Args:
+        u, v (ndarray): 1D array, shape (D,). 
+        p (float): order of the norm.
+        weights (float|ndarray): weights for each vector dimension.
+    """
+    weights = np.array(weights) if weights else 1
+    return np.pow((weights * np.abs(u-v)**p).sum(), 1./p)
+
+
+def rotation_distance(rot1, rot2, mode="geodesic"):
+    """Metrics for 3D Rotations. 
+    Reference: https://www.cs.cmu.edu/~cga/dynopt/readings/Rmetric.pdf
+    
+    Args:
+        rot1, rot2 (ndarray): rotation matrices, shape (3,3).
+        mode (str): options from geodesic|dev_id|inner_unit_quad2|inner_unit_quad|norm_diff_quad.
+    """
+    # eqn 23 in reference, range [0,pi]
+    # use clipping to avoid NaNs for rounding errors
+    # reference: https://github.com/utiasSTARS/liegroups/blob/fe1d376b7d33809dec78724b456f01833507c305/liegroups/numpy/so3.py#L180
+    rot_d = np.arccos(np.clip(0.5*np.trace(rot1 @ np.transpose(rot2))-0.5, -1., 1.))
+    # can derive other metrics using their functional equivalence 
+    if mode == "geodesic":
+        pass
+    elif mode == "dev_id":
+        # # eqn 25 in reference 
+        # rot_d = np.sqrt(2* (3 - np.trace(rot1 @ np.transpose(rot2))))
+        # eqn 33, range [0, 2*sqrt(2)]
+        rot_d = 2 * np.sqrt(2) * np.sin(rot_d/2)
+    elif mode == "inner_unit_quad":
+        # eqn 34, range [0, pi/2]
+        rot_d = rot_d / 2
+    elif mode == "inner_unit_quad2":
+        # eqn 32, range [0, 1]
+        rot_d = 1 - np.cos(rot_d/2)
+    elif mode == "norm_diff_quad":
+        # eqn 31, range [0, sqrt(2)]
+        rot_d = np.sqrt(2 * (1 - np.cos(rot_d/2)))
+    else:
+        raise NotImplementedError("The given rotation metric is not available.")
+    return rot_d 
+
+
+def state_distance(state1, state2, weights=None, rot_mode="geodesic", task="cartpole", quad_type=3):
+    """Metric distance between two env states.
+    
+    Args:
+        state1, state2 (ndarray): trajectory states, shape (D,).
+        weights (list|ndarray): weights to different elements/groups in state.
+        rot_mode (str): rotation metric mode.
+
+    Returns:
+        state_d (float): distance metric between the 2 states.
+    """    
+    if task == "cartpole":
+        # state is [x, x_dot, theta, theta_dot]
+        state_d = euclidean_distance(state1, state2, weights)
+    elif task == "quadrotor":
+        if quad_type == 1:
+            # state is [z, z_dot]
+            if weights:
+                assert len(weights) == 2, "weights must have shape (2,)"
+            state_d = euclidean_distance(state1, state2, weights)
+        elif quad_type == 2:
+            # state is [x, x_dot, z, z_dot, theta, theta_dot]
+            if weights:
+                assert len(weights) == 4, "weights must have shape (4,)"
+            else:
+                weights = np.ones(4)
+            # extract state
+            pos1, pos2 = state1[[0,2]], state2[[0,2]] 
+            vel1, vel2 = state1[[1,3]], state2[[1,3]] 
+            ang1, ang2 = state1[4], state2[4] 
+            angvel1, angvel2 = state1[5], state2[5]
+            # convert euler angles to rotation matrices 
+            rot1, rot2 = npRotXYZ(0, ang1, 0), npRotXYZ(0, ang2, 0)
+            # compose total state distance
+            state_d = weights[0] * euclidean_distance(pos1, pos2) + \
+                    weights[1] * euclidean_distance(vel1, vel2) + \
+                    weights[2] * rotation_distance(rot1, rot2, rot_mode) + \
+                    weights[3] * euclidean_distance(angvel1, angvel2)
+        else:
+            # state is [x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p_body, q_body, r_body]
+            if weights:
+                assert len(weights) == 4, "weights must have shape (4,)"
+            else:
+                weights = np.ones(4)
+            # extract state
+            pos1, pos2 = state1[[0,2,4]], state2[[0,2,4]] 
+            vel1, vel2 = state1[[1,3,5]], state2[[1,3,5]] 
+            ang1, ang2 = state1[6:9], state2[6:9] 
+            angvel1_body, angvel2_body = state1[9:12], state2[9:12]
+            # convert euler angles to rotation matrices 
+            rot1, rot2 = npRotXYZ(*ang1), npRotXYZ(*ang2)
+            # convert body rates to angular velocities w.r.t inertial frame
+            angvel1, angvel2 = rot1 @ angvel1_body, rot2 @ angvel2_body
+            # compose total state distance
+            state_d = weights[0] * euclidean_distance(pos1, pos2) + \
+                    weights[1] * euclidean_distance(vel1, vel2) + \
+                    weights[2] * rotation_distance(rot1, rot2, rot_mode) + \
+                    weights[3] * euclidean_distance(angvel1, angvel2)
+    else:
+        raise NotImplementedError("The given task state distance is not available.")
+    return state_d
+
+
 def encode_data(data, tuple_length=1, include_action=True):
     """Processes trajectory data into step tuples, each is treated as a sample for MMD comparison.
 
     Args:
-        data (dict): Must contain keys `obs`, `act`, `n_trajs`.
-            the values for `obs` and `act` are list of list of np.arrays.
+        data (dict): Must contain keys `obs`, `action`.
+            the values for `obs` and `action` are list of list of np.arrays.
         tuple_length (int): length of each tuple as 1 sample.
         include_action (bool): if to include action in each tuple sample.
         
@@ -39,12 +159,13 @@ def encode_data(data, tuple_length=1, include_action=True):
             (#tuples, obs_dim*(l+1)) where l is tuple length.
     """
     # data = Munch(dict(n_steps=n_steps, obs=ep_obs_list, act=ep_act_list))
+    n_trajs = len(data["obs"])
     sas_tuples = []
-    for i in range(data["n_trajs"]):
+    for i in range(n_trajs):
         ep_obs = data["obs"][i]
         ep_obs_tuples = [ep_obs[j:j+tuple_length+1] for j in range(len(ep_obs) - tuple_length)]
         if include_action:
-            ep_act = data["act"][i]
+            ep_act = data["action"][i]
             ep_act_tuples = [ep_act[j:j+tuple_length] for j in range(len(ep_act) - tuple_length + 1)]
             ep_tuples = [np.concatenate(o_tp + a_tp) 
                         for o_tp, a_tp in zip(ep_obs_tuples, ep_act_tuples)]
@@ -56,20 +177,34 @@ def encode_data(data, tuple_length=1, include_action=True):
     return encoded_data
 
 
-def mmd_loss(samples1, samples2, mode='gaussian', sigma=0.2):
-    """Computes the MMD loss as similarity metric between 2 sets of trajectories..
+def mmd_loss(samples1, samples2, mode='gaussian', sigma=0.2, use_numpy=True):
+    """Computes the MMD loss as similarity metric between 2 sets of trajectories samples.
 
     adapted from https://github.com/aviralkumar2907/BEAR/blob/f2e31c1b5f81c4fb0e692a34949c7d8b48582d8f/algos.py#L326
 
     Args:
-        samples1 (torch.FloatTensor): Sample data, shape (B,N) where B is batch/sample size and N is sample dim.
-        samples2 (torch.FloatTensor): Sample data, shape (B,N) where B is batch/sample size and N is sample dim.
+        samples1, samples2 (ndarray|torch.FloatTensor): shape (B,N,D) or (N,D) where B is batch size, N is sample size, and D is sample dim.
         mode (str): Kernel name to use.
         sigma (float): Std param in kernel.
+        use_numpy (bool): if True, input and output are both numpy arrays, used only for evaluation;
+            if false, input and output are torch tensors, can be used in training.
 
     Returns:
-        overall_loss (float): MMD value.
+        overall_loss (ndarray|torch.FloatTensor|float): MMD metric value.
     """
+    if len(samples1.shape) != len(samples2.shape) or samples1.shape[-1] != samples2.shape[-1]:
+        raise ValueError("Unmatched input samples shape.") 
+    # preprocessing
+    if use_numpy:
+        samples1 = torch.from_numpy(samples1)
+        samples2 = torch.from_numpy(samples2)
+    # add batch dim if needed: (N,D) -> (1,N,D) 
+    input_shape = samples1.shape
+    if len(input_shape) == 2:
+        samples1 = samples1.unsqueeze(0)
+        samples2 = samples2.unsqueeze(0)
+        
+    # use torch's auto tensor shape expansion
     diff_x_x = samples1.unsqueeze(2) - samples1.unsqueeze(1)  # B x N x N x d
     diff_x_y = samples1.unsqueeze(2) - samples2.unsqueeze(1)
     diff_y_y = samples2.unsqueeze(2) - samples2.unsqueeze(1)  # B x N x N x d
@@ -84,12 +219,17 @@ def mmd_loss(samples1, samples2, mode='gaussian', sigma=0.2):
         diff_y_y = torch.mean((-(diff_y_y.abs()).sum(-1)/(2.0 * sigma)).exp(), dim=(1,2))
     else:
         raise NotImplementedError('The given MMD mode is not available.')
-
     overall_loss = (diff_x_x + diff_y_y - 2.0 * diff_x_y + 1e-6).sqrt()
+
+    # postprocessing
+    if len(input_shape) == 2:
+        overall_loss = overall_loss.squeeze(0)
+    if use_numpy:
+        overall_loss = overall_loss.numpy()
     return overall_loss
 
 
-def mse(traj1, traj2):
+def mse(traj1, traj2, **kwargs):
     """Mean squared error/Euclidean distance.
 
     Args:
@@ -230,122 +370,3 @@ def discrete_frechet(traj1, traj2, p=2, distance_func=euclidean_distance, distan
     return cost 
 
 
-
-def euclidean_distance(u, v, weights=None):
-    """ Euclidean distance, or use https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.euclidean.html
-    
-    Args:
-        u, v (ndarray): 1D array, shape (D,). 
-        weights (float|ndarray): weights for each vector dimension.
-    """
-    weights = np.array(weights) if weights else 1
-    return np.sqrt((weights * (u-v)**2).sum())
-
-
-def minkowski_distance(u, v, p=2, weights=None):
-    """Minkowski distance, or use https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.minkowski.html
-    
-    Args:
-        u, v (ndarray): 1D array, shape (D,). 
-        p (float): order of the norm.
-        weights (float|ndarray): weights for each vector dimension.
-    """
-    weights = np.array(weights) if weights else 1
-    return np.pow((weights * np.abs(u-v)**p).sum(), 1./p)
-
-
-def rotation_distance(rot1, rot2, mode="geodesic"):
-    """Metrics for 3D Rotations. 
-    Reference: https://www.cs.cmu.edu/~cga/dynopt/readings/Rmetric.pdf
-    
-    Args:
-        rot1, rot2 (ndarray): rotation matrices, shape (3,3).
-        mode (str): options from geodesic|dev_id|inner_unit_quad2|inner_unit_quad|norm_diff_quad.
-    """
-    # eqn 23 in reference, range [0,pi]
-    # use clipping to avoid NaNs for rounding errors
-    # reference: https://github.com/utiasSTARS/liegroups/blob/fe1d376b7d33809dec78724b456f01833507c305/liegroups/numpy/so3.py#L180
-    rot_d = np.arccos(np.clip(0.5*np.trace(rot1 @ np.transpose(rot2))-0.5, -1., 1.))
-    # can derive other metrics using their functional equivalence 
-    if mode == "geodesic":
-        pass
-    elif mode == "dev_id":
-        # # eqn 25 in reference 
-        # rot_d = np.sqrt(2* (3 - np.trace(rot1 @ np.transpose(rot2))))
-        # eqn 33, range [0, 2*sqrt(2)]
-        rot_d = 2 * np.sqrt(2) * np.sin(rot_d/2)
-    elif mode == "inner_unit_quad":
-        # eqn 34, range [0, pi/2]
-        rot_d = rot_d / 2
-    elif mode == "inner_unit_quad2":
-        # eqn 32, range [0, 1]
-        rot_d = 1 - np.cos(rot_d/2)
-    elif mode == "norm_diff_quad":
-        # eqn 31, range [0, sqrt(2)]
-        rot_d = np.sqrt(2 * (1 - np.cos(rot_d/2)))
-    else:
-        raise NotImplementedError("The given rotation metric is not available.")
-    return rot_d 
-
-
-def state_distance(state1, state2, weights=None, rot_mode="geodesic", task="cartpole", quad_type=3):
-    """Metric distance between two env states.
-    
-    Args:
-        state1, state2 (ndarray): trajectory states, shape (D,).
-        weights (list|ndarray): weights to different elements/groups in state.
-        rot_mode (str): rotation metric mode.
-
-    Returns:
-        state_d (float): distance metric between the 2 states.
-    """    
-    if task == "cartpole":
-        # state is [x, x_dot, theta, theta_dot]
-        state_d = euclidean_distance(state1, state2, weights)
-    elif task == "quadrotor":
-        if quad_type == 1:
-            # state is [z, z_dot]
-            if weights:
-                assert len(weights) == 2, "weights must have shape (2,)"
-            state_d = euclidean_distance(state1, state2, weights)
-        elif quad_type == 2:
-            # state is [x, x_dot, z, z_dot, theta, theta_dot]
-            if weights:
-                assert len(weights) == 4, "weights must have shape (4,)"
-            else:
-                weights = np.ones(4)
-            # extract state
-            pos1, pos2 = state1[[0,2]], state2[[0,2]] 
-            vel1, vel2 = state1[[1,3]], state2[[1,3]] 
-            ang1, ang2 = state1[4], state2[4] 
-            angvel1, angvel2 = state1[5], state2[5]
-            # convert euler angles to rotation matrices 
-            rot1, rot2 = npRotXYZ(0, ang1, 0), npRotXYZ(0, ang2, 0)
-            # compose total state distance
-            state_d = weights[0] * euclidean_distance(pos1, pos2) + \
-                    weights[1] * euclidean_distance(vel1, vel2) + \
-                    weights[2] * rotation_distance(rot1, rot2, rot_mode) + \
-                    weights[3] * euclidean_distance(angvel1, angvel2)
-        else:
-            # state is [x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p_body, q_body, r_body]
-            if weights:
-                assert len(weights) == 4, "weights must have shape (4,)"
-            else:
-                weights = np.ones(4)
-            # extract state
-            pos1, pos2 = state1[[0,2,4]], state2[[0,2,4]] 
-            vel1, vel2 = state1[[1,3,5]], state2[[1,3,5]] 
-            ang1, ang2 = state1[6:9], state2[6:9] 
-            angvel1_body, angvel2_body = state1[9:12], state2[9:12]
-            # convert euler angles to rotation matrices 
-            rot1, rot2 = npRotXYZ(*ang1), npRotXYZ(*ang2)
-            # convert body rates to angular velocities w.r.t inertial frame
-            angvel1, angvel2 = rot1 @ angvel1_body, rot2 @ angvel2_body
-            # compose total state distance
-            state_d = weights[0] * euclidean_distance(pos1, pos2) + \
-                    weights[1] * euclidean_distance(vel1, vel2) + \
-                    weights[2] * rotation_distance(rot1, rot2, rot_mode) + \
-                    weights[3] * euclidean_distance(angvel1, angvel2)
-    else:
-        raise NotImplementedError("The given task state distance is not available.")
-    return state_d
