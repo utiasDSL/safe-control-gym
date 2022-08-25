@@ -253,8 +253,8 @@ class Controller():
 
 
         elif iteration == 23*self.CTRL_FREQ:
-            x = 0.
-            y = 0.
+            x = self.initial_obs[0]
+            y = self.initial_obs[2]
             z = 1.5
             yaw = 0.
             duration = 6
