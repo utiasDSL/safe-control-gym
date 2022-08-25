@@ -72,15 +72,15 @@ conda activate safe
 
 Also see [`pycffirmware`](https://github.com/utiasDSL/pycffirmware)'s `README.md`
 
-
-
 ## Getting Started
 Run the scripts in [`competition/`](https://github.com/utiasDSL/safe-control-gym/tree/main/competition)
 ```
 $ cd ./competition/
 $ python3 getting_started.py --overrides ./getting_started.yaml
 ```
-**Modify file [`edit_this.py`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py) to customize your planning and control based on [Crazyswarm's cmdFullState() interface](https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.cmdFullState)**
+**Modify file [`edit_this.py`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py) to customize your controller based on [Crazyswarm's Crazyflie interface](https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie)**
+
+Also see [section 'Methods to Re-implement'](https://github.com/utiasDSL/safe-control-gym/tree/beta-iros-competition#getting-started)
 
 ## Submission
 
@@ -92,6 +92,82 @@ $ python3 getting_started.py --overrides ./getting_started.yaml
 ## Video
 
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/bWhDTNtj8EA/maxresdefault.jpg)](https://www.youtube.com/watch?v=bWhDTNtj8EA)
+
+## Methods to Re-implement
+
+Required
+```
+edit_this.py : Controller.__init__(initial_obs, initial_info)           # Initialize the controller
+    Args:
+        initial_obs (ndarray): The initial observation of the quadrotor's state
+            [x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r].
+        initial_info (dict): The a priori information as a dictionary with keys
+            - 'symbolic_model'
+            - 'symbolic_constraints'
+            - 'nominal_physical_parameters'
+            - 'ctrl_timestep'
+            - 'ctrl_freq'
+            - 'episode_len_sec'
+            - 'quadrotor_kf'
+            - 'quadrotor_km'
+            - 'gate_dimensions'
+            - 'obstacle_dimensions'
+            - 'nominal_gates_pos'
+            - 'nominal_obstacles_pos'
+            - 'inertial_prop_randomization'
+            - 'gates_and_obs_randomization'
+            - 'disturbances'
+
+    Returns:
+        N/A
+```
+
+```
+edit_this.py : Controller.cmdFirmware(time, obs, reward, done, info)    # Select the next command for the quadrotor
+    Args:
+        time (float): Episode's elapsed time, in seconds.
+        obs (ndarray): The quadrotor's Vicon data
+            [x, 0, y, 0, z, 0, phi, theta, psi, 0, 0, 0].
+        reward (float, optional): The reward signal.
+        done (bool, optional): Wether the episode has terminated.
+        info (dict, optional): Current step information as a dictionary with keys
+            - 'collision'
+            - 'current_target_gate_id'
+            - 'current_target_gate_in_range'
+            - 'current_target_gate_pos'
+            - 'at_goal_position'
+            - 'constraint_values'
+            - 'constraint_violation'
+
+    Returns:
+        Command: selected type of command (NONE, FULLSTATE, TAKEOFF, LAND, STOP, GOTO, see Enum-like class `Command`).
+        List: arguments for the type of command
+            - NONE's args: []
+            - FULLSTATE's args: [pos (3 val), vel (3 val), acc (3 val), yaw, rpy_rates (3 val), curr_time] 
+            - TAKEOFF's args: [height, duration]
+            - LAND's args: [height, duration]
+            - STOP's args: []
+            - GOTO's args: [x, y, z, yaw, duration, relative (bool)]
+```
+
+Optional
+```
+edit_this.py : Controller.interStepLearn(...)       # Update the controller's internal state at each step
+    Args:
+        N/A
+
+    Returns:
+        N/A     
+```
+
+```
+edit_this.py : Controller.interEpisodeLearn(...)    # Update the controller's internal state between episodes
+    Args:
+        N/A
+
+    Returns:
+        N/A
+```
 
 -----
 > University of Toronto's [Dynamic Systems Lab](https://github.com/utiasDSL) / [Vector Institute for Artificial Intelligence](https://github.com/VectorInstitute)

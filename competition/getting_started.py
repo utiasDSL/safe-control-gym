@@ -88,7 +88,6 @@ def main():
 
     # Run an experiment.
     ep_start = time.time()
-    
     for i in range(config.num_episodes*CTRL_FREQ*env.EPISODE_LEN_SEC):
 
         # Step by keyboard input.

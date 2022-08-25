@@ -50,7 +50,7 @@ class Command(Enum):
 
     """
     NONE = 0 # Args: Empty
-    FULLSTATE = 1 # Args: [pos, vel, acc, yaw, rpy_rate, iteration] 
+    FULLSTATE = 1 # Args: [pos, vel, acc, yaw, rpy_rate, curr_time] 
         # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.cmdFullState
     TAKEOFF = 2 # Args: [height, duration]
         # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.takeoff
