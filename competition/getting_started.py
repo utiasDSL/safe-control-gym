@@ -99,10 +99,10 @@ def main():
 
         # Print episode time in seconds on the GUI.
         text_label_id = p.addUserDebugText("Ep. time: {:.2f}s".format(curr_time),
-                                           textPosition=[0, 0, 1],
+                                           textPosition=[0, 0, 1.5],
                                            textColorRGB=[1, 0, 0],
                                            lifeTime=1,
-                                           textSize=1,
+                                           textSize=1.5,
                                            parentObjectUniqueId=0,
                                            parentLinkIndex=-1,
                                            replaceItemUniqueId=text_label_id,
