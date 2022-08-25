@@ -58,7 +58,7 @@ class Controller():
     """
 
     def __init__(self,
-                 initial_pos,
+                 initial_obs,
                  initial_info,
                  use_firmware: bool = False,
                  use_hardware: bool = False,
@@ -86,7 +86,7 @@ class Controller():
         """
 
         self.use_hardware = use_hardware
-        self.initial_pos = initial_pos
+        self.initial_obs = initial_obs
 
         # Save environment parameters.
         self.CTRL_TIMESTEP = initial_info["ctrl_timestep"]
@@ -123,9 +123,9 @@ class Controller():
 
         # Curve fitting with waypoints.
         if use_firmware:
-            waypoints = [(0.1, 0.1, .75)]  # Hardcoded scenario knowledge.
+            waypoints = [(self.initial_obs[0], self.initial_obs[2], .75)]  # Height is hardcoded scenario knowledge.
         else:
-            waypoints = [(0.1, 0.1, .0)]  # Hardcoded scenario knowledge.
+            waypoints = [(self.initial_obs[0], self.initial_obs[2], .0)]  # Height is hardcoded scenario knowledge
         for idx, g in enumerate(self.NOMINAL_GATES):
             x = g[0]
             y = g[1]
