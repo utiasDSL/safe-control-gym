@@ -69,7 +69,10 @@ def main():
         obs, info = env.reset()
     
     # Create controller.
-    ctrl = Controller(obs, info, config.use_firmware, verbose=config.verbose)
+    # obs = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
+    # vicon_obs = {x, 0, y, 0, z, 0, phi, theta, psi, 0, 0, 0}.
+    vicon_obs = [obs[0], 0, obs[2], 0, obs[4], 0, obs[6], obs[7], obs[8], 0, 0, 0]
+    ctrl = Controller(vicon_obs, info, config.use_firmware, verbose=config.verbose)
 
     # Create a logger and counters
     logger = Logger(logging_freq_hz=CTRL_FREQ)
@@ -99,7 +102,7 @@ def main():
                                            textPosition=[0, 0, 1],
                                            textColorRGB=[1, 0, 0],
                                            lifeTime=1,
-                                           textSize=2,
+                                           textSize=1,
                                            parentObjectUniqueId=0,
                                            parentLinkIndex=-1,
                                            replaceItemUniqueId=text_label_id,

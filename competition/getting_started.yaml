@@ -11,8 +11,8 @@ quadrotor_config:
   pyb_freq: 500 # Multiple of ctrl_freq and firmware_freq
   quad_type: 3  # 3D quadrotor
   physics: pyb
-  gui: True
-  camera_view: [5, -40, -40, 1.5, 2, 0.5]
+  gui: False
+  camera_view: [5, -40, -40, 0.5, -1, 0.5]
   info_in_reset: True
   normalized_rl_action_space: False
   cost: competition  # Sparse reward function
@@ -21,14 +21,14 @@ quadrotor_config:
   episode_len_sec: 33  # Episode duration in seconds
   task: stabilization
   task_info:
-    stabilization_goal: [0.5, 6., 0.75]  # Final goal/target position in x-y-z to hover at
+    stabilization_goal: [-0.5, 2.9, 0.75]  # Final goal/target position in x-y-z to hover at
     stabilization_goal_tolerance: 0.1
 
   # Nominal (pre-randomization) initial state
   init_state:
-    init_x: 0.1
+    init_x: -0.9
     init_x_dot: 0
-    init_y: 0.1
+    init_y: -2.9
     init_y_dot: 0
     init_z: 0.0
     init_z_dot: 0
@@ -42,19 +42,17 @@ quadrotor_config:
   # Nominal (pre-randomization) positions of gates and obstacles
   gates:
     [
-      # x, y, z, _, _, yaw
-      [1.5, 0.5, 0.8, 0, 0, -1.57],
-      [3, 1.5, 0.8, 0, 0, 0],
-      [1, 3.2, 0.8, 0, 0, 1.57],
-      [0.5, 4.5, 0.8, 0, 0, 0]
+      [0.5, -2.5, 0.8, 0, 0, -1.57],
+      [2, -1.5, 0.8, 0, 0, 0],
+      [0, 0.2, 0.8, 0, 0, 1.57],
+      [-0.5, 1.5, 0.8, 0, 0, 0]
     ]
   obstacles:
     [
-      # x, y, z, _, _, yaw
-      [2.5, 0.5, 0.6, 0, 0, 0],
-      [1.5, 2, 0.6, 0, 0, 0],
-      [2.5, 3, 0.6, 0, 0, 0],
-      [0, 3, 0.6, 0, 0, 0]
+      [1.5, -2.5, 0.6, 0, 0, 0],
+      [0.5, -1, 0.6, 0, 0, 0],
+      [1.5, 0, 0.6, 0, 0, 0],
+      [-1, 0, 0.6, 0, 0, 0]
     ]
 
   # Randomization of the initial state
@@ -85,7 +83,7 @@ quadrotor_config:
       low: -0.1
       high: 0.1
 
-  # Randomizaation of the quadrotor inertial properties
+  # Randomization of the quadrotor inertial properties
   randomized_inertial_prop: True
   inertial_prop_randomization_info:
     M:
@@ -127,9 +125,9 @@ quadrotor_config:
       constrained_variable: state
       active_dims: [0, 2, 4]
       upper_bounds:
-      - 4   # x
+      - 3     # x
       # - 100 # x_dot
-      - 4   # y
+      - 3     # y
       # - 100 # y_dot
       - 1.5 # z
       # - 100 # z_dot
@@ -140,11 +138,11 @@ quadrotor_config:
       # - 10  # q
       # - 10  # r
       lower_bounds:
-      - 0    # x
+      - -3     # x
       # - -100 # x_dot
-      - 0    # y
+      - -3     # y
       # - -100 # y_dot
-      - -0.1 # z
+      - -0.1   # z
       # - -100 # z_dot
       # - -3   # phi
       # - -3   # theta
