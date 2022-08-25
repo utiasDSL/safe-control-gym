@@ -91,7 +91,7 @@ $ python3 getting_started.py --overrides ./getting_started.yaml
 
 ## Video
 
-[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/TzxycGeu_OM/maxresdefault.jpg)](https://www.youtube.com/watch?v=TzxycGeu_OM)
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/bWhDTNtj8EA/maxresdefault.jpg)](https://www.youtube.com/watch?v=bWhDTNtj8EA)
 
 -----
 > University of Toronto's [Dynamic Systems Lab](https://github.com/utiasDSL) / [Vector Institute for Artificial Intelligence](https://github.com/VectorInstitute)
