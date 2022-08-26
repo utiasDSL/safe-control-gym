@@ -2,12 +2,12 @@
 
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/bWhDTNtj8EA/maxresdefault.jpg)](https://www.youtube.com/watch?v=bWhDTNtj8EA)
 
-*Note: beta release subject to change throughout the month of August, 2022; register for updates*
+*Note: beta release subject to change throughout the month of August 2022; register for updates*
 
 - [Official Webpage](https://www.dynsyslab.org/iros-2022-safe-robot-learning-competition/)
 - [IROS Competition Page](https://iros2022.org/program/competition/#toggle-id-8)
 - [GitHub Discussions](https://github.com/utiasDSL/safe-control-gym/discussions/categories/iros-2022-competition)
-- [Google Form](https://forms.gle/vEmVK99n1SyaE4Zw9) to register you interest and receive e-mail updates
+- [Google Form](https://forms.gle/vEmVK99n1SyaE4Zw9) (to register your interest and receive e-mail updates)
 
 ## Description 
 
