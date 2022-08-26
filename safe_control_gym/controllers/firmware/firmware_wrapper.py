@@ -11,19 +11,16 @@ from safe_control_gym.controllers.base_controller import BaseController
 import pycffirmware as firm
 
 class FirmwareWrapper(BaseController):
-    ACTION_DELAY = 0 # max 2
-    SENSOR_DELAY = 0 # doesn't affect ideal environment 
-    STATE_DELAY = 0 # anything breaks 
-    CONTROLLER = 'mellinger'
+    ACTION_DELAY = 0 # how many firmware loops run between the controller commanding an action and the drone motors responding to it
+    SENSOR_DELAY = 0 # how many firmware loops run between experiencing a motion and the sensors registering it
+    STATE_DELAY = 0 # not yet supported, keep 0
+    CONTROLLER = 'mellinger' # specifies controller type 
 
+    # Configurations to match firmware. Not recommended to change
     GYRO_LPF_CUTOFF_FREQ = 80
     ACCEL_LPF_CUTOFF_FREQ = 30
     QUAD_FORMATION_X = True
     MOTOR_SET_ENABLE = True
-    MIN_THRUST_VAL = 0
-
-    SENSORS_BMI088_G_PER_LSB_CFG = 2 * 24 / 65536
-    SENSORS_BMI088_DEG_PER_LSB_CFG = 2 * 2000 / 65536
 
     RAD_TO_DEG = 180 / math.pi
 
@@ -38,8 +35,31 @@ class FirmwareWrapper(BaseController):
                 MAX_PWM = 65535,
                 verbose=False,
                 **kwargs):
+        """Initializes a FirmwareWrapper object.
+        
+        This allows users to simulate the on board controllers of CrazyFlie (CF),
+        including access to a portion of the CF command API. FirmwareWrapper.reset() must be called at the beginning 
+        of every episode. 
+        
+        Args: 
+            env_func (function): initilizer for safe-control-gym environment 
+            firmware_freq (int): frequency to run the firmware loop at (typically 500)
+            ctrl_freq (int): frequency that .step will be called (typically < 60)
+            PWM2RPM_SCALE (float): mapping factor from PWM to RPM 
+            PWM2RPM_CONST (float): mapping constant from PWM to RPM 
+            KF = (float): motor force factor 
+            MIN_PWM (int): minimum PWM command
+            MAX_PWM (int): maximum pwm command 
+            verbose (bool): displays additional information 
+            **kwargs: to be passed to BaseController
+
+        Attributes: 
+            env: safe-control environment 
+
+        Todo:
+            * Add support for state estimation 
+        """
         super().__init__(env_func, **kwargs)
-        self.env_func = env_func
         self.firmware_freq = firmware_freq
         self.ctrl_freq = ctrl_freq
 
@@ -50,28 +70,14 @@ class FirmwareWrapper(BaseController):
         self.MAX_PWM = float(MAX_PWM)
         self.verbose = verbose
 
-        self.env = self.env_func()
+        self.env = env_func()
+
 
     def __repr__(self):
         ret = ""
         ret += f"======= EMULATOR STATUS =======\n"
         ret += f"  \n"
         ret += f"  Tick: {self.tick}\n"
-        ret += f"  \n"
-        ret += f"  Setpoint\n"
-        ret += f"  -------------------------------\n"
-        ret += f"  {'Pos':>6}: {round(self.setpoint.position.x, 5):>8}x, {round(self.setpoint.position.y, 5):>8}y, {round(self.setpoint.position.z, 5):>8}z\n"
-        # ret += f"  {'Pos':>6}: {int((self.setpoint.position.x+1)*10) * ' ' + ' ':<25}x, {int((self.setpoint.position.y+1)*10) * ' ' + ' ':<25}y, {int((self.setpoint.position.z+1)*10) * ' ' + ' ':<25}z\n"
-        ret += f"  {'Vel':>6}: {round(self.setpoint.velocity.x, 5):>8}x, {round(self.setpoint.velocity.y, 5):>8}y, {round(self.setpoint.velocity.z, 5):>8}z\n"
-        ret += f"  {'Acc':>6}: {round(self.setpoint.acceleration.x, 5):>8}x, {round(self.setpoint.acceleration.y, 5):>8}y, {round(self.setpoint.acceleration.z, 5):>8}z\n"
-        ret += f"  {'Thrust':>6}: {round(self.setpoint.thrust, 5):>8}\n"
-        ret += f"  \n"
-        ret += f"  Control\n"
-        ret += f"  -------------------------------\n"
-        ret += f"  {'Roll':>6}: {self.control.roll:>8}\n"
-        ret += f"  {'Pitch':>6}: {self.control.pitch:>8}\n"
-        ret += f"  {'Yaw':>6}: {self.control.yaw:>8}\n"
-        ret += f"  {'Thrust':>6}: {round(self.control.thrust, 5):>8}\n"
         ret += f"  \n"
         ret += f"  State\n"
         ret += f"  -------------------------------\n"
@@ -80,6 +86,24 @@ class FirmwareWrapper(BaseController):
         ret += f"  {'Acc':>6}: {round(self.state.acc.x, 5):>8}x, {round(self.state.acc.y, 5):>8}y, {round(self.state.acc.z, 5):>8}z\n"
         ret += f"  {'RPY':>6}: {round(self.state.attitude.roll, 5):>8}, {round(self.state.attitude.pitch, 5):>8}, {round(self.state.attitude.yaw, 5):>8}\n"
         ret += f"  \n"
+
+        if self.verbose: 
+            ret += f"  Setpoint\n"
+            ret += f"  -------------------------------\n"
+            ret += f"  {'Pos':>6}: {round(self.setpoint.position.x, 5):>8}x, {round(self.setpoint.position.y, 5):>8}y, {round(self.setpoint.position.z, 5):>8}z\n"
+            # ret += f"  {'Pos':>6}: {int((self.setpoint.position.x+1)*10) * ' ' + ' ':<25}x, {int((self.setpoint.position.y+1)*10) * ' ' + ' ':<25}y, {int((self.setpoint.position.z+1)*10) * ' ' + ' ':<25}z\n"
+            ret += f"  {'Vel':>6}: {round(self.setpoint.velocity.x, 5):>8}x, {round(self.setpoint.velocity.y, 5):>8}y, {round(self.setpoint.velocity.z, 5):>8}z\n"
+            ret += f"  {'Acc':>6}: {round(self.setpoint.acceleration.x, 5):>8}x, {round(self.setpoint.acceleration.y, 5):>8}y, {round(self.setpoint.acceleration.z, 5):>8}z\n"
+            ret += f"  {'Thrust':>6}: {round(self.setpoint.thrust, 5):>8}\n"
+            ret += f"  \n"
+            ret += f"  Control\n"
+            ret += f"  -------------------------------\n"
+            ret += f"  {'Roll':>6}: {self.control.roll:>8}\n"
+            ret += f"  {'Pitch':>6}: {self.control.pitch:>8}\n"
+            ret += f"  {'Yaw':>6}: {self.control.yaw:>8}\n"
+            ret += f"  {'Thrust':>6}: {round(self.control.thrust, 5):>8}\n"
+            ret += f"  \n"
+        
         ret += f"  Action\n"
         ret += f"  -------------------------------\n"
         ret += f"  {'M1':>6}: {round(self.action[0], 3):>8}\n"
@@ -90,8 +114,14 @@ class FirmwareWrapper(BaseController):
         ret += f"===============================\n"
         return ret
 
+
     #region Controller functions
     def reset(self):
+        """Resets the firmware_wrapper object.
+
+        Todo:
+            * Add support for state estimation 
+        """
         # Initialize history  
         self.action_history = [[0, 0, 0, 0] for _ in range(self.ACTION_DELAY)]
         self.sensor_history = [[[0, 0, 0], [0, 0, 0]] for _ in range(self.SENSOR_DELAY)]
@@ -101,11 +131,9 @@ class FirmwareWrapper(BaseController):
         self.acclpf = [firm.lpf2pData() for _ in range(3)]
         self.gyrolpf = [firm.lpf2pData() for _ in range(3)]
         for i in range(3):
-            # TODO: Account for sub 1000 frimware freq in low pass sensor filters
             firm.lpf2pInit(self.acclpf[i], self.firmware_freq, self.GYRO_LPF_CUTOFF_FREQ)
             firm.lpf2pInit(self.gyrolpf[i], self.firmware_freq, self.ACCEL_LPF_CUTOFF_FREQ)
-        self._error = False
-
+        
         # Initialize state objects 
         self.control = firm.control_t()
         self.setpoint = firm.setpoint_t()
@@ -116,15 +144,18 @@ class FirmwareWrapper(BaseController):
         self.action = [0, 0, 0, 0]
         self.command_queue = []
 
-        self.sensorData_set = False
-        self.state_set = False
-        self.full_state_cmd_override = True # When true, high level commander is not called  
-
+        self.tumble_counter = 0
         self.prev_vel = np.array([0, 0, 0])
         self.prev_rpy = np.array([0, 0, 0])
         self.prev_time_s = None
         self.last_pos_pid_call = 0
         self.last_att_pid_call = 0
+        
+        # Initialize state flags 
+        self._error = False
+        self.sensorData_set = False
+        self.state_set = False
+        self.full_state_cmd_override = True # When true, high level commander is not called  
 
         # Initialize controller
         if self.CONTROLLER == 'pid':
@@ -132,14 +163,16 @@ class FirmwareWrapper(BaseController):
             print('PID controller init test:', firm.controllerPidTest())
         elif self.CONTROLLER == 'mellinger':
             firm.controllerMellingerInit()
+            assert(self.firmware_freq == 500), "Mellinger controller requires a firmware frequency of 500Hz."
             print('Mellinger controller init test:', firm.controllerMellingerTest())
         
+        # Reset environment 
         init_obs, init_info = self.env.reset()
         init_pos=np.array([init_obs[0], init_obs[2], init_obs[4]]) # global coord, m
         init_vel=np.array([init_obs[1], init_obs[3], init_obs[5]]) # global coord, m/s
-        init_rpy = np.array([init_obs[6], init_obs[7], init_obs[8]]) # body coord?, rad 
-        self.pyb_clinet = init_info['pyb_client']
-        self.last_visualized_setpoint = None
+        init_rpy = np.array([init_obs[6], init_obs[7], init_obs[8]]) # body coord, rad 
+        if self.env.NUM_DRONES > 1: 
+            raise NotImplementedError("Firmware controller wrapper does not support multiple drones.")
 
         # Initilaize high level commander 
         firm.crtpCommanderHighLevelInit()
@@ -149,11 +182,11 @@ class FirmwareWrapper(BaseController):
         
         self.ctrl_dt = 1 / self.ctrl_freq
         self.firmware_dt = 1 / self.firmware_freq
-        # initialize emulator state objects 
-        # if self.env.NUM_DRONES > 1: 
-        #     raise NotImplementedError("Firmware controller wrapper does not support multiple drones.")
-
+        
+        # Initialize visualization tools 
         self.first_motor_killed_print = True
+        self.pyb_clinet = init_info['pyb_client']
+        self.last_visualized_setpoint = None
 
         self.results_dict = { 'obs': [],
                         'reward': [],
@@ -170,11 +203,18 @@ class FirmwareWrapper(BaseController):
 
 
     def step(self, sim_time, action):
+        '''Step the firmware_wrapper class and its environment. 
+        This function should be called once at the rate of ctrl_freq. Step processes and high level commands, 
+        and runs the firmware loop and simulator according to the frequencies set. 
+
+        Args: 
+            sim_time (float): the time in seconds since beginning the episode
+            action (np.ndarray(4)): motor control forces to be applied. Order is: front left, back left, back right, front right 
+
+        Todo:
+            * Add support for state estimation 
         '''
-        Step is to be called at a rate of env.CTRL_FREQ. This corresponds to the rate we can send commands through 
-        the CF radio, typically below 60Hz. 
-        '''
-        self.process_command_queue(sim_time)
+        self._process_command_queue(sim_time)
         
         
         # Draws setpoint for debugging purposes 
@@ -186,39 +226,30 @@ class FirmwareWrapper(BaseController):
                     p.getQuaternionFromEuler([0,0,0]),
                     physicsClientId=self.pyb_clinet)
 
-        count = 0
         while self.tick / self.firmware_freq < sim_time + self.ctrl_dt:
-            count += 1
             # Step the environment and print all returned information.
             obs, reward, done, info = self.env.step(action)
             
             # Get state values from pybullet
-            # # obs [pos[0], vel[0], pos[1], vel[1], pos[2], vel[2], rpy (euler), ang_v] shape is 12 # NOTE ang_v != body rates 
             cur_pos=np.array([obs[0], obs[2], obs[4]]) # global coord, m
-            # cur_quat=np.array(p.getQuaternionFromEuler([obs[6], obs[7], obs[8]])) # global coord --- not used 
             cur_vel=np.array([obs[1], obs[3], obs[5]]) # global coord, m/s
-            cur_rpy = np.array([obs[6], obs[7], obs[8]]) # body coord?, rad 
+            cur_rpy = np.array([obs[6], obs[7], obs[8]]) # body coord, rad 
             body_rot = R.from_euler('XYZ', cur_rpy).inv()
-
 
             # Estimate rates 
             cur_rotation_rates = (cur_rpy - self.prev_rpy) / self.firmware_dt # body coord, rad/s
-            # cur_rotation_rates = np.array([0, 0, 0])
-            # cur_rotation_rates = cur_rotation_rates[[0, 2, 1]]
             self.prev_rpy = cur_rpy
             cur_acc = (cur_vel - self.prev_vel) / self.firmware_dt / 9.81 + np.array([0, 0, 1]) # global coord
-            # print(cur_acc, cur_vel, self.prev_vel)
             self.prev_vel = cur_vel
             
-
             # Update state 
             state_timestamp = int(self.tick / self.firmware_freq * 1e3)
             if self.STATE_DELAY:
-                self._update_state(state_timestamp, *self.state_history[0])#, quat=cur_quat)
+                raise NotImplementedError("State delay is not implemented. Leave at 0.")
+                self._update_state(state_timestamp, *self.state_history[0])
                 self.state_history = self.state_history[1:] + [[cur_pos, cur_vel, cur_acc, cur_rpy * self.RAD_TO_DEG]]
             else:
                 self._update_state(state_timestamp, cur_pos, cur_vel, cur_acc, cur_rpy * self.RAD_TO_DEG)#, quat=cur_quat)
-
 
             # Update sensor data 
             sensor_timestamp = int(self.tick / self.firmware_freq * 1e6)
@@ -228,18 +259,13 @@ class FirmwareWrapper(BaseController):
             else:
                 self._update_sensorData(sensor_timestamp, body_rot.apply(cur_acc), cur_rotation_rates * self.RAD_TO_DEG)
 
-
             # Update setpoint 
             self._updateSetpoint(self.tick / self.firmware_freq) # setpoint looks right 
 
-
-
             # Step controller 
-            self.step_controller()
-
+            self._step_controller()
 
             # Get action 
-            # front left, back left, back right, front right 
             new_action = self.KF * (self.PWM2RPM_SCALE * np.clip(np.array(self.pwms), self.MIN_PWM, self.MAX_PWM) + self.PWM2RPM_CONST)**2
             new_action = new_action[[3, 2, 1, 0]]
 
@@ -260,73 +286,11 @@ class FirmwareWrapper(BaseController):
             self.action = action 
         return obs, reward, done, info, action
 
+
     def _update_initial_state(self, obs):
         self.prev_vel = np.array([obs[1], obs[3], obs[5]])
         self.prev_rpy = np.array([obs[6], obs[7], obs[8]])
 
-    def run(self,
-            iterations,
-            traj={},
-            **kwargs):
-        action = np.zeros(4)
-        # action = np.array([38727, 38727, 38727, 38727]) # hover to start 
-        # action = self.KF * (self.PWM2RPM_SCALE * np.clip(np.array(action), self.MIN_PWM, self.MAX_PWM) + self.PWM2RPM_CONST)**2
-        
-        s = time.time()
-        obs = self.env._get_observation()
-        self.update_initial_state(obs)
-
-        posx, posy, posz, yaw = traj[0]
-        self.sendFullStateCmd([posx, posy, posz], [0, 0, 0], [0, 0, 0], [0, 0, yaw], [0, 0, 0], 0)
-
-        # Levels the drone to a hover to begin the trajectory 
-        counter = 0
-        while True: 
-            obs, _, _, _, action = self.step(0, action)
-
-            cur_pos = np.array([obs[0], obs[2], obs[4]])
-
-            if np.sum((cur_pos - np.array(traj[0][:-1]))**2)**0.5 < 0.0001:
-                counter += 1
-            else:
-                counter = 0
-            if counter > 10:
-                break
-        
-        print("Hover found")
-        # time.sleep(100)
-
-        for i in range(iterations):
-            # print(self)
-            if self._error:
-                # Error code set when CF is tumbling 
-                break
-
-            if i in traj:
-                # print("Traj finished:", firm.crtpCommanderHighLevelIsTrajectoryFinished())
-                # self.sendLandCmd(0, 5)
-                # self.sendGotoCmd(1, 1, -0.25, math.pi/6, 5, True)
-                posx, posy, posz, yaw = traj[i]
-                # print("Traj sent", traj[i], i)
-                self.sendFullStateCmd([posx, posy, posz], [0, 0, 0], [0, 0, 0], [0, 0, yaw], [0, 0, 0], i)
-            
-            # time.sleep(0.05)
-            raise NotImplementedError("Check code here.")
-            obs, reward, done, info, action = self.step(i, action) #TODO: i should be sim_time
-            
-            # Record iteration results 
-            self.results_dict['obs'].append(obs)
-            self.results_dict['reward'].append(reward)
-            self.results_dict['done'].append(done)
-            self.results_dict['info'].append(info)
-            self.results_dict['action'].append(action)
-
-            # (Optional) Enforces realtime execution 
-            # time.sleep(max(0, (s + sim_time) - time.time())) 
-
-        self.close_results_dict()
-
-        return self.results_dict
 
     def close_results_dict(self):
         """Cleanup the rtesults dict and munchify it.
@@ -339,7 +303,6 @@ class FirmwareWrapper(BaseController):
         self.results_dict['action'] = np.vstack(self.results_dict['action'])
 
         self.results_dict = munchify(self.results_dict)
-
     #endregion
 
     #region Sensor update
@@ -355,19 +318,16 @@ class FirmwareWrapper(BaseController):
             #endif
             uint64_t interruptTimestamp;   // microseconds 
         '''
-        ## ONLY USES ACC AND GYRO IN CONTROLLER --- REST IS USED IN STATE ESTIMATION
+        ## Only gyro and acc are used in controller. Mag and baro used in state etimation (not yet supported)
         self._update_acc(*acc_vals)
         self._update_gyro(*gyro_vals)
         # self._update_gyro(self.sensorData.mag, *mag_vals)
         # self._update_baro(self.sensorData.baro, *baro_vals)
 
-        # firm.sensfusion6UpdateQ(self.sensorData.gyro.x, self.sensorData.gyro.y, self.sensorData.gyro.z,
-        #                self.sensorData.acc.x, self.sensorData.acc.y, self.sensorData.acc.z,
-        #                0.001)
-
         self.sensorData.interruptTimestamp = timestamp
         self.sensorData_set = True
     
+
     def _update_gyro(self, x, y, z):
         self.sensorData.gyro.x = firm.lpf2pApply(self.gyrolpf[0], x)
         self.sensorData.gyro.y = firm.lpf2pApply(self.gyrolpf[1], y)
@@ -392,12 +352,6 @@ class FirmwareWrapper(BaseController):
     #endregion 
 
     #region State update 
-    # def update_state(self):
-    #     state = self.env._get_drone_state_vector(0)
-    #     pos, quat, rpy, vel, _, _ = np.split(state, [3, 7, 10, 13, 16])
-
-    #     self._update_state(rpy, pos, vel, quat)
-
     def _update_state(self, timestamp, pos, vel, acc, rpy, quat=None):
         '''
             attitude_t attitude;      // deg (legacy CF2 body coordinate system, where pitch is inverted)
@@ -412,9 +366,9 @@ class FirmwareWrapper(BaseController):
 
         self._update_3D_vec(self.state.position, timestamp, *pos)
         self._update_3D_vec(self.state.velocity, timestamp, *vel)
-        # TODO: state->acc is used in sitaw freefall detection, and state estimation. Both of which are not included 
         self._update_3D_vec(self.state.acc, timestamp, *acc)
         self.state_set = True
+
 
     def _update_3D_vec(self, point, timestamp, x, y, z):
         point.x = x
@@ -422,25 +376,12 @@ class FirmwareWrapper(BaseController):
         point.z = z
         point.timestamp = timestamp
 
-    def _update_attitudeQuaternion(self, quaternion_t, timestamp, qx, qy, qz, qw=None):
-        '''
-        if q4 is present, input is taken as a quat. Else, as roll, pitch, and yaw in deg
-            uint32_t timestamp;
 
-            union {
-                struct {
-                    float q0;
-                    float q1;
-                    float q2;
-                    float q3;
-                };
-                struct {
-                    float x;
-                    float y;
-                    float z;
-                    float w;
-                };
-            };
+    def _update_attitudeQuaternion(self, quaternion_t, timestamp, qx, qy, qz, qw=None):
+        '''Updates attitude quaternion.
+
+        Note:
+            if qw is present, input is taken as a quat. Else, as roll, pitch, and yaw in deg
         '''
         quaternion_t.timestamp = timestamp
 
@@ -452,6 +393,7 @@ class FirmwareWrapper(BaseController):
         quaternion_t.z = qz
         quaternion_t.w = qw
 
+
     def _update_attitude_t(self, attitude_t, timestamp, roll, pitch, yaw):
         attitude_t.timestamp = timestamp
         attitude_t.roll = roll
@@ -460,7 +402,7 @@ class FirmwareWrapper(BaseController):
     #endregion 
 
     #region Controller 
-    def step_controller(self):
+    def _step_controller(self):
         if not (self.sensorData_set):
             print("WARNING: sensorData has not been updated since last controller call.")
         if not (self.state_set):
@@ -468,26 +410,32 @@ class FirmwareWrapper(BaseController):
         self.sensorData_set = False
         self.state_set = False
 
-        if self.state.acc.z < 0: 
-            # Implementation of sitaw.c tumble check 
-            # print('WARNING: CrazyFlie is Tumbling. Killing motors to save propellers.')
-            # self.pwms = [0, 0, 0, 0]
+        # Check for tumbling crazyflie 
+        if self.state.acc.z < -0.5: 
+            self.tumble_counter += 1
+        else:
+            self.tumble_counter = 0
+        if self.tumble_counter >= 30:
+            print('WARNING: CrazyFlie is Tumbling. Killing motors to save propellers.')
+            self.pwms = [0, 0, 0, 0]
             self.tick += 1
             self._error = True
             return 
 
-        cur_time = self.tick / self.firmware_freq
-        if (cur_time - self.last_att_pid_call > 0.002) and (cur_time - self.last_pos_pid_call > 0.01):
-            _tick = 0
-            self.last_pos_pid_call = cur_time
-            self.last_att_pid_call = cur_time
-        elif (cur_time - self.last_att_pid_call > 0.002):
-            self.last_att_pid_call = cur_time
-            _tick = 2
-        else:
-            _tick = 1
-
+        # Step the chosen controller 
         if self.CONTROLLER == 'pid':
+            # Determine tick based on time passed, allowing us to run pid slower than the 1000Hz it was designed for
+            cur_time = self.tick / self.firmware_freq
+            if (cur_time - self.last_att_pid_call > 0.002) and (cur_time - self.last_pos_pid_call > 0.01):
+                _tick = 0 # Runs position and attitude controller
+                self.last_pos_pid_call = cur_time
+                self.last_att_pid_call = cur_time
+            elif (cur_time - self.last_att_pid_call > 0.002):
+                self.last_att_pid_call = cur_time
+                _tick = 2 # Runs attitude controller 
+            else:
+                _tick = 1 # Runs neither controller 
+
             firm.controllerPid(
                 self.control,
                 self.setpoint,
@@ -501,18 +449,13 @@ class FirmwareWrapper(BaseController):
                 self.setpoint,
                 self.sensorData,
                 self.state,
-                _tick
+                self.tick
             )
-        '''
-        Tick should increment self.firmware_freq times / s. Position updates run at 100Hz, attitude runs at 500Hz 
 
-        Idea: Set tick from pybullet based on what loops we need to run. 
-        = 0: runs both 
-        = 1: runs neither 
-        = 2: runs attitude 
-        '''
+        # Get pwm values from control object 
         self._powerDistribution(self.control)
         self.tick += 1
+
 
     def _updateSetpoint(self, timestep):
         if not self.full_state_cmd_override:
@@ -520,7 +463,8 @@ class FirmwareWrapper(BaseController):
             firm.crtpCommanderHighLevelUpdateTime(timestep) # Sets commander time variable --- this is time in s from start of flight 
             firm.crtpCommanderHighLevelGetSetpoint(self.setpoint, self.state)
 
-    def process_command_queue(self, sim_time):
+
+    def _process_command_queue(self, sim_time):
         if len(self.command_queue) > 0:
             firm.crtpCommanderHighLevelStop() # Resets planner object 
             if self.full_state_cmd_override:
@@ -529,19 +473,23 @@ class FirmwareWrapper(BaseController):
             command, args = self.command_queue.pop(0)
             getattr(self, command)(*args)
 
-    def sendFullStateCmd(self, pos, vel, acc, yaw, rpy_rate, timestep):
-        '''
-        Adds a fullstate command to processing queue
 
-        Arguments:
-        pos -- (list) position of the CF (m) 
-        vel -- (list) velocity of the CF (m/s)
-        acc -- (list) acceleration of the CF (m/s^2)
-        yaw -- yaw (rad)
-        rpy_rate -- (list) roll, pitch, yaw rates (deg/s)
-        timestep -- (s)
-        '''
+    def sendFullStateCmd(self, pos, vel, acc, yaw, rpy_rate, timestep):
+        """Adds a sendfullstate command to command processing queue. 
+        
+        Notes:
+            Overrides any high level commands being processed. 
+
+        Args:
+            pos (list): [x, y, z] position of the CF (m) 
+            vel (list): [x, y, z] velocity of the CF (m/s)
+            acc (list): [x, y, z] acceleration of the CF (m/s^2)
+            yaw (float): yaw of the CF (rad)
+            rpy_rate (list): roll, pitch, yaw rates (deg/s)
+            timestep (float): simulation time when command is sent (s)
+        """
         self.command_queue += [['_sendFullStateCmd', [pos, vel, acc, yaw, rpy_rate, timestep]]]
+
 
     def _sendFullStateCmd(self, pos, vel, acc, yaw, rpy_rate, timestep):
         # print(f"INFO_{self.tick}: Full state command sent.")
@@ -582,62 +530,122 @@ class FirmwareWrapper(BaseController):
         self.setpoint.timestamp = int(timestep*1000) # TODO: This may end up skipping control loops 
         self.full_state_cmd_override = True
 
+
     def sendTakeoffCmd(self, height, duration):
+        """Adds a takeoff command to command processing queue. 
+
+        Args:
+            height (float): target takeoff height (m) 
+            duration: (float): length of manuever
+        """
         self.command_queue += [['_sendTakeoffCmd', [height, duration]]]
     def _sendTakeoffCmd(self, height, duration):
         print(f"INFO_{self.tick}: Takeoff command sent.")
         firm.crtpCommanderHighLevelTakeoff(height, duration)
         self.full_state_cmd_override = False
 
+
     def sendTakeoffYawCmd(self, height, duration, yaw):
-        # yaw in rad
+        """Adds a takeoffyaw command to command processing queue. 
+
+        Args:
+            height (float): target takeoff height (m) 
+            duration: (float): length of manuever
+            yaw (float): target yaw (rad)
+        """
         self.command_queue += [['_sendTakeoffYawCmd', [height, duration, yaw]]]
     def _sendTakeoffYawCmd(self, height, duration, yaw):
         print(f"INFO_{self.tick}: Takeoff command sent.")
         firm.crtpCommanderHighLevelTakeoffYaw(height, duration, yaw)
         self.full_state_cmd_override = False
 
+
     def sendTakeoffVelCmd(self, height, vel, relative):
+        """Adds a takeoffvel command to command processing queue. 
+
+        Args:
+            height (float): target takeoff height (m) 
+            vel (float): target takeoff velocity (m/s)
+            relative: (bool): whether takeoff height is relative to CF's current position
+        """
         self.command_queue += [['_sendTakeoffVelCmd', [height, vel, relative]]]
     def _sendTakeoffVelCmd(self, height, vel, relative):
         print(f"INFO_{self.tick}: Takeoff command sent.")
         firm.crtpCommanderHighLevelTakeoffWithVelocity(height, vel, relative)
         self.full_state_cmd_override = False
 
+
     def sendLandCmd(self, height, duration):
+        """Adds a land command to command processing queue. 
+
+        Args:
+            height (float): target landing height (m) 
+            duration: (float): length of manuever
+        """
         self.command_queue += [['_sendLandCmd', [height, duration]]]
     def _sendLandCmd(self, height, duration):
         print(f"INFO_{self.tick}: Land command sent.")
         firm.crtpCommanderHighLevelLand(height, duration)
         self.full_state_cmd_override = False
 
+
     def sendLandYawCmd(self, height, duration, yaw):
+        """Adds a landyaw command to command processing queue. 
+
+        Args:
+            height (float): target landing height (m) 
+            duration: (float): length of manuever
+            yaw (float): target yaw (rad)
+        """
         self.command_queue += [['_sendLandYawCmd', [height, duration, yaw]]]
     def _sendLandYawCmd(self, height, duration, yaw):
         print(f"INFO_{self.tick}: Land command sent.")
         firm.crtpCommanderHighLevelLandYaw(height, duration, yaw)
         self.full_state_cmd_override = False
 
+
     def sendLandVelCmd(self, height, vel, relative):
+        """Adds a landvel command to command processing queue. 
+
+        Args:
+            height (float): target landing height (m) 
+            vel (float): target landing velocity (m/s)
+            relative: (bool): whether landing height is relative to CF's current position
+        """
         self.command_queue += [['_sendLandVelCmd', [height, vel, relative]]]
     def _sendLandVelCmd(self, height, vel, relative):
         print(f"INFO_{self.tick}: Land command sent.")
         firm.crtpCommanderHighLevelLandWithVelocity(height, vel, relative)
         self.full_state_cmd_override = False
 
+
     def sendStopCmd(self):
+        """Adds a stop command to command processing queue. 
+        """
         self.command_queue += [['_sendStopCmd', []]]
     def _sendStopCmd(self):
         print(f"INFO_{self.tick}: Stop command sent.")
         firm.crtpCommanderHighLevelStop()
         self.full_state_cmd_override = False
         
+
     def sendGotoCmd(self, x, y, z, yaw, duration_s, relative):
+        """Adds a goto command to command processing queue. 
+
+        Args:
+            x (float): target x position (m) 
+            y (float): target y position (m) 
+            z (float): target z position (m) 
+            yaw (float): target yaw (rad)
+            duration_s (float): length of manuever
+            relative (bool): whether setpoint is relative to CF's current position 
+        """
         self.command_queue += [['_sendGotoCmd', [x, y, z, yaw, duration_s, relative]]]
     def _sendGotoCmd(self, x, y, z, yaw, duration_s, relative):
         print(f"INFO_{self.tick}: Go to command sent.")
         firm.crtpCommanderHighLevelGoTo(x, y, z, yaw, duration_s, relative)
         self.full_state_cmd_override = False
+
 
     BRUSHED = True
     SUPPLY_VOLTAGE = 3 # QUESTION: Is change of battery life worth simulating?
@@ -652,12 +660,14 @@ class FirmwareWrapper(BaseController):
         else: 
             raise NotImplementedError("Emulator does not support the brushless motor configuration at this time.")
 
+
     def _limitThrust(self, val):
         if val > 65535:
             return 65535
         elif val < 0:
             return 0
         return val
+
 
     def _powerDistribution(self, control_t):
         motor_pwms = []
@@ -678,24 +688,20 @@ class FirmwareWrapper(BaseController):
         if self.MOTOR_SET_ENABLE:
             self.pwms = motor_pwms
         else:
-            self.pwms = np.clip(motor_pwms, self.MIN_THRUST_VAL).tolist()
+            self.pwms = np.clip(motor_pwms, self.MIN_PWM).tolist()
     #endregion
-    
-    def _get_time_from_timestep(step, HZ):
-        return step / HZ
 
 #region Utils 
 def _get_quaternion_from_euler(roll, pitch, yaw):
-    """
-    Convert an Euler angle to a quaternion.
+    """Convert an Euler angle to a quaternion.
     
-    Input
-        :param roll: The roll (rotation around x-axis) angle in radians.
-        :param pitch: The pitch (rotation around y-axis) angle in radians.
-        :param yaw: The yaw (rotation around z-axis) angle in radians.
+    Args:
+        roll (float): The roll (rotation around x-axis) angle in radians.
+        pitch (float): The pitch (rotation around y-axis) angle in radians.
+        yaw (float): The yaw (rotation around z-axis) angle in radians.
     
-    Output
-        :return qx, qy, qz, qw: The orientation in quaternion [x,y,z,w] format
+    Returns:
+        list: The orientation in quaternion [x,y,z,w] format
     """
     qx = np.sin(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) - np.cos(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
     qy = np.cos(roll/2) * np.sin(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.cos(pitch/2) * np.sin(yaw/2)
@@ -703,5 +709,4 @@ def _get_quaternion_from_euler(roll, pitch, yaw):
     qw = np.cos(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
     
     return [qx, qy, qz, qw]
-
 #endregion
