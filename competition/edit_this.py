@@ -35,22 +35,14 @@ from collections import deque
 
 from safe_control_gym.envs.gym_pybullet_drones.quadrotor_utils import PIDController
 
-try:
-    import pycffirmware
-except ImportError:
-    FIRMWARE_INSTALLED = False
-else:
-    FIRMWARE_INSTALLED = True
-finally:
-    print("Module 'cffirmware' available:", FIRMWARE_INSTALLED)
-
 
 class Command(Enum):
     """Command types that can be used with pycffirmware.
 
     """
+    FINISHED = -1 # Args: Empty, kills the run 
     NONE = 0 # Args: Empty
-    FULLSTATE = 1 # Args: [pos, vel, acc, yaw, rpy_rate, curr_time] 
+    FULLSTATE = 1 # Args: [pos, vel, acc, yaw, rpy_rate] 
         # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.cmdFullState
     TAKEOFF = 2 # Args: [height, duration]
         # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.takeoff
@@ -58,7 +50,7 @@ class Command(Enum):
         # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.land
     STOP = 4 # Args: Empty
         # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.stop
-    GOTO = 5 # Args: [x, y, z, yaw, duration, relative (bool)]
+    GOTO = 5 # Args: [pos, yaw, duration, relative (bool)]
         # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.goTo
 
 
@@ -105,10 +97,7 @@ class Controller():
 
         # Check for pycffirmware.
         if use_firmware:
-            if not FIRMWARE_INSTALLED:
-                raise RuntimeError("[ERROR] Module 'cffirmware' not installed, try set 'use_firmware' to False in 'getting_started.yaml'.")
-            else:
-                self.ctrl = None
+            self.ctrl = None
         else:
             # Initialized simple PID Controller.
             self.ctrl = PIDController()
@@ -217,8 +206,6 @@ class Controller():
 
         if self.ctrl is not None:
             raise RuntimeError("[ERROR] Using method 'cmdFirmware' but Controller was created with 'use_firmware' = False.")
-        if not FIRMWARE_INSTALLED:
-            raise RuntimeError("[ERROR] Module 'cffirmware' not installed.")
 
         iteration = int(time*self.CTRL_FREQ)
 
@@ -244,7 +231,7 @@ class Controller():
             target_rpy_rates = np.zeros(3)
 
             command_type = Command(1)  # cmdFullState.
-            args = [target_pos, target_vel, target_acc, target_yaw, target_rpy_rates, time]
+            args = [target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
 
         elif iteration == 20*self.CTRL_FREQ:
             x = self.ref_x[-1]
@@ -254,8 +241,7 @@ class Controller():
             duration = 2.5
 
             command_type = Command(5)  # goTo.
-            args = [x, y, z, yaw, duration, False]
-
+            args = [[x, y, z], yaw, duration, False]
 
         elif iteration == 23*self.CTRL_FREQ:
             x = self.initial_obs[0]
@@ -265,7 +251,7 @@ class Controller():
             duration = 6
 
             command_type = Command(5)  # goTo.
-            args = [x, y, z, yaw, duration, False]
+            args = [[x, y, z], yaw, duration, False]
 
         elif iteration == 30*self.CTRL_FREQ:
             height = 0.
@@ -273,7 +259,6 @@ class Controller():
 
             command_type = Command(3)  # Land.
             args = [height, duration]
-
 
         else:
             command_type = Command(0)  # None.

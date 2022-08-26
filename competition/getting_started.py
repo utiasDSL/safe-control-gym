@@ -122,7 +122,7 @@ def main():
 
             # Select interface.
             if command_type == Command.FULLSTATE:
-                firmware_wrapper.sendFullStateCmd(*args)
+                firmware_wrapper.sendFullStateCmd(*args, curr_time)
             elif command_type == Command.TAKEOFF:
                 firmware_wrapper.sendTakeoffCmd(*args)
             elif command_type == Command.LAND:

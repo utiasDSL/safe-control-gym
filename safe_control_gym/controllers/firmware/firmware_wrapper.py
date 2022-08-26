@@ -629,21 +629,19 @@ class FirmwareWrapper(BaseController):
         self.full_state_cmd_override = False
         
 
-    def sendGotoCmd(self, x, y, z, yaw, duration_s, relative):
+    def sendGotoCmd(self, pos, yaw, duration_s, relative):
         """Adds a goto command to command processing queue. 
 
         Args:
-            x (float): target x position (m) 
-            y (float): target y position (m) 
-            z (float): target z position (m) 
+            pos (list): [x, y, z] target position (m)
             yaw (float): target yaw (rad)
             duration_s (float): length of manuever
             relative (bool): whether setpoint is relative to CF's current position 
         """
-        self.command_queue += [['_sendGotoCmd', [x, y, z, yaw, duration_s, relative]]]
-    def _sendGotoCmd(self, x, y, z, yaw, duration_s, relative):
+        self.command_queue += [['_sendGotoCmd', [pos, yaw, duration_s, relative]]]
+    def _sendGotoCmd(self, pos, yaw, duration_s, relative):
         print(f"INFO_{self.tick}: Go to command sent.")
-        firm.crtpCommanderHighLevelGoTo(x, y, z, yaw, duration_s, relative)
+        firm.crtpCommanderHighLevelGoTo(*pos, yaw, duration_s, relative)
         self.full_state_cmd_override = False
 
 
