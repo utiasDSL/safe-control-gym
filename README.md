@@ -11,7 +11,7 @@
 
 ## Description 
 
-The task is to design a controller/planner that enables a small quadrotor (*Crazyflie 2.x*) to fly through a set of gates and reach a predefined target. **The objective is to minimize the completion time while guaranteeing safety under both (1) robot dynamics and (2) environment uncertainties.** During operation, the controller/planner has access to the position and attitude measurements provided by a motion capture system and the pose of the next gate; the controller is expected to compute an input reference that is sent to the quadrotor onboard controller using an interface based on [Crazyswarm's API](https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie).
+The task is to design a controller/planner that enables a quadrotor (*Crazyflie 2.x*) to **safely fly through a set of gates and reach a predefined target despite uncertainties in the robot dynamics (e.g., mass and inertia) and the environment (e.g., wind and position of the gates)**. The algorithms will be evaluated regarding their safety (e.g., no collisions) and performance (e.g., time to target). We encourage participants to explore both control and reinforcement learning approaches (e.g., robust, adaptive, predictive, learning-based and optimal control, and model-based/model-free reinforcement learning). The controller/planner has access to the position and attitude measurements provided by a motion capture system and the noisy pose of the closest next gate. The controller can [send position, velocity, acceleration and heading references to an onboard position controller](https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.cmdFullState).
 
 ## Install on Ubuntu/macOS
 
