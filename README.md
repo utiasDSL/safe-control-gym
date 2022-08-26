@@ -75,9 +75,9 @@ Also see how to install [SWIG](https://www.dev2qa.com/how-to-install-swig-on-mac
 
 ## Getting Started
 Run the scripts in [`competition/`](https://github.com/utiasDSL/safe-control-gym/tree/main/competition)
-```
-$ cd ./competition/
-$ python3 getting_started.py --overrides ./getting_started.yaml
+```bash
+cd ./competition/
+python3 getting_started.py --overrides ./getting_started.yaml
 ```
 **Modify file [`edit_this.py`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py) to customize your controller based on [Crazyswarm's Crazyflie interface](https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie)**
 
