@@ -168,17 +168,19 @@ edit_this.py : Controller.interEpisodeLearn(...)    # Update the controller's in
 ```
 
 ## Scoring
-Performance
+1. Performance
 - TBA
 
-Safety
+2. Safety
 - TBA
 
-Robustness
+3. Robustness
 - TBA
 
 ## Prizes
-TBA
+- 1st: TBA
+- 2nd: TBA
+- 3rd: TBA
 
 ## Organizers
 - Angela Schoellig (University of Toronto, Vector Institute)
