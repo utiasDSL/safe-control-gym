@@ -9,6 +9,10 @@
 - [GitHub Discussions](https://github.com/utiasDSL/safe-control-gym/discussions/categories/iros-2022-competition)
 - [Google Form](https://forms.gle/vEmVK99n1SyaE4Zw9) to register you interest and receive e-mail updates
 
+## Description 
+
+The task is to design a controller/planner that enables a small quadrotor (Crazyflie 2.x) to fly through a set of gates and reach a predefined target. The objective is to minimize the completion time while guaranteeing safety under both (1) robot dynamics and (2) environment uncertainties. During operation, the controller/planner has access to the position and attitude measurements provided by a motion capture system and the pose of the next gate; the controller is expected to compute an input reference that is sent to the quadrotor onboard controller.
+
 ## Install on Ubuntu/macOS
 
 ```bash
@@ -160,6 +164,32 @@ edit_this.py : Controller.interEpisodeLearn(...)    # Update the controller's in
     Returns:
         N/A
 ```
+
+## Scoring
+TBA
+
+## Prizes
+TBA
+
+## Organizers
+- Angela Schoellig (University of Toronto, Vector Institute)
+- Davide Scaramuzza (University of Zurich)
+- Vijay Kumar (University of Pennsylvania)
+- Nicholas Roy (Massachusetts Institute of Technology)
+- Todd Murphey (Northwestern University)
+- Sebastian Trimpe (RWTH Aachen University)
+- Wolfgang Hönig (TU Berlin)
+- Mark Muller (University of California Berkeley)
+- Jose Martinez-Carranza (INAOE)
+- SiQi Zhou (University of Toronto, Vector Institute)
+- Melissa Greeff (University of Toronto, Vector Institute)
+- Jacopo Panerati (University of Toronto, Vector Institute)
+- Yunlong Song (University of Zurich)
+- Leticia Oyuki Rojas Pérez (INAOE)
+- Adam W. Hall (University of Toronto, Vector Institute)
+- Justin Yuan (University of Toronto, Vector Institute)
+- Lukas Brunke (University of Toronto, Vector Institute)
+- Antonio Loquercio (UC Berkeley)
 
 -----
 > University of Toronto's [Dynamic Systems Lab](https://github.com/utiasDSL) / [Vector Institute for Artificial Intelligence](https://github.com/VectorInstitute)
