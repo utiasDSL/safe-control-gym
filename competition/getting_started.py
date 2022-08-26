@@ -4,6 +4,8 @@ Run as:
 
     $ python3 getting_started.py --overrides ./getting_started.yaml
 
+Look for instructions in `README.md` and `edit_this.py`.
+
 """
 import time
 import numpy as np
@@ -41,7 +43,6 @@ def main():
     config = CONFIG_FACTORY.merge()
     if config.use_firmware and not FIRMWARE_INSTALLED:
         raise RuntimeError("[ERROR] Module 'cffirmware' not installed.")
-
     CTRL_FREQ = config.quadrotor_config['ctrl_freq']
     CTRL_DT = 1/CTRL_FREQ
 
@@ -53,13 +54,12 @@ def main():
         # we abstract the difference. This allows ctrl_freq to be the rate at which the user sends ctrl signals, 
         # not the firmware. 
         config.quadrotor_config['ctrl_freq'] = FIRMWARE_FREQ
-
         env_func = partial(make, 'quadrotor', **config.quadrotor_config)
         firmware_wrapper = make('firmware',
                     env_func, FIRMWARE_FREQ, CTRL_FREQ
                     ) 
         obs, info = firmware_wrapper.reset()
-        action = np.zeros(4)
+        first_ep_iteration = True
         info['ctrl_timestep'] = CTRL_DT
         info['ctrl_freq'] = CTRL_FREQ
         env = firmware_wrapper.env
@@ -69,9 +69,9 @@ def main():
         obs, info = env.reset()
     
     # Create controller.
-    # obs = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
-    # vicon_obs = {x, 0, y, 0, z, 0, phi, theta, psi, 0, 0, 0}.
     vicon_obs = [obs[0], 0, obs[2], 0, obs[4], 0, obs[6], obs[7], obs[8], 0, 0, 0]
+        # obs = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
+        # vicon_obs = {x, 0, y, 0, z, 0, phi, theta, psi, 0, 0, 0}.
     ctrl = Controller(vicon_obs, info, config.use_firmware, verbose=config.verbose)
 
     # Create a logger and counters
@@ -83,12 +83,11 @@ def main():
     episode_start_iter = 0
     text_label_id = p.addUserDebugText("", textPosition=[0, 0, 1],physicsClientId=env.PYB_CLIENT)
 
-
     # Wait for keyboard input to start.
     # input("Press any key to start")
 
     # Run an experiment.
-    ep_start = time.time() 
+    ep_start = time.time()
     for i in range(config.num_episodes*CTRL_FREQ*env.EPISODE_LEN_SEC):
 
         # Step by keyboard input.
@@ -110,10 +109,16 @@ def main():
 
         # Compute control input.
         if config.use_firmware:
-            # obs = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
-            # vicon_obs = {x, 0, y, 0, z, 0, phi, theta, psi, 0, 0, 0}.
             vicon_obs = [obs[0], 0, obs[2], 0, obs[4], 0, obs[6], obs[7], obs[8], 0, 0, 0]
-            command_type, args = ctrl.cmdFirmware(curr_time, vicon_obs)
+                # obs = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
+                # vicon_obs = {x, 0, y, 0, z, 0, phi, theta, psi, 0, 0, 0}.
+            if first_ep_iteration:
+                action = np.zeros(4)
+                reward = 0
+                done = False
+                info = {}
+                first_ep_iteration = False
+            command_type, args = ctrl.cmdFirmware(curr_time, vicon_obs, reward, done, info)
 
             # Select interface.
             if command_type == Command.FULLSTATE:
@@ -134,7 +139,7 @@ def main():
             # Step the environment.
             obs, reward, done, info, action = firmware_wrapper.step(curr_time, action)
         else:
-            target_pos, target_vel = ctrl.cmdSimOnly(curr_time, obs)
+            target_pos, target_vel = ctrl.cmdSimOnly(curr_time, obs, reward, done, info)
             action = ctrl._thrusts(obs, target_pos, target_vel)
             obs, reward, done, info = env.step(action)
 
@@ -174,10 +179,9 @@ def main():
                    state=np.hstack([pos, np.zeros(4), rpy, vel, bf_rates, np.sqrt(action/env.KF)])
                    )
 
-        # Sync the simulation.
+        # Synchronize the GUI.
         if config.quadrotor_config.gui:
             sync(i-episode_start_iter, ep_start, CTRL_DT)
-
 
         # If an episode is complete, reset the environment.
         if done:
@@ -205,7 +209,7 @@ def main():
             if config.use_firmware:
                 # Re-initialize firmware.
                 new_initial_obs, new_initial_info = firmware_wrapper.reset()
-                action = np.zeros(4)
+                first_ep_iteration = True
             else:
                 new_initial_obs, new_initial_info = env.reset()
 
