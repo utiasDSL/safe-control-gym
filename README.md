@@ -15,6 +15,8 @@ The task is to design a controller/planner that enables a small quadrotor (*Craz
 
 ## Install on Ubuntu/macOS
 
+We recommend using Ubuntu 20.04 on a mid-tier laptop and GPU (e.g., a Lenovo P52 with i7-8850H/Quadro P2000)
+
 ```bash
 git clone https://github.com/utiasDSL/safe-control-gym.git
 cd safe-control-gym
@@ -166,7 +168,14 @@ edit_this.py : Controller.interEpisodeLearn(...)    # Update the controller's in
 ```
 
 ## Scoring
-TBA
+Performance
+- TBA
+
+Safety
+- TBA
+
+Robustness
+- TBA
 
 ## Prizes
 TBA
