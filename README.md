@@ -11,7 +11,7 @@
 
 ## Description 
 
-The task is to design a controller/planner that enables a small quadrotor (Crazyflie 2.x) to fly through a set of gates and reach a predefined target. The objective is to minimize the completion time while guaranteeing safety under both (1) robot dynamics and (2) environment uncertainties. During operation, the controller/planner has access to the position and attitude measurements provided by a motion capture system and the pose of the next gate; the controller is expected to compute an input reference that is sent to the quadrotor onboard controller.
+The task is to design a controller/planner that enables a small quadrotor (*Crazyflie 2.x*) to fly through a set of gates and reach a predefined target. **The objective is to minimize the completion time while guaranteeing safety under both (1) robot dynamics and (2) environment uncertainties.** During operation, the controller/planner has access to the position and attitude measurements provided by a motion capture system and the pose of the next gate; the controller is expected to compute an input reference that is sent to the quadrotor onboard controller using an interface based on [Crazyswarm's API](https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie).
 
 ## Install on Ubuntu/macOS
 
@@ -69,7 +69,7 @@ conda activate safe
 ./build_osx.sh
 ```
 
-Also see [`pycffirmware`](https://github.com/utiasDSL/pycffirmware)'s `README.md`
+Also see how to install [SWIG](https://www.dev2qa.com/how-to-install-swig-on-macos-linux-and-windows/) and [`pycffirmware`](https://github.com/utiasDSL/pycffirmware)'s `README.md`
 
 ## Getting Started
 Run the scripts in [`competition/`](https://github.com/utiasDSL/safe-control-gym/tree/main/competition)
