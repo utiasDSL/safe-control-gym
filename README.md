@@ -156,6 +156,8 @@ edit_this.py : Controller.interStepLearn(...)       # Update the controller's in
     Args:
         N/A
 
+    Leverage the data in `self.action_buffer`, `self.obs_buffer`, `self.reward_buffer`, self.done_buffer`, `self.info_buffer`
+
     Returns:
         N/A     
 ```
@@ -164,6 +166,8 @@ edit_this.py : Controller.interStepLearn(...)       # Update the controller's in
 edit_this.py : Controller.interEpisodeLearn(...)    # Update the controller's internal state between episodes
     Args:
         N/A
+
+    Leverage the data in `self.action_buffer`, `self.obs_buffer`, `self.reward_buffer`, self.done_buffer`, `self.info_buffer`
 
     Returns:
         N/A
