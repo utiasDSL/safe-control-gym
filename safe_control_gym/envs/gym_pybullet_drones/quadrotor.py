@@ -1102,6 +1102,8 @@ class Quadrotor(BaseAviary):
         info["nominal_gates_pos"] = self.GATES
         info["nominal_obstacles_pos"] = self.OBSTACLES
 
+        if self.RANDOMIZED_INIT:
+            info["initial_state_randomization"] = self.INIT_STATE_RAND_INFO
         if self.RANDOMIZED_INERTIAL_PROP:
             info["inertial_prop_randomization"] = self.INERTIAL_PROP_RAND_INFO
         if self.RANDOMIZED_GATES_AND_OBS:

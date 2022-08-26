@@ -100,21 +100,23 @@ edit_this.py : Controller.__init__(initial_obs, initial_info)           # Initia
         initial_obs (ndarray): The initial observation of the quadrotor's state
             [x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r].
         initial_info (dict): The a priori information as a dictionary with keys
-            - 'symbolic_model'
-            - 'symbolic_constraints'
-            - 'nominal_physical_parameters'
-            - 'ctrl_timestep'
-            - 'ctrl_freq'
-            - 'episode_len_sec'
-            - 'quadrotor_kf'
-            - 'quadrotor_km'
-            - 'gate_dimensions'
-            - 'obstacle_dimensions'
-            - 'nominal_gates_pos'
-            - 'nominal_obstacles_pos'
-            - 'inertial_prop_randomization'
-            - 'gates_and_obs_randomization'
-            - 'disturbances'
+            - 'symbolic_model'                  CasADi's 3D quadrotor dynamics
+            - 'symbolic_constraints'            CasADi's constraints
+            - 'nominal_physical_parameters'     Nominal mass and inertia
+            - 'ctrl_timestep'                   Control timestep (in seconds)
+            - 'ctrl_freq'                       Control frequency (in Hz)
+            - 'episode_len_sec'                 Maximum duration of an episode (in seconds)
+            - 'quadrotor_kf'                    Motor coefficient
+            - 'quadrotor_km'                    Motor coefficient
+            - 'gate_dimensions'                 Shape and measurements of the gates
+            - 'obstacle_dimensions'             Shape and measurements of the obstacles
+            - 'nominal_gates_pos'               Nominal pose of the gates
+            - 'nominal_obstacles_pos'           Nominal pose of the obstacles
+            - 'x_reference'                     Final position to reach/hover at
+            - 'initial_state_randomization'     Distributions of the randomized additive error on the initial pose
+            - 'inertial_prop_randomization'     Distributions of the randomized additive error on the inertial properties
+            - 'gates_and_obs_randomization'     Distributions of the randomized additive error on the gates and obstacles positions
+            - 'disturbances'                    Dynamics and input disturbances's distributions 
 
     Returns:
         N/A
@@ -129,13 +131,13 @@ edit_this.py : Controller.cmdFirmware(time, obs, reward, done, info)    # Select
         reward (float, optional): The reward signal.
         done (bool, optional): Wether the episode has terminated.
         info (dict, optional): Current step information as a dictionary with keys
-            - 'collision'
-            - 'current_target_gate_id'
-            - 'current_target_gate_in_range'
-            - 'current_target_gate_pos'
-            - 'at_goal_position'
-            - 'constraint_values'
-            - 'constraint_violation'
+            - 'collision'                       As a tuple (gate id, boolean)
+            - 'current_target_gate_id'          Id of the next gate (-1 when all gates have been travelled through)
+            - 'current_target_gate_in_range'    Whether the next gate is close enough for perfect visibility
+            - 'current_target_gate_pos'         Nominal or exact position of the next gate (depending on the parameter above)
+            - 'at_goal_position'                Whether the quadrotor is at the final position ('x_reference')
+            - 'constraint_values'               Constraint evaluation
+            - 'constraint_violation'            Whether any of the constraints is violated
 
     Returns:
         Command: selected type of command (NONE, FULLSTATE, TAKEOFF, LAND, STOP, GOTO, see Enum-like class `Command`).
