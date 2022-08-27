@@ -25,7 +25,7 @@ quadrotor_config:
     init_x_dot: 0
     init_y: -2.9
     init_y_dot: 0
-    init_z: 0.0
+    init_z: 0.03
     init_z_dot: 0
     init_phi: 0
     init_theta: 0
@@ -63,8 +63,8 @@ quadrotor_config:
       high: 0.1
     init_z:
       distrib: "uniform"
-      low: -0.01
-      high: 0.01
+      low: 0.0
+      high: 0.02
     init_phi:
       distrib: "uniform"
       low: -0.1

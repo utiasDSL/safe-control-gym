@@ -1011,7 +1011,7 @@ class Quadrotor(BaseAviary):
         # Gates progress.
         if self.pyb_step_counter > 0.5*self.PYB_FREQ and self.NUM_GATES > 0 and self.current_gate < self.NUM_GATES:
             x, y, _, _, _, rot = self.EFFECTIVE_GATES_POSITIONS[self.current_gate]
-            height = 0.7
+            height = 0.75
             delta_x = 0.05*np.cos(rot)
             delta_y = 0.05*np.sin(rot)
             fr = [[x,y, height-0.1875]]

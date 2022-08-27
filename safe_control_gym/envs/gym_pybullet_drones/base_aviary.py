@@ -118,7 +118,7 @@ class BaseAviary(BenchmarkEnv):
         self.PWM2RPM_CONST, \
         self.MIN_PWM, \
         self.MAX_PWM = self._parse_urdf_parameters(self.URDF_PATH)
-        self.GROUND_PLANE_Z = -0.05
+        self.GROUND_PLANE_Z = 0 # -0.05
         if verbose:
             print(
                 "[INFO] BaseAviary.__init__() loaded parameters from the drone's .urdf: \
