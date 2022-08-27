@@ -374,6 +374,14 @@ class Quadrotor(BaseAviary):
                        np.array(obstacle[0:3]) + offset,
                        p.getQuaternionFromEuler(obstacle[3:6]),
                        physicsClientId=self.PYB_CLIENT)
+            p.addUserDebugText(str(TMP_ID),
+                               textPosition=[0, 0, 0.5],
+                               textColorRGB=[1, 0, 0],
+                               lifeTime=self.EPISODE_LEN_SEC,
+                               textSize=1.5,
+                               parentObjectUniqueId=TMP_ID,
+                               parentLinkIndex=-1,
+                               physicsClientId=self.PYB_CLIENT)
             self.OBSTACLES_IDS.append(TMP_ID)
         #
         self.GATES_IDS = []
@@ -394,6 +402,14 @@ class Quadrotor(BaseAviary):
                        np.array(gate[0:3]) + offset,
                        p.getQuaternionFromEuler(gate[3:6]),
                        physicsClientId=self.PYB_CLIENT)
+            p.addUserDebugText(str(TMP_ID),
+                               textPosition=[0, 0, 0.5],
+                               textColorRGB=[1, 0, 0],
+                               lifeTime=self.EPISODE_LEN_SEC,
+                               textSize=1.5,
+                               parentObjectUniqueId=TMP_ID,
+                               parentLinkIndex=-1,
+                               physicsClientId=self.PYB_CLIENT)
             self.GATES_IDS.append(TMP_ID)
         #
         self.NUM_GATES = len(self.GATES)
