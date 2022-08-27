@@ -117,9 +117,9 @@ class Controller():
 
         # Example: curve fitting with waypoints.
         if use_firmware:
-            waypoints = [(self.initial_obs[0], self.initial_obs[2], .75)]  # Height is hardcoded scenario knowledge.
+            waypoints = [(self.initial_obs[0], self.initial_obs[2], initial_info["gate_dimensions"]["height"])]  # Height is hardcoded scenario knowledge.
         else:
-            waypoints = [(self.initial_obs[0], self.initial_obs[2], .0)]  # Height is hardcoded scenario knowledge
+            waypoints = [(self.initial_obs[0], self.initial_obs[2], self.initial_obs[4])]  # Height is hardcoded scenario knowledge
         for idx, g in enumerate(self.NOMINAL_GATES):
             x = g[0]
             y = g[1]

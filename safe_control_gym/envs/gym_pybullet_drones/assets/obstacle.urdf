@@ -16,7 +16,7 @@
         <cylinder length="0.8" radius="0.05" />
       </geometry> 
       <material name="kindablue">
-        <color rgba=".1 .5 .7 0.8"/>
+        <color rgba=".1 .5 .7 1"/>
       </material> 
     </visual>
 
