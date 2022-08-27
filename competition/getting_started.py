@@ -18,7 +18,11 @@ from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.utils import sync
 from safe_control_gym.envs.gym_pybullet_drones.Logger import Logger
 
-from edit_this import Controller, Command
+try:
+    from edit_this import Controller, Command
+except ImportError:
+    # Test import.
+    from .edit_this import Controller, Command
 
 try:
     import pycffirmware
@@ -30,7 +34,7 @@ finally:
     print("Module 'cffirmware' available:", FIRMWARE_INSTALLED)
 
 
-def main():
+def run(test=False):
     """The main function creating, running, and closing an environment over N episodes.
 
     """
@@ -41,6 +45,16 @@ def main():
     # Load configuration.
     CONFIG_FACTORY = ConfigFactory()
     config = CONFIG_FACTORY.merge()
+
+    # Testing (without pycffirmware).
+    if test:
+        config['use_firmware'] = False
+        config['verbose'] = False
+        config.quadrotor_config['ctrl_freq'] = 60
+        config.quadrotor_config['pyb_freq'] = 240
+        config.quadrotor_config['gui'] = False
+
+    # Check firmware configuration.
     if config.use_firmware and not FIRMWARE_INSTALLED:
         raise RuntimeError("[ERROR] Module 'cffirmware' not installed.")
     CTRL_FREQ = config.quadrotor_config['ctrl_freq']
@@ -59,7 +73,6 @@ def main():
                     env_func, FIRMWARE_FREQ, CTRL_FREQ
                     ) 
         obs, info = firmware_wrapper.reset()
-        first_ep_iteration = True
         info['ctrl_timestep'] = CTRL_DT
         info['ctrl_freq'] = CTRL_FREQ
         env = firmware_wrapper.env
@@ -88,6 +101,7 @@ def main():
 
     # Run an experiment.
     ep_start = time.time()
+    first_ep_iteration = True
     for i in range(config.num_episodes*CTRL_FREQ*env.EPISODE_LEN_SEC):
 
         # Step by keyboard input.
@@ -139,6 +153,11 @@ def main():
             # Step the environment.
             obs, reward, done, info, action = firmware_wrapper.step(curr_time, action)
         else:
+            if first_ep_iteration:
+                reward = 0
+                done = False
+                info = {}
+                first_ep_iteration = False
             target_pos, target_vel = ctrl.cmdSimOnly(curr_time, obs, reward, done, info)
             action = ctrl._thrusts(obs, target_pos, target_vel)
             obs, reward, done, info = env.step(action)
@@ -186,7 +205,8 @@ def main():
         # If an episode is complete, reset the environment.
         if done:
             # Plot logging (comment as desired).
-            logger.plot(comment="get_start-episode-"+str(episodes_count))
+            if not test:
+                logger.plot(comment="get_start-episode-"+str(episodes_count))
 
             # CSV save.
             logger.save_as_csv(comment="get_start-episode-"+str(episodes_count))
@@ -209,9 +229,9 @@ def main():
             if config.use_firmware:
                 # Re-initialize firmware.
                 new_initial_obs, new_initial_info = firmware_wrapper.reset()
-                first_ep_iteration = True
             else:
                 new_initial_obs, new_initial_info = env.reset()
+            first_ep_iteration = True
 
             # ctrl._draw_trajectory(new_initial_info)
 
@@ -237,4 +257,4 @@ def main():
           ))
 
 if __name__ == "__main__":
-    main()
+    run()
