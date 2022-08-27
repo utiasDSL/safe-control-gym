@@ -50,7 +50,7 @@ class SymbolicModel():
         self.ny = self.y_sym.shape[0]
         # Setup cost function.
         self.cost_func = cost["cost_func"]
-        print(self.cost_func)
+        # print(self.cost_func)
         self.Q = cost["vars"]["Q"]
         self.R = cost["vars"]["R"]
         self.Xr = cost["vars"]["Xr"]

@@ -42,7 +42,7 @@ class Experiment:
 
         self.reset()
 
-    def run_evaluation(self, training=False, n_episodes=None, n_steps=None, log_freq=None, **kwargs):
+    def run_evaluation(self, training=False, n_episodes=None, n_steps=None, log_freq=None, verbose=True, **kwargs):
         '''Evaluate a trained controller.
 
         Args:
@@ -62,9 +62,10 @@ class Experiment:
         metrics = self.compute_metrics(trajs_data)
 
         # terminal printouts
-        for metric_key, metric_val in metrics.items():
-            print('{}: {:.3f}'.format(colored(metric_key, 'yellow'), metric_val))
-        print('Evaluation done.')
+        if verbose:
+            for metric_key, metric_val in metrics.items():
+                print('{}: {:.3f}'.format(colored(metric_key, 'yellow'), metric_val))
+            print('Evaluation done.')
         return dict(trajs_data), metrics
 
     def _execute_evaluations(self, n_episodes=None, n_steps=None, log_freq=None):
@@ -363,7 +364,7 @@ class MetricExtractor:
     def get_episode_rmse(self):
         '''Root mean square error of episodes. '''
         return self.get_episode_data('mse',
-                                     postprocess_func=lambda x: np.sqrt(np.mean(x)))
+                                     postprocess_func=lambda x: float(np.sqrt(np.mean(x))))
 
     def get_episode_constraint_violations(self):
         '''Occurence of any violation in episodes. '''

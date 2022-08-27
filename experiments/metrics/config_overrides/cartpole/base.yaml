@@ -1,0 +1,42 @@
+task_config:
+  ctrl_freq: 50
+  pyb_freq: 1000
+  episode_len_sec: 5
+  normalized_rl_action_space: True
+  info_in_reset: True
+
+  # task 
+  task: stabilization
+  task_info:
+    stabilization_goal: [0]
+    stabilization_goal_tolerance: 0.005
+  cost: rl_reward
+
+  # init 
+  randomized_init: True
+  init_state_randomization_info:
+    init_x:
+      distrib: uniform
+      low: -0.3
+      high: 0.3
+    init_theta:
+      distrib: uniform
+      low: -0.1
+      high: 0.1
+
+  # custom
+  rew_state_weight: [5, 0, 1, 0]
+  rew_act_weight: 0.01
+  rew_exponential: True
+  done_on_out_of_bound: True 
+
+
+##########################################################################
+eval_task_config: # overrides task_config
+  done_on_out_of_bound: False 
+  done_on_violation: False
+  hybrid_env: False
+  inertial_prop:  # 1.5x
+    pole_length: 0.75
+    pole_mass: 0.15
+    cart_mass: 1.5
