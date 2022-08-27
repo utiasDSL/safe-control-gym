@@ -365,11 +365,11 @@ class Quadrotor(BaseAviary):
             d_args = rand_info_copy["obstacles"].pop("args", [])
             d_kwargs = rand_info_copy["obstacles"]
         for obstacle in self.OBSTACLES:
-            offset = np.array([0, 0, 0])
+            obs_height = 0.525 # URDF dependent.
             if self.RANDOMIZED_GATES_AND_OBS:
-                offset = np.array([distrib(*d_args, **d_kwargs), distrib(*d_args, **d_kwargs), 0])
+                offset = np.array([distrib(*d_args, **d_kwargs), distrib(*d_args, **d_kwargs), obs_height])
             else:
-                offset = np.array([0, 0, 0])
+                offset = np.array([0, 0, obs_height])
             TMP_ID = p.loadURDF(os.path.join(self.URDF_DIR, "obstacle.urdf"),
                        np.array(obstacle[0:3]) + offset,
                        p.getQuaternionFromEuler(obstacle[3:6]),
@@ -392,11 +392,11 @@ class Quadrotor(BaseAviary):
             d_args = rand_info_copy["gates"].pop("args", [])
             d_kwargs = rand_info_copy["gates"]
         for gate in self.GATES:
-            offset = np.array([0, 0, 0])
+            gate_height = 1. # URDF dependent.
             if self.RANDOMIZED_GATES_AND_OBS:
-                offset = np.array([distrib(*d_args, **d_kwargs), distrib(*d_args, **d_kwargs), 0])
+                offset = np.array([distrib(*d_args, **d_kwargs), distrib(*d_args, **d_kwargs), gate_height])
             else:
-                offset = np.array([0, 0, 0])
+                offset = np.array([0, 0, gate_height])
             self.EFFECTIVE_GATES_POSITIONS.append(list(np.array(gate[0:3]) + offset) + gate[3:6])
             TMP_ID = p.loadURDF(os.path.join(self.URDF_DIR, "portal.urdf"),
                        np.array(gate[0:3]) + offset,
@@ -1024,19 +1024,20 @@ class Quadrotor(BaseAviary):
             info["collision"] = (None, False)
             self.currently_collided = False
         #
-        # Gates progress.
+        # Gates progress (note: allow 0.5 seconds for initial drop if objects are not on the gound).
         if self.pyb_step_counter > 0.5*self.PYB_FREQ and self.NUM_GATES > 0 and self.current_gate < self.NUM_GATES:
             x, y, _, _, _, rot = self.EFFECTIVE_GATES_POSITIONS[self.current_gate]
-            height = 0.75
+            height = 1. # Obstacle URDF dependent.
+            half_length = 0.1875 # Obstacle URDF dependent.
             delta_x = 0.05*np.cos(rot)
             delta_y = 0.05*np.sin(rot)
-            fr = [[x,y, height-0.1875]]
-            to = [[x,y, height+0.1875]]
+            fr = [[x,y, height-half_length]]
+            to = [[x,y, height+half_length]]
             for i in [1,2, 3]:
-                fr.append([x+i*delta_x, y+i*delta_y, height-0.1875])
-                fr.append([x-i*delta_x, y-i*delta_y, height-0.1875])
-                to.append([x+i*delta_x, y+i*delta_y, height+0.1875])
-                to.append([x-i*delta_x, y-i*delta_y, height+0.1875])
+                fr.append([x+i*delta_x, y+i*delta_y, height-half_length])
+                fr.append([x-i*delta_x, y-i*delta_y, height-half_length])
+                to.append([x+i*delta_x, y+i*delta_y, height+half_length])
+                to.append([x-i*delta_x, y-i*delta_y, height+half_length])
             # for i in range(len(fr)):
             #     p.addUserDebugLine(lineFromXYZ=fr[i],
             #                        lineToXYZ=to[i],
@@ -1107,7 +1108,7 @@ class Quadrotor(BaseAviary):
         info["quadrotor_km"] = self.KM
         info["gate_dimensions"] = {
             "shape": "square",
-            "height": 0.75,
+            "height": 1.,
             "edge": 0.45
         }
         info["obstacle_dimensions"] = {
