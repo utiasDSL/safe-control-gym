@@ -21,6 +21,7 @@ Todos:
 """
 import numpy as np 
 import torch 
+import geomloss
 from safe_control_gym.math_and_models.transformations import npRotXYZ
 
 
@@ -194,7 +195,7 @@ def mmd_loss(samples1, samples2, mode='gaussian', sigma=0.2, use_numpy=True):
         overall_loss (ndarray|torch.FloatTensor|float): MMD metric value.
     """
     if len(samples1.shape) != len(samples2.shape) or samples1.shape[-1] != samples2.shape[-1]:
-        raise ValueError("Unmatched input samples shape.") 
+        raise ValueError("Input samples shapes do not match.") 
     # preprocessing
     if use_numpy:
         samples1 = torch.from_numpy(samples1)
@@ -228,6 +229,40 @@ def mmd_loss(samples1, samples2, mode='gaussian', sigma=0.2, use_numpy=True):
     if use_numpy:
         overall_loss = overall_loss.numpy()
     return overall_loss
+
+
+def geom_loss(samples1, samples2, loss="sinkhorn", p=2, blur=0.05, use_numpy=True, cost=None, kernel=None, **kwargs):
+    """Computes the geometric loss as similarity metric between 2 sets of trajectories samples.
+
+    adapted from https://www.kernel-operations.io/geomloss/api/pytorch-api.html
+    
+    Args:
+        samples1 (ndarray|torch.FloatTensor): shape (B,N1,D) or (N1,D) where B is batch size, N is sample size, and D is sample dim.
+        samples2 (ndarray|torch.FloatTensor): shape (B,N2,D) or (N2,D).
+        loss (str): loss function name from sinkhorn|hausdorff|energy|gaussian|laplacian, 
+            sinkhorn interpolates between Wasserstein (blur=0) and kernel (blur=  ) distances, 
+            the latter 3 options are MMD variants. 
+        blur (float): the finest level of detail that should be handled by the loss function.
+        use_numpy (bool): if True, input and output are both numpy arrays, used only for evaluation;
+            if false, input and output are torch tensors, can be used in training.
+
+    Returns:
+        cost (ndarray|torch.FloatTensor|float): final loss value.
+    """
+    if len(samples1.shape) != len(samples2.shape) or samples1.shape[-1] != samples2.shape[-1]:
+        raise ValueError("Input samples shapes do not match.") 
+    # preprocessing
+    if use_numpy:
+        samples1 = torch.from_numpy(samples1)
+        samples2 = torch.from_numpy(samples2)
+    
+    cost_func = geomloss.SamplesLoss(loss=loss, p=p, blur=blur, cost=cost, kernel=kernel)
+    cost = cost_func(samples1, samples2)
+    
+    # postprocessing
+    if use_numpy:
+        cost = cost.numpy()
+    return cost
 
 
 def mse(traj1, traj2, **kwargs):
