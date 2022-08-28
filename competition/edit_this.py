@@ -77,7 +77,7 @@ class Controller():
             initial_obs (ndarray): The initial observation of the quadrotor's state
                 [x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r].
             initial_info (dict): The a priori information as a dictionary with keys
-                'symbolic_model', 'nominal_physical_parameters', 'nominal_gates_pos', etc.
+                'symbolic_model', 'nominal_physical_parameters', 'nominal_gates_pos_and_type', etc.
             use_firmware (bool, optional): Choice between the on-board controll in `pycffirmware`
                 or simplified software-only alternative.
             buffer_size (int, optional): Size of the data buffers used in method `learn()`.
@@ -92,7 +92,7 @@ class Controller():
         self.VERBOSE = verbose
 
         # Store a priori scenario information.
-        self.NOMINAL_GATES = initial_info["nominal_gates_pos"]
+        self.NOMINAL_GATES = initial_info["nominal_gates_pos_and_type"]
         self.NOMINAL_OBSTACLES = initial_info["nominal_obstacles_pos"]
 
         # Check for pycffirmware.
@@ -117,23 +117,28 @@ class Controller():
 
         # Example: curve fitting with waypoints.
         if use_firmware:
-            waypoints = [(self.initial_obs[0], self.initial_obs[2], initial_info["gate_dimensions"]["height"])]  # Height is hardcoded scenario knowledge.
+            waypoints = [(self.initial_obs[0], self.initial_obs[2], initial_info["gate_dimensions"]["tall"]["height"])]  # Height is hardcoded scenario knowledge.
         else:
-            waypoints = [(self.initial_obs[0], self.initial_obs[2], self.initial_obs[4])]  # Height is hardcoded scenario knowledge
+            waypoints = [(self.initial_obs[0], self.initial_obs[2], self.initial_obs[4])]
         for idx, g in enumerate(self.NOMINAL_GATES):
             x = g[0]
             y = g[1]
             rot = g[5]
+            typ = g[6]
+            if typ == 0:
+                height = initial_info["gate_dimensions"]["tall"]["height"]
+            elif typ == 1:
+                height = initial_info["gate_dimensions"]["low"]["height"]
             if rot > 0.5*1.57 or rot < 0:
                 if idx == 2:  # Hardcoded scenario knowledge (direction in which to take gate 2.
-                    waypoints.append((x+0.3, y-0.2, initial_info["gate_dimensions"]["height"]))
-                    waypoints.append((x-0.3, y-0.2, initial_info["gate_dimensions"]["height"]))
+                    waypoints.append((x+0.3, y-0.2, height))
+                    waypoints.append((x-0.3, y-0.2, height))
                 else:
-                    waypoints.append((x-0.3, y, initial_info["gate_dimensions"]["height"]))
-                    waypoints.append((x+0.3, y, initial_info["gate_dimensions"]["height"]))
+                    waypoints.append((x-0.3, y, height))
+                    waypoints.append((x+0.3, y, height))
             else:
-                waypoints.append((x, y-0.3, initial_info["gate_dimensions"]["height"]))
-                waypoints.append((x, y+0.3, initial_info["gate_dimensions"]["height"]))
+                waypoints.append((x, y-0.3, height))
+                waypoints.append((x, y+0.3, height))
         waypoints.append([initial_info["x_reference"][0], initial_info["x_reference"][2], initial_info["x_reference"][4]])
         self.waypoints = np.array(waypoints)
         deg = 6

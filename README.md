@@ -110,7 +110,7 @@ edit_this.py : Controller.__init__(initial_obs, initial_info)           # Initia
             - 'quadrotor_km'                    Motor coefficient
             - 'gate_dimensions'                 Shape and measurements of the gates
             - 'obstacle_dimensions'             Shape and measurements of the obstacles
-            - 'nominal_gates_pos'               Nominal pose of the gates
+            - 'nominal_gates_pos_and_type'      Nominal pose and type (tall, low, etc.) of the gates
             - 'nominal_obstacles_pos'           Nominal pose of the obstacles
             - 'x_reference'                     Final position to reach/hover at
             - 'initial_state_randomization'     Distributions of the randomized additive error on the initial pose
@@ -133,6 +133,7 @@ edit_this.py : Controller.cmdFirmware(time, obs, reward, done, info)    # Select
         info (dict, optional): Current step information as a dictionary with keys
             - 'collision'                       As a tuple (gate id, boolean)
             - 'current_target_gate_id'          Id of the next gate (-1 when all gates have been travelled through)
+            - 'current_target_gate_type'        Type of the next gate (0: tall, 1: low, etc.)
             - 'current_target_gate_in_range'    Whether the next gate is close enough for perfect visibility
             - 'current_target_gate_pos'         Nominal or exact position of the next gate (depending on the parameter above)
             - 'at_goal_position'                Whether the quadrotor is at the final position ('x_reference')

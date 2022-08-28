@@ -9,7 +9,7 @@ quadrotor_config:
   ctrl_freq: 30 # Frequency of decision making
   pyb_freq: 500 # If `use_firmware` == True, must be multiple of 500, else must be multiple of ctrl_freq
   episode_len_sec: 33  # Episode duration in seconds
-  gui: True # Whether to spawn PyBullet's GUI
+  gui: False # Whether to spawn PyBullet's GUI
   camera_view: [5, -40, -40, 0.5, -1, 0.5] # Distance, yaw, pitch, x, y, z target position
   cost: competition  # Sparse reward function, if desired, re-implement it in Quadrotor._get_reward()
                      # github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/safe_control_gym/envs/gym_pybullet_drones/quadrotor.py
@@ -36,11 +36,11 @@ quadrotor_config:
 
   # Nominal (pre-randomization) positions of gates and obstacles
   gates:
-    [  # x, y, z, r, p, y
-      [0.5, -2.5, 0, 0, 0, -1.57],
-      [2, -1.5, 0, 0, 0, 0],
-      [0, 0.2, 0, 0, 0, 1.57],
-      [-0.5, 1.5, 0, 0, 0, 0]
+    [  # x, y, z, r, p, y, type (0: tall, 1: low)
+      [0.5, -2.5, 0, 0, 0, -1.57, 0],
+      [2, -1.5, 0, 0, 0, 0, 1],
+      [0, 0.2, 0, 0, 0, 1.57, 1],
+      [-0.5, 1.5, 0, 0, 0, 0, 0]
     ]
   obstacles:
     [  # x, y, z, r, p, y
