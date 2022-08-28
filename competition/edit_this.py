@@ -221,7 +221,7 @@ class Controller():
         # Handwritten solution for GitHub's example scenario.
 
         if iteration == 0:
-            height = 0.75
+            height = 1
             duration = 2
 
             command_type = Command(2)  # Take-off.
