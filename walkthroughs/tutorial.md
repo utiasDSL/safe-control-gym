@@ -137,7 +137,6 @@ Here is a short guide to the results that can be used for parsing results as you
 | Control Approach | Available Results | 
 | -----------------|-------------------|
 | PPO, Safe Explorer PPO, SAC, RARL, RAP | <ul><li>ep_returns (the return for each episode)</li><li>ep_lengths (the number of steps in each epsiode)<li>constraint_violations (the number of constraint violations in each episode)</li><li>constraint_values (the constraint cost in each episode)</li><li>mse (the mean squared error of the expected and observed states for each episode)</li><li>frames (if render=true, the frames of the visualization of the run in the simulation environment)</li></ul>|
-| MPSC             | Same as the controller being certified | 
 | Linear MPC       | <ul><li>obs (the states/observations over the run)</li><li>reward (the reward at each step)</li><li>done (whether or not the run is complete)</li><li>info (includes goal_reached (bool), mse, constraint values, and constraint violation count)</li><li>action (which action was taken at each step)</li><li>horizon_inputs(the previous input at each step)</li><li>horizon_states(the previous state at each step)</li><li>horizon_states(the previous state at each step)</li>| 
 | GP MPC           | <ul><li>obs (the states/observations over the run)</li><li>reward (the reward at each step)</li><li>done (whether or not the run is complete)</li><li>info (includes goal_reached (bool), mse, constraint values, and constraint violation count)</li><li>action (which action was taken at each step)</li><li>horizon_inputs(the previous input at each step)</li><li>horizon_states(the previous state at each step)</li><li>horizon_states(the previous state at each step)</li><li>input_constraint_set</li><li>state_constraint_set</li><li>state_horizon_cov(covariance of each state)</li><li>input_horizon_cov(covariance of each input)</li><li>gp_mean_eq_pred()</li><li>gp_pred()</li><li>linear_pred()</li></ul> | 
  
@@ -201,7 +200,8 @@ The configuration used by the experiment is specified in four ways via the comma
 1. --algo : this specifies the default configuration for controller/algorithm used in the experiment
 2. --task : this specifies the default configuration associated with the agent model used in the experiment 
 3. --overrides : this specifies an overrides file that makes an desired modifications to the default configuration files you are using 
-4. --your_arg : using the `.add_argument()` method from `ConfigFactory()` in code and commandline arguments
+4. --safety_filter : this specifies the default configuration associated with the safety filter used in the experiment, if any are used. 
+5. --your_arg : using the `.add_argument()` method from `ConfigFactory()` in code and commandline arguments
 
 ### Override Configurations
 
@@ -216,6 +216,8 @@ Here is one way of setting up your overrides file. Open up `safe-control-gym/wal
 - algo_config: 
     - Contains all algorithm configurations including:
         - seed, initial model parameters, number of iterations, learning rate etc. 
+- sf_config: 
+    - Contains all safety filter configurations
 
 ## Configurations and Options 
 
@@ -265,7 +267,7 @@ For more information on some common utilities in this repo, refer to `safe-contr
 #### Safety Ceritification of Learned Controllers
 | Approach | id | Location | 
 | -------- | --- | ----------- |
-|  Model Predictive Safety Certification | 'mpsc' | [MPSC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpsc/mpsc.py) |
+|  Model Predictive Safety Certification | 'mpsc' | [MPSC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/safety_filters/mpsc/mpsc.py) |
 |  Control Barrier Functions  | 'cbf'  |  [CBF](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/cbf/cbf_qp.py) |
 
 #### Safe Exploration 

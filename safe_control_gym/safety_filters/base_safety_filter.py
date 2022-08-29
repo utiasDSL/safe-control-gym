@@ -1,20 +1,20 @@
-'''Base controller. '''
+'''Base class for safety filter. '''
 
 from abc import ABC, abstractmethod
 
 import torch
 
 
-class BaseController(ABC):
-    '''Template for controller/agent, implement the following methods as needed. '''
+class BaseSafetyFilter(ABC):
+    '''Template for safety filter, implement the following methods as needed. '''
 
     def __init__(self,
                  env_func,
                  training=True,
                  checkpoint_path='temp/model_latest.pt',
-                 output_dir='temp',
+                 output_dir: str='temp',
                  use_gpu=False,
-                 seed=0,
+                 seed: int=0,
                  **kwargs
                  ):
         '''Initializes controller agent.
@@ -41,18 +41,22 @@ class BaseController(ABC):
         for key, value in kwargs.items():
             self.__dict__[key] = value
 
-        self.setup_results_dict()
-
     @abstractmethod
-    def select_action(self, obs, info=None):
-        '''Determine the action to take at the current timestep.
+    def certify_action(self,
+                       current_state,
+                       uncertified_action,
+                       info=None,
+                       ):
+        '''Determines a safe action from the current state and proposed action.
 
         Args:
-            obs (ndarray): The observation at this timestep.
+            current_state (ndarray): Current state/observation.
+            uncertified_action (ndarray): The uncertified_controller's action.
             info (dict): The info at this timestep.
 
         Returns:
-            action (ndarray): The action chosen by the controller.
+            certified_action (ndarray): The certified action.
+            success (bool): Whether the safety filtering was successful or not.
         '''
         raise NotImplementedError
 
@@ -89,12 +93,10 @@ class BaseController(ABC):
         '''Do initializations for training or evaluation. '''
         raise NotImplementedError
 
-    def reset_before_run(self, obs=None, info=None, env=None):
-        '''Reinitialize just the controller before a new run.
+    def reset_before_run(self, env=None):
+        '''Reinitialize just the safety filter before a new run.
 
         Args:
-            obs (ndarray): The initial observation for the new run.
-            info (dict): The first info of the new run.
             env (BenchmarkEnv): The environment to be used for the new run.
         '''
         self.setup_results_dict()

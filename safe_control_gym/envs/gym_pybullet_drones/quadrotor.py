@@ -698,10 +698,7 @@ class Quadrotor(BaseAviary):
         Returns:
             action (ndarray): The motors RPMs to apply to the quadrotor.
         '''
-
-        if self.NORMALIZED_RL_ACTION_SPACE:
-            # rescale action to around hover thrust
-            action = (1 + self.norm_act_scale * action) * self.hover_thrust
+        action = self.denormalize_action(action)
         self.current_physical_action = action
 
         # Apply disturbances.
@@ -718,6 +715,34 @@ class Quadrotor(BaseAviary):
         pwm = cmd2pwm(thrust, self.PWM2RPM_SCALE, self.PWM2RPM_CONST, self.KF, self.MIN_PWM, self.MAX_PWM)
         rpm = pwm2rpm(pwm, self.PWM2RPM_SCALE, self.PWM2RPM_CONST)
         return rpm
+
+    def normalize_action(self, action):
+        '''Converts a physical action into an normalized action if necessary.
+
+        Args:
+            action (ndarray): The action to be converted.
+
+        Returns:
+            normalized_action (ndarray): The action in the correct action space.
+        '''
+        if self.NORMALIZED_RL_ACTION_SPACE:
+            action = (action/self.hover_thrust-1)/self.norm_act_scale
+
+        return action
+
+    def denormalize_action(self, action):
+        '''Converts a normalized action into a physical action if necessary.
+
+        Args:
+            action (ndarray): The action to be converted.
+
+        Returns:
+            physical_action (ndarray): The physical action.
+        '''
+        if self.NORMALIZED_RL_ACTION_SPACE:
+            action = (1 + self.norm_act_scale * action) * self.hover_thrust
+
+        return action
 
     def _get_observation(self):
         '''Returns the current observation (state) of the environment.

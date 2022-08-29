@@ -428,7 +428,7 @@ class CartPole(BenchmarkEnv):
     def _set_action_space(self):
         '''Sets the action space of the environment. '''
         self.action_scale = 10
-        self.physical_action_bounds = (-np.asarray(self.action_scale), np.asarray(self.action_scale))
+        self.physical_action_bounds = (-np.atleast_1d(self.action_scale), np.atleast_1d(self.action_scale))
         self.action_threshold = 1 if self.NORMALIZED_RL_ACTION_SPACE else self.action_scale
         self.action_space = spaces.Box(low=-self.action_threshold, high=self.action_threshold, shape=(1,))
         # Define action/input labels and units.
@@ -471,8 +471,7 @@ class CartPole(BenchmarkEnv):
         Returns:
             force (float): The scalar, clipped force to apply to the cart.
         '''
-        if self.NORMALIZED_RL_ACTION_SPACE:
-            action = self.action_scale * action
+        action = self.denormalize_action(action)
         self.current_physical_action = action
 
         # Apply disturbances.
@@ -487,6 +486,34 @@ class CartPole(BenchmarkEnv):
         self.current_clipped_action = force
 
         return force[0] # Only use the scalar value.
+
+    def normalize_action(self, action):
+        '''Converts a physical action into an normalized action if necessary.
+
+        Args:
+            action (ndarray): The action to be converted.
+
+        Returns:
+            normalized_action (ndarray): The action in the correct action space.
+        '''
+        if self.NORMALIZED_RL_ACTION_SPACE:
+            action = action / self.action_scale
+
+        return action
+
+    def denormalize_action(self, action):
+        '''Converts a normalized action into a physical action if necessary.
+
+        Args:
+            action (ndarray): The action to be converted.
+
+        Returns:
+            physical_action (ndarray): The physical action.
+        '''
+        if self.NORMALIZED_RL_ACTION_SPACE:
+            action = self.action_scale * action
+
+        return action
 
     def _advance_simulation(self, force):
         '''Apply the commanded forces and adversarial actions to the cartpole.

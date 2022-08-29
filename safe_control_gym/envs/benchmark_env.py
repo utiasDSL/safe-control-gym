@@ -391,6 +391,30 @@ class BenchmarkEnv(gym.Env, ABC):
         '''
         raise NotImplementedError
 
+    @abstractmethod
+    def normalize_action(self, action):
+        '''Converts a physical action into an normalized action if necessary.
+
+        Args:
+            action (ndarray): The action to be converted.
+
+        Returns:
+            normalized_action (ndarray): The action in the correct action space.
+        '''
+        raise NotImplementedError
+
+    @abstractmethod
+    def denormalize_action(self, action):
+        '''Converts a normalized action into a physical action if necessary.
+
+        Args:
+            action (ndarray): The action to be converted.
+
+        Returns:
+            physical_action (ndarray): The physical action.
+        '''
+        raise NotImplementedError
+
     def before_step(self, action):
         '''Pre-processing before calling `.step()`.
 
