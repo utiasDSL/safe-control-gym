@@ -1132,7 +1132,6 @@ class Quadrotor(BaseAviary):
                 "height": 0.525,
                 "edge": 0.45
             }
-            
         }
         info["obstacle_dimensions"] = {
             "shape": "cylinder",
