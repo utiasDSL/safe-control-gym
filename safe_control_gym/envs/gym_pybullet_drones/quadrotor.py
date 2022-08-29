@@ -146,6 +146,7 @@ class Quadrotor(BaseAviary):
 
     def __init__(self,
                  init_state=None,
+                 prior_prop=None,
                  inertial_prop=None,
                  # custom args
                  quad_type: QuadType = QuadType.TWO_D,
@@ -199,7 +200,7 @@ class Quadrotor(BaseAviary):
 
         # BaseAviary constructor, called after defining the custom args,
         # since some BenchmarkEnv init setup can be task(custom args)-dependent.
-        super().__init__(init_state=init_state, inertial_prop=inertial_prop, **kwargs)
+        super().__init__(init_state=init_state, prior_prop=prior_prop, inertial_prop=inertial_prop, **kwargs)
 
         # Store initial state info.
         self.INIT_STATE_LABELS = {
@@ -252,6 +253,20 @@ class Quadrotor(BaseAviary):
             self.J[2, 2] = inertial_prop.get('Izz', self.J[2, 2])
         else:
             raise ValueError('[ERROR] in Quadrotor.__init__(), inertial_prop incorrect format.')
+
+        # TODO: decide if this is ok to fix prior
+        # Store prior parameters.
+        self.PRIOR_MASS = self.MASS
+        self.PRIOR_J = deepcopy(self.J)
+        if prior_prop is None:
+            pass
+        elif isinstance(prior_prop, dict):
+            self.PRIOR_MASS = prior_prop.get('M', self.MASS)
+            self.PRIOR_J[0, 0] = prior_prop.get('Ixx', self.J[0, 0])
+            self.PRIOR_J[1, 1] = prior_prop.get('Iyy', self.J[1, 1])
+            self.PRIOR_J[2, 2] = prior_prop.get('Izz', self.J[2, 2])
+        else:
+            raise ValueError('[ERROR] in Quadrotor.__init__(), prior_prop incorrect format.')
 
         # Set prior/symbolic info.
         self._setup_symbolic()
@@ -468,8 +483,11 @@ class Quadrotor(BaseAviary):
 
     def _setup_symbolic(self):
         '''Creates symbolic (CasADi) models for dynamics, observation, and cost. '''
-        m, g, l = self.MASS, self.GRAVITY_ACC, self.L
-        Iyy = self.J[1, 1]
+        # TODO: reverse or delete commented out code once decided how to fix prior
+        # m, g, l = self.MASS, self.GRAVITY_ACC, self.L
+        # Iyy = self.J[1, 1]
+        m, g, l = self.PRIOR_MASS, self.GRAVITY_ACC, self.L
+        Iyy = self.PRIOR_J[1, 1]
         dt = self.CTRL_TIMESTEP
         # Define states.
         z = cs.MX.sym('z')
@@ -506,8 +524,11 @@ class Quadrotor(BaseAviary):
             Y = cs.vertcat(x, x_dot, z, z_dot, theta, theta_dot)
         elif self.QUAD_TYPE == QuadType.THREE_D:
             nx, nu = 12, 4
-            Ixx = self.J[0, 0]
-            Izz = self.J[2, 2]
+            # TODO: reverse or delete commented out code once decided how to fix prior
+            # Ixx = self.J[0, 0]
+            # Izz = self.J[2, 2]
+            Ixx = self.PRIOR_J[0, 0]
+            Izz = self.PRIOR_J[2, 2]
             J = cs.blockcat([[Ixx, 0.0, 0.0],
                              [0.0, Iyy, 0.0],
                              [0.0, 0.0, Izz]])
@@ -540,7 +561,7 @@ class Quadrotor(BaseAviary):
 
             # From Ch. 2 of Luis, Carlos, and Jérôme Le Ny. 'Design of a trajectory tracking controller for a
             # nanoquadcopter.' arXiv preprint arXiv:1608.05786 (2016).
-
+    
             # Defining the dynamics function.
             # We are using the velocity of the base wrt to the world frame expressed in the world frame.
             # Note that the reference expresses this in the body frame.
@@ -883,9 +904,16 @@ class Quadrotor(BaseAviary):
         '''
         info = {}
         info['symbolic_model'] = self.symbolic
+        # TODO: reverse or delete commented out code once decided how to fix prior
+        # info['physical_parameters'] = {
+        #     'quadrotor_mass': self.MASS,
+        #     'quadrotor_iyy_inertia': self.J[1, 1]
+        # }
         info['physical_parameters'] = {
-            'quadrotor_mass': self.MASS,
-            'quadrotor_iyy_inertia': self.J[1, 1]
+            'quadrotor_mass': self.PRIOR_MASS,
+            'quadrotor_ixx_inertia': self.PRIOR_J[0, 0],
+            'quadrotor_iyy_inertia': self.PRIOR_J[1, 1],
+            'quadrotor_izz_inertia': self.PRIOR_J[2, 2]
         }
         info['x_reference'] = self.X_GOAL
         info['u_reference'] = self.U_GOAL

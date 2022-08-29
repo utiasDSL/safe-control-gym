@@ -127,3 +127,11 @@ class BaseController(ABC):
     def setup_results_dict(self):
         '''Setup the results dictionary to store run information. '''
         self.results_dict = {}
+        
+    def setup_prior(self):
+        '''Changes the prior model fetched from `self.env` for the controller.
+        '''
+        prior_info = getattr(self, "prior_info", None)
+        if prior_info is not None:
+            # TODO: it does not work currently, since `_setup_symbolic()` doesn't take any args
+            self.env._setup_symbolic(prior_info)
