@@ -392,13 +392,21 @@ class Quadrotor(BaseAviary):
             d_args = rand_info_copy["gates"].pop("args", [])
             d_kwargs = rand_info_copy["gates"]
         for gate in self.GATES:
-            gate_height = 1. # URDF dependent.
+            if gate[6] == 0:
+                urdf_file = "portal.urdf"
+                gate_height = 1. # URDF dependent.
+            elif gate[6] == 1:
+                urdf_file = "low_portal.urdf"
+                gate_height = 0.525 # URDF dependent.
+            else:
+                raise ValueError("[ERROR] Unknown gate type.")
             if self.RANDOMIZED_GATES_AND_OBS:
                 offset = np.array([distrib(*d_args, **d_kwargs), distrib(*d_args, **d_kwargs), gate_height])
             else:
                 offset = np.array([0, 0, gate_height])
             self.EFFECTIVE_GATES_POSITIONS.append(list(np.array(gate[0:3]) + offset) + gate[3:6])
-            TMP_ID = p.loadURDF(os.path.join(self.URDF_DIR, "portal.urdf"),
+            
+            TMP_ID = p.loadURDF(os.path.join(self.URDF_DIR, urdf_file),
                        np.array(gate[0:3]) + offset,
                        p.getQuaternionFromEuler(gate[3:6]),
                        physicsClientId=self.PYB_CLIENT)
@@ -1027,7 +1035,12 @@ class Quadrotor(BaseAviary):
         # Gates progress (note: allow 0.5 seconds for initial drop if objects are not on the gound).
         if self.pyb_step_counter > 0.5*self.PYB_FREQ and self.NUM_GATES > 0 and self.current_gate < self.NUM_GATES:
             x, y, _, _, _, rot = self.EFFECTIVE_GATES_POSITIONS[self.current_gate]
-            height = 1. # Obstacle URDF dependent.
+            if self.GATES[self.current_gate][6] == 0:
+                height = 1. # URDF dependent.
+            elif self.GATES[self.current_gate][6] == 1:
+                height = 0.525 # URDF dependent.
+            else:
+                raise ValueError("[ERROR] Unknown gate type.")
             half_length = 0.1875 # Obstacle URDF dependent.
             delta_x = 0.05*np.cos(rot)
             delta_y = 0.05*np.sin(rot)
@@ -1066,11 +1079,13 @@ class Quadrotor(BaseAviary):
                 info["current_target_gate_pos"] = self.EFFECTIVE_GATES_POSITIONS[self.current_gate]
             else:
                 info["current_target_gate_in_range"] = False
-                info["current_target_gate_pos"] = self.GATES[self.current_gate]
+                info["current_target_gate_pos"] = self.GATES[self.current_gate][0:6]
+            info["current_target_gate_type"] = self.GATES[self.current_gate][6]
         else:
             info["current_target_gate_id"] = -1
             info["current_target_gate_in_range"] = False
             info["current_target_gate_pos"] = []
+            info["current_target_gate_type"] = -1
         #
         # Final goal position reached
         info["at_goal_position"] = False
@@ -1107,16 +1122,23 @@ class Quadrotor(BaseAviary):
         info["quadrotor_kf"] = self.KF
         info["quadrotor_km"] = self.KM
         info["gate_dimensions"] = {
-            "shape": "square",
-            "height": 1.,
-            "edge": 0.45
+            "tall": {
+                "shape": "square",
+                "height": 1.,
+                "edge": 0.45
+            },
+            "low": {
+                "shape": "square",
+                "height": 0.525,
+                "edge": 0.45
+            }
         }
         info["obstacle_dimensions"] = {
             "shape": "cylinder",
-            "height": 0.8,
+            "height": 1.05,
             "radius": 0.05
         }
-        info["nominal_gates_pos"] = self.GATES
+        info["nominal_gates_pos_and_type"] = self.GATES
         info["nominal_obstacles_pos"] = self.OBSTACLES
 
         if self.RANDOMIZED_INIT:

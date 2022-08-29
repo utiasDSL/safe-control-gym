@@ -184,6 +184,7 @@ def run(test=False):
             print('\tCurrent target gate ID: ' + str(info['current_target_gate_id']))
             print('\tCurrent target gate in range: ' + str(info['current_target_gate_in_range']))
             print('\tCurrent target gate position: ' + str(info['current_target_gate_pos']))
+            print('\tCurrent target gate type: ' + str(info['current_target_gate_type']))
             print('\tAt goal position: ' + str(info['at_goal_position']))
             print('\tCollisions: ' + str(collisions_count))
             print('\tCollided objects: ' + str(collided_objects))
