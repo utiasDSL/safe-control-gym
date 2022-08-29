@@ -9,6 +9,9 @@ experiments/arxiv/quadrotor_*/*data/
 #
 experiments/lqr/*data/
 #
+experiments/mpsc/temp-data/
+experiments/mpsc/unsafe_rl_temp_data/
+#
 experiments/pid/*data/
 #
 results/
