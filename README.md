@@ -1,5 +1,7 @@
 # IROS 2022 Safe Robot Learning Competition
 
+## Video
+
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/bWhDTNtj8EA/maxresdefault.jpg)](https://www.youtube.com/watch?v=bWhDTNtj8EA)
 
 *Note: beta release subject to change throughout the month of August 2022; register for updates*
@@ -81,7 +83,113 @@ python3 getting_started.py --overrides ./getting_started.yaml
 ```
 **Modify file [`edit_this.py`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py) to customize your controller based on [Crazyswarm's Crazyflie interface](https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie)**
 
-Also see [section 'Methods to Re-implement'](https://github.com/utiasDSL/safe-control-gym/tree/beta-iros-competition#methods-to-re-implement)
+## Development and Evaluation Scenarios
+
+A complete problem is specified by a YAML file like [`getting_started.yaml`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/getting_started.yaml)
+
+Proposed solutions will be evaluated in 4 scenarios with different challenges:
+- [`level0.yaml`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level0.yaml), perfect knowledge
+- [`level1.yaml`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level1.yaml), uncertain dynamics
+- [`level2.yaml`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level2.yaml), uncertain dynamics and gates/obstacles
+- Sim2real, transfer of the best `level2` controller to a real Crazyflie 2.x
+
+## Implement Your Controller/Solution
+
+Methods to Re-implement in [`edit_this.py`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py)
+
+**Required**
+```
+edit_this.py : Controller.__init__(initial_obs, initial_info)           # Initialize the controller
+
+    Args:
+        initial_obs (ndarray): The initial observation of the quadrotor's state
+            [x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r].
+        initial_info (dict): The a priori problem information as a dictionary with keys
+
+            - 'ctrl_timestep'                   Control timestep (in seconds)
+            - 'ctrl_freq'                       Control frequency (in Hz)
+            - 'episode_len_sec'                 Maximum duration of an episode (in seconds)
+            - 'nominal_physical_parameters'     *Nominal* mass and inertia of the quadrotor
+
+            - 'gate_dimensions'                 Shape and measurements of the gates
+            - 'obstacle_dimensions'             Shape and measurements of the obstacles
+            - 'nominal_gates_pos_and_type'      *Nominal* pose and type (tall, low, etc.) of the gates
+            - 'nominal_obstacles_pos'           *Nominal* pose of the obstacles
+            - 'x_reference'                     Final position to reach/hover at
+
+            - 'initial_state_randomization'     Distributions of the randomized additive error on the initial pose
+            - 'inertial_prop_randomization'     Distributions of the randomized additive error on the inertial properties
+            - 'gates_and_obs_randomization'     Distributions of the randomized additive error on the gates and obstacles positions
+            - 'disturbances'                    Distributions of the dynamics and input disturbances's  
+
+            - 'symbolic_model'                  CasADi's 3D quadrotor dynamics
+            - 'symbolic_constraints'            CasADi's constraints
+
+    Returns: N/A
+```
+
+**Required**
+```
+edit_this.py : Controller.cmdFirmware(time, obs, reward, done, info)    # Select the next command for the quadrotor
+
+    Args:
+        time (float): Episode's elapsed time, in seconds.
+        obs (ndarray): The quadrotor's pose from PyBullet or Vicon
+            [x, 0, y, 0, z, 0, phi, theta, psi, 0, 0, 0].
+        reward (float, optional): The reward signal.
+        done (bool, optional): Wether the episode has terminated.
+        info (dict, optional): Current step information as a dictionary with keys
+
+            - 'current_target_gate_id'          ID of the next gate (-1 when all gates have been travelled through)
+            - 'current_target_gate_type'        Type of the next gate (0: tall, 1: low)
+            - 'current_target_gate_in_range'    Boolean, whether the next gate is close enough (i.e., <= VISIBILITY_RANGE == 0.45m) for perfect visibility (affects the value of the next key 'current_target_gate_pos')
+            - 'current_target_gate_pos'         *Nominal* or exact position of the next gate (depending on the value of the key above, 'current_target_gate_in_range')
+            
+            - 'at_goal_position'                Boolean, Whether the quadrotor is at the final position ('x_reference')
+
+            - 'constraint_values'               Constraint evaluations
+            - 'constraint_violation'            Boolean, whether any of the constraints is violated
+            - 'collision'                       Collision, as a tuple (collided object id, boolean), note when False, ID==None
+
+    Returns:
+        Command: selected type of command (FINISHED, NONE, FULLSTATE, TAKEOFF, LAND, STOP, GOTO, NOTIFYSETPOINTSTOP, see Enum-like class `Command`).
+        List: arguments for the type of command
+            - FINISHED's args: []
+            - NONE's args: []
+            - FULLSTATE's args: [pos (3 val), vel (3 val), acc (3 val), yaw, rpy_rates (3 val), curr_time] 
+            - TAKEOFF's args: [height, duration]
+            - LAND's args: [height, duration]
+            - STOP's args: []
+            - GOTO's args: [x, y, z, yaw, duration, relative (bool)]
+            - NOTIFYSETPOINTSTOP's args: []
+
+        Also see: https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py#L39
+        and: https://crazyswarm.readthedocs.io/en/latest/api.html#crazyflie-class
+```
+
+**Optional, recommended for learning, adaptive control**
+```
+edit_this.py : Controller.interStepLearn(...)       # Update the controller's internal state at each step
+
+    Args:
+        N/A
+
+    Leverage the data in `self.action_buffer`, `self.obs_buffer`, `self.reward_buffer`, self.done_buffer`, `self.info_buffer`
+
+    Returns: N/A     
+```
+
+**Optional, recommended for learning, adaptive control**
+```
+edit_this.py : Controller.interEpisodeLearn(...)    # Update the controller's internal state between episodes
+
+    Args:
+        N/A
+
+    Leverage the data in `self.action_buffer`, `self.obs_buffer`, `self.reward_buffer`, self.done_buffer`, `self.info_buffer`
+
+    Returns: N/A
+```
 
 ## Submission
 
@@ -91,98 +199,13 @@ Also see [section 'Methods to Re-implement'](https://github.com/utiasDSL/safe-co
 - Create a Pull Request into `utiasDSL/safe-control-gym:beta-iros-competition` from your fork ([help](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork))
 - Tag @JacopoPan in the Pull Request's Conversation tab
 
-## Methods to Re-implement
-
-Required
-```
-edit_this.py : Controller.__init__(initial_obs, initial_info)           # Initialize the controller
-    Args:
-        initial_obs (ndarray): The initial observation of the quadrotor's state
-            [x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r].
-        initial_info (dict): The a priori information as a dictionary with keys
-            - 'symbolic_model'                  CasADi's 3D quadrotor dynamics
-            - 'symbolic_constraints'            CasADi's constraints
-            - 'nominal_physical_parameters'     Nominal mass and inertia
-            - 'ctrl_timestep'                   Control timestep (in seconds)
-            - 'ctrl_freq'                       Control frequency (in Hz)
-            - 'episode_len_sec'                 Maximum duration of an episode (in seconds)
-            - 'quadrotor_kf'                    Motor coefficient
-            - 'quadrotor_km'                    Motor coefficient
-            - 'gate_dimensions'                 Shape and measurements of the gates
-            - 'obstacle_dimensions'             Shape and measurements of the obstacles
-            - 'nominal_gates_pos_and_type'      Nominal pose and type (tall, low, etc.) of the gates
-            - 'nominal_obstacles_pos'           Nominal pose of the obstacles
-            - 'x_reference'                     Final position to reach/hover at
-            - 'initial_state_randomization'     Distributions of the randomized additive error on the initial pose
-            - 'inertial_prop_randomization'     Distributions of the randomized additive error on the inertial properties
-            - 'gates_and_obs_randomization'     Distributions of the randomized additive error on the gates and obstacles positions
-            - 'disturbances'                    Dynamics and input disturbances's distributions 
-
-    Returns:
-        N/A
-```
-
-```
-edit_this.py : Controller.cmdFirmware(time, obs, reward, done, info)    # Select the next command for the quadrotor
-    Args:
-        time (float): Episode's elapsed time, in seconds.
-        obs (ndarray): The quadrotor's Vicon data
-            [x, 0, y, 0, z, 0, phi, theta, psi, 0, 0, 0].
-        reward (float, optional): The reward signal.
-        done (bool, optional): Wether the episode has terminated.
-        info (dict, optional): Current step information as a dictionary with keys
-            - 'collision'                       As a tuple (gate id, boolean)
-            - 'current_target_gate_id'          Id of the next gate (-1 when all gates have been travelled through)
-            - 'current_target_gate_type'        Type of the next gate (0: tall, 1: low, etc.)
-            - 'current_target_gate_in_range'    Whether the next gate is close enough for perfect visibility
-            - 'current_target_gate_pos'         Nominal or exact position of the next gate (depending on the parameter above)
-            - 'at_goal_position'                Whether the quadrotor is at the final position ('x_reference')
-            - 'constraint_values'               Constraint evaluation
-            - 'constraint_violation'            Whether any of the constraints is violated
-
-    Returns:
-        Command: selected type of command (NONE, FULLSTATE, TAKEOFF, LAND, STOP, GOTO, see Enum-like class `Command`).
-        List: arguments for the type of command
-            - NONE's args: []
-            - FULLSTATE's args: [pos (3 val), vel (3 val), acc (3 val), yaw, rpy_rates (3 val), curr_time] 
-            - TAKEOFF's args: [height, duration]
-            - LAND's args: [height, duration]
-            - STOP's args: []
-            - GOTO's args: [x, y, z, yaw, duration, relative (bool)]
-```
-
-Optional, recommended
-```
-edit_this.py : Controller.interStepLearn(...)       # Update the controller's internal state at each step
-    Args:
-        N/A
-
-    Leverage the data in `self.action_buffer`, `self.obs_buffer`, `self.reward_buffer`, self.done_buffer`, `self.info_buffer`
-
-    Returns:
-        N/A     
-```
-
-```
-edit_this.py : Controller.interEpisodeLearn(...)    # Update the controller's internal state between episodes
-    Args:
-        N/A
-
-    Leverage the data in `self.action_buffer`, `self.obs_buffer`, `self.reward_buffer`, self.done_buffer`, `self.info_buffer`
-
-    Returns:
-        N/A
-```
-
 ## Scoring
-1. Performance
-- TBA
 
-2. Safety
-- TBA
-
-3. Robustness
-- TBA
+Solutions will be evaluated and scored by:
+- Performance: minimizing the time required to complete the task (flying through the gates)
+- Safety: minimizing collisions with gates and obstacles as well as constraint violations
+- Robustness: maximizing the success rate in uncertain scenarios ([`level1.yaml`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level1.yaml), [`level2.yaml`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level2.yaml), and sim2real)
+- Data efficiency: minimizing the number of episodes used to improve performance 
 
 ## Prizes
 - 1st: TBA
@@ -202,6 +225,8 @@ edit_this.py : Controller.interEpisodeLearn(...)    # Update the controller's in
 - SiQi Zhou (University of Toronto, Vector Institute)
 - Melissa Greeff (University of Toronto, Vector Institute)
 - Jacopo Panerati (University of Toronto, Vector Institute)
+- Wenda Zhao (University of Toronto, Vector Institute)
+- Spencer Teetaert (University of Toronto)
 - Yunlong Song (University of Zurich)
 - Leticia Oyuki Rojas Pérez (INAOE)
 - Adam W. Hall (University of Toronto, Vector Institute)
