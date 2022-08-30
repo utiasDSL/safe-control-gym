@@ -163,7 +163,7 @@ class CBF(BaseSafetyFilter):
                            current_state,
                            uncertified_action,
                            ):
-        '''Solve the MPC optimization problem for a given observation and uncertified input.
+        '''Solve the CBF optimization problem for a given observation and uncertified input.
 
         Args:
             current_state (ndarray): Current state/observation.
@@ -250,6 +250,7 @@ class CBF(BaseSafetyFilter):
             infeasible_states (list): List of all states for which the QP is infeasible.
         '''
         valid_cbf = False
+        epsilon = 1e-6
 
         # Select the states to check the CBF condition
         max_bounds = np.array(self.state_limits)
@@ -287,7 +288,7 @@ class CBF(BaseSafetyFilter):
 
                 # Check if the infeasible point is inside or outside the superlevel set. Note that the sampled region makes up a
                 # box, but the superlevel set is not. The superlevel set only needs to be contained inside the box.
-                if barrier_at_x > 0:
+                if barrier_at_x > 0.0 + epsilon:
                     num_infeasible_states_inside_set += 1
 
         print('Number of infeasible states:', num_infeasible)

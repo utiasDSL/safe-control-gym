@@ -150,7 +150,7 @@ class CBF_NN(CBF):
                            current_state,
                            uncertified_action,
                            ):
-        '''Solve the MPC optimization problem for a given observation and uncertified input.
+        '''Solve the CBF optimization problem for a given observation and uncertified input.
 
         Args:
             current_state (ndarray): Current state/observation.
@@ -174,13 +174,7 @@ class CBF_NN(CBF):
         opti.set_value(current_state_var, current_state)
         opti.set_value(uncertified_action_var, uncertified_action)
 
-        torch_state = torch.from_numpy(current_state)
-        torch_state = torch.unsqueeze(torch_state, 0)
-        torch_state = torch_state.to(torch.float32)
-        a_b = self.mlp(torch_state)
-        a_b = a_b.detach().numpy()
-        a = a_b[0, :self.model.nu]
-        b = a_b[0, -1]
+        a, b = self.extract_a_b(current_state)
 
         opti.set_value(a_var, a)
         opti.set_value(b_var, b)
@@ -208,6 +202,25 @@ class CBF_NN(CBF):
             print('Linear Function:', self.linear_func(x=self.cbf(X=current_state)['cbf'])['y'])
             print('------------------------------------------------')
         return certified_action, feasible
+
+    def extract_a_b(self, current_state):
+        '''Extracts the a and b vectors from the torch state.
+
+        Args:
+            current_state (ndarray): The current state of the system.
+
+        Returns:
+            a, b (ndarray): The a and b vectors used to calculate the learned residual.
+        '''
+        torch_state = torch.from_numpy(current_state)
+        torch_state = torch.unsqueeze(torch_state, 0)
+        torch_state = torch_state.to(torch.float32)
+        a_b = self.mlp(torch_state)
+        a_b = a_b.detach().numpy()
+        a = a_b[0, :self.model.nu]
+        b = a_b[0, -1]
+
+        return a, b
 
     def compute_loss(self, batch):
         '''Compute training loss of the neural network that represents the Lie derivative error.
@@ -328,13 +341,7 @@ class CBF_NN(CBF):
                 lie_derivative_values[counter, :] = self.lie_derivative(X=obs, u=blended_input)['LfV']
 
                 # Determine the estimated Lie derivative
-                torch_state = torch.from_numpy(obs)
-                torch_state = torch.unsqueeze(torch_state, 0)
-                torch_state = torch_state.to(torch.float32)
-                a_b = self.mlp(torch_state)
-                a_b = a_b.detach().numpy()
-                a = a_b[0, :self.model.nu]
-                b = a_b[0, -1]
+                a, b = self.extract_a_b(current_state=obs)
                 lie_derivative_est[counter, :] = lie_derivative_values[counter, :] + np.dot(a.T, blended_input) + b
 
                 counter += 1

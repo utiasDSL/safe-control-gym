@@ -1,7 +1,7 @@
 task_config:
   seed: 42
-  ctrl_freq: 15
-  pyb_freq: 750
+  ctrl_freq: 25
+  pyb_freq: 1000
   info_in_reset: True
 
   cost: quadratic
