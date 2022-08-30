@@ -139,13 +139,13 @@ class Controller():
         #########################
 
         # Example: curve fitting with waypoints.
-        y_offset = 0
+        self.y_offset = -3
         waypoints = [
-            (0, 0+y_offset, 1, 0),
-            (1, 1+y_offset, 1, 0),
-            (-1, 2+y_offset, 1, 0),
-            (1, 3+y_offset, 1, 0),
-            (0, 4+y_offset, 1, 0),
+            (0, 0+self.y_offset, 1, 0),
+            (1, 1+self.y_offset, 1, 0),
+            (-1, 2+self.y_offset, 1, 0),
+            (1, 3+self.y_offset, 1, 0),
+            (0, 4+self.y_offset, 1, 0),
         ]  # Height is hardcoded scenario knowledge
         
         self.waypoints = np.array(waypoints)
@@ -201,8 +201,8 @@ class Controller():
             plt.pause(2)
             plt.close()
 
-        # Draw the trajectory on PyBullet's GUI
-        self._draw_trajectory(initial_info)
+            # Draw the trajectory on PyBullet's GUI
+            self._draw_trajectory(initial_info)
 
         #########################
         # REPLACE THIS (END) ####
@@ -269,7 +269,7 @@ class Controller():
             args = []
         
         elif iteration == (2+2*TRANSITION_BUFFER+TRAJECTORY_LENGTH)*self.CTRL_FREQ+1:
-            pos = [0, 0, 1]
+            pos = [0, self.y_offset, 1]
             yaw = 0.
             duration = 4
 

@@ -200,7 +200,6 @@ class Controller():
         elif iteration >= (2+TRANSITION_BUFFER)*self.CTRL_FREQ and iteration < (2+TRANSITION_BUFFER+TRAJECTORY_LENGTH)*self.CTRL_FREQ:
             step = iteration-(2+TRANSITION_BUFFER)*self.CTRL_FREQ
             target_pos = np.array([self.ref_x(step), self.ref_y(step), self.ref_z(step)])
-            print(step, target_pos)
             target_vel = np.zeros(3)
             target_acc = np.zeros(3)
             target_yaw = 0.
@@ -212,7 +211,6 @@ class Controller():
         elif iteration >= (2+TRANSITION_BUFFER+TRAJECTORY_LENGTH)*self.CTRL_FREQ and iteration < int(2+2*TRANSITION_BUFFER+TRAJECTORY_LENGTH)*self.CTRL_FREQ:
             step = TRAJECTORY_LENGTH*self.CTRL_FREQ
             target_pos = np.array([self.ref_x(step), self.ref_y(step), self.ref_z(step)])
-            print(step, target_pos)
             target_vel = np.zeros(3)
             target_acc = np.zeros(3)
             target_yaw = 0.
@@ -240,9 +238,9 @@ class Controller():
             command_type = Command(3)  # Land.
             args = [height, duration]
 
-        # elif iteration == (6+3*TRANSITION_BUFFER+TRAJECTORY_LENGTH)*self.CTRL_FREQ:
-        #     command_type = Command(-1)  # Terminate.
-        #     args = []
+        elif iteration == (8+4*TRANSITION_BUFFER+TRAJECTORY_LENGTH)*self.CTRL_FREQ:
+            command_type = Command(-1)  # Terminate.
+            args = []
 
         else:
             command_type = Command(0)  # None.

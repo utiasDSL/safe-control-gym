@@ -141,10 +141,10 @@ class Controller():
         # Example: curve fitting with waypoints.
         y_offset = 0
         waypoints = [
-            (0, 0, 0.5*0.7, 0),
-            (1, 1, 1*0.7, 0),
-            (-1, -1, 1.75*0.7, 0),
             (0, 0, 2.5*0.7, 0),
+            (-1, -1, 1.75*0.7, 0),
+            (1, 1, 1*0.7, 0),
+            (0, 0, 0.5*0.7, 0),
         ]  # Height is hardcoded scenario knowledge
         
         self.waypoints = np.array(waypoints)
@@ -246,35 +246,35 @@ class Controller():
         # Handwritten solution for GitHub's example scenario.
 
         if iteration == 0:
-            height = 0.5*0.7
-            duration = 2
+            height = 2.5*0.7
+            duration = 3
 
             command_type = Command(2)  # Take-off
             args = [height, duration]
 
-        elif iteration >= (2+TRANSITION_BUFFER)*self.CTRL_FREQ and iteration < (2+2*TRANSITION_BUFFER+TRAJECTORY_LENGTH)*self.CTRL_FREQ:
-            step = min(iteration-(2+TRANSITION_BUFFER)*self.CTRL_FREQ, len(self.ref_x) - 1)
+        elif iteration >= (3+TRANSITION_BUFFER)*self.CTRL_FREQ and iteration < (3+2*TRANSITION_BUFFER+TRAJECTORY_LENGTH)*self.CTRL_FREQ:
+            step = min(iteration-(3+TRANSITION_BUFFER)*self.CTRL_FREQ, len(self.ref_x) - 1)
             target_pos = np.array([self.ref_x[step], self.ref_y[step], self.ref_z[step]])
-            target_vel = 0*np.array([self.ref_vx[step], self.ref_vy[step], self.ref_vz[step]])
-            target_acc = 0*np.array([self.ref_ax[step], self.ref_ay[step], self.ref_az[step]])
+            target_vel = 0.1*np.array([self.ref_vx[step], self.ref_vy[step], self.ref_vz[step]])
+            target_acc = 0.3*np.array([self.ref_ax[step], self.ref_ay[step], self.ref_az[step]])
             target_yaw = 0.
             target_rpy_rates = np.array([0, self.ref_pitch[step], 0])
 
             command_type = Command(1)  # cmdFullState.
             args = [target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
 
-        elif iteration == (2+2*TRANSITION_BUFFER+TRAJECTORY_LENGTH)*self.CTRL_FREQ:
+        elif iteration == (3+2*TRANSITION_BUFFER+TRAJECTORY_LENGTH)*self.CTRL_FREQ:
             command_type = Command(6)  # Notify setpoint stop.
             args = []
 
-        elif iteration == (2+2*TRANSITION_BUFFER+TRAJECTORY_LENGTH)*self.CTRL_FREQ+1:
+        elif iteration == (3+2*TRANSITION_BUFFER+TRAJECTORY_LENGTH)*self.CTRL_FREQ+1:
             height = 0.
-            duration = 3
+            duration = 2
 
             command_type = Command(3)  # Land.
             args = [height, duration]
 
-        elif iteration == (5+3*TRANSITION_BUFFER+TRAJECTORY_LENGTH)*self.CTRL_FREQ:
+        elif iteration == (6+3*TRANSITION_BUFFER+TRAJECTORY_LENGTH)*self.CTRL_FREQ:
             command_type = Command(-1)  # Terminate.
             args = []
 

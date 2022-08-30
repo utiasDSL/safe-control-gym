@@ -114,7 +114,7 @@ class Controller():
         #########################
 
         # Example: curve fitting with waypoints.
-        factor = 0.002
+        factor = 1.5
         waypoints = [
             (0, 0, 1, 0),
             (1, 0, 1.25, np.pi/factor),
@@ -225,17 +225,28 @@ class Controller():
             command_type = Command(1)  # cmdFullState.
             args = [target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
 
-        elif iteration == (TRAJECTORY_LENGTH+5)*self.CTRL_FREQ:
+
+        
+        elif iteration == (TRAJECTORY_LENGTH+3)*self.CTRL_FREQ:
             command_type = Command(6)  # notify setpoint stop
             args = []
+            
+        elif iteration == (TRAJECTORY_LENGTH+3)*self.CTRL_FREQ+1:
+            command_type = Command(5)  # goto.
+            args = [[0, 0, 1], 0, 1, False]        
+            
         
-        elif iteration == (TRAJECTORY_LENGTH+5)*self.CTRL_FREQ+1:
+        elif iteration == (TRAJECTORY_LENGTH+4)*self.CTRL_FREQ:
             height = 0.
             duration = 3
 
             command_type = Command(3)  # Land.
             args = [height, duration]
 
+        elif iteration == (TRAJECTORY_LENGTH+8)*self.CTRL_FREQ:
+            command_type = Command(-1)  # Terminate.
+            args = []
+        
         else:
             command_type = Command(0)  # None.
             args = []
