@@ -34,7 +34,6 @@ try:
 except ImportError:
     print("WARNING: Pybullet is not installed. Verbose display options are not available.")
     VERBOSE = False
-
 from enum import Enum
 from collections import deque
 
@@ -57,6 +56,7 @@ class Command(Enum):
     GOTO = 5 # Args: [pos, yaw, duration, relative (bool)]
         # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.goTo
     NOTIFYSETPOINTSTOP = 6 # Args: None
+        # Must be called after calling cmdfullstate and before calling anything else 
 
 
 class Controller():
@@ -114,14 +114,13 @@ class Controller():
         #########################
 
         # Example: curve fitting with waypoints.
-        factor = 0.02 * 180 / (np.pi*1000)
         waypoints = [
             (0, 0, 1, 0),
-            (0.5, 0, 1.25, np.pi / (1*factor)),
+            (0.5, 0, 1.25, np.pi),
             (1, 0, 1.5, 0),
             (0, 0, 1.5, 0),
             (-1, 0, 1.5, 0),
-            (-0.5, 0, 1.25, -np.pi / (1*factor)),
+            (-0.5, 0, 1.25, -np.pi),
             (0, 0, 1, 0),
         ]  # Height is hardcoded scenario knowledge
         
@@ -228,21 +227,29 @@ class Controller():
             command_type = Command(1)  # cmdFullState.
             args = [target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
 
-        elif iteration == (TRAJECTORY_LENGTH+5)*self.CTRL_FREQ:
-            command_type = Command(6)  # Land.
+        elif iteration < int((TRAJECTORY_LENGTH+5)*self.CTRL_FREQ)-1 and iteration > (TRAJECTORY_LENGTH+3)*self.CTRL_FREQ:
+            target_pos = np.array([self.ref_x[-1], self.ref_y[-1], self.ref_z[-1]])
+            target_vel = np.zeros(3)
+            target_acc = np.zeros(3)
+            target_yaw = 0.
+            target_rpy_rates = np.array([0, 0, 0])
+
+            command_type = Command(1)  # cmdFullState.
+            args = [target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
+
+
+        elif iteration == int((TRAJECTORY_LENGTH+5)*self.CTRL_FREQ)-1:
+            command_type = Command(6)  # Notify setpoint stop.
             args = []
-            
-        elif iteration == (TRAJECTORY_LENGTH+5)*self.CTRL_FREQ+1:
+        
+        elif iteration == int((TRAJECTORY_LENGTH+5)*self.CTRL_FREQ):
             height = 0.
             duration = 3
 
             command_type = Command(3)  # Land.
             args = [height, duration]
-
+        
         elif iteration == (TRAJECTORY_LENGTH+8)*self.CTRL_FREQ:
-            height = 0.
-            duration = 3
-
             command_type = Command(-1)  # Terminate.
             args = []
 
