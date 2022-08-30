@@ -8,6 +8,7 @@ Look for instructions in `README.md` and `edit_this.py`.
 
 """
 import time
+import inspect
 import numpy as np
 import pybullet as p
 
@@ -99,6 +100,34 @@ def run(test=False):
     # Wait for keyboard input to start.
     # input("Press any key to start")
 
+    # Initial printouts.
+    if config.verbose:
+        print('\tInitial observation [x, 0, y, 0, z, 0, phi, theta, psi, 0, 0, 0]: ' + str(obs))
+        print('\tControl timestep: ' + str(info['ctrl_timestep']))
+        print('\tControl frequency: ' + str(info['ctrl_freq']))
+        print('\tMaximum episode duration: ' + str(info['episode_len_sec']))
+        print('\tNominal quadrotor mass and inertia: ' + str(info['nominal_physical_parameters']))
+        print('\tGates properties: ' + str(info['gate_dimensions']))
+        print('\tObstacles properties: ' + str(info['obstacle_dimensions']))
+        print('\tNominal gates positions [x, y, z, r, p, y, type]: ' + str(info['nominal_gates_pos_and_type']))
+        print('\tNominal obstacles positions [x, y, z, r, p, y]: ' + str(info['nominal_obstacles_pos']))
+        print('\tFinal target hover position [x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r]: ' + str(info['x_reference']))
+        print('\tDistribution of the error on the initial state: ' + str(info['initial_state_randomization']))
+        print('\tDistribution of the error on the inertial properties: ' + str(info['inertial_prop_randomization']))
+        print('\tDistribution of the error on positions of gates and obsacles: ' + str(info['gates_and_obs_randomization']))
+        print('\tDistribution of the disturbances: ' + str(info['disturbances']))
+        print('\tA priori symbolic model:')
+        print('\t\tState: ' + str(info['symbolic_model'].x_sym).strip('vertcat'))
+        print('\t\tInput: ' + str(info['symbolic_model'].u_sym).strip('vertcat'))
+        print('\t\tDynamics: ' + str(info['symbolic_model'].x_dot).strip('vertcat'))
+        print('Input constraints lower bounds: ' + str(env.constraints.input_constraints[0].lower_bounds))
+        print('Input constraints upper bounds: ' + str(env.constraints.input_constraints[0].upper_bounds))
+        print('State constraints lower bounds: ' + str(env.constraints.state_constraints[0].lower_bounds))
+        print('State constraints upper bounds: ' + str(env.constraints.state_constraints[0].upper_bounds))
+        print('\tSymbolic constraints: ')
+        for fun in info['symbolic_constraints']:
+            print('\t' + str(inspect.getsource(fun)).strip('\n'))
+
     # Run an experiment.
     ep_start = time.time()
     first_ep_iteration = True
@@ -180,16 +209,17 @@ def run(test=False):
             print('\tObservation: ' + str(obs))
             print('\tReward: ' + str(reward) + ' (Cumulative: ' + str(cumulative_reward) +')')
             print('\tDone: ' + str(done))
+            print('\tCurrent target gate ID: ' + str(info['current_target_gate_id']))
+            print('\tCurrent target gate type: ' + str(info['current_target_gate_type']))
+            print('\tCurrent target gate in range: ' + str(info['current_target_gate_in_range']))
+            print('\tCurrent target gate position: ' + str(info['current_target_gate_pos']))
+            print('\tAt goal position: ' + str(info['at_goal_position']))
             if 'constraint_values' in info:
                 print('\tConstraints evaluations: ' + str(info['constraint_values']))
                 print('\tConstraints violation: ' + str(bool(info['constraint_violation'])))
-            print('\tCurrent target gate ID: ' + str(info['current_target_gate_id']))
-            print('\tCurrent target gate in range: ' + str(info['current_target_gate_in_range']))
-            print('\tCurrent target gate position: ' + str(info['current_target_gate_pos']))
-            print('\tCurrent target gate type: ' + str(info['current_target_gate_type']))
-            print('\tAt goal position: ' + str(info['at_goal_position']))
-            print('\tCollisions: ' + str(collisions_count))
-            print('\tCollided objects: ' + str(collided_objects))
+            print('\tCollision: ' + str(info["collision"]))
+            print('\tTotal collisions: ' + str(collisions_count))
+            print('\tCollided objects (history): ' + str(collided_objects))
 
         # Log data.
         pos = [obs[0],obs[2],obs[4]]
