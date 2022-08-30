@@ -537,8 +537,8 @@ class Quadrotor(BaseAviary):
         # Standard Gym return.
         obs = self._get_observation()
         # rew = self._get_reward()
-        done = self._get_done()
         info = self._get_info()
+        done = self._get_done()  # IROS 2022 - After _get_info() to use this step's 'self' attributes.
         rew = self._get_reward()  # IROS 2022 - After _get_info() to use this step's 'self' attributes.
         obs, rew, done, info = super().after_step(obs, rew, done, info)
         return obs, rew, done, info
