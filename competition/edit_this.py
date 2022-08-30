@@ -52,6 +52,8 @@ class Command(Enum):
         # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.stop
     GOTO = 5 # Args: [pos, yaw, duration, relative (bool)]
         # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.goTo
+    NOTIFYSETPOINTSTOP = 6 # Args: None
+        # Must be called to transfer drone state from low level control (cmdFullState) to high level control (takeoff, land, goto)
 
 
 class Controller():
@@ -239,6 +241,10 @@ class Controller():
             args = [target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
 
         elif iteration == 20*self.CTRL_FREQ:
+            command_type = Command(6)  # notify setpoint stop.
+            args = []
+
+        elif iteration == 20*self.CTRL_FREQ+1:
             x = self.ref_x[-1]
             y = self.ref_y[-1]
             z = 1.5 
