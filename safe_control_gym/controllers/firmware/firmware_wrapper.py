@@ -23,6 +23,7 @@ class FirmwareWrapper(BaseController):
     MOTOR_SET_ENABLE = True
 
     RAD_TO_DEG = 180 / math.pi
+    MILLI_RAD_TO_DEG = 180 / (np.pi * 1000)
 
     def __init__(self, 
                 env_func, 
@@ -122,6 +123,7 @@ class FirmwareWrapper(BaseController):
         Todo:
             * Add support for state estimation 
         """
+        self.cmds = []
         # Initialize history  
         self.action_history = [[0, 0, 0, 0] for _ in range(self.ACTION_DELAY)]
         self.sensor_history = [[[0, 0, 0], [0, 0, 0]] for _ in range(self.SENSOR_DELAY)]
@@ -239,7 +241,7 @@ class FirmwareWrapper(BaseController):
             # Estimate rates 
             cur_rotation_rates = (cur_rpy - self.prev_rpy) / self.firmware_dt # body coord, rad/s
             self.prev_rpy = cur_rpy
-            cur_acc = (cur_vel - self.prev_vel) / self.firmware_dt / 9.81 + np.array([0, 0, 1]) # global coord
+            cur_acc = (cur_vel - self.prev_vel) / self.firmware_dt / 9.8 + np.array([0, 0, 1]) # global coord
             self.prev_vel = cur_vel
             
             # Update state 
@@ -259,8 +261,8 @@ class FirmwareWrapper(BaseController):
             else:
                 self._update_sensorData(sensor_timestamp, body_rot.apply(cur_acc), cur_rotation_rates * self.RAD_TO_DEG)
 
-            # Update setpoint 
-            self._updateSetpoint(self.tick / self.firmware_freq) # setpoint looks right 
+            # Update setpoint
+            self._updateSetpoint(self.tick / self.firmware_freq, log_setpoint=(self.tick+1) / self.firmware_freq >= sim_time + self.ctrl_dt) # setpoint looks right 
 
             # Step controller 
             self._step_controller()
@@ -422,20 +424,20 @@ class FirmwareWrapper(BaseController):
             self._error = True
             return 
 
+        # Determine tick based on time passed, allowing us to run pid slower than the 1000Hz it was designed for
+        cur_time = self.tick / self.firmware_freq
+        if (cur_time - self.last_att_pid_call > 0.002) and (cur_time - self.last_pos_pid_call > 0.01):
+            _tick = 0 # Runs position and attitude controller
+            self.last_pos_pid_call = cur_time
+            self.last_att_pid_call = cur_time
+        elif (cur_time - self.last_att_pid_call > 0.002):
+            self.last_att_pid_call = cur_time
+            _tick = 2 # Runs attitude controller 
+        else:
+            _tick = 1 # Runs neither controller 
+
         # Step the chosen controller 
         if self.CONTROLLER == 'pid':
-            # Determine tick based on time passed, allowing us to run pid slower than the 1000Hz it was designed for
-            cur_time = self.tick / self.firmware_freq
-            if (cur_time - self.last_att_pid_call > 0.002) and (cur_time - self.last_pos_pid_call > 0.01):
-                _tick = 0 # Runs position and attitude controller
-                self.last_pos_pid_call = cur_time
-                self.last_att_pid_call = cur_time
-            elif (cur_time - self.last_att_pid_call > 0.002):
-                self.last_att_pid_call = cur_time
-                _tick = 2 # Runs attitude controller 
-            else:
-                _tick = 1 # Runs neither controller 
-
             firm.controllerPid(
                 self.control,
                 self.setpoint,
@@ -449,7 +451,7 @@ class FirmwareWrapper(BaseController):
                 self.setpoint,
                 self.sensorData,
                 self.state,
-                self.tick
+                _tick
             )
 
         # Get pwm values from control object 
@@ -457,18 +459,37 @@ class FirmwareWrapper(BaseController):
         self.tick += 1
 
 
-    def _updateSetpoint(self, timestep):
+    def _updateSetpoint(self, timestep, log_setpoint=False):
         if not self.full_state_cmd_override:
             firm.crtpCommanderHighLevelTellState(self.state)
             firm.crtpCommanderHighLevelUpdateTime(timestep) # Sets commander time variable --- this is time in s from start of flight 
             firm.crtpCommanderHighLevelGetSetpoint(self.setpoint, self.state)
 
+            if log_setpoint:
+                self.cmds += [[
+                    timestep, 
+                    self.setpoint.position.x, 
+                    self.setpoint.position.y, 
+                    self.setpoint.position.z, 
+                    self.setpoint.velocity.x, 
+                    self.setpoint.velocity.y, 
+                    self.setpoint.velocity.z, 
+                    self.setpoint.acceleration.x,
+                    self.setpoint.acceleration.y,
+                    self.setpoint.acceleration.z,
+                    self.setpoint.attitudeRate.roll,
+                    self.setpoint.attitudeRate.pitch,
+                    self.setpoint.attitudeRate.yaw,
+                    self.setpoint.attitudeQuaternion.x,
+                    self.setpoint.attitudeQuaternion.y,
+                    self.setpoint.attitudeQuaternion.z,
+                    self.setpoint.attitudeQuaternion.w,
+                    ]]
+
 
     def _process_command_queue(self, sim_time):
         if len(self.command_queue) > 0:
-            firm.crtpCommanderHighLevelStop() # Resets planner object 
-            if self.full_state_cmd_override:
-                firm.crtpCommanderHighLevelTellState(self.state)
+            firm.crtpCommanderHighLevelStop() # Resets planner object        
             firm.crtpCommanderHighLevelUpdateTime(sim_time) # Sets commander time variable --- this is time in s from start of flight 
             command, args = self.command_queue.pop(0)
             getattr(self, command)(*args)
@@ -503,9 +524,9 @@ class FirmwareWrapper(BaseController):
         self.setpoint.acceleration.y = acc[1]
         self.setpoint.acceleration.z = acc[2]
 
-        self.setpoint.attitudeRate.roll = rpy_rate[0]
-        self.setpoint.attitudeRate.pitch = rpy_rate[1]
-        self.setpoint.attitudeRate.yaw = rpy_rate[2]
+        self.setpoint.attitudeRate.roll = rpy_rate[0] * self.MILLI_RAD_TO_DEG
+        self.setpoint.attitudeRate.pitch = rpy_rate[1] * self.MILLI_RAD_TO_DEG
+        self.setpoint.attitudeRate.yaw = rpy_rate[2] * self.MILLI_RAD_TO_DEG
 
         quat = _get_quaternion_from_euler(0, 0, yaw)
         self.setpoint.attitudeQuaternion.x = quat[0]
@@ -644,6 +665,17 @@ class FirmwareWrapper(BaseController):
         firm.crtpCommanderHighLevelGoTo(*pos, yaw, duration_s, relative)
         self.full_state_cmd_override = False
 
+    def notifySetpointStop(self):
+        """Adds a notifySetpointStop command to command processing queue. 
+        """
+        self.command_queue += [['_notifySetpointStop', []]]
+    def _notifySetpointStop(self):
+        """Adds a notifySetpointStop command to command processing queue. 
+        """
+        print(f"INFO_{self.tick}: Notify setpoint stop command sent.")
+        firm.crtpCommanderHighLevelTellState(self.state)
+        self.full_state_cmd_override = False
+
 
     BRUSHED = True
     SUPPLY_VOLTAGE = 3 # QUESTION: Is change of battery life worth simulating?
@@ -652,7 +684,7 @@ class FirmwareWrapper(BaseController):
             thrust = thrust / 65536 * 60
             volts = -0.0006239 * thrust**2 + 0.088 * thrust
             percentage = min(1, volts / self.SUPPLY_VOLTAGE)
-            ratio = percentage * 65535
+            ratio = percentage * self.MAX_PWM
 
             return ratio
         else: 
@@ -660,8 +692,8 @@ class FirmwareWrapper(BaseController):
 
 
     def _limitThrust(self, val):
-        if val > 65535:
-            return 65535
+        if val > self.MAX_PWM:
+            return self.MAX_PWM
         elif val < 0:
             return 0
         return val
