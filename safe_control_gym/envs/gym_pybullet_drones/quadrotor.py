@@ -342,6 +342,11 @@ class Quadrotor(BaseAviary):
             self.GATES_AND_OBS_RAND_INFO = kwargs['gates_and_obstacles_randomization_info']
         else:
             self.RANDOMIZED_GATES_AND_OBS = False
+        #
+        if 'done_on_collision' in kwargs:
+            self.DONE_ON_COLLISION = kwargs['done_on_collision']
+        else:
+            self.DONE_ON_COLLISION = False
 
     def reset(self):
         """(Re-)initializes the environment to start an episode.
@@ -537,8 +542,8 @@ class Quadrotor(BaseAviary):
         # Standard Gym return.
         obs = self._get_observation()
         # rew = self._get_reward()
-        done = self._get_done()
         info = self._get_info()
+        done = self._get_done()  # IROS 2022 - After _get_info() to use this step's 'self' attributes.
         rew = self._get_reward()  # IROS 2022 - After _get_info() to use this step's 'self' attributes.
         obs, rew, done, info = super().after_step(obs, rew, done, info)
         return obs, rew, done, info
@@ -915,7 +920,7 @@ class Quadrotor(BaseAviary):
                                                      Q=self.Q,
                                                      R=self.R)["l"])
 
-        # IROS 2022 - Competition sparse reward signal. 
+        # IROS 2022 - Competition sparse reward signal.
         if self.COST == Cost.COMPETITION:
             reward = 0
             # Reward stepping through the right next gate.
@@ -974,6 +979,10 @@ class Quadrotor(BaseAviary):
             # Early terminate if needed.
             if out_of_bound:
                 return True
+
+        # IROS 2022 - Terminate episode on collision.
+        if self.DONE_ON_COLLISION and self.currently_collided:
+            return True
 
         return False
 

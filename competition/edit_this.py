@@ -25,38 +25,17 @@ Tips:
         5) interEpisodeLearn (optional)
 
 """
-import os
 import numpy as np
 import pybullet as p
 import matplotlib.pyplot as plt
 
-from enum import Enum
 from collections import deque
 
-from safe_control_gym.envs.gym_pybullet_drones.quadrotor_utils import PIDController
-
-
-class Command(Enum):
-    """Command types that can be used with pycffirmware.
-
-    """
-    FINISHED = -1 # Args: None (exits the control loop)
-    NONE = 0 # Args: None (do nothing)
-
-    FULLSTATE = 1 # Args: [pos, vel, acc, yaw, rpy_rate] 
-        # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.cmdFullState
-    TAKEOFF = 2 # Args: [height, duration]
-        # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.takeoff
-    LAND = 3 # Args: [height, duration]
-        # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.land
-    STOP = 4 # Args: None
-        # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.stop
-    GOTO = 5 # Args: [pos, yaw, duration, relative (bool)]
-        # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.goTo
-
-    NOTIFYSETPOINTSTOP = 6 # Args: None
-        # Must be called to transfer drone state from low level control (cmdFullState) to high level control (takeoff, land, goto)
-        # https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.notifySetpointsStop
+try:
+    from competition_utils import Command, PIDController, timing_step, timing_ep, draw_trajectory
+except ImportError:
+    # Test import.
+    from .competition_utils import Command, PIDController, timing_step, timing_ep, draw_trajectory
 
 
 class Controller():
@@ -90,11 +69,12 @@ class Controller():
 
         """
 
-        # Save environment parameters.
+        # Save environment and conrol parameters.
         self.CTRL_TIMESTEP = initial_info["ctrl_timestep"]
         self.CTRL_FREQ = initial_info["ctrl_freq"]
         self.initial_obs = initial_obs
         self.VERBOSE = verbose
+        self.BUFFER_SIZE = buffer_size
 
         # Store a priori scenario information.
         self.NOMINAL_GATES = initial_info["nominal_gates_pos_and_type"]
@@ -109,41 +89,30 @@ class Controller():
             # Save additonal environment parameters.
             self.KF = initial_info["quadrotor_kf"]
 
-        # Data buffers.
-        self.action_buffer = deque([], maxlen=buffer_size)
-        self.obs_buffer = deque([], maxlen=buffer_size)
-        self.reward_buffer = deque([], maxlen=buffer_size)
-        self.done_buffer = deque([], maxlen=buffer_size)
-        self.info_buffer = deque([], maxlen=buffer_size)
+        # Reset counters and buffers.
+        self.reset()
 
         #########################
         # REPLACE THIS (START) ##
         #########################
 
-        # Example: curve fitting with waypoints.
+        # Static planning example: curve fitting with waypoints.
         if use_firmware:
             waypoints = [(self.initial_obs[0], self.initial_obs[2], initial_info["gate_dimensions"]["tall"]["height"])]  # Height is hardcoded scenario knowledge.
         else:
             waypoints = [(self.initial_obs[0], self.initial_obs[2], self.initial_obs[4])]
         for idx, g in enumerate(self.NOMINAL_GATES):
-            x = g[0]
-            y = g[1]
-            rot = g[5]
-            typ = g[6]
-            if typ == 0:
-                height = initial_info["gate_dimensions"]["tall"]["height"]
-            elif typ == 1:
-                height = initial_info["gate_dimensions"]["low"]["height"]
-            if rot > 0.5*1.57 or rot < 0:
+            height = initial_info["gate_dimensions"]["tall"]["height"] if g[6] == 0 else initial_info["gate_dimensions"]["low"]["height"]
+            if g[5] > 0.75 or g[5] < 0:
                 if idx == 2:  # Hardcoded scenario knowledge (direction in which to take gate 2.
-                    waypoints.append((x+0.3, y-0.2, height))
-                    waypoints.append((x-0.3, y-0.2, height))
+                    waypoints.append((g[0]+0.3, g[1]-0.2, height))
+                    waypoints.append((g[0]-0.3, g[1]-0.2, height))
                 else:
-                    waypoints.append((x-0.3, y, height))
-                    waypoints.append((x+0.3, y, height))
+                    waypoints.append((g[0]-0.3, g[1], height))
+                    waypoints.append((g[0]+0.3, g[1], height))
             else:
-                waypoints.append((x, y-0.3, height))
-                waypoints.append((x, y+0.3, height))
+                waypoints.append((g[0], g[1]-0.3, height))
+                waypoints.append((g[0], g[1]+0.3, height))
         waypoints.append([initial_info["x_reference"][0], initial_info["x_reference"][2], initial_info["x_reference"][4]])
         self.waypoints = np.array(waypoints)
         deg = 6
@@ -181,7 +150,7 @@ class Controller():
             plt.close()
 
         # Draw the trajectory on PyBullet's GUI
-        self._draw_trajectory(initial_info)
+        draw_trajectory(initial_info, self.waypoints, self.ref_x, self.ref_y, self.ref_z)
 
         #########################
         # REPLACE THIS (END) ####
@@ -332,6 +301,7 @@ class Controller():
 
         return target_p, target_v
 
+    @timing_step
     def interStepLearn(self,
                        action,
                        obs,
@@ -352,6 +322,7 @@ class Controller():
             info (dict): Most recent information dictionary.
 
         """
+        self.interstep_counter += 1
 
         # Store the last step's events.
         self.action_buffer.append(action)
@@ -370,6 +341,7 @@ class Controller():
         # REPLACE THIS (END) ####
         #########################
 
+    @timing_ep
     def interEpisodeLearn(self):
         """Learning and controller updates called between episodes.
 
@@ -378,6 +350,7 @@ class Controller():
             rewards, done flags, and information dictionaries to learn, adapt, and/or re-plan.
 
         """
+        self.interepisode_counter += 1
 
         #########################
         # REPLACE THIS (START) ##
@@ -393,42 +366,17 @@ class Controller():
         # REPLACE THIS (END) ####
         #########################
 
-    def _thrusts(self,
-                 obs,
-                 target,
-                 target_v
-                 ):
-        """Do not modify this.
+    def reset(self):
+        """Reset data buffers and counters.
 
         """
-        rpms, _, _ = self.ctrl.compute_control(control_timestep=self.CTRL_TIMESTEP,
-                                               cur_pos=np.array([obs[0],obs[2],obs[4]]),
-                                               cur_quat=np.array(p.getQuaternionFromEuler([obs[6],obs[7],obs[8]])),
-                                               cur_vel=np.array([obs[1],obs[3],obs[5]]),
-                                               cur_ang_vel=np.array([obs[9],obs[10],obs[11]]),
-                                               target_pos=target,
-                                               target_vel=target_v
-                                               )
-        return self.KF * rpms**2
+        # Data buffers.
+        self.action_buffer = deque([], maxlen=self.BUFFER_SIZE)
+        self.obs_buffer = deque([], maxlen=self.BUFFER_SIZE)
+        self.reward_buffer = deque([], maxlen=self.BUFFER_SIZE)
+        self.done_buffer = deque([], maxlen=self.BUFFER_SIZE)
+        self.info_buffer = deque([], maxlen=self.BUFFER_SIZE)
 
-    def _draw_trajectory(self,
-                         initial_info
-                         ):
-        """Do not modify this.
-
-        """
-        for point in self.waypoints:
-            p.loadURDF(os.path.join(initial_info["urdf_dir"], "sphere.urdf"),
-                       [point[0], point[1], point[2]],
-                       p.getQuaternionFromEuler([0,0,0]),
-                       physicsClientId=initial_info["pyb_client"])
-        step = int(self.ref_x.shape[0]/50)
-        for i in range(step, self.ref_x.shape[0], step):
-            p.addUserDebugLine(lineFromXYZ=[self.ref_x[i-step], self.ref_y[i-step], self.ref_z[i-step]],
-                               lineToXYZ=[self.ref_x[i], self.ref_y[i], self.ref_z[i]],
-                               lineColorRGB=[1, 0, 0],
-                               physicsClientId=initial_info["pyb_client"])
-        p.addUserDebugLine(lineFromXYZ=[self.ref_x[i], self.ref_y[i], self.ref_z[i]],
-                           lineToXYZ=[self.ref_x[-1], self.ref_y[-1], self.ref_z[-1]],
-                           lineColorRGB=[1, 0, 0],
-                           physicsClientId=initial_info["pyb_client"])
+        # Counters.
+        self.interstep_counter = 0
+        self.interepisode_counter = 0

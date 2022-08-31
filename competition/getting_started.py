@@ -20,10 +20,12 @@ from safe_control_gym.utils.utils import sync
 from safe_control_gym.envs.gym_pybullet_drones.Logger import Logger
 
 try:
-    from edit_this import Controller, Command
+    from competition_utils import Command, thrusts
+    from edit_this import Controller
 except ImportError:
     # Test import.
-    from .edit_this import Controller, Command
+    from .competition_utils import Command, thrusts
+    from .edit_this import Controller
 
 try:
     import pycffirmware
@@ -190,7 +192,7 @@ def run(test=False):
                 info = {}
                 first_ep_iteration = False
             target_pos, target_vel = ctrl.cmdSimOnly(curr_time, obs, reward, done, info)
-            action = ctrl._thrusts(obs, target_pos, target_vel)
+            action = thrusts(ctrl.ctrl, ctrl.CTRL_TIMESTEP, ctrl.KF, obs, target_pos, target_vel)
             obs, reward, done, info = env.step(action)
 
         # Update the controller internal state and models.
@@ -266,12 +268,9 @@ def run(test=False):
                 new_initial_obs, new_initial_info = env.reset()
             first_ep_iteration = True
 
-            # ctrl._draw_trajectory(new_initial_info)
-
             if config.verbose:
                 print(str(episodes_count)+'-th reset.')
                 print('Reset obs' + str(new_initial_obs))
-                print('Reset info' + str(new_initial_info))
             
             episode_start_iter = i+1
             ep_start = time.time()

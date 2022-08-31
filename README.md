@@ -40,7 +40,7 @@ pip install --upgrade pip
 pip install -e .
 ```
 
-## Install `pycffirmware` (optional, recommended) 
+## Install `pycffirmware`
 
 ```bash
 git clone https://github.com/utiasDSL/pycffirmware.git
@@ -163,7 +163,7 @@ edit_this.py : Controller.cmdFirmware(time, obs, reward, done, info)    # Select
             - GOTO's args: [x, y, z, yaw, duration, relative (bool)]
             - NOTIFYSETPOINTSTOP's args: []
 
-        Also see: https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py#L39
+        Also see: https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/competition_utils.py#L10
         and: https://crazyswarm.readthedocs.io/en/latest/api.html#crazyflie-class
 ```
 
