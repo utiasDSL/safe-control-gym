@@ -1109,18 +1109,21 @@ class Quadrotor(BaseAviary):
         info["at_goal_position"] = False
         info["task_completed"] = False
         if self.current_gate == self.NUM_GATES:
-            quad_xyz = np.array([self.state[0], self.state[2], self.state[4]])
-            goal_xyz = np.array([self.X_GOAL[0], self.X_GOAL[2], self.X_GOAL[4]])
-            if np.linalg.norm(quad_xyz - goal_xyz) < self.TASK_INFO["stabilization_goal_tolerance"]:
-                self.at_goal_pos = True
-                self.steps_at_goal_pos += 1
+            if self.QUAD_TYPE == QuadType.THREE_D:
+                quad_xyz = np.array([self.state[0], self.state[2], self.state[4]])
+                goal_xyz = np.array([self.X_GOAL[0], self.X_GOAL[2], self.X_GOAL[4]])
+                if np.linalg.norm(quad_xyz - goal_xyz) < self.TASK_INFO["stabilization_goal_tolerance"]:
+                    self.at_goal_pos = True
+                    self.steps_at_goal_pos += 1
+                else:
+                    self.at_goal_pos = False
+                    self.steps_at_goal_pos = 0
+                if self.steps_at_goal_pos > self.CTRL_FREQ*2: # Remain near goal position for 2''.
+                    self.task_completed = True
+                info["at_goal_position"] = self.at_goal_pos
+                info["task_completed"] = self.task_completed
             else:
-                self.at_goal_pos = False
-                self.steps_at_goal_pos = 0
-            if self.steps_at_goal_pos > self.CTRL_FREQ*2: # Remain near goal position for 2''.
-                self.task_completed = True
-            info["at_goal_position"] = self.at_goal_pos
-            info["task_completed"] = self.task_completed
+                print('[WARNING] "at_goal_position" and "task_completed" are only intended for used with the 3D quadrotor.')
 
         return info
 
