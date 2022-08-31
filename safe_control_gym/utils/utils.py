@@ -16,8 +16,6 @@ import imageio
 import numpy as np
 import torch
 
-from functools import wraps
-
 
 def mkdirs(*paths):
     """Makes a list of directories.
@@ -238,33 +236,3 @@ def sync(i, start_time, timestep):
     elapsed = time.time() - start_time
     if elapsed < (i*timestep):
         time.sleep(timestep*i - elapsed)
-
-def timing_step(function):
-    """Interstep learning timing decorator.
-
-    """
-    @wraps(function)
-    def wrap(*args, **keyword_args):
-        start = time.time()
-        result = function(*args, **keyword_args)
-        end = time.time()
-        if end-start >= args[0].CTRL_TIMESTEP:
-            print('\n[WARNING] Function "{}" took: {} sec (too slow)'.format(function.__name__, end-start))
-        if args[0].VERBOSE and args[0].interstep_counter%int(args[0].CTRL_FREQ/2) == 0:
-            print('\n{}-th call to function "{}" took: {} sec'.format(args[0].interstep_counter, function.__name__, end-start))
-        return result
-    return wrap
-
-def timing_ep(function):
-    """Interepisode learning timing decorator.
-
-    """
-    @wraps(function)
-    def wrap(*args, **keyword_args):
-        start = time.time()
-        result = function(*args, **keyword_args)
-        end = time.time()
-        if args[0].VERBOSE:
-            print('\n{}-th call to function "{}" took: {} sec'.format(args[0].interepisode_counter, function.__name__, end-start))
-        return result
-    return wrap
