@@ -347,6 +347,11 @@ class Quadrotor(BaseAviary):
             self.DONE_ON_COLLISION = kwargs['done_on_collision']
         else:
             self.DONE_ON_COLLISION = False
+        #
+        if 'done_on_completion' in kwargs:
+            self.DONE_ON_COMPLETION = kwargs['done_on_completion']
+        else:
+            self.DONE_ON_COMPLETION = False
 
     def reset(self):
         """(Re-)initializes the environment to start an episode.
@@ -438,9 +443,11 @@ class Quadrotor(BaseAviary):
         # 
         # Initialize IROS-specific attributes.
         self.stepped_through_gate = False
-        self.at_goal_pos = False
         self.currently_collided = False
-        
+        self.at_goal_pos = False
+        self.steps_at_goal_pos = 0
+        self.task_completed = False
+
         # Choose randomized or deterministic inertial properties.
         prop_values = {
             "M": self.MASS,
@@ -982,6 +989,9 @@ class Quadrotor(BaseAviary):
         # IROS 2022 - Terminate episode on collision.
         if self.DONE_ON_COLLISION and self.currently_collided:
             return True
+        # IROS 2022 - Terminate episode on task completion.
+        if self.DONE_ON_COMPLETION and self.task_completed:
+            return True
 
         return False
 
@@ -1097,9 +1107,20 @@ class Quadrotor(BaseAviary):
         #
         # Final goal position reached
         info["at_goal_position"] = False
+        info["task_completed"] = False
         if self.current_gate == self.NUM_GATES:
-            self.at_goal_pos = bool(np.linalg.norm(self.state - self.X_GOAL) < self.TASK_INFO["stabilization_goal_tolerance"])
+            quad_xyz = np.array([self.state[0], self.state[2], self.state[4]])
+            goal_xyz = np.array([self.X_GOAL[0], self.X_GOAL[2], self.X_GOAL[4]])
+            if np.linalg.norm(quad_xyz - goal_xyz) < self.TASK_INFO["stabilization_goal_tolerance"]:
+                self.at_goal_pos = True
+                self.steps_at_goal_pos += 1
+            else:
+                self.at_goal_pos = False
+                self.steps_at_goal_pos = 0
+            if self.steps_at_goal_pos > self.CTRL_FREQ*2: # Remain near goal position for 2''.
+                self.task_completed = True
             info["at_goal_position"] = self.at_goal_pos
+            info["task_completed"] = self.task_completed
 
         return info
 

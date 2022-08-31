@@ -217,6 +217,7 @@ def run(test=False):
             print('\tCurrent target gate in range: ' + str(info['current_target_gate_in_range']))
             print('\tCurrent target gate position: ' + str(info['current_target_gate_pos']))
             print('\tAt goal position: ' + str(info['at_goal_position']))
+            print('\tTask completed: ' + str(info['task_completed']))
             if 'constraint_values' in info:
                 print('\tConstraints evaluations: ' + str(info['constraint_values']))
                 print('\tConstraints violation: ' + str(bool(info['constraint_violation'])))

@@ -145,7 +145,8 @@ edit_this.py : Controller.cmdFirmware(time, obs, reward, done, info)    # Select
             - 'current_target_gate_in_range'    Boolean, whether the next gate is close enough (i.e., <= VISIBILITY_RANGE == 0.45m) for perfect visibility (affects the value of the next key 'current_target_gate_pos')
             - 'current_target_gate_pos'         *Nominal* or exact position of the next gate (depending on the value of the key above, 'current_target_gate_in_range')
             
-            - 'at_goal_position'                Boolean, Whether the quadrotor is at the final position ('x_reference')
+            - 'at_goal_position'                Boolean, whether the quadrotor is at the final position ('x_reference')
+            - 'task_completed'                  Boolean, whether the quadrotor stayed at the final position ('x_reference') for 2''
 
             - 'constraint_values'               Constraint evaluations
             - 'constraint_violation'            Boolean, whether any of the constraints is violated
