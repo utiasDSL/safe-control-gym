@@ -16,7 +16,7 @@ fig = plt.figure()
 ax = plt.axes(projection='3d')
 
 for trial in trials:
-    vicon_idxs = np.where(trial[:,header_map["vicon_pos_x"]:header_map["vicon_orientation_w"]] != 0)[0]
+    vicon_idxs = list(set(np.where(trial[:,header_map["vicon_pos_x"]:header_map["vicon_orientation_w"]+1] != 0)[0]))
     xline = trial[vicon_idxs,header_map["vicon_pos_x"]]
     yline = trial[vicon_idxs,header_map["vicon_pos_y"]]
     zline = trial[vicon_idxs,header_map["vicon_pos_z"]]

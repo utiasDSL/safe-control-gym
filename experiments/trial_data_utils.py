@@ -1,11 +1,7 @@
 import numpy as np
 import os, glob
 
-
-def get_data(run):
-    results_folder = glob.glob(f"{run}/data/*/")
-
-    headers = [
+headers = [
         "time",
 
         "takeoff",
@@ -39,11 +35,14 @@ def get_data(run):
         "vicon_orientation_z",
         "vicon_orientation_w",
     ]
-    header_map = dict(zip(headers, list(range(len(headers)))))
+header_map = dict(zip(headers, list(range(len(headers)))))
 
+def get_data(run):
+    results_folder = glob.glob(f"{run}/data/*/")
 
     trials = []
     for results in results_folder:
+        print(results)
         output_data = []
         # ros_out 
         file = "_slash_rosout.csv"
@@ -166,3 +165,47 @@ def get_data(run):
         trials += [output_data_np]
 
     return trials, header_map
+
+
+def get_average_run(trials, hz=200):
+    # Filter by vicon items 
+    run_data = []
+    for trial in trials:
+        vicon_idxs = list(set(np.where(trial[:,header_map["vicon_pos_x"]:header_map["vicon_orientation_w"]+1] != 0)[0]))
+        vicon_readings = trial[vicon_idxs]
+
+        run_data += [vicon_readings[:, [0] + list(range(header_map["vicon_pos_x"],header_map["vicon_orientation_w"]+1))]]
+
+
+    # Run an averaging window across pose values
+    idxs = np.array([0 for _ in range(len(run_data))])    
+    lengths = np.array([len(trial) for trial in run_data])    
+
+    aligned_data = []
+    counter = 0
+    dt = 1/hz
+    while not np.all(idxs >= lengths):
+        min_time = (counter - 0.5) * dt
+        max_time = (counter + 0.5) * dt
+
+        avg_values = []
+
+        for i, trial in enumerate(run_data):
+            while idxs[i] < lengths[i]:
+                if trial[idxs[i], 0] < min_time:
+                    idxs[i] += 1
+                    continue
+                elif trial[idxs[i], 0] > max_time:
+                    break
+                else:
+                    avg_values += [trial[idxs[i],1:]]
+                    idxs[i] += 1
+
+        if len(avg_values) > 0:
+            item = [counter*dt, *np.mean(avg_values, 0).tolist()]
+            aligned_data += [item]
+
+        counter += 1
+        
+    aligned_data_np = np.array(aligned_data)
+    return aligned_data_np
