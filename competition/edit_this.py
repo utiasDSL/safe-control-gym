@@ -33,6 +33,7 @@ import matplotlib.pyplot as plt
 from enum import Enum
 from collections import deque
 
+from safe_control_gym.utils.utils import timing_step, timing_ep
 from safe_control_gym.envs.gym_pybullet_drones.quadrotor_utils import PIDController
 
 
@@ -115,6 +116,10 @@ class Controller():
         self.reward_buffer = deque([], maxlen=buffer_size)
         self.done_buffer = deque([], maxlen=buffer_size)
         self.info_buffer = deque([], maxlen=buffer_size)
+
+        # Counters.
+        self.interstep_counter = 0
+        self.interepisode_counter = 0
 
         #########################
         # REPLACE THIS (START) ##
@@ -332,6 +337,7 @@ class Controller():
 
         return target_p, target_v
 
+    @timing_step
     def interStepLearn(self,
                        action,
                        obs,
@@ -352,6 +358,7 @@ class Controller():
             info (dict): Most recent information dictionary.
 
         """
+        self.interstep_counter += 1
 
         # Store the last step's events.
         self.action_buffer.append(action)
@@ -370,6 +377,7 @@ class Controller():
         # REPLACE THIS (END) ####
         #########################
 
+    @timing_ep
     def interEpisodeLearn(self):
         """Learning and controller updates called between episodes.
 
@@ -378,6 +386,7 @@ class Controller():
             rewards, done flags, and information dictionaries to learn, adapt, and/or re-plan.
 
         """
+        self.interepisode_counter += 1
 
         #########################
         # REPLACE THIS (START) ##

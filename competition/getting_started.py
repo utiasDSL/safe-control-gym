@@ -271,7 +271,7 @@ def run(test=False):
             if config.verbose:
                 print(str(episodes_count)+'-th reset.')
                 print('Reset obs' + str(new_initial_obs))
-                print('Reset info' + str(new_initial_info))
+                # print('Reset info' + str(new_initial_info))
             
             episode_start_iter = i+1
             ep_start = time.time()
