@@ -541,7 +541,6 @@ class Quadrotor(BaseAviary):
         super()._advance_simulation(rpm, disturb_force)
         # Standard Gym return.
         obs = self._get_observation()
-        # rew = self._get_reward()
         info = self._get_info()
         done = self._get_done()  # IROS 2022 - After _get_info() to use this step's 'self' attributes.
         rew = self._get_reward()  # IROS 2022 - After _get_info() to use this step's 'self' attributes.
