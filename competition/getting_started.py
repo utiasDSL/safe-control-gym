@@ -192,7 +192,6 @@ def run(test=False):
                 info = {}
                 first_ep_iteration = False
             target_pos, target_vel = ctrl.cmdSimOnly(curr_time, obs, reward, done, info)
-            # action = ctrl._thrusts(obs, target_pos, target_vel)
             action = thrusts(ctrl.ctrl, ctrl.CTRL_TIMESTEP, ctrl.KF, obs, target_pos, target_vel)
             obs, reward, done, info = env.step(action)
 
@@ -272,7 +271,6 @@ def run(test=False):
             if config.verbose:
                 print(str(episodes_count)+'-th reset.')
                 print('Reset obs' + str(new_initial_obs))
-                # print('Reset info' + str(new_initial_info))
             
             episode_start_iter = i+1
             ep_start = time.time()
