@@ -884,16 +884,11 @@ class Quadrotor(BaseAviary):
         '''
         info = {}
         info['symbolic_model'] = self.symbolic
-        # TODO: reverse or delete commented out code once decided how to fix prior
-        # info['physical_parameters'] = {
-        #     'quadrotor_mass': self.MASS,
-        #     'quadrotor_iyy_inertia': self.J[1, 1]
-        # }
         info['physical_parameters'] = {
-            'quadrotor_mass': self.PRIOR_MASS,
-            'quadrotor_ixx_inertia': self.PRIOR_J[0, 0],
-            'quadrotor_iyy_inertia': self.PRIOR_J[1, 1],
-            'quadrotor_izz_inertia': self.PRIOR_J[2, 2]
+            'quadrotor_mass': self.MASS,
+            'quadrotor_ixx_inertia': self.J[0, 0],
+            'quadrotor_iyy_inertia': self.J[1, 1],
+            'quadrotor_izz_inertia': self.J[2, 2]
         }
         info['x_reference'] = self.X_GOAL
         info['u_reference'] = self.U_GOAL

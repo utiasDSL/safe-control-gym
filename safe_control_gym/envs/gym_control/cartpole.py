@@ -663,9 +663,9 @@ class CartPole(BenchmarkEnv):
         info = {}
         info['symbolic_model'] = self.symbolic
         info['physical_parameters'] = {
-            'pole_effective_length': self.PRIOR_EFFECTIVE_POLE_LENGTH,
-            'pole_mass': self.PRIOR_POLE_MASS,
-            'cart_mass': self.PRIOR_CART_MASS
+            'pole_effective_length': self.EFFECTIVE_POLE_LENGTH,
+            'pole_mass': self.POLE_MASS,
+            'cart_mass': self.CART_MASS
         }
         info['x_reference'] = self.X_GOAL
         info['u_reference'] = self.U_GOAL
