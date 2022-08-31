@@ -207,6 +207,14 @@ class BenchmarkEnv(gym.Env):
         self.initial_reset = False
         self.INFO_IN_RESET = info_in_reset
 
+        # IROS 2022 - Save random seed for re-seeding.
+        self.RND_SEED = seed
+        if 'reseed_on_reset' in kwargs:
+            self.RESEED_ON_RESET = kwargs['reseed_on_reset']
+        else:
+            self.RESEED_ON_RESET = False
+        
+
     def seed(self,
              seed=None
              ):
@@ -347,6 +355,10 @@ class BenchmarkEnv(gym.Env):
         """Pre-processing before calling `.reset()`.
         
         """
+        # IROS 2022 - Re-seed on reset.
+        if self.RESEED_ON_RESET:
+            self.seed(self.RND_SEED)
+
         # Housekeeping variables.
         self.initial_reset = True
         self.pyb_step_counter = 0
