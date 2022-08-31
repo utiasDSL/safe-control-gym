@@ -128,10 +128,50 @@ class BaseController(ABC):
         '''Setup the results dictionary to store run information. '''
         self.results_dict = {}
         
-    def setup_prior(self):
-        '''Changes the prior model fetched from `self.env` for the controller.
+    def get_prior(self, env, prior_info={}):
+        '''Fetch the prior model from the env for the controller.
+
+        Note there's a default env.symbolic when each each env is created.
+        To make a different prior model, do the following when initializing a ctrl::
+
+            self.env = env_func() 
+            self.model = self.get_prior(self.env)
+
+        Besides the env config `base.yaml` and ctrl config `mpc.yaml`, 
+        you can define an additional prior config `prior.yaml` that looks like:: 
+
+            algo_config:
+                prior_info:
+                    M: 0.03
+                    Iyy: 0.00003
+
+        and to ensure the resulting config.algo_config contains both the params
+        from ctrl config and prior config, chain them to the --overrides like::
+
+            python main.py --algo mpc --task quadrotor --overrides base.yaml mpc.yaml prior.yaml ...
+        
+        Also note we look for prior_info from the incoming function arg first, then the ctrl itself.
+        this allows changing the prior model during learning by calling::
+        
+            new_model = self.get_prior(same_env, new_prior_info)
+        
+        Alternatively, you can overwrite this method and use your own format for prior_info
+        to customize how you get/change the prior model for your controller.
+
+        Args:
+            env (BenchmarkEnv): the environment to fetch prior model from.
+            prior_info (dict): specifies the prior properties or other things to 
+                overwrite the default prior model in the env.
+            
+        Returns:
+            SymbolicModel: CasAdi prior model.
         '''
-        prior_info = getattr(self, "prior_info", None)
-        if prior_info is not None:
-            # TODO: it does not work currently, since `_setup_symbolic()` doesn't take any args
-            self.env._setup_symbolic(prior_info)
+        if not prior_info:
+            prior_info = getattr(self, "prior_info", {})
+        # Note we only reset the symbolic model when prior_info is nonempty
+        if prior_info:
+            prior_model = env._setup_symbolic(prior_info)
+        # Note this ensures the env can still access the prior model, 
+        # which is used to get quadratic costs in env.step()
+        prior_model = env.symbolic
+        return prior_model

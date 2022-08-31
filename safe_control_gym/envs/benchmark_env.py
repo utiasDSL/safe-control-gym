@@ -298,7 +298,7 @@ class BenchmarkEnv(gym.Env, ABC):
         return randomized_values
 
     @abstractmethod
-    def _setup_symbolic(self):
+    def _setup_symbolic(self, prior_prop={}, **kwargs):
         '''Creates a symbolic (CasADi) model for dynamics and cost. '''
         raise NotImplementedError
 

@@ -146,7 +146,6 @@ class Quadrotor(BaseAviary):
 
     def __init__(self,
                  init_state=None,
-                 prior_prop=None,
                  inertial_prop=None,
                  # custom args
                  quad_type: QuadType = QuadType.TWO_D,
@@ -200,7 +199,7 @@ class Quadrotor(BaseAviary):
 
         # BaseAviary constructor, called after defining the custom args,
         # since some BenchmarkEnv init setup can be task(custom args)-dependent.
-        super().__init__(init_state=init_state, prior_prop=prior_prop, inertial_prop=inertial_prop, **kwargs)
+        super().__init__(init_state=init_state, inertial_prop=inertial_prop, **kwargs)
 
         # Store initial state info.
         self.INIT_STATE_LABELS = {
@@ -253,23 +252,6 @@ class Quadrotor(BaseAviary):
             self.J[2, 2] = inertial_prop.get('Izz', self.J[2, 2])
         else:
             raise ValueError('[ERROR] in Quadrotor.__init__(), inertial_prop incorrect format.')
-
-        # TODO: decide if this is ok to fix prior
-        # Store prior parameters.
-        self.PRIOR_MASS = self.MASS
-        self.PRIOR_J = deepcopy(self.J)
-        if prior_prop is None:
-            pass
-        elif isinstance(prior_prop, dict):
-            self.PRIOR_MASS = prior_prop.get('M', self.MASS)
-            self.PRIOR_J[0, 0] = prior_prop.get('Ixx', self.J[0, 0])
-            self.PRIOR_J[1, 1] = prior_prop.get('Iyy', self.J[1, 1])
-            self.PRIOR_J[2, 2] = prior_prop.get('Izz', self.J[2, 2])
-        else:
-            raise ValueError('[ERROR] in Quadrotor.__init__(), prior_prop incorrect format.')
-
-        # Set prior/symbolic info.
-        self._setup_symbolic()
 
         # Create X_GOAL and U_GOAL references for the assigned task.
         self.U_GOAL = np.ones(self.action_dim) * self.MASS * self.GRAVITY_ACC / self.action_dim
@@ -335,10 +317,8 @@ class Quadrotor(BaseAviary):
                     np.zeros(VEL_REF_TRANS.shape[0])
                 ]).transpose()
 
-        # Equilibrium point at hover for linearization.
-        self.X_EQ = np.zeros(self.state_dim)
-        self.U_EQ = self.U_GOAL
-
+        # Set prior/symbolic info.
+        self._setup_symbolic()
 
     def reset(self):
         '''(Re-)initializes the environment to start an episode.
@@ -481,13 +461,11 @@ class Quadrotor(BaseAviary):
         # Image.fromarray(np.reshape(rgb, (h, w, 4)), 'RGBA').show()
         return np.reshape(rgb, (h, w, 4))
 
-    def _setup_symbolic(self):
+    def _setup_symbolic(self, prior_prop={}, **kwargs):
         '''Creates symbolic (CasADi) models for dynamics, observation, and cost. '''
-        # TODO: reverse or delete commented out code once decided how to fix prior
-        # m, g, l = self.MASS, self.GRAVITY_ACC, self.L
-        # Iyy = self.J[1, 1]
-        m, g, l = self.PRIOR_MASS, self.GRAVITY_ACC, self.L
-        Iyy = self.PRIOR_J[1, 1]
+        m = prior_prop.get("M", self.MASS)
+        Iyy = prior_prop.get("Iyy", self.J[1, 1])
+        g, l = self.GRAVITY_ACC, self.L        
         dt = self.CTRL_TIMESTEP
         # Define states.
         z = cs.MX.sym('z')
@@ -524,11 +502,8 @@ class Quadrotor(BaseAviary):
             Y = cs.vertcat(x, x_dot, z, z_dot, theta, theta_dot)
         elif self.QUAD_TYPE == QuadType.THREE_D:
             nx, nu = 12, 4
-            # TODO: reverse or delete commented out code once decided how to fix prior
-            # Ixx = self.J[0, 0]
-            # Izz = self.J[2, 2]
-            Ixx = self.PRIOR_J[0, 0]
-            Izz = self.PRIOR_J[2, 2]
+            Ixx = prior_prop.get("Ixx", self.J[0, 0])
+            Izz = prior_prop.get("Izz", self.J[2, 2])
             J = cs.blockcat([[Ixx, 0.0, 0.0],
                              [0.0, Iyy, 0.0],
                              [0.0, 0.0, Izz]])
@@ -597,8 +572,13 @@ class Quadrotor(BaseAviary):
                 'R': R
             }
         }
+        # Additional params to cache
+        params = {
+            "X_EQ": np.zeros(self.state_dim),
+            "U_EQ": self.U_GOAL,
+        }
         # Setup symbolic model.
-        self.symbolic = SymbolicModel(dynamics=dynamics, cost=cost, dt=dt)
+        self.symbolic = SymbolicModel(dynamics=dynamics, cost=cost, dt=dt, params=params)
 
     def _set_action_space(self):
         '''Sets the action space of the environment. '''
