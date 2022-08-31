@@ -96,7 +96,7 @@ class Controller():
         # REPLACE THIS (START) ##
         #########################
 
-        # Static planning example: curve fitting with waypoints.
+        # Example: harcode waypoints through the gates.
         if use_firmware:
             waypoints = [(self.initial_obs[0], self.initial_obs[2], initial_info["gate_dimensions"]["tall"]["height"])]  # Height is hardcoded scenario knowledge.
         else:
@@ -114,6 +114,8 @@ class Controller():
                 waypoints.append((g[0], g[1]-0.3, height))
                 waypoints.append((g[0], g[1]+0.3, height))
         waypoints.append([initial_info["x_reference"][0], initial_info["x_reference"][2], initial_info["x_reference"][4]])
+
+        # Polynomial fit
         self.waypoints = np.array(waypoints)
         deg = 6
         t = np.arange(self.waypoints.shape[0])
@@ -123,7 +125,8 @@ class Controller():
         fx = np.poly1d(fit_x)
         fy = np.poly1d(fit_y)
         fz = np.poly1d(fit_z)
-        t_scaled = np.linspace(t[0], t[-1], int(15*self.CTRL_FREQ))
+        duration = 15
+        t_scaled = np.linspace(t[0], t[-1], int(duration*self.CTRL_FREQ))
         self.ref_x = fx(t_scaled)
         self.ref_y = fy(t_scaled)
         self.ref_z = fz(t_scaled)
