@@ -124,6 +124,7 @@ def run(test=False):
         print('\t\tDynamics: ' + str(info['symbolic_model'].x_dot).strip('vertcat'))
         print('Input constraints lower bounds: ' + str(env.constraints.input_constraints[0].lower_bounds))
         print('Input constraints upper bounds: ' + str(env.constraints.input_constraints[0].upper_bounds))
+        print('State constraints active dimensions: ' + str(config.quadrotor_config.constraints[1].active_dims))
         print('State constraints lower bounds: ' + str(env.constraints.state_constraints[0].lower_bounds))
         print('State constraints upper bounds: ' + str(env.constraints.state_constraints[0].upper_bounds))
         print('\tSymbolic constraints: ')
