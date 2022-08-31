@@ -142,9 +142,12 @@ class BaseController(ABC):
 
             algo_config:
                 prior_info:
-                    M: 0.03
-                    Iyy: 0.00003
-
+                    prior_prop:
+                        M: 0.03
+                        Iyy: 0.00003
+                    randomize_prior_prop: False
+                    prior_prop_rand_info: {}
+                    
         and to ensure the resulting config.algo_config contains both the params
         from ctrl config and prior config, chain them to the --overrides like::
 
@@ -168,9 +171,22 @@ class BaseController(ABC):
         '''
         if not prior_info:
             prior_info = getattr(self, "prior_info", {})
-        # Note we only reset the symbolic model when prior_info is nonempty
-        if prior_info:
-            prior_model = env._setup_symbolic(prior_info)
+        prior_prop = prior_info.get("prior_prop", {})
+
+        # randomize prior prop, similar to randomizing the inertial_prop in BenchmarkEnv
+        # this can simulate the estimation errors in the prior model
+        randomize_prior_prop = prior_info.get("randomize_prior_prop", False)
+        prior_prop_rand_info = prior_info.get("prior_prop_rand_info", {})
+        if randomize_prior_prop and prior_prop_rand_info:
+            # check keys, this is due to the current implementation of BenchmarkEnv._randomize_values_by_info()
+            for k in prior_prop_rand_info:
+                assert k in prior_prop, "A prior param to randomize does not have a base value in prior_prop."
+            prior_prop = env._randomize_values_by_info(prior_prop, prior_prop_rand_info)
+
+        # Note we only reset the symbolic model when prior_prop is nonempty
+        if prior_prop:
+            prior_model = env._setup_symbolic(prior_prop=prior_prop)
+
         # Note this ensures the env can still access the prior model, 
         # which is used to get quadratic costs in env.step()
         prior_model = env.symbolic
