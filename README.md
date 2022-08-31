@@ -2,7 +2,7 @@
 
 ## Video
 
-[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/bWhDTNtj8EA/maxresdefault.jpg)](https://www.youtube.com/watch?v=bWhDTNtj8EA)
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/dgni-58OSMs/maxresdefault.jpg)](https://www.youtube.com/watch?v=dgni-58OSMs)
 
 *Note: beta release subject to change throughout the month of August 2022; register for updates*
 
