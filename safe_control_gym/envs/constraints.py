@@ -624,3 +624,4 @@ def create_constraint_list(constraint_specs, available_constraints, env):
         cfg = {key: constraint[key] for key in constraint if key != 'constraint_form'}
         constraint_list.append(con_class(env, **cfg))
     return ConstraintList(constraint_list)
+
