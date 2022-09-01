@@ -375,14 +375,16 @@ class Quadrotor(BaseAviary):
             d_args = rand_info_copy["obstacles"].pop("args", [])
             d_kwargs = rand_info_copy["obstacles"]
         for obstacle in self.OBSTACLES:
-            obs_height = 0.525 # URDF dependent.
+            obs_height = 0.525 # URDF dependent, places 'obstacle.urdf' at z == 0.
             if self.RANDOMIZED_GATES_AND_OBS:
                 offset = np.array([distrib(*d_args, **d_kwargs), distrib(*d_args, **d_kwargs), obs_height])
+                pose_disturbance = np.array([0, 0, distrib(*d_args, **d_kwargs)])
             else:
                 offset = np.array([0, 0, obs_height])
+                pose_disturbance = np.array([0, 0, 0])
             TMP_ID = p.loadURDF(os.path.join(self.URDF_DIR, "obstacle.urdf"),
                        np.array(obstacle[0:3]) + offset,
-                       p.getQuaternionFromEuler(obstacle[3:6]),
+                       p.getQuaternionFromEuler(np.array(obstacle[3:6])+pose_disturbance),
                        physicsClientId=self.PYB_CLIENT)
             p.addUserDebugText(str(TMP_ID),
                                textPosition=[0, 0, 0.5],
@@ -404,21 +406,22 @@ class Quadrotor(BaseAviary):
         for gate in self.GATES:
             if gate[6] == 0:
                 urdf_file = "portal.urdf"
-                gate_height = 1. # URDF dependent.
+                gate_height = 1. # URDF dependent, places 'portal.urdf' at z == 0.
             elif gate[6] == 1:
                 urdf_file = "low_portal.urdf"
-                gate_height = 0.525 # URDF dependent.
+                gate_height = 0.525 # URDF dependent, places 'low_portal.urdf' at z == 0.
             else:
                 raise ValueError("[ERROR] Unknown gate type.")
             if self.RANDOMIZED_GATES_AND_OBS:
                 offset = np.array([distrib(*d_args, **d_kwargs), distrib(*d_args, **d_kwargs), gate_height])
+                pose_disturbance = np.array([0, 0, distrib(*d_args, **d_kwargs)])
             else:
                 offset = np.array([0, 0, gate_height])
-            self.EFFECTIVE_GATES_POSITIONS.append(list(np.array(gate[0:3]) + offset) + gate[3:6])
-            
+                pose_disturbance = np.array([0, 0, 0])
+            self.EFFECTIVE_GATES_POSITIONS.append(list(np.array(gate[0:3]) + offset) + list(np.array(gate[3:6]) + pose_disturbance))
             TMP_ID = p.loadURDF(os.path.join(self.URDF_DIR, urdf_file),
                        np.array(gate[0:3]) + offset,
-                       p.getQuaternionFromEuler(gate[3:6]),
+                       p.getQuaternionFromEuler(np.array(gate[3:6])+pose_disturbance),
                        physicsClientId=self.PYB_CLIENT)
             p.addUserDebugText(str(TMP_ID),
                                textPosition=[0, 0, 0.5],
@@ -1146,6 +1149,8 @@ class Quadrotor(BaseAviary):
         info["u_reference"] = self.U_GOAL
         if self.constraints is not None:
             info["symbolic_constraints"] = self.constraints.get_all_symbolic_models()
+        else:
+            info["symbolic_constraints"] = {}
         
         # IROS 2022 - Reset info.
         info["ctrl_timestep"] = self.CTRL_TIMESTEP
@@ -1175,10 +1180,16 @@ class Quadrotor(BaseAviary):
 
         if self.RANDOMIZED_INIT:
             info["initial_state_randomization"] = self.INIT_STATE_RAND_INFO
+        else:
+            info["initial_state_randomization"] = {}
         if self.RANDOMIZED_INERTIAL_PROP:
             info["inertial_prop_randomization"] = self.INERTIAL_PROP_RAND_INFO
+        else:
+            info["inertial_prop_randomization"] = {}
         if self.RANDOMIZED_GATES_AND_OBS:
             info["gates_and_obs_randomization"] = self.GATES_AND_OBS_RAND_INFO
+        else:
+            info["gates_and_obs_randomization"] = {}
         info["disturbances"] = self.DISTURBANCES
 
         # INFO 2022 - Debugging.

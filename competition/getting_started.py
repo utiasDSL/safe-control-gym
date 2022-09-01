@@ -116,7 +116,7 @@ def run(test=False):
         print('\tFinal target hover position [x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r]: ' + str(info['x_reference']))
         print('\tDistribution of the error on the initial state: ' + str(info['initial_state_randomization']))
         print('\tDistribution of the error on the inertial properties: ' + str(info['inertial_prop_randomization']))
-        print('\tDistribution of the error on positions of gates and obsacles: ' + str(info['gates_and_obs_randomization']))
+        print('\tDistribution of the error on positions of gates and obstacles: ' + str(info['gates_and_obs_randomization']))
         print('\tDistribution of the disturbances: ' + str(info['disturbances']))
         print('\tA priori symbolic model:')
         print('\t\tState: ' + str(info['symbolic_model'].x_sym).strip('vertcat'))
