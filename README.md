@@ -77,7 +77,7 @@ conda activate safe
 Also see how to install [SWIG](https://www.dev2qa.com/how-to-install-swig-on-macos-linux-and-windows/) and [`pycffirmware`](https://github.com/utiasDSL/pycffirmware)'s `README.md`
 
 ## Getting Started
-Run the scripts in [`competition/`](https://github.com/utiasDSL/safe-control-gym/tree/main/competition)
+Run the scripts in [`competition/`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/)
 ```bash
 cd ../../safe-control-gym/competition/
 python3 getting_started.py --overrides ./getting_started.yaml
