@@ -35,7 +35,7 @@ conda activate safe
 
 Install the `safe-control-gym` repository 
 
-```
+```bash
 pip install --upgrade pip
 pip install -e .
 ```
@@ -43,6 +43,7 @@ pip install -e .
 ## Install `pycffirmware`
 
 ```bash
+cd ..
 git clone https://github.com/utiasDSL/pycffirmware.git
 cd pycffirmware/
 git submodule update --init --recursive
@@ -50,11 +51,11 @@ git submodule update --init --recursive
 
 ### On Ubuntu
 
-```
+```bash
 sudo apt update
 sudo apt -y install swig
 sudo apt install build-essential
-cd wrapper
+cd wrapper/
 chmod +x build_linux.sh
 conda activate safe
 ./build_linux.sh
@@ -63,11 +64,11 @@ conda activate safe
 ### On macOS
 
 Install [`brew`](https://brew.sh/), then
-```
+```bash
 brew install swig
 brew install gcc            # Also run `xcode-select --install` if prompted
 brew install make
-cd wrapper
+cd wrapper/
 chmod +x build_osx.sh       # Assumes `gcc` is at `/usr/local/bin/gcc-12`
 conda activate safe
 ./build_osx.sh
@@ -78,7 +79,7 @@ Also see how to install [SWIG](https://www.dev2qa.com/how-to-install-swig-on-mac
 ## Getting Started
 Run the scripts in [`competition/`](https://github.com/utiasDSL/safe-control-gym/tree/main/competition)
 ```bash
-cd ./competition/
+cd ../../safe-control-gym/competition/
 python3 getting_started.py --overrides ./getting_started.yaml
 ```
 **Modify file [`edit_this.py`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py) to customize your controller based on [Crazyswarm's Crazyflie interface](https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie)**
