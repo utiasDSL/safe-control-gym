@@ -13,6 +13,8 @@ import numpy as np
 import pybullet as p
 
 from functools import partial
+from rich.tree import Tree
+from rich import print
 
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
@@ -98,6 +100,7 @@ def run(test=False):
     collided_objects = set()
     episode_start_iter = 0
     text_label_id = p.addUserDebugText("", textPosition=[0, 0, 1],physicsClientId=env.PYB_CLIENT)
+    stats = []
 
     # Wait for keyboard input to start.
     # input("Press any key to start")
@@ -248,6 +251,10 @@ def run(test=False):
             # CSV save.
             logger.save_as_csv(comment="get_start-episode-"+str(episodes_count))
 
+            # Append episode stats.
+            episode_stats = ['flight time', 'end', 'gates passed', 'total collision', 'total rewards', 'total constraint violations'] # TODO
+            stats.append(episode_stats)
+
             # Create a new logger.
             logger = Logger(logging_freq_hz=CTRL_FREQ)
 
@@ -280,7 +287,7 @@ def run(test=False):
     # Close the environment and print timing statistics.
     env.close()
     elapsed_sec = time.time() - START
-    print(str("\n{:d} iterations (@{:d}Hz) and {:d} episodes in {:.2f} sec, i.e. {:.2f} steps/sec for a {:.2f}x speedup.\n\n"
+    print(str("\n{:d} iterations (@{:d}Hz) and {:d} episodes in {:.2f} sec, i.e. {:.2f} steps/sec for a {:.2f}x speedup.\n"
           .format(i,
                   env.CTRL_FREQ,
                   config.num_episodes,
@@ -289,6 +296,16 @@ def run(test=False):
                   (i*CTRL_DT)/elapsed_sec
                   )
           ))
+
+    # Print episodes summary.
+    tree = Tree("Summary")
+    for idx, ep in enumerate(stats):
+        ep_tree = tree.add('Episode ' + str(idx+1))
+        for val in ep:
+            ep_tree.add('val')
+    print('\n\n')
+    print(tree)
+    print('\n\n')
 
 if __name__ == "__main__":
     run()
