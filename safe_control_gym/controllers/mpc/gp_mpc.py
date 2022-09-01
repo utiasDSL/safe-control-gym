@@ -764,6 +764,7 @@ class GPMPC(MPC):
             raise ValueError("[ERROR]: gp_mpc.learn(): Need to provide both targets and inputs.")
 
         total_input_data = self.data_inputs.shape[0]
+        print(f"Data points: {total_input_data}")
         # If validation set is desired.
         if self.test_data_ratio > 0 and self.test_data_ratio is not None:
             train_idx, test_idx = train_test_split(
@@ -909,6 +910,7 @@ class GPMPC(MPC):
             self.set_gp_dynamics_func(n_ind_points)
             self.setup_gp_optimizer(n_ind_points)
         self.prior_ctrl.reset()
+        self.reset_results_dict()
         # Previously solved states & inputs, useful for warm start.
         self.x_prev = None
         self.u_prev = None

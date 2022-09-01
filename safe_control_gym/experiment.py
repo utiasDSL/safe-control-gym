@@ -3,6 +3,7 @@
 from time import time
 from copy import deepcopy
 from collections import defaultdict
+from munch import munchify
 
 import gym
 import numpy as np
@@ -68,9 +69,19 @@ class Experiment:
         return dict(trajs_data), metrics
 
     def _execute_evaluations(self, n_episodes=None, n_steps=None, log_freq=None):
+        trajs_data = self._execute_task(ctrl=self.ctrl,
+                                        env=self.env,
+                                        n_episodes=n_episodes,
+                                        n_steps=n_steps,
+                                        log_freq=log_freq)
+        return trajs_data
+
+    def _execute_task(self, ctrl=None, env=None, n_episodes=None, n_steps=None, log_freq=None):
         '''Runs the experiments and collects all the required data.
 
         Args:
+            ctrl : Controller to run the task. Default is self.train.
+            env : Environment of the task to run. Defulat is self.env.
             n_episodes (int): number of runs to execute.
             n_steps (int): the number of steps to collect in total.
             log_freq (int): the frequency with which to log information.
@@ -83,44 +94,54 @@ class Experiment:
             raise ValueError('One of n_episodes or n_steps must be defined.')
         elif n_episodes is not None and n_steps is not None:
             raise ValueError('Only one of n_episodes or n_steps can be defined.')
+        if ctrl is None:
+            ctrl = self.ctrl
+        if env is None:
+            env = self.env
 
         # initialize
-        sim_steps = log_freq // self.env.CTRL_FREQ if log_freq else 1
+        sim_steps = log_freq // env.CTRL_FREQ if log_freq else 1
         steps, trajs = 0, 0
-        obs, info = self._evaluation_reset(ctrl_data=None)
+        obs, info = self._evaluation_reset(ctrl=ctrl,
+                                           env=env,
+                                           ctrl_data=None)
         ctrl_data = defaultdict(list)
 
         if n_episodes is not None:
             while trajs < n_episodes:
-                action = self.ctrl.select_action(obs, info)
+                action = ctrl.select_action(obs, info)
                 # inner sim loop to accomodate different control frequencies
                 for _ in range(sim_steps):
-                    obs, _, done, info = self.env.step(action)
+                    obs, _, done, info = env.step(action)
                     if done:
                         trajs += 1
-                        obs, info = self._evaluation_reset(ctrl_data=ctrl_data)
+                        self._evaluation_reset(ctrl=ctrl,
+                                               env=env,
+                                               ctrl_data=ctrl_data)
                         break
         elif n_steps is not None:
             while steps < n_steps:
-                action = self.ctrl.select_action(obs, info)
+                action = ctrl.select_action(obs, info)
                 # inner sim loop to accomodate different control frequencies
                 for _ in range(sim_steps):
-                    obs, _, done, info = self.env.step(action)
+                    obs, _, done, info = env.step(action)
                     steps += 1
                     if steps >= n_steps:
-                        self.env.save_data()
-                        for data_key, data_val in self.ctrl.results_dict.items():
+                        env.save_data()
+                        for data_key, data_val in ctrl.results_dict.items():
                             ctrl_data[data_key].append(data_val)
                         break
                     if done:
-                        obs, info = self._evaluation_reset(ctrl_data=ctrl_data)
+                        self._evaluation_reset(ctrl=ctrl,
+                                               env=env,
+                                               ctrl_data=ctrl_data)
                         break
 
-        trajs_data = self.env.data
-        trajs_data['controller_data'].append(dict(ctrl_data))
-        return trajs_data
+        trajs_data = env.data
+        trajs_data['controller_data'].append(munchify(dict(ctrl_data)))
+        return munchify(trajs_data)
 
-    def _evaluation_reset(self, ctrl_data):
+    def _evaluation_reset(self, ctrl, env, ctrl_data):
         '''Resets the evaluation between runs.
 
         Args:
@@ -130,15 +151,19 @@ class Experiment:
             obs (ndarray): the initial observation.
             info (dict): the initial info.
         '''
-        if self.env.INFO_IN_RESET:
-            obs, info = self.env.reset()
+        if ctrl is None:
+            ctrl = self.ctrl
+        if env is None:
+            env = self.env
+        if env.INFO_IN_RESET:
+            obs, info = env.reset()
         else:
-            obs = self.env.reset()
+            obs = env.reset()
             info = None
         if ctrl_data is not None:
-            for data_key, data_val in self.ctrl.results_dict.items():
+            for data_key, data_val in ctrl.results_dict.items():
                 ctrl_data[data_key].append(data_val)
-        self.ctrl.reset_before_run(obs, info, env=self.env)
+        ctrl.reset_before_run(obs, info, env=env)
         return obs, info
 
     def launch_training(self, **kwargs):
@@ -253,7 +278,10 @@ class RecordDataWrapper(gym.Wrapper):
         if self.episode_data:
             # save to data container
             for key, ep_val in self.episode_data.items():
-                self.data[key].append(deepcopy(ep_val))
+                if key == 'info':
+                    self.data[key].append(np.array(deepcopy(ep_val), dtype=object))
+                else:
+                    self.data[key].append(np.array(deepcopy(ep_val)))
             # re-initialize episode data container
             self.episode_data = defaultdict(list)
 
@@ -310,6 +338,16 @@ class RecordDataWrapper(gym.Wrapper):
 
         return obs, reward, done, info
 
+    def _stack_lists(self):
+        stack_keys = ['obs',
+                      'action',
+                      'state',
+                      'reward',
+                      'current_physical_action',
+                      'current_noisy_physical_action',
+                      'current_clipped_action']
+        for key in stack_keys:
+            self.episode_data[key] = np.vstack(self.episode_data[key])
 
 class MetricExtractor:
     '''A utility class that computes metrics given collected trajectory data.
