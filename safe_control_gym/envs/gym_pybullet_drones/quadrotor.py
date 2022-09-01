@@ -574,6 +574,12 @@ class Quadrotor(BaseAviary):
         }
         # Additional params to cache
         params = {
+            # prior inertial properties
+            "quad_mass": m, 
+            "quad_Iyy": Iyy,
+            "quad_Ixx": Ixx if "Ixx" in locals() else None,
+            "quad_Izz": Izz if "Izz" in locals() else None,
+            # equilibrium point for linearization
             "X_EQ": np.zeros(self.state_dim),
             "U_EQ": self.U_GOAL,
         }

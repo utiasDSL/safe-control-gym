@@ -411,6 +411,11 @@ class CartPole(BenchmarkEnv):
         cost = {'cost_func': cost_func, 'vars': {'X': X, 'U': U, 'Xr': Xr, 'Ur': Ur, 'Q': Q, 'R': R}}
         # Additional params to cache
         params = {
+            # prior inertial properties
+            "pole_length": l,
+            "pole_mass": m,
+            "cart_mass": M,
+            # equilibrium point for linearization
             "X_EQ": np.atleast_2d(self.X_GOAL)[0,:].T,
             "U_EQ": np.atleast_2d(self.U_GOAL)[0,:],
         }

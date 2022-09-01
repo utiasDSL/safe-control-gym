@@ -48,3 +48,9 @@ task_config:
   episode_len_sec: 6
   cost: quadratic
   done_on_out_of_bound: False
+
+algo_config:
+  prior_info:
+    prior_prop:
+      M: 0.027
+      Iyy: 0.000014
