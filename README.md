@@ -104,6 +104,7 @@ edit_this.py : Controller.__init__(initial_obs, initial_info)           # Initia
     Args:
         initial_obs (ndarray): The initial observation of the quadrotor's state
             [x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r].
+
         initial_info (dict): The a priori problem information as a dictionary with keys
 
             - 'ctrl_timestep'                   Control timestep (in seconds)
@@ -136,6 +137,7 @@ edit_this.py : Controller.cmdFirmware(time, obs, reward, done, info)    # Select
         time (float): Episode's elapsed time, in seconds.
         obs (ndarray): The quadrotor's pose from PyBullet or Vicon
             [x, 0, y, 0, z, 0, phi, theta, psi, 0, 0, 0].
+
         reward (float, optional): The reward signal.
         done (bool, optional): Wether the episode has terminated.
         info (dict, optional): Current step information as a dictionary with keys
