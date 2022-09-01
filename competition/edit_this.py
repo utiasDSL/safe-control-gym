@@ -27,15 +27,14 @@ Tips:
 """
 import numpy as np
 import pybullet as p
-import matplotlib.pyplot as plt
 
 from collections import deque
 
 try:
-    from competition_utils import Command, PIDController, timing_step, timing_ep, draw_trajectory
+    from competition_utils import Command, PIDController, timing_step, timing_ep, plot_trajectory, draw_trajectory
 except ImportError:
     # Test import.
-    from .competition_utils import Command, PIDController, timing_step, timing_ep, draw_trajectory
+    from .competition_utils import Command, PIDController, timing_step, timing_ep, plot_trajectory, draw_trajectory
 
 
 class Controller():
@@ -68,7 +67,6 @@ class Controller():
             verbose (bool, optional): Turn on and off additional printouts and plots.
 
         """
-
         # Save environment and conrol parameters.
         self.CTRL_TIMESTEP = initial_info["ctrl_timestep"]
         self.CTRL_FREQ = initial_info["ctrl_freq"]
@@ -123,12 +121,9 @@ class Controller():
         self.waypoints = np.array(waypoints)
         deg = 6
         t = np.arange(self.waypoints.shape[0])
-        fit_x = np.polyfit(t, self.waypoints[:,0], deg)
-        fit_y = np.polyfit(t, self.waypoints[:,1], deg)
-        fit_z = np.polyfit(t, self.waypoints[:,2], deg)
-        fx = np.poly1d(fit_x)
-        fy = np.poly1d(fit_y)
-        fz = np.poly1d(fit_z)
+        fx = np.poly1d(np.polyfit(t, self.waypoints[:,0], deg))
+        fy = np.poly1d(np.polyfit(t, self.waypoints[:,1], deg))
+        fz = np.poly1d(np.polyfit(t, self.waypoints[:,2], deg))
         duration = 15
         t_scaled = np.linspace(t[0], t[-1], int(duration*self.CTRL_FREQ))
         self.ref_x = fx(t_scaled)
@@ -136,25 +131,8 @@ class Controller():
         self.ref_z = fz(t_scaled)
 
         if self.VERBOSE:
-            # Plot each dimension.
-            _, axs = plt.subplots(3, 1)
-            axs[0].plot(t_scaled, self.ref_x)
-            axs[0].set_ylabel('x (m)')
-            axs[1].plot(t_scaled, self.ref_y)
-            axs[1].set_ylabel('y (m)')
-            axs[2].plot(t_scaled, self.ref_z)
-            axs[2].set_ylabel('z (m)')
-            plt.show(block=False)
-            plt.pause(2)
-            plt.close()
-
-            # Plot in 3D.
-            ax = plt.axes(projection='3d')
-            ax.plot3D(self.ref_x, self.ref_y, self.ref_z)
-            ax.scatter3D(self.waypoints[:,0], self.waypoints[:,1], self.waypoints[:,2])
-            plt.show(block=False)
-            plt.pause(2)
-            plt.close()
+            # Plot trajectory in each dimension and 3D.
+            plot_trajectory(t_scaled, self.waypoints, self.ref_x, self.ref_y, self.ref_z)
 
         # Draw the trajectory on PyBullet's GUI
         draw_trajectory(initial_info, self.waypoints, self.ref_x, self.ref_y, self.ref_z)
@@ -174,7 +152,7 @@ class Controller():
 
         INSTRUCTIONS:
             Re-implement this function to return the target position, velocity, acceleration, attitude, and attitude rates to be sent
-            from Crazyswarm to the Crazyflie using, e.g., a `cmdFullState` call. 
+            from Crazyswarm to the Crazyflie using, e.g., a `cmdFullState` call.
 
         Args:
             time (float): Episode's elapsed time, in seconds.
@@ -189,7 +167,6 @@ class Controller():
             List: arguments for the type of command (see comments in class `Command`)
 
         """
-
         if self.ctrl is not None:
             raise RuntimeError("[ERROR] Using method 'cmdFirmware' but Controller was created with 'use_firmware' = False.")
 
@@ -285,7 +262,6 @@ class Controller():
             List: target velocity (len == 3).
 
         """
-
         if self.ctrl is None:
             raise RuntimeError("[ERROR] Attempting to use method 'cmdSimOnly' but Controller was created with 'use_firmware' = True.")
 
@@ -299,7 +275,6 @@ class Controller():
             target_p = np.array([self.ref_x[iteration], self.ref_y[iteration], self.ref_z[iteration]])
         else:
             target_p = np.array([self.ref_x[-1], self.ref_y[-1], self.ref_z[-1]])
-
         target_v = np.zeros(3)
 
         #########################
@@ -375,6 +350,8 @@ class Controller():
 
     def reset(self):
         """Reset data buffers and counters.
+
+        Called once in __init__(). Optionally call in interEpisodeLearn() if desired.
 
         """
         # Data buffers.

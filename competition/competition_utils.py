@@ -6,8 +6,9 @@ import math
 import time
 import numpy as np
 import pybullet as p
-from scipy.spatial.transform import Rotation
+import matplotlib.pyplot as plt
 
+from scipy.spatial.transform import Rotation
 from enum import Enum
 from functools import wraps
 
@@ -276,6 +277,35 @@ def timing_ep(function):
             print('\n{}-th call to function "{}" took: {} sec'.format(args[0].interepisode_counter, function.__name__, end-start))
         return result
     return wrap
+
+def plot_trajectory(t_scaled,
+                    waypoints,
+                    ref_x,
+                    ref_y,
+                    ref_z
+                    ):
+    """Plot the trajectory with matplotlib.
+
+    """
+    # Plot each dimension.
+    _, axs = plt.subplots(3, 1)
+    axs[0].plot(t_scaled, ref_x)
+    axs[0].set_ylabel('x (m)')
+    axs[1].plot(t_scaled, ref_y)
+    axs[1].set_ylabel('y (m)')
+    axs[2].plot(t_scaled, ref_z)
+    axs[2].set_ylabel('z (m)')
+    plt.show(block=False)
+    plt.pause(2)
+    plt.close()
+
+    # Plot in 3D.
+    ax = plt.axes(projection='3d')
+    ax.plot3D(ref_x, ref_y, ref_z)
+    ax.scatter3D(waypoints[:,0], waypoints[:,1], waypoints[:,2])
+    plt.show(block=False)
+    plt.pause(2)
+    plt.close()
 
 def draw_trajectory(initial_info,
                     waypoints,
