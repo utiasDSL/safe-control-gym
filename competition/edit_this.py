@@ -104,15 +104,19 @@ class Controller():
         for idx, g in enumerate(self.NOMINAL_GATES):
             height = initial_info["gate_dimensions"]["tall"]["height"] if g[6] == 0 else initial_info["gate_dimensions"]["low"]["height"]
             if g[5] > 0.75 or g[5] < 0:
-                if idx == 2:  # Hardcoded scenario knowledge (direction in which to take gate 2.
-                    waypoints.append((g[0]+0.3, g[1]-0.2, height))
-                    waypoints.append((g[0]-0.3, g[1]-0.2, height))
+                if idx == 2:  # Hardcoded scenario knowledge (direction in which to take gate 2).
+                    waypoints.append((g[0]+0.3, g[1]-0.3, height))
+                    waypoints.append((g[0]-0.3, g[1]-0.3, height))
                 else:
                     waypoints.append((g[0]-0.3, g[1], height))
                     waypoints.append((g[0]+0.3, g[1], height))
             else:
-                waypoints.append((g[0], g[1]-0.3, height))
-                waypoints.append((g[0], g[1]+0.3, height))
+                if idx == 3:  # Hardcoded scenario knowledge (correct how to take gate 3).
+                    waypoints.append((g[0]+0.1, g[1]-0.3, height))
+                    waypoints.append((g[0]+0.1, g[1]+0.3, height))
+                else:
+                    waypoints.append((g[0], g[1]-0.3, height))
+                    waypoints.append((g[0], g[1]+0.3, height))
         waypoints.append([initial_info["x_reference"][0], initial_info["x_reference"][2], initial_info["x_reference"][4]])
 
         # Polynomial fit

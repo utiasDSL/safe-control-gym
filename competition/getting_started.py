@@ -98,8 +98,10 @@ def run(test=False):
     cumulative_reward = 0
     collisions_count = 0
     collided_objects = set()
+    violations_count = 0
     episode_start_iter = 0
     text_label_id = p.addUserDebugText("", textPosition=[0, 0, 1],physicsClientId=env.PYB_CLIENT)
+    num_of_gates = len(config.quadrotor_config.gates)
     stats = []
 
     # Wait for keyboard input to start.
@@ -202,11 +204,13 @@ def run(test=False):
         # Update the controller internal state and models.
         ctrl.interStepLearn(action, obs, reward, done, info)
 
-        # Add up reward and collisions.
+        # Add up reward, collisions, violations.
         cumulative_reward += reward
         if info["collision"][1]:
             collisions_count += 1
             collided_objects.add(info["collision"][0])
+        if 'constraint_values' in info and info['constraint_violation'] == True:
+            violations_count += 1
 
         # Printouts.
         if config.verbose and i%int(CTRL_FREQ/2) == 0:
@@ -252,7 +256,26 @@ def run(test=False):
             logger.save_as_csv(comment="get_start-episode-"+str(episodes_count))
 
             # Append episode stats.
-            episode_stats = ['flight time', 'end', 'gates passed', 'total collision', 'total rewards', 'total constraint violations'] # TODO
+            if info['current_target_gate_id'] == -1:
+                gates_passed = num_of_gates
+            else:
+                gates_passed = info['current_target_gate_id']
+            if config.quadrotor_config.done_on_collision and info["collision"][1]:
+                termination = 'COLLISION'
+            elif config.quadrotor_config.done_on_completion and info['task_completed']:
+                termination = 'TASK COMPLETION'
+            elif config.quadrotor_config.done_on_violation and info['constraint_violation']:
+                termination = 'CONSTRAINT VIOLATION'
+            else:
+                termination = 'MAX EPISODE DURATION'
+            episode_stats = [
+                '[yellow]Flight time (s): '+str(curr_time),
+                '[yellow]Reason for termination: '+termination,
+                '[green]Gates passed: '+str(gates_passed),
+                '[green]Total reward: '+str(cumulative_reward),
+                '[red]Number of collisions: '+str(collisions_count),
+                '[red]Number of constraint violations: '+str(violations_count)
+                ]
             stats.append(episode_stats)
 
             # Create a new logger.
@@ -268,6 +291,7 @@ def run(test=False):
             cumulative_reward = 0
             collisions_count = 0
             collided_objects = set()
+            violations_count = 0
 
             # Reset the environment.
             if config.use_firmware:
@@ -302,7 +326,7 @@ def run(test=False):
     for idx, ep in enumerate(stats):
         ep_tree = tree.add('Episode ' + str(idx+1))
         for val in ep:
-            ep_tree.add('val')
+            ep_tree.add(val)
     print('\n\n')
     print(tree)
     print('\n\n')

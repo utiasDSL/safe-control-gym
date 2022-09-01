@@ -1,8 +1,8 @@
 # IROS 2022 Safe Robot Learning Competition
 
-## Video
-
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/dgni-58OSMs/maxresdefault.jpg)](https://www.youtube.com/watch?v=dgni-58OSMs)
+
+*The image links to the video of a flight example*
 
 *Note: beta release subject to change throughout the month of August 2022; register for updates*
 
