@@ -86,18 +86,18 @@ python3 getting_started.py --overrides ./getting_started.yaml
 
 ## Development and Evaluation Scenarios
 
-A complete problem is specified by a YAML file like [`getting_started.yaml`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/getting_started.yaml)
+A complete problem is specified by a YAML file, e.g. [`getting_started.yaml`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/getting_started.yaml)
 
 Proposed solutions will be evaluated in 5 scenarios with different challenges:
 
-| Evaluation Scenario    | Rand. Inertial Properties | Rand. Obstacles, Gates | Rand. Episodes | Constraints  | Notes                     |
+| Evaluation Scenario    | Random. Inertial Properties | Randomized Obstacles, Gates | Random. Episodes | Constraints  | Notes                     |
 | :--------------------: | :-----------------------: | :--------------------: | :------------: | :----------: | :-----------------------: |
-| [`level0.yaml`][link0] | No                        | No                     | No             | Yes          | Perfect knowledge, plan   |
+| [`level0.yaml`][link0] | No                        | No                     | No             | Yes          | Perfect knowledge, planning   |
 | [`level1.yaml`][link1] | Yes                       | No                     | No             | Yes          | Adapt                     |
-| [`level2.yaml`][link2] | Yes                       | Yes                    | No             | Yes          | Learning, re-plan         |
+| [`level2.yaml`][link2] | Yes                       | Yes                    | No             | Yes          | Learning, re-planning         |
 | [`level3.yaml`][link3] | Yes                       | Yes                    | Yes            | Yes          | Robustness                |
 |                        |                           |                        |                |              |                           |
-| [sim2real]             | Real-life hardware        | Yes, injected          | No             | Yes          | Sim2real transfer         |
+| sim2real               | Real-life hardware        | Yes, injected          | No             | Yes          | Sim2real transfer         |
 
 > Note: the random seed used to score solution will be picked at the time of the competition
 
