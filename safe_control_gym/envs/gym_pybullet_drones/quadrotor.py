@@ -895,10 +895,8 @@ class Quadrotor(BaseAviary):
         info = {}
         info['symbolic_model'] = self.symbolic
         info['physical_parameters'] = {
-            'quadrotor_mass': self.MASS,
-            'quadrotor_ixx_inertia': self.J[0, 0],
-            'quadrotor_iyy_inertia': self.J[1, 1],
-            'quadrotor_izz_inertia': self.J[2, 2]
+            'quadrotor_mass': self.OVERRIDDEN_QUAD_MASS,
+            'quadrotor_inertia': self.OVERRIDDEN_QUAD_INERTIA,
         }
         info['x_reference'] = self.X_GOAL
         info['u_reference'] = self.U_GOAL
