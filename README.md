@@ -88,11 +88,24 @@ python3 getting_started.py --overrides ./getting_started.yaml
 
 A complete problem is specified by a YAML file like [`getting_started.yaml`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/getting_started.yaml)
 
-Proposed solutions will be evaluated in 4 scenarios with different challenges:
-- [`level0.yaml`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level0.yaml), perfect knowledge
-- [`level1.yaml`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level1.yaml), uncertain dynamics
-- [`level2.yaml`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level2.yaml), uncertain dynamics and gates/obstacles
-- Sim2real, transfer of the best `level2` controller to a real Crazyflie 2.x
+Proposed solutions will be evaluated in 5 scenarios with different challenges:
+
+| Evaluation Scenario    | Rand. Inertial Properties | Rand. Obstacles, Gates | Rand. Episodes | Constraints  | Notes                     |
+| :--------------------: | :-----------------------: | :--------------------: | :------------: | :----------: | :-----------------------: |
+| [`level0.yaml`][link0] | No                        | No                     | No             | Yes          | Perfect knowledge, plan   |
+| [`level1.yaml`][link1] | Yes                       | No                     | No             | Yes          | Adapt                     |
+| [`level2.yaml`][link2] | Yes                       | Yes                    | No             | Yes          | Learning, re-plan         |
+| [`level3.yaml`][link3] | Yes                       | Yes                    | Yes            | Yes          | Robustness                |
+|                        |                           |                        |                |              |                           |
+| [sim2real]             | Real-life hardware        | Yes, injected          | No             | Yes          | Sim2real transfer         |
+
+> Note: the random seed used to score solution will be picked at the time of the competition
+
+[link0]: https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level0.yaml
+[link1]: https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level1.yaml
+[link2]: https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level2.yaml
+[link3]: https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level3.yaml
+
 
 ## Implement Your Controller/Solution
 
