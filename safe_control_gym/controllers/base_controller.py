@@ -185,7 +185,7 @@ class BaseController(ABC):
 
         # Note we only reset the symbolic model when prior_prop is nonempty
         if prior_prop:
-            prior_model = env._setup_symbolic(prior_prop=prior_prop)
+            env._setup_symbolic(prior_prop=prior_prop)
 
         # Note this ensures the env can still access the prior model, 
         # which is used to get quadratic costs in env.step()
