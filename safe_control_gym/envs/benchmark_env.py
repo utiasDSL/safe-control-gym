@@ -299,7 +299,11 @@ class BenchmarkEnv(gym.Env, ABC):
 
     @abstractmethod
     def _setup_symbolic(self, prior_prop={}, **kwargs):
-        '''Creates a symbolic (CasADi) model for dynamics and cost. '''
+        '''Creates a symbolic (CasADi) model for dynamics and cost. 
+        
+        Args:
+            prior_prop (dict): specify the prior inertial prop to use in the symbolic model.
+        '''
         raise NotImplementedError
 
     def _setup_disturbances(self):

@@ -462,7 +462,11 @@ class Quadrotor(BaseAviary):
         return np.reshape(rgb, (h, w, 4))
 
     def _setup_symbolic(self, prior_prop={}, **kwargs):
-        '''Creates symbolic (CasADi) models for dynamics, observation, and cost. '''
+        '''Creates symbolic (CasADi) models for dynamics, observation, and cost. 
+        
+        Args:
+            prior_prop (dict): specify the prior inertial prop to use in the symbolic model.
+        '''
         m = prior_prop.get("M", self.MASS)
         Iyy = prior_prop.get("Iyy", self.J[1, 1])
         g, l = self.GRAVITY_ACC, self.L        

@@ -378,7 +378,11 @@ class CartPole(BenchmarkEnv):
         self.PYB_CLIENT = -1
 
     def _setup_symbolic(self, prior_prop={}, **kwargs):
-        '''Creates symbolic (CasADi) models for dynamics, observation, and cost. '''
+        '''Creates symbolic (CasADi) models for dynamics, observation, and cost. 
+
+        Args:
+            prior_prop (dict): specify the prior inertial prop to use in the symbolic model.
+        '''
         l = prior_prop.get("pole_length", self.EFFECTIVE_POLE_LENGTH)
         m = prior_prop.get("pole_mass", self.POLE_MASS)
         M = prior_prop.get("cart_mass", self.CART_MASS)
