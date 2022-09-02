@@ -205,7 +205,8 @@ class Logger(object):
     
     def plot(self,
              comment: str="",
-             pwm=False):
+             pwm=False,
+             autoclose=False):
         """Logs entries for a single simulation step, of a single drone.
 
         Parameters
@@ -407,7 +408,9 @@ class Logger(object):
                             hspace=0.0
                             )
         plt.savefig(os.path.join('results', comment+'-output_figure.png'))
-        plt.show()
-        # plt.show(block=False)
-        # plt.pause(3)
-        # plt.close()
+        if autoclose:
+            plt.show(block=False)
+            plt.pause(2)
+            plt.close()
+        else:
+            plt.show()

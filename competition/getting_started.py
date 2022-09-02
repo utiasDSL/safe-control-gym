@@ -250,7 +250,7 @@ def run(test=False):
         if done:
             # Plot logging (comment as desired).
             if not test:
-                logger.plot(comment="get_start-episode-"+str(episodes_count))
+                logger.plot(comment="get_start-episode-"+str(episodes_count), autoclose=True)
 
             # CSV save.
             logger.save_as_csv(comment="get_start-episode-"+str(episodes_count))
