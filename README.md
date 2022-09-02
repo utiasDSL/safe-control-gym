@@ -99,7 +99,9 @@ Proposed solutions will be evaluated in 5 scenarios with different challenges:
 | | | | | | |
 | sim2real | Real-life hardware | **Yes**, injected | *No* | **Yes**  | Sim2real transfer |
 
-> Note: the random seed used to score solution will be picked at the time of the competition
+> Note 1: the random seed used to score solution will be picked at the time of the competition
+> 
+> Note 2: if the base scenarios do not allow to determine a unique winner, we will progressively raise the difficulty by, alternately, (i) adding intermediate gates and (ii) increasing the parameters of the random distributions by 50% (except in `level0`).
 
 [link0]: https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level0.yaml
 [link1]: https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level1.yaml
