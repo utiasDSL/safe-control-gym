@@ -124,7 +124,6 @@ class CartPole(BenchmarkEnv):
 
     def __init__(self,
                  init_state=None,
-                 prior_prop=None,
                  inertial_prop=None,
                  # custom args
                  obs_goal_horizon=0,
@@ -140,7 +139,6 @@ class CartPole(BenchmarkEnv):
         Args:
             init_state  (ndarray/dict, optional): The initial state of the environment.
                 (x, x_dot, theta, theta_dot).
-            prior_prop (dict, optional): The prior inertial properties of the environment.
             inertial_prop (dict, optional): The ground truth inertial properties of the environment.
             obs_goal_horizon (int): How many future goal states to append to obervation.
             obs_wrap_angle (bool): If to wrap angle to [-pi, pi] when used in observation.
@@ -157,7 +155,7 @@ class CartPole(BenchmarkEnv):
         self.done_on_out_of_bound = done_on_out_of_bound
         # BenchmarkEnv constructor, called after defining the custom args,
         # since some BenchmarkEnv init setup can be task(custom args)-dependent.
-        super().__init__(init_state=init_state, prior_prop=prior_prop, inertial_prop=inertial_prop, **kwargs)
+        super().__init__(init_state=init_state, inertial_prop=inertial_prop, **kwargs)
 
         # Create PyBullet client connection.
         self.PYB_CLIENT = -1
@@ -201,19 +199,6 @@ class CartPole(BenchmarkEnv):
         else:
             raise ValueError('[ERROR] in CartPole.__init__(), inertial_prop incorrect format.')
 
-        # Store prior parameters.
-        if prior_prop is None:
-            self.PRIOR_EFFECTIVE_POLE_LENGTH = EFFECTIVE_POLE_LENGTH
-            self.PRIOR_POLE_MASS = POLE_MASS
-            self.PRIOR_CART_MASS = CART_MASS
-        elif isinstance(prior_prop, dict):
-            self.PRIOR_EFFECTIVE_POLE_LENGTH = prior_prop.get('pole_length', EFFECTIVE_POLE_LENGTH)
-            self.PRIOR_POLE_MASS = prior_prop.get('pole_mass', POLE_MASS)
-            self.PRIOR_CART_MASS = prior_prop.get('cart_mass', CART_MASS)
-        else:
-            raise ValueError('[ERROR] in CartPole.__init__(), prior_prop incorrect format.')
-        # Set prior/symbolic info.
-        self._setup_symbolic()
         # Create X_GOAL and U_GOAL references for the assigned task.
         self.U_GOAL = np.zeros(1)
         if self.TASK == Task.STABILIZATION:
@@ -233,9 +218,9 @@ class CartPole(BenchmarkEnv):
                 np.zeros(POS_REF.shape[0]),
                 np.zeros(VEL_REF.shape[0])
             ]).transpose()
-        # Define equilibrium point about the upright equilibrium for stabilization or first point in trajectory.
-        self.X_EQ = np.atleast_2d(self.X_GOAL)[0,:].T
-        self.U_EQ = np.atleast_2d(self.U_GOAL)[0,:]
+            
+        # Set prior/symbolic info.
+        self._setup_symbolic()
 
     def step(self, action):
         '''Advances the environment by one control step.
@@ -392,9 +377,15 @@ class CartPole(BenchmarkEnv):
             p.disconnect(physicsClientId=self.PYB_CLIENT)
         self.PYB_CLIENT = -1
 
-    def _setup_symbolic(self):
-        '''Creates symbolic (CasADi) models for dynamics, observation, and cost. '''
-        l, m, M = self.PRIOR_EFFECTIVE_POLE_LENGTH, self.PRIOR_POLE_MASS, self.PRIOR_CART_MASS
+    def _setup_symbolic(self, prior_prop={}, **kwargs):
+        '''Creates symbolic (CasADi) models for dynamics, observation, and cost. 
+
+        Args:
+            prior_prop (dict): specify the prior inertial prop to use in the symbolic model.
+        '''
+        l = prior_prop.get("pole_length", self.EFFECTIVE_POLE_LENGTH)
+        m = prior_prop.get("pole_mass", self.POLE_MASS)
+        M = prior_prop.get("cart_mass", self.CART_MASS)
         Mm, ml = m + M, m * l
         g = self.GRAVITY_ACC
         dt = self.CTRL_TIMESTEP
@@ -422,8 +413,18 @@ class CartPole(BenchmarkEnv):
         # Define dynamics and cost dictionaries.
         dynamics = {'dyn_eqn': X_dot, 'obs_eqn': Y, 'vars': {'X': X, 'U': U}}
         cost = {'cost_func': cost_func, 'vars': {'X': X, 'U': U, 'Xr': Xr, 'Ur': Ur, 'Q': Q, 'R': R}}
+        # Additional params to cache
+        params = {
+            # prior inertial properties
+            "pole_length": l,
+            "pole_mass": m,
+            "cart_mass": M,
+            # equilibrium point for linearization
+            "X_EQ": np.atleast_2d(self.X_GOAL)[0,:].T,
+            "U_EQ": np.atleast_2d(self.U_GOAL)[0,:],
+        }
         # Setup symbolic model.
-        self.symbolic = SymbolicModel(dynamics=dynamics, cost=cost, dt=dt)
+        self.symbolic = SymbolicModel(dynamics=dynamics, cost=cost, dt=dt, params=params)
 
     def _set_action_space(self):
         '''Sets the action space of the environment. '''
@@ -698,9 +699,9 @@ class CartPole(BenchmarkEnv):
         info = {}
         info['symbolic_model'] = self.symbolic
         info['physical_parameters'] = {
-            'pole_effective_length': self.PRIOR_EFFECTIVE_POLE_LENGTH,
-            'pole_mass': self.PRIOR_POLE_MASS,
-            'cart_mass': self.PRIOR_CART_MASS
+            'pole_effective_length': self.OVERRIDDEN_EFFECTIVE_POLE_LENGTH,
+            'pole_mass': self.OVERRIDDEN_POLE_MASS,
+            'cart_mass': self.OVERRIDDEN_CART_MASS
         }
         info['x_reference'] = self.X_GOAL
         info['u_reference'] = self.U_GOAL

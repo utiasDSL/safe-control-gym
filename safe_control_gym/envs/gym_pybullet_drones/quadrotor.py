@@ -253,9 +253,6 @@ class Quadrotor(BaseAviary):
         else:
             raise ValueError('[ERROR] in Quadrotor.__init__(), inertial_prop incorrect format.')
 
-        # Set prior/symbolic info.
-        self._setup_symbolic()
-
         # Create X_GOAL and U_GOAL references for the assigned task.
         self.U_GOAL = np.ones(self.action_dim) * self.MASS * self.GRAVITY_ACC / self.action_dim
         if self.TASK == Task.STABILIZATION:
@@ -320,10 +317,8 @@ class Quadrotor(BaseAviary):
                     np.zeros(VEL_REF_TRANS.shape[0])
                 ]).transpose()
 
-        # Equilibrium point at hover for linearization.
-        self.X_EQ = np.zeros(self.state_dim)
-        self.U_EQ = self.U_GOAL
-
+        # Set prior/symbolic info.
+        self._setup_symbolic()
 
     def reset(self):
         '''(Re-)initializes the environment to start an episode.
@@ -466,10 +461,15 @@ class Quadrotor(BaseAviary):
         # Image.fromarray(np.reshape(rgb, (h, w, 4)), 'RGBA').show()
         return np.reshape(rgb, (h, w, 4))
 
-    def _setup_symbolic(self):
-        '''Creates symbolic (CasADi) models for dynamics, observation, and cost. '''
-        m, g, l = self.MASS, self.GRAVITY_ACC, self.L
-        Iyy = self.J[1, 1]
+    def _setup_symbolic(self, prior_prop={}, **kwargs):
+        '''Creates symbolic (CasADi) models for dynamics, observation, and cost. 
+        
+        Args:
+            prior_prop (dict): specify the prior inertial prop to use in the symbolic model.
+        '''
+        m = prior_prop.get("M", self.MASS)
+        Iyy = prior_prop.get("Iyy", self.J[1, 1])
+        g, l = self.GRAVITY_ACC, self.L        
         dt = self.CTRL_TIMESTEP
         # Define states.
         z = cs.MX.sym('z')
@@ -506,8 +506,8 @@ class Quadrotor(BaseAviary):
             Y = cs.vertcat(x, x_dot, z, z_dot, theta, theta_dot)
         elif self.QUAD_TYPE == QuadType.THREE_D:
             nx, nu = 12, 4
-            Ixx = self.J[0, 0]
-            Izz = self.J[2, 2]
+            Ixx = prior_prop.get("Ixx", self.J[0, 0])
+            Izz = prior_prop.get("Izz", self.J[2, 2])
             J = cs.blockcat([[Ixx, 0.0, 0.0],
                              [0.0, Iyy, 0.0],
                              [0.0, 0.0, Izz]])
@@ -540,7 +540,7 @@ class Quadrotor(BaseAviary):
 
             # From Ch. 2 of Luis, Carlos, and Jérôme Le Ny. 'Design of a trajectory tracking controller for a
             # nanoquadcopter.' arXiv preprint arXiv:1608.05786 (2016).
-
+    
             # Defining the dynamics function.
             # We are using the velocity of the base wrt to the world frame expressed in the world frame.
             # Note that the reference expresses this in the body frame.
@@ -576,8 +576,19 @@ class Quadrotor(BaseAviary):
                 'R': R
             }
         }
+        # Additional params to cache
+        params = {
+            # prior inertial properties
+            "quad_mass": m, 
+            "quad_Iyy": Iyy,
+            "quad_Ixx": Ixx if "Ixx" in locals() else None,
+            "quad_Izz": Izz if "Izz" in locals() else None,
+            # equilibrium point for linearization
+            "X_EQ": np.zeros(self.state_dim),
+            "U_EQ": self.U_GOAL,
+        }
         # Setup symbolic model.
-        self.symbolic = SymbolicModel(dynamics=dynamics, cost=cost, dt=dt)
+        self.symbolic = SymbolicModel(dynamics=dynamics, cost=cost, dt=dt, params=params)
 
     def _set_action_space(self):
         '''Sets the action space of the environment. '''
@@ -909,8 +920,8 @@ class Quadrotor(BaseAviary):
         info = {}
         info['symbolic_model'] = self.symbolic
         info['physical_parameters'] = {
-            'quadrotor_mass': self.MASS,
-            'quadrotor_iyy_inertia': self.J[1, 1]
+            'quadrotor_mass': self.OVERRIDDEN_QUAD_MASS,
+            'quadrotor_inertia': self.OVERRIDDEN_QUAD_INERTIA,
         }
         info['x_reference'] = self.X_GOAL
         info['u_reference'] = self.U_GOAL

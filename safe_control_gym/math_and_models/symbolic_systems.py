@@ -23,7 +23,9 @@ class SymbolicModel():
                  cost,
                  dt=1e-3,
                  integration_algo='cvodes',
-                 funcs=None):
+                 funcs=None, 
+                 params=None,
+                 ):
         """
 
         """
@@ -44,6 +46,12 @@ class SymbolicModel():
             for name, func in funcs.items():
                 assert name not in self.__dict__
                 self.__dict__[name] = func
+        # Cache ohter parameters, for example, X_EQ and U_EQ
+        # that would be used in the controller via the symbolic model
+        if params is not None:
+            for name, param in params.items():
+                assert name not in self.__dict__
+                self.__dict__[name] = param
         # Variable dimensions.
         self.nx = self.x_sym.shape[0]
         self.nu = self.u_sym.shape[0]
