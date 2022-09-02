@@ -93,7 +93,7 @@ Proposed solutions will be evaluated in 5 scenarios with different challenges:
 | Evaluation Scenario    | Random. Inertial Properties | Randomized Obstacles, Gates | Random. Episodes | Constraints  | Notes                     |
 | :--------------------: | :-----------------------: | :--------------------: | :------------: | :----------: | :-----------------------: |
 | [`level0.yaml`][link0] | No                        | No                     | No             | Yes          | Perfect knowledge   |
-| [`level1.yaml`][link1] | Yes                       | No                     | No             | Yes          | Adapt                     |
+| [`level1.yaml`][link1] | Yes                       | No                     | No             | Yes          | Adaptive                  |
 | [`level2.yaml`][link2] | Yes                       | Yes                    | No             | Yes          | Learning, re-planning         |
 | [`level3.yaml`][link3] | Yes                       | Yes                    | Yes            | Yes          | Robustness                |
 |                        |                           |                        |                |              |                           |
