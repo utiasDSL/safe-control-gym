@@ -97,7 +97,7 @@ Proposed solutions will be evaluated in 5 scenarios with different challenges:
 | [`level2.yaml`][link2] | **Yes** | **Yes** | **Yes** | *No* | Learning, re-planning |
 | [`level3.yaml`][link3] | **Yes** | **Yes** | **Yes** | **Yes** | Robustness |
 | | | | | | |
-| sim2real | Real-life hardware |**Yes**  |  **Yes**, injected | *No* | Sim2real transfer |
+| sim2real | **Yes** | Real-life hardware |  **Yes**, injected | *No* | Sim2real transfer |
 
 > Note 1: the random seed used to score solution will be picked at the time of the competition
 > 
