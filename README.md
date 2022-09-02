@@ -99,6 +99,8 @@ Proposed solutions will be evaluated in 5 scenarios with different challenges:
 | | | | | | |
 | sim2real | **Yes** | Real-life hardware |  **Yes**, injected | *No* | Sim2real transfer |
 
+> "Rand. Between Episodes" (governed by argument `reseed_on_reset`) states whether randomized properties and positions vary or are kept constant (by re-seeding the random number generator on each `env.reset()`) across episodes
+> 
 > Note 1: the random seed used to score solution will be picked at the time of the competition
 > 
 > Note 2: if the base scenarios do not allow to determine a unique winner, we will progressively raise the difficulty by, alternately, (i) adding intermediate gates and (ii) increasing the parameters of the random distributions by 50% (except in `level0`).
@@ -123,7 +125,7 @@ edit_this.py : Controller.__init__(initial_obs, initial_info)           # Initia
 
         initial_info (dict): The a priori problem information as a dictionary with keys
 
-            - 'ctrl_timestep'                   Control timestep (in seconds)
+            - 'ctrl_timestep'                   Control time step (in seconds)
             - 'ctrl_freq'                       Control frequency (in Hz)
             - 'episode_len_sec'                 Maximum duration of an episode (in seconds)
             - 'nominal_physical_parameters'     *Nominal* mass and inertia of the quadrotor
@@ -137,7 +139,7 @@ edit_this.py : Controller.__init__(initial_obs, initial_info)           # Initia
             - 'initial_state_randomization'     Distributions of the randomized additive error on the initial pose
             - 'inertial_prop_randomization'     Distributions of the randomized additive error on the inertial properties
             - 'gates_and_obs_randomization'     Distributions of the randomized additive error on the gates and obstacles positions
-            - 'disturbances'                    Distributions of the dynamics and input disturbances's  
+            - 'disturbances'                    Distributions of the dynamics and input disturbances  
 
             - 'symbolic_model'                  CasADi's 3D quadrotor dynamics
             - 'symbolic_constraints'            CasADi's constraints
@@ -158,7 +160,7 @@ edit_this.py : Controller.cmdFirmware(time, obs, reward, done, info)    # Select
         done (bool, optional): Wether the episode has terminated.
         info (dict, optional): Current step information as a dictionary with keys
 
-            - 'current_target_gate_id'          ID of the next gate (-1 when all gates have been travelled through)
+            - 'current_target_gate_id'          ID of the next gate (-1 when all gates have been traveled through)
             - 'current_target_gate_type'        Type of the next gate (0: tall, 1: low)
             - 'current_target_gate_in_range'    Boolean, whether the next gate is close enough (i.e., <= VISIBILITY_RANGE == 0.45m) for perfect visibility (affects the value of the next key 'current_target_gate_pos')
             - 'current_target_gate_pos'         *Nominal* or exact position of the next gate (depending on the value of the key above, 'current_target_gate_in_range')
@@ -212,7 +214,7 @@ edit_this.py : Controller.interEpisodeLearn(...)    # Update the controller's in
 
 ## Submission
 
-- Fork this repo ([help](https://docs.github.com/en/get-started/quickstart/fork-a-repo))
+- Fork this repository ([help](https://docs.github.com/en/get-started/quickstart/fork-a-repo))
 - Checkout this branch (`beta-iros-competition`)
 - Implement your solution by modifying [`edit_this.py`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py)
 - Create a Pull Request into `utiasDSL/safe-control-gym:beta-iros-competition` from your fork ([help](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork))

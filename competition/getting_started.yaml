@@ -1,6 +1,6 @@
 # Configuration
 num_episodes: 3 # Customizable number of episodes (NOTE: solutions that require fewer episode will receive higher scores)
-use_firmware: True # Whether to use pycffirmware or not (NOTE: only set to False for debuggin purposes)
+use_firmware: True # Whether to use pycffirmware or not (NOTE: only set to False for debugging purposes)
 verbose: True # Boolean passed to the Controller class, can be used to turn on and off additional printouts
 
 # Note: DSL's flyable/usable space in Toronto extends from -3 to +3 meters in x and y and 0 and 2 meters in z
@@ -18,7 +18,7 @@ quadrotor_config:
   episode_len_sec: 33  # Maximum episode duration, in seconds
 
   done_on_violation: False # Whether `done` becomes True when a constraint is violated
-  done_on_completion: False # Whether `done` becomes True when the taks is completed (travelled all gates and 2'' hover at stabilization_goal)
+  done_on_completion: False # Whether `done` becomes True when the task is completed (traveled all gates and 2'' hover at stabilization_goal)
   done_on_collision: True # Whether `done` becomes True when a collision happens
   cost: competition  # Sparse reward function, if you desire, re-implement it in Quadrotor._get_reward()
                      # github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/safe_control_gym/envs/gym_pybullet_drones/quadrotor.py
