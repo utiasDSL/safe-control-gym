@@ -1,8 +1,8 @@
 # Level 0
 
-# | Evaluation Scenario | Random. Inertial Properties | Randomized Obstacles, Gates | Random. Episodes | Constraints  | Notes             |
-# | :-----------------: | :-------------------------: | :-------------------------: | :--------------: | :----------: | :---------------: |
-# | `level0.yaml`       | *No*                        | *No*                        | *No*             | **Yes**      | Perfect knowledge |
+# | Evaluation Scenario | Constraints  | Rand. Inertial Properties | Randomized Obstacles, Gates | Rand. Between Episodes | Notes             |
+# | :-----------------: | :----------: | :-----------------------: | :-------------------------: | :--------------------: | :---------------: |
+# | `level0.yaml`       | **Yes**      | *No*                      | *No*                        | *No*                   | Perfect knowledge |
 
 # Configuration
 num_episodes: 5 # Customizable number of episodes (NOTE: solutions that require fewer episode will receive higher scores)

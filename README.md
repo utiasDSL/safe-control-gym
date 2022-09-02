@@ -90,8 +90,8 @@ A complete problem is specified by a YAML file, e.g. [`getting_started.yaml`](ht
 
 Proposed solutions will be evaluated in 5 scenarios with different challenges:
 
-| Evaluation Scenario | Constraints  | Random. Inertial Properties | Randomized Obstacles, Gates | Rand. Between Episodes | Notes |
-| :-----------------: | :----------: | :-------------------------: | :-------------------------: | :--------------------: | :---: |
+| Evaluation Scenario | Constraints  | Rand. Inertial Properties | Randomized Obstacles, Gates | Rand. Between Episodes | Notes |
+| :-----------------: | :----------: | :-----------------------: | :-------------------------: | :--------------------: | :---: |
 | [`level0.yaml`][link0] | **Yes** | *No* | *No* | *No* | Perfect knowledge |
 | [`level1.yaml`][link1] | **Yes** | **Yes** | *No* | *No* | Adaptive |
 | [`level2.yaml`][link2] | **Yes** | **Yes** | **Yes** | *No* | Learning, re-planning |
