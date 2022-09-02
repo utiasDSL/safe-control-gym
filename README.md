@@ -92,12 +92,12 @@ Proposed solutions will be evaluated in 5 scenarios with different challenges:
 
 | Evaluation Scenario    | Random. Inertial Properties | Randomized Obstacles, Gates | Random. Episodes | Constraints  | Notes                     |
 | :--------------------: | :-----------------------: | :--------------------: | :------------: | :----------: | :-----------------------: |
-| [`level0.yaml`][link0] | No                        | No                     | No             | **Yes**          | Perfect knowledge   |
-| [`level1.yaml`][link1] | **Yes**                       | No                     | No             | **Yes**          | Adaptive                  |
-| [`level2.yaml`][link2] | **Yes**                       | **Yes**                    | No             | **Yes**          | Learning, re-planning         |
+| [`level0.yaml`][link0] | *No*                        | *No*                     | *No*             | **Yes**          | Perfect knowledge   |
+| [`level1.yaml`][link1] | **Yes**                       | *No*                     | *No*             | **Yes**          | Adaptive                  |
+| [`level2.yaml`][link2] | **Yes**                       | **Yes**                    | *No*             | **Yes**          | Learning, re-planning         |
 | [`level3.yaml`][link3] | **Yes**                       | **Yes**                    | **Yes**            | **Yes**          | Robustness                |
 |                        |                           |                        |                |              |                           |
-| sim2real               | Real-life hardware        | **Yes**, injected          | No             | **Yes**          | Sim2real transfer         |
+| sim2real               | Real-life hardware        | **Yes**, injected          | *No*             | **Yes**          | Sim2real transfer         |
 
 > Note: the random seed used to score solution will be picked at the time of the competition
 
