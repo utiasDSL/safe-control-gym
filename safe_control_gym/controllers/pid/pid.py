@@ -61,8 +61,7 @@ class PID(BaseController):
 
         self.env.reset()
         self.g = g
-        # self.GRAVITY = g * self.env.OVERRIDDEN_QUAD_MASS # The gravitational force (g*M) acting on each drone.
-        self.GRAVITY = g * self.model.quad_mass
+        self.GRAVITY = g * self.model.quad_mass # The gravitational force (g*M) acting on each drone.
         self.KF = kf
         self.KM = km
         self.P_COEFF_FOR = np.array(p_coeff_for)
@@ -260,12 +259,6 @@ class PID(BaseController):
         self.integral_pos_e = np.zeros(3)
         self.last_rpy = np.zeros(3)
         self.integral_rpy_e = np.zeros(3)
-
-        # if env is None:
-        #     self.GRAVITY = self.g * self.env.OVERRIDDEN_QUAD_MASS
-        # else:
-        #     self.GRAVITY = self.g * env.OVERRIDDEN_QUAD_MASS
-
         self.setup_results_dict()
 
     def close(self):
