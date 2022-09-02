@@ -90,14 +90,14 @@ A complete problem is specified by a YAML file, e.g. [`getting_started.yaml`](ht
 
 Proposed solutions will be evaluated in 5 scenarios with different challenges:
 
-| Evaluation Scenario | Random. Inertial Properties | Randomized Obstacles, Gates | Random. Episodes | Constraints  | Notes |
-| :-----------------: | :-------------------------: | :-------------------------: | :--------------: | :----------: | :---: |
-| [`level0.yaml`][link0] | *No* | *No* | *No* | **Yes** | Perfect knowledge |
-| [`level1.yaml`][link1] | **Yes** | *No* | *No* | **Yes** | Adaptive |
-| [`level2.yaml`][link2] | **Yes** | **Yes** | *No* | **Yes** | Learning, re-planning |
+| Evaluation Scenario | Constraints  | Random. Inertial Properties | Randomized Obstacles, Gates | Rand. Between Episodes | Notes |
+| :-----------------: | :----------: | :-------------------------: | :-------------------------: | :--------------------: | :---: |
+| [`level0.yaml`][link0] | **Yes** | *No* | *No* | *No* | Perfect knowledge |
+| [`level1.yaml`][link1] | **Yes** | **Yes** | *No* | *No* | Adaptive |
+| [`level2.yaml`][link2] | **Yes** | **Yes** | **Yes** | *No* | Learning, re-planning |
 | [`level3.yaml`][link3] | **Yes** | **Yes** | **Yes** | **Yes** | Robustness |
 | | | | | | |
-| sim2real | Real-life hardware | **Yes**, injected | *No* | **Yes**  | Sim2real transfer |
+| sim2real | Real-life hardware |**Yes**  |  **Yes**, injected | *No* | Sim2real transfer |
 
 > Note 1: the random seed used to score solution will be picked at the time of the competition
 > 
