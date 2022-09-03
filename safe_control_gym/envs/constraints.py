@@ -200,7 +200,8 @@ class QuadraticContstraint(Constraint):
             constrained_variable (ConstrainedVariableType): Specifies the input type to the constraint as a constraint
                                                         that acts on the state, input, or both.
             strict (optional, bool): Whether the constraint is violated also when equal to its threshold.
-            active_dims (list of ints): Filters the constraint to only act only select certian dimensions.
+            active_dims (list of ints): Filters the constraint to only act on select certian dimensions. Note that the
+                dimensions of P should match the length active dims.
             tolerance (list or np.array): The distance from the constraint at which is_almost_active returns True.
             decimals (optional, int): Specifies the number of decimal places to round the constraint evaluation too.
         '''
@@ -212,7 +213,8 @@ class QuadraticContstraint(Constraint):
                          tolerance=tolerance,
                          decimals=decimals)
         P = np.array(P, ndmin=1)
-        assert P.shape == (self.dim, self.dim), '[ERROR] P has the wrong dimension!'
+        assert P.shape == (self.dim, self.dim), '[ERROR] P has the wrong dimension! It should match the dimension of' \
+                                                'the constrained_variable or the same length as active_dims.'
         self.P = P
         assert isinstance(b, float), '[ERROR] b is not a scalar!'
         self.b = b
@@ -250,7 +252,8 @@ class LinearConstraint(Constraint):
             b (ndarray or list): b matrix of the constraint (1D array self.num_constraints)
                                   constrained_variable (ConstrainedVariableType): Type of constraint.
             strict (optional, bool): Whether the constraint is violated also when equal to its threshold.
-            active_dims (list or int): List specifying which dimensions the constraint is active for.
+            active_dims (list or int): List specifying which dimensions the constraint is active for. Note that the
+                dimensions of A and b should match the length active dims.
             tolerance (float): The distance at which is_almost_active(env) triggers.
             decimals (optional, int): Specifies the number of decimal places to round the constraint evaluation too.
         '''
@@ -300,7 +303,8 @@ class BoundedConstraint(LinearConstraint):
             upper_bounds (ndarray or list): Uppbound of constraint.
             constrained_variable (ConstrainedVariableType): Type of constraint.
             strict (optional, bool): Whether the constraint is violated also when equal to its threshold.
-            active_dims (list or int): List specifying which dimensions the constraint is active for.
+            active_dims (list or int): List specifying which dimensions the constraint is active for. Note that
+                lower_bounds and upper_bounds should have the same length as active_dims.
             tolerance (float): The distance at which is_almost_active(env) triggers.
             decimals (optional, int): Specifies the number of decimal places to round the constraint evaluation too.
         '''
@@ -308,6 +312,12 @@ class BoundedConstraint(LinearConstraint):
         self.lower_bounds = np.array(lower_bounds, ndmin=1)
         self.upper_bounds = np.array(upper_bounds, ndmin=1)
         dim = self.lower_bounds.shape[0]
+        if active_dims is not None and type(active_dims) == list:
+            assert self.lower_bounds.shape[0] == len(active_dims), '[Error] active_dims and lower_bounds must have the same dimension.'
+        if active_dims is not None and type(active_dims) == int:
+            assert self.lower_bounds.shape[0] == 1, '[Error] active_dims and lower_bounds must have the same dimension.'
+        if active_dims is not None and type(active_dims) == int:
+            assert self.upper_bounds.shape[0] == 1, '[Error] active_dims and upper_bounds must have the same dimension.'
         A = np.vstack((-np.eye(dim), np.eye(dim)))
         b = np.hstack((-self.lower_bounds, self.upper_bounds))
         super().__init__(env, A, b,
