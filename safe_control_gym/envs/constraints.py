@@ -37,6 +37,7 @@ class Constraint:
                  strict: bool=False,
                  active_dims=None,
                  tolerance=None,
+                 decimals: int=8,
                  **kwargs
                  ):
         '''Defines params (e.g. bounds) and state.
@@ -48,6 +49,7 @@ class Constraint:
             strict (optional, bool): Whether the constraint is violated also when equal to its threshold.
             active_dims (list of ints): Filters the constraint to only act only select certian dimensions.
             tolerance (list or np.array): The distance from the constraint at which is_almost_active returns True.
+            decimals (optional, int): Specifies the number of decimal places to round the constraint evaluation too.
         '''
 
         self.constrained_variable = ConstrainedVariableType(constrained_variable)
@@ -61,6 +63,7 @@ class Constraint:
             raise NotImplementedError('[ERROR] invalid constrained_variable (use STATE, INPUT or INPUT_AND_STATE).')
         # Save the strictness attribute
         self.strict = strict
+        self.decimals = decimals
         # Only want to select specific dimensions, implemented via a filter matrix.
         if active_dims is not None:
             if isinstance(active_dims, int):
@@ -103,7 +106,7 @@ class Constraint:
             value (ndarray): The evaulation of the constraint.
         '''
         env_value = self.get_env_constraint_var(env)
-        return np.atleast_1d(np.squeeze(self.sym_func(np.array(env_value, ndmin=1))))
+        return np.round_(np.atleast_1d(np.squeeze(self.sym_func(np.array(env_value, ndmin=1)))), decimals=self.decimals)
 
     def is_violated(self,
                     env,
@@ -185,7 +188,8 @@ class QuadraticContstraint(Constraint):
                  constrained_variable: ConstrainedVariableType,
                  strict: bool=False,
                  active_dims=None,
-                 tolerance=None
+                 tolerance=None,
+                 decimals: int=8
                  ):
         '''Initializes the class.
 
@@ -198,9 +202,15 @@ class QuadraticContstraint(Constraint):
             strict (optional, bool): Whether the constraint is violated also when equal to its threshold.
             active_dims (list of ints): Filters the constraint to only act only select certian dimensions.
             tolerance (list or np.array): The distance from the constraint at which is_almost_active returns True.
+            decimals (optional, int): Specifies the number of decimal places to round the constraint evaluation too.
         '''
 
-        super().__init__(env, constrained_variable, strict=strict, active_dims=active_dims, tolerance=tolerance)
+        super().__init__(env,
+                         constrained_variable,
+                         strict=strict,
+                         active_dims=active_dims,
+                         tolerance=tolerance,
+                         decimals=decimals)
         P = np.array(P, ndmin=1)
         assert P.shape == (self.dim, self.dim), '[ERROR] P has the wrong dimension!'
         self.P = P
@@ -229,7 +239,8 @@ class LinearConstraint(Constraint):
                  constrained_variable: ConstrainedVariableType,
                  strict: bool=False,
                  active_dims=None,
-                 tolerance=None
+                 tolerance=None,
+                 decimals: int=8
                  ):
         '''Initialize the class.
 
@@ -241,9 +252,15 @@ class LinearConstraint(Constraint):
             strict (optional, bool): Whether the constraint is violated also when equal to its threshold.
             active_dims (list or int): List specifying which dimensions the constraint is active for.
             tolerance (float): The distance at which is_almost_active(env) triggers.
+            decimals (optional, int): Specifies the number of decimal places to round the constraint evaluation too.
         '''
 
-        super().__init__(env, constrained_variable, strict=strict, active_dims=active_dims, tolerance=tolerance)
+        super().__init__(env,
+                         constrained_variable,
+                         strict=strict,
+                         active_dims=active_dims,
+                         tolerance=tolerance,
+                         decimals=decimals)
         A = np.array(A, ndmin=1)
         b = np.array(b, ndmin=1)
         assert A.shape[1] == self.dim, '[ERROR] A has the wrong dimension!'
@@ -273,7 +290,8 @@ class BoundedConstraint(LinearConstraint):
                  constrained_variable: ConstrainedVariableType,
                  strict: bool=False,
                  active_dims=None,
-                 tolerance=None):
+                 tolerance=None,
+                 decimals: int=8):
         '''Initialize the constraint.
 
         Args:
@@ -284,6 +302,7 @@ class BoundedConstraint(LinearConstraint):
             strict (optional, bool): Whether the constraint is violated also when equal to its threshold.
             active_dims (list or int): List specifying which dimensions the constraint is active for.
             tolerance (float): The distance at which is_almost_active(env) triggers.
+            decimals (optional, int): Specifies the number of decimal places to round the constraint evaluation too.
         '''
 
         self.lower_bounds = np.array(lower_bounds, ndmin=1)
@@ -291,7 +310,12 @@ class BoundedConstraint(LinearConstraint):
         dim = self.lower_bounds.shape[0]
         A = np.vstack((-np.eye(dim), np.eye(dim)))
         b = np.hstack((-self.lower_bounds, self.upper_bounds))
-        super().__init__(env, A, b, constrained_variable, strict=strict, active_dims=active_dims, tolerance=tolerance)
+        super().__init__(env, A, b,
+                         constrained_variable,
+                         strict=strict,
+                         active_dims=active_dims,
+                         tolerance=tolerance,
+                         decimals=decimals)
         self.check_tolerance_shape()
 
 
@@ -310,7 +334,8 @@ class DefaultConstraint(BoundedConstraint):
                  lower_bounds=None,
                  upper_bounds=None,
                  strict: bool=False,
-                 tolerance=None
+                 tolerance=None,
+                 decimals: int=8
                  ):
         ''''Initialize the class.
 
@@ -322,6 +347,7 @@ class DefaultConstraint(BoundedConstraint):
                 the environemt observation space dimension. If None, the env defaults are used.
             strict (optional, bool): Whether the constraint is violated also when equal to its threshold.
             tolerance (float): The distance at which is_almost_active(env) triggers.
+            decimals (optional, int): Specifies the number of decimal places to round the constraint evaluation too.
         '''
 
         if constrained_variable == ConstrainedVariableType.STATE:
@@ -357,7 +383,8 @@ class DefaultConstraint(BoundedConstraint):
                          constrained_variable=constrained_variable,
                          strict=strict,
                          active_dims=None,
-                         tolerance=tolerance)
+                         tolerance=tolerance,
+                         decimals=decimals)
 
 
 class SymmetricStateConstraint(BoundedConstraint):
@@ -373,6 +400,7 @@ class SymmetricStateConstraint(BoundedConstraint):
                  strict: bool=False,
                  active_dims=None,
                  tolerance=None,
+                 decimals: int=8,
                  **kwrags
                  ):
         ''''Initialize the class.
@@ -384,8 +412,9 @@ class SymmetricStateConstraint(BoundedConstraint):
             bound (list, np.array): 1D array or list of the bounds. Length must match
                 the environemt observation space dimension. If none, the env defaults are used
             strict (optional, bool): Whether the constraint is violated also when equal to its threshold.
-            active_dims (list of ints): Filters the constraint to only act only select certian dimensions.
+            active_dims (list of ints): Filters the constraint to only act on select certian dimensions.
             tolerance (list or np.array): The distance from the constraint at which is_almost_active returns True.
+            decimals (optional, int): Specifies the number of decimal places to round the constraint evaluation too.
         '''
 
         assert bound is not None
@@ -397,13 +426,14 @@ class SymmetricStateConstraint(BoundedConstraint):
                          strict=strict,
                          active_dims=active_dims,
                          tolerance=tolerance,
+                         decimals=decimals
                          **kwrags)
         assert (env.NAME == 'cartpole'), '[ERROR] SymmetricStateConstraint is meant for CartPole environments'
         assert (env.COST == 'rl_reward'), '[ERROR] SymmetricStateConstraint is meant for RL environments'
         self.num_constraints = self.bound.shape[0]
 
     def get_value(self, env):
-        c_value = np.abs(self.constraint_filter @ env.state) - self.bound
+        c_value = np.round_(np.abs(self.constraint_filter @ env.state) - self.bound, decimals=self.decimals)
         return c_value
 
     # TODO: temp addition
