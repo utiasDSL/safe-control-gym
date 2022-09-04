@@ -89,6 +89,7 @@ class Controller():
 
         # Reset counters and buffers.
         self.reset()
+        self.interEpisodeReset()
 
         #########################
         # REPLACE THIS (START) ##
@@ -349,9 +350,9 @@ class Controller():
         #########################
 
     def reset(self):
-        """Reset data buffers and counters.
+        """Initialize/reset data buffers and counters.
 
-        Called once in __init__(). Optionally call in interEpisodeLearn() if desired.
+        Called once in __init__().
 
         """
         # Data buffers.
@@ -364,3 +365,14 @@ class Controller():
         # Counters.
         self.interstep_counter = 0
         self.interepisode_counter = 0
+
+    def interEpisodeReset(self):
+        """Initialize/reset learning timing variables.
+
+        Called between episodes in `getting_started.py`.
+
+        """
+        # Timing stats variables.
+        self.interstep_learning_time = 0
+        self.interstep_learning_occurrences = 0
+        self.interepisode_learning_time = 0

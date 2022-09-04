@@ -271,6 +271,10 @@ def run(test=False):
                 termination = 'CONSTRAINT VIOLATION'
             else:
                 termination = 'MAX EPISODE DURATION'
+            if ctrl.interstep_learning_occurrences != 0:
+                interstep_learning_avg = ctrl.interstep_learning_time/ctrl.interstep_learning_occurrences
+            else:
+                interstep_learning_avg = ctrl.interstep_learning_time
             episode_stats = [
                 '[yellow]Flight time (s): '+str(curr_time),
                 '[yellow]Reason for termination: '+termination,
@@ -278,8 +282,8 @@ def run(test=False):
                 '[green]Total reward: '+str(cumulative_reward),
                 '[red]Number of collisions: '+str(collisions_count),
                 '[red]Number of constraint violations: '+str(violations_count),
-                '[white]Total and average interstep learning time (s): '+str(0)+', '+str(0),
-                '[white]Interepisode learning time (s): '+str(0),
+                '[white]Total and average interstep learning time (s): '+str(ctrl.interstep_learning_time)+', '+str(interstep_learning_avg),
+                '[white]Interepisode learning time (s): '+str(ctrl.interepisode_learning_time),
                 ]
             stats.append(episode_stats)
 
@@ -294,6 +298,7 @@ def run(test=False):
             collisions_count = 0
             collided_objects = set()
             violations_count = 0
+            ctrl.interEpisodeReset()
 
             # Reset the environment.
             if config.use_firmware:

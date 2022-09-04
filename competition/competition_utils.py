@@ -255,11 +255,13 @@ def timing_step(function):
     def wrap(*args, **keyword_args):
         start = time.time()
         result = function(*args, **keyword_args)
-        end = time.time()
-        if end-start >= args[0].CTRL_TIMESTEP:
-            print('\n[WARNING] Function "{}" took: {} sec (too slow)'.format(function.__name__, end-start))
+        elapsed = time.time()-start
+        args[0].interstep_learning_time += elapsed
+        args[0].interstep_learning_occurrences += 1
+        if elapsed >= args[0].CTRL_TIMESTEP:
+            print('\n[WARNING] Function "{}" took: {} sec (too slow)'.format(function.__name__, elapsed))
         if args[0].VERBOSE and args[0].interstep_counter%int(args[0].CTRL_FREQ/2) == 0:
-            print('\n{}-th call to function "{}" took: {} sec'.format(args[0].interstep_counter, function.__name__, end-start))
+            print('\n{}-th call to function "{}" took: {} sec'.format(args[0].interstep_counter, function.__name__, elapsed))
         return result
     return wrap
 
@@ -272,9 +274,10 @@ def timing_ep(function):
     def wrap(*args, **keyword_args):
         start = time.time()
         result = function(*args, **keyword_args)
-        end = time.time()
+        elapsed = time.time()-start
+        args[0].interepisode_learning_time = elapsed
         if args[0].VERBOSE:
-            print('\n{}-th call to function "{}" took: {} sec'.format(args[0].interepisode_counter, function.__name__, end-start))
+            print('\n{}-th call to function "{}" took: {} sec'.format(args[0].interepisode_counter, function.__name__, elapsed))
         return result
     return wrap
 
