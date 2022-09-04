@@ -100,7 +100,7 @@ def run(test=False):
     collided_objects = set()
     violations_count = 0
     episode_start_iter = 0
-    text_label_id = p.addUserDebugText("", textPosition=[0, 0, 1],physicsClientId=env.PYB_CLIENT)
+    time_label_id = p.addUserDebugText("", textPosition=[0, 0, 1],physicsClientId=env.PYB_CLIENT)
     num_of_gates = len(config.quadrotor_config.gates)
     stats = []
 
@@ -148,14 +148,14 @@ def run(test=False):
         curr_time = (i-episode_start_iter)*CTRL_DT
 
         # Print episode time in seconds on the GUI.
-        text_label_id = p.addUserDebugText("Ep. time: {:.2f}s".format(curr_time),
+        time_label_id = p.addUserDebugText("Ep. time: {:.2f}s".format(curr_time),
                                            textPosition=[0, 0, 1.5],
                                            textColorRGB=[1, 0, 0],
                                            lifeTime=3*CTRL_DT,
                                            textSize=1.5,
                                            parentObjectUniqueId=0,
                                            parentLinkIndex=-1,
-                                           replaceItemUniqueId=text_label_id,
+                                           replaceItemUniqueId=time_label_id,
                                            physicsClientId=env.PYB_CLIENT)
 
         # Compute control input.
@@ -255,6 +255,9 @@ def run(test=False):
             # CSV save.
             logger.save_as_csv(comment="get_start-episode-"+str(episodes_count))
 
+            # Update the controller internal state and models.
+            ctrl.interEpisodeLearn()
+
             # Append episode stats.
             if info['current_target_gate_id'] == -1:
                 gates_passed = num_of_gates
@@ -274,15 +277,14 @@ def run(test=False):
                 '[green]Gates passed: '+str(gates_passed),
                 '[green]Total reward: '+str(cumulative_reward),
                 '[red]Number of collisions: '+str(collisions_count),
-                '[red]Number of constraint violations: '+str(violations_count)
+                '[red]Number of constraint violations: '+str(violations_count),
+                '[white]Total and average interstep learning time (s): '+str(0)+', '+str(0),
+                '[white]Interepisode learning time (s): '+str(0),
                 ]
             stats.append(episode_stats)
 
             # Create a new logger.
             logger = Logger(logging_freq_hz=CTRL_FREQ)
-
-            # Update the controller internal state and models.
-            ctrl.interEpisodeLearn()
 
             # Reset/update counters.
             episodes_count += 1
