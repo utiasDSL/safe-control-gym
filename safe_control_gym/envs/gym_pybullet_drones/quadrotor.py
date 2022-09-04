@@ -932,15 +932,18 @@ class Quadrotor(BaseAviary):
         # IROS 2022 - Competition sparse reward signal.
         if self.COST == Cost.COMPETITION:
             reward = 0
-            # Reward stepping through the right next gate.
+            # Reward for stepping through the (correct) next gate.
             if self.stepped_through_gate:
                 reward += 100
-            # Reward reaching goal position (after navigating the gates in the correct order).
+            # Reward for reaching goal position (after navigating the gates in the correct order).
             if self.at_goal_pos:
                 reward += 100
-            # Penalize by collision
+            # Penalize by collision.
             if self.currently_collided:
                 reward -= 1000
+            # Penalize by constraint violation.
+            if self.cnstr_violation:
+                reward -= 100
             # Penalize by loss from X_GOAL, U_GOAL state.
             # reward += float(-1 * self.symbolic.loss(x=self.state,
             #                                         Xr=self.X_GOAL,
