@@ -226,7 +226,7 @@ Solutions will be evaluated and scored by:
 - Performance: minimizing the time (in sec.) required to complete the task (flying through the gates)
 - Safety: minimizing the no. of collisions with gates and obstacles as well as the number of constraint violations
 - Robustness: maximizing the success rate (across episodes) in uncertain scenarios (i.e., [`level3.yaml`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level3.yaml))
-- Data and compute efficiency: minimizing the no. of episodes and the learning time (in sec.) used to improve performance 
+- Data and compute efficiency: minimizing the no. of episodes and learning time (in sec.) used to improve performance 
 
 ## Prizes
 - 1st: TBA
