@@ -234,7 +234,7 @@ Solutions will be evaluated and scored by:
 - 3rd: TBA
 
 ## Organizers
-- Angela Schoellig (University of Toronto, Vector Institute)
+- Angela Schoellig (Technische Universität München, University of Toronto, Vector Institute)
 - Davide Scaramuzza (University of Zurich)
 - Vijay Kumar (University of Pennsylvania)
 - Nicholas Roy (Massachusetts Institute of Technology)
