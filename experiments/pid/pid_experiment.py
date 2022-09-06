@@ -29,8 +29,10 @@ def run(gui=True, n_episodes=2, n_steps=None, save_data=True):
                     **config.task_config
                     )
     env = env_func(gui=gui)
+
     ctrl = make(config.algo,
                 env_func,
+                **config.algo_config
                 )
 
     # Run the experiment.

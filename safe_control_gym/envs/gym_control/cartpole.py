@@ -218,7 +218,7 @@ class CartPole(BenchmarkEnv):
                 np.zeros(POS_REF.shape[0]),
                 np.zeros(VEL_REF.shape[0])
             ]).transpose()
-            
+
         # Set prior/symbolic info.
         self._setup_symbolic()
 
@@ -378,7 +378,7 @@ class CartPole(BenchmarkEnv):
         self.PYB_CLIENT = -1
 
     def _setup_symbolic(self, prior_prop={}, **kwargs):
-        '''Creates symbolic (CasADi) models for dynamics, observation, and cost. 
+        '''Creates symbolic (CasADi) models for dynamics, observation, and cost.
 
         Args:
             prior_prop (dict): specify the prior inertial prop to use in the symbolic model.
