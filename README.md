@@ -223,10 +223,10 @@ edit_this.py : Controller.interEpisodeLearn(...)    # Update the controller's in
 ## Scoring
 
 Solutions will be evaluated and scored by:
+- **Safety**: avoid collisions with gates and obstacles and minimize the no. of constraint violations
 - **Performance**: minimizing the time (in sec.) required to complete the task (flying through the gates)
-- **Safety**: minimizing the no. of collisions with gates and obstacles as well as the number of constraint violations
+- **Data & compute efficiency**: minimizing the no. of episodes and overall learning time (in sec.) used to improve performance 
 - **Robustness**: maximizing the success rate (across episodes) in uncertain scenarios (i.e., [`level3.yaml`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level3.yaml))
-- **Data & compute efficiency**: minimizing the no. of episodes and learning time (in sec.) used to improve performance 
 
 ## Prizes
 - 1st: TBA
