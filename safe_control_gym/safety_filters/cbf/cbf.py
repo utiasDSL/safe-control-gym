@@ -3,6 +3,7 @@
 Reference:
     * [Control Barrier Functions: Theory and Applications](https://arxiv.org/abs/1903.11199)
 '''
+
 from typing import Tuple
 
 import numpy as np
@@ -34,10 +35,6 @@ class CBF(BaseSafetyFilter):
             slack_weight (float): The weight of the slack in the optimization.
             slack_tolerance (float): How high the slack can be in the optimization.
         '''
-
-        # TODO: Combine with CLF approach for stabilization
-        # TODO: Currently specific for cartpole! Make more general for other systems, e.g., extend to quadrotor
-        #  environment
 
         super().__init__(env_func=env_func, **kwargs)
         self.env = self.env_func()
@@ -74,7 +71,6 @@ class CBF(BaseSafetyFilter):
         else:
             raise NotImplementedError('[Error] Currently CBF is only implemented for the cartpole system.')
 
-        # TODO: Extend this to systems that are not control affine. Then we would need to move away from a QP solver
         # Check if the dynamics are control affine
         assert self.is_control_affine()
 
