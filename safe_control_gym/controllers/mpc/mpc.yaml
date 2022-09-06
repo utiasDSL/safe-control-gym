@@ -5,7 +5,7 @@ r_mpc:
 q_mpc:
   - 1.
 warmstart: True
-prior_prop: null
+prior_info: null
 soft_constraints: False
 constraint_tol: 1.0e-6
 

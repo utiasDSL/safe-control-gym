@@ -32,7 +32,7 @@ class LinearMPC(MPC):
             soft_constraints=False,
             terminate_run_on_done=True,
             constraint_tol: float=1e-8,
-            prior_prop: dict=None,
+            prior_info: dict=None,
             solver: str='sqpmethod',
             # runner args
             # shared/base args
@@ -50,7 +50,7 @@ class LinearMPC(MPC):
             soft_constraints (bool): Formulate the constraints as soft constraints.
             terminate_run_on_done (bool): Terminate the run when the environment returns done or not.
             constraint_tol (float): Tolerance to add the the constraint as sometimes solvers are not exact.
-            prior_prop (dict): Dictionary specifiy the algorithms prior model parameters.
+            prior_info (dict): Dictionary specifiy the algorithms prior model parameters.
             solver (str): Specify which solver you wish to use (qrqp, qpoases, ipopt, sqpmethod)
             output_dir (str): output directory to write logs and results.
             additional_constraints (list): list of constraints.
@@ -60,6 +60,7 @@ class LinearMPC(MPC):
         for k, v in locals().items():
             if k != "self" and k != "kwargs" and "__" not in k:
                 self.__dict__[k] = v
+
         super().__init__(
             env_func,
             horizon=horizon,
@@ -69,7 +70,7 @@ class LinearMPC(MPC):
             soft_constraints=soft_constraints,
             terminate_run_on_done=terminate_run_on_done,
             constraint_tol=constraint_tol,
-            prior_prop=prior_prop,
+            prior_info=prior_info,
             output_dir=output_dir,
             additional_constraints=additional_constraints,
             **kwargs

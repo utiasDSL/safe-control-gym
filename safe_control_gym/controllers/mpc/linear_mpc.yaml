@@ -5,7 +5,7 @@ r_mpc:
 q_mpc:
   - 1.
 use_prev_start: True
-prior_prop: null
+prior_info: null
 solver: null
 # Runner args
 deque_size: 10
