@@ -27,6 +27,7 @@ class MPC(BaseController):
             soft_constraints: bool = False,
             terminate_run_on_done: bool = True,
             constraint_tol: float = 1e-6,
+            prior_prop: dict=None,
             # runner args
             # shared/base args
             output_dir: str = "results/temp",
@@ -46,6 +47,7 @@ class MPC(BaseController):
             soft_constraints (bool): Formulate the constraints as soft constraints.
             terminate_run_on_done (bool): Terminate the run when the environment returns done or not.
             constraint_tol (float): Tolerance to add the the constraint as sometimes solvers are not exact.
+            prior_prop (dict): Dictionary specifiy the algorithms prior model parameters.
             output_dir (str): output directory to write logs and results.
             additional_constraints (list): List of additional constraints
             use_gpu (bool): False (use cpu) True (use cuda).
@@ -69,11 +71,12 @@ class MPC(BaseController):
             self.constraints, self.state_constraints_sym, self.input_constraints_sym = reset_constraints(self.env.constraints.constraints)
             self.additional_constraints = []
         # Model parameters
-        self.model = self.env.symbolic
+        self.model = self.get_prior(self.env)
         self.dt = self.model.dt
         self.T = horizon
         self.Q = get_cost_weight_matrix(self.q_mpc, self.model.nx)
         self.R = get_cost_weight_matrix(self.r_mpc, self.model.nu)
+        self.prior_prop = prior_prop
 
         self.soft_constraints = soft_constraints
         self.warmstart = warmstart
@@ -138,7 +141,7 @@ class MPC(BaseController):
         self.x_prev = None
         self.u_prev = None
 
-        self.reset_results_dict()
+        self.setup_results_dict()
 
     def set_dynamics_func(self):
         """Updates symbolic dynamics with actual control frequency.
@@ -308,6 +311,7 @@ class MPC(BaseController):
         self.u_prev = u_val
         self.results_dict['horizon_states'].append(deepcopy(self.x_prev))
         self.results_dict['horizon_inputs'].append(deepcopy(self.u_prev))
+        self.results_dict['goal_states'].append(deepcopy(goal_states))
         self.results_dict['t_wall'].append(opti.stats()['t_wall_total'])
         # Take the first action from the solved action sequence.
         if u_val.ndim > 1:
@@ -337,7 +341,7 @@ class MPC(BaseController):
             raise Exception("Reference for this mode is not implemented.")
         return goal_states  # (nx, T+1).
 
-    def reset_results_dict(self):
+    def setup_results_dict(self):
         """
 
         """
@@ -348,6 +352,7 @@ class MPC(BaseController):
                               'action': [],
                               'horizon_inputs': [],
                               'horizon_states': [],
+                              'goal_states': [],
                               'frames': [],
                               'state_mse': [],
                               'common_cost': [],
@@ -388,7 +393,7 @@ class MPC(BaseController):
         print(obs)
         ep_returns, ep_lengths = [], []
         frames = []
-        self.reset_results_dict()
+        self.setup_results_dict()
         self.results_dict['obs'].append(obs)
         self.results_dict['state'].append(env.state)
         i = 0
