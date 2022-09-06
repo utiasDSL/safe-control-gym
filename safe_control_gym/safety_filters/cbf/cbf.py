@@ -3,6 +3,7 @@
 Reference:
     * [Control Barrier Functions: Theory and Applications](https://arxiv.org/abs/1903.11199)
 '''
+from typing import Tuple
 
 import numpy as np
 import casadi as cs
@@ -87,15 +88,23 @@ class CBF(BaseSafetyFilter):
 
         self.reset()
 
-    def get_lie_derivative(self):
-        '''Determines the Lie derivative of the CBF with respect to the known dynamics. '''
+    def get_lie_derivative(self) -> cs.Function:
+        '''Determines the Lie derivative of the CBF with respect to the known dynamics.
+
+        Returns:
+            LfV_func (cs.Function): The lie derivative of the system.
+        '''
         dVdx = cs.gradient(self.cbf(X=self.X)['cbf'], self.X)
         LfV = cs.dot(dVdx, self.model.x_dot)
         LfV_func = cs.Function('LfV', [self.X, self.u], [LfV], ['X', 'u'], ['LfV'])
         return LfV_func
 
-    def is_control_affine(self):
-        '''Check if the system is control affine. '''
+    def is_control_affine(self) -> bool:
+        '''Check if the system is control affine.
+
+        Returns:
+            control_affine (bool): Whether the system is control affine or not.
+        '''
         dfdu = cs.jacobian(self.model.x_dot, self.u)
         return not cs.depends_on(dfdu, self.u)
 
@@ -160,17 +169,17 @@ class CBF(BaseSafetyFilter):
         }
 
     def solve_optimization(self,
-                           current_state,
-                           uncertified_action,
-                           ):
+                           current_state: np.ndarray,
+                           uncertified_action: np.ndarray,
+                           ) -> Tuple[np.ndarray, bool]:
         '''Solve the CBF optimization problem for a given observation and uncertified input.
 
         Args:
-            current_state (ndarray): Current state/observation.
-            uncertified_action (ndarray): The uncertified_controller's action.
+            current_state (np.ndarray): Current state/observation.
+            uncertified_action (np.ndarray): The uncertified_controller's action.
 
         Returns:
-            certified_action (ndarray): The certified action.
+            certified_action (np.ndarray): The certified action.
             feasible (bool): Whether the safety filtering was feasible or not.
         '''
 
@@ -213,19 +222,19 @@ class CBF(BaseSafetyFilter):
         return certified_action, feasible
 
     def certify_action(self,
-                       current_state,
-                       uncertified_action,
-                       info=None,
-                       ):
+                       current_state: np.ndarray,
+                       uncertified_action: np.ndarray,
+                       info: dict=None
+                       ) -> Tuple[np.ndarray, bool]:
         '''Determines a safe action from the current state and proposed action.
 
         Args:
-            current_state (ndarray): Current state/observation.
-            uncertified_action (ndarray): The uncertified_controller's action.
+            current_state (np.ndarray): Current state/observation.
+            uncertified_action (np.ndarray): The uncertified_controller's action.
             info (dict): The info at this timestep.
 
         Returns:
-            certified_action (ndarray): The certified action.
+            certified_action (np.ndarray): The certified action.
             success (bool): Whether the safety filtering was successful or not.
         '''
 
@@ -237,7 +246,10 @@ class CBF(BaseSafetyFilter):
 
         return certified_action, success
 
-    def is_cbf(self, num_points=100, tolerance=0.01):
+    def is_cbf(self,
+               num_points: int=100,
+               tolerance: float=0.01
+               ) -> Tuple[bool, list]:
         '''
         Check if the provided CBF candidate is actually a CBF for the system using a gridded approach.
 

@@ -3,14 +3,16 @@
 import torch
 import numpy as np
 import casadi as cs
-from gym.spaces import Box
+from gym.spaces import box, Box
 
 
-def cbf_cartpole(X, state_limits):
+def cbf_cartpole(X: cs.MX,
+                 state_limits: list
+                 ) -> cs.Function:
     '''Creates a control barrier function (CBF) candidate based on an ellipsoid function.
 
     Attributes:
-        X (cs.sym.MX): Symbolic state variable.
+        X (cs.MX): Symbolic state variable.
         state_limits (list): List of the limits on the state.
 
     Returns:
@@ -26,7 +28,7 @@ def cbf_cartpole(X, state_limits):
     cbf_func = cs.Function('barrier', [X], [cbf], ['X'], ['cbf'])
     return cbf_func
 
-def linear_function(slope):
+def linear_function(slope: float) -> cs.Function:
     '''Creates a one dimensional linear function.
 
     Attributes:
@@ -39,7 +41,7 @@ def linear_function(slope):
     linear_func = cs.Function('linear', [x], [slope * x], ['x'], ['y'])
     return linear_func
 
-def cartesian_product(*arrays):
+def cartesian_product(*arrays: list) -> np.ndarray:
     '''Creates the cartesian product of a list of arrays from:
        https://stackoverflow.com/a/11146645
 
@@ -47,7 +49,7 @@ def cartesian_product(*arrays):
         arrays (list): List of arrays.
 
     Returns:
-        cartesian (ndarray); Cartesian product of all arrays in the list.
+        cartesian (np.ndarray); Cartesian product of all arrays in the list.
     '''
     la = len(arrays)
     dtype = np.result_type(*arrays)
@@ -67,7 +69,24 @@ class CBFBuffer(object):
         keys (list): Names of all data from scheme.
     '''
 
-    def __init__(self, obs_space, act_space, max_size, device, batch_size=None):
+    def __init__(self,
+                 obs_space: box.Box,
+                 act_space: box.Box,
+                 max_size: int,
+                 device: str,
+                 batch_size: int
+                 ):
+        '''
+        A buffer for CBF_NN.
+
+        Args:
+            obs_space (gym.spaces.box.Box): The observation space.
+            act_space (gym.spaces.box.Box): The action space.
+            max_size (int): Maximum size of the replay buffer.
+            device (str): The device being used.
+            batch_size (int): Number of samples (steps) per batch.
+        '''
+
         super().__init__()
         self.max_size = max_size
         self.batch_size = batch_size
@@ -110,7 +129,7 @@ class CBFBuffer(object):
         self.pos = 0
         self.buffer_size = 0
 
-    def __len__(self):
+    def __len__(self) -> int:
         '''Returns current size of the buffer.
 
         Returns:
@@ -118,7 +137,7 @@ class CBFBuffer(object):
         '''
         return self.buffer_size
 
-    def state_dict(self):
+    def state_dict(self) -> dict:
         '''Returns a snapshot of current buffer.
 
         Returns:
@@ -133,7 +152,9 @@ class CBFBuffer(object):
             state[k] = v
         return state
 
-    def load_state_dict(self, state):
+    def load_state_dict(self,
+                        state: dict,
+                        ):
         '''Restores buffer from previous state.
 
         Args:
@@ -142,7 +163,9 @@ class CBFBuffer(object):
         for k, v in state.items():
             self.__dict__[k] = v
 
-    def push(self, batch):
+    def push(self,
+             batch: dict,
+             ):
         '''Inserts transition step data (as dict) to storage.
 
         Args:
@@ -169,7 +192,9 @@ class CBFBuffer(object):
         if self.buffer_size < self.max_size:
             self.buffer_size = min(self.max_size, self.pos + n)
 
-    def sample(self, batch_size=None):
+    def sample(self,
+               batch_size: int=None
+               ) -> dict:
         '''Returns data batch.
 
         Args:

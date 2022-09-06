@@ -5,6 +5,7 @@ Reference:
 '''
 
 import os
+from typing import Tuple
 
 import torch
 import numpy as np
@@ -42,7 +43,7 @@ class CBF_NN(CBF):
         Lie derivative condition in the QP for the true system.
 
         Args:
-            env_func (gym.Env): Functionalized initialization of the environment.
+            env_func (BenchmarkEnv): Functionalized initialization of the environment.
             slope (float): The slope of the linear function in the CBF.
             soft_constrainted (bool): Whether to use soft or hard constraints.
             slack_weight (float): The weight of the slack in the optimization.
@@ -147,17 +148,17 @@ class CBF_NN(CBF):
         }
 
     def solve_optimization(self,
-                           current_state,
-                           uncertified_action,
-                           ):
+                           current_state: np.ndarray,
+                           uncertified_action: np.ndarray,
+                           ) -> Tuple[np.ndarray, bool]:
         '''Solve the CBF optimization problem for a given observation and uncertified input.
 
         Args:
-            current_state (ndarray): Current state/observation.
-            uncertified_action (ndarray): The uncertified_controller's action.
+            current_state (np.ndarray): Current state/observation.
+            uncertified_action (np.ndarray): The uncertified_controller's action.
 
         Returns:
-            certified_action (ndarray): The certified action.
+            certified_action (np.ndarray): The certified action.
             feasible (bool): Whether the safety filtering was feasible or not.
         '''
 
@@ -203,14 +204,16 @@ class CBF_NN(CBF):
             print('------------------------------------------------')
         return certified_action, feasible
 
-    def extract_a_b(self, current_state):
+    def extract_a_b(self,
+                    current_state: np.ndarray
+                    ) -> Tuple[np.ndarray, np.ndarray]:
         '''Extracts the a and b vectors from the torch state.
 
         Args:
-            current_state (ndarray): The current state of the system.
+            current_state (np.ndarray): The current state of the system.
 
         Returns:
-            a, b (ndarray): The a and b vectors used to calculate the learned residual.
+            a, b (np.ndarray): The a and b vectors used to calculate the learned residual.
         '''
         torch_state = torch.from_numpy(current_state)
         torch_state = torch.unsqueeze(torch_state, 0)
@@ -222,7 +225,9 @@ class CBF_NN(CBF):
 
         return a, b
 
-    def compute_loss(self, batch):
+    def compute_loss(self,
+                     batch: dict
+                     ) -> float:
         '''Compute training loss of the neural network that represents the Lie derivative error.
 
         Args:
@@ -246,7 +251,9 @@ class CBF_NN(CBF):
         loss = (h_dot_estimate - barrier_dot_approx).pow(2).mean()
         return loss
 
-    def update(self, batch):
+    def update(self,
+               batch: dict
+               ):
         '''Update the neural network parameters.
 
         Args:
@@ -257,7 +264,9 @@ class CBF_NN(CBF):
         loss.backward()
         self.opt.step()
 
-    def save(self, path):
+    def save(self,
+             path: str
+             ):
         '''Saves model params and experiment state to path.
 
         Args:
@@ -276,7 +285,9 @@ class CBF_NN(CBF):
             state_dict.update(exp_state)
         torch.save(state_dict, path)
 
-    def load(self, path):
+    def load(self,
+             path: str
+             ):
         '''Restores model and experiment given path.
 
         Args:
@@ -291,7 +302,10 @@ class CBF_NN(CBF):
         if self.training:
             self.buffer.load_state_dict(state['buffer'])
 
-    def learn(self, env=None, **kwargs):
+    def learn(self,
+              env=None,
+              **kwargs
+              ):
         '''Learn the error in the Lie derivative from multiple experiments.
 
         Args:
