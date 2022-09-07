@@ -228,6 +228,8 @@ Solutions will be evaluated and scored by:
 - **Data & compute efficiency**: minimizing the no. of episodes and overall learning time (in sec.) used to improve performance 
 - **Robustness**: maximizing the success rate (across episodes) in uncertain scenarios (i.e., [`level3.yaml`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level3.yaml))
 
+<img src="figures/terminal1.png" alt="terminal output" width="800">
+
 ## Prizes
 - 1st: TBA
 - 2nd: TBA
