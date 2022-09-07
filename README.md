@@ -3,7 +3,7 @@
 
 
 
-Physics-based CartPole and Quadrotor [Gym](https://gym.openai.com) environments (using [PyBullet](https://pybullet.org/wordpress/)) with symbolic *a priori* dynamics (using [CasADi](https://web.casadi.org)) for **learning-based control**, and model-free and model-based **reinforcement learning** (RL). 
+Physics-based CartPole and Quadrotor [Gym](https://gym.openai.com) environments (using [PyBullet](https://pybullet.org/wordpress/)) with symbolic *a priori* dynamics (using [CasADi](https://web.casadi.org)) for **learning-based control**, and model-free and model-based **reinforcement learning** (RL).
 
 These environments include (and evaluate) symbolic safety constraints and implement input, parameter, and dynamics disturbances to test the robustness and generalizability of control approaches. [[PDF]](https://arxiv.org/pdf/2108.06266.pdf)
 
@@ -11,7 +11,7 @@ These environments include (and evaluate) symbolic safety constraints and implem
 
 ```
 @article{brunke2021safe,
-         title={Safe Learning in Robotics: From Learning-Based Control to Safe Reinforcement Learning}, 
+         title={Safe Learning in Robotics: From Learning-Based Control to Safe Reinforcement Learning},
          author={Lukas Brunke and Melissa Greeff and Adam W. Hall and Zhaocong Yuan and Siqi Zhou and Jacopo Panerati and Angela P. Schoellig},
          journal = {Annual Review of Control, Robotics, and Autonomous Systems},
          year={2021},
@@ -30,7 +30,7 @@ git clone https://github.com/utiasDSL/safe-control-gym.git
 cd safe-control-gym
 ```
 
-### Option A (recommended): using conda 
+### Option A (recommended): using conda
 
 Create and access a Python 3.8 environment using
 [`conda`](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
@@ -40,7 +40,7 @@ conda create -n safe python=3.8.10
 conda activate safe
 ```
 
-Install the `safe-control-gym` repository 
+Install the `safe-control-gym` repository
 
 ```
 pip install --upgrade pip
@@ -69,7 +69,7 @@ You may need to separately install `gmp`, a dependency of `pycddlib`:
  ```bash
 conda install -c anaconda gmp
  ```
- or 
+ or
   ```bash
  sudo apt-get install libgmp-dev
  ```
@@ -86,7 +86,7 @@ Overview of [`safe-control-gym`](https://arxiv.org/abs/2109.06325)'s API:
 
 ```
 @misc{yuan2021safecontrolgym,
-      title={safe-control-gym: a Unified Benchmark Suite for Safe Learning-based Control and Reinforcement Learning}, 
+      title={safe-control-gym: a Unified Benchmark Suite for Safe Learning-based Control and Reinforcement Learning},
       author={Zhaocong Yuan and Adam W. Hall and Siqi Zhou and Lukas Brunke and Melissa Greeff and Jacopo Panerati and Angela P. Schoellig},
       year={2021},
       eprint={2109.06325},
@@ -97,7 +97,7 @@ Overview of [`safe-control-gym`](https://arxiv.org/abs/2109.06325)'s API:
 
 ## Configuration
 
-<img src="figures/config.png" alt="config" width="800"> 
+<img src="figures/config.png" alt="config" width="800">
 
 ## Performance
 
@@ -122,7 +122,7 @@ Note that the Bullet engine frequency reported for `safe-control-gym` is typical
 | [quadrotor][005]           | False  | 50Hz           | 1000Hz          | Yes                               | 7.62x           |
 
 > ^ Whether the environment includes a default set of constraints and disturbances
-> 
+>
 > ^^ Speed-up = Elapsed Simulation Time / Elapsed Wall Clock Time; on a 2.30GHz Quad-Core i7-1068NG7 with 32GB 3733MHz LPDDR4X; no GPU
 
 [001]: https://github.com/openai/gym/blob/master/gym/envs/classic_control/cartpole.py
@@ -171,8 +171,9 @@ $ python3 verbose_api.py --task cartpole --overrides verbose_api.yaml           
 
 
 ## List of Implemented Safety Filters
-- [MPSC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/safety_filters/mpsc/mpsc.py)
-- [CBF](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/cbf/cbf_qp.py)
+- [MPSC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/safety_filters/mpsc/linear_mpsc.py)
+- [CBF](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/safety_filters/cbf/cbf.py)
+- [Neural Network CBF](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/safety_filters/cbf/cbf_nn.py)
 
 
 
@@ -239,11 +240,11 @@ $ ./create_fig8.sh                                                 # Run the scr
 ```
 This will use the unsafe (pre-trained) PPO controller/agent in folder `safe-control-gym/experiments/figure8/unsafe_ppo_model/` to generate
 
-<img src="figures/mpsc-1.png" alt="mpsc-1" width="800"> 
+<img src="figures/mpsc-1.png" alt="mpsc-1" width="800">
 
 <img src="figures/mpsc-2.png" alt="mpsc-2" width="400"> <img src="figures/mpsc-3.png" alt="mpsc-3" width="400">
 
-To also re-train the unsafe PPO controller/agent (ca. 2' on a laptop) 
+To also re-train the unsafe PPO controller/agent (ca. 2' on a laptop)
 ```
 $ chmod +x create_unsafe_ppo_model.sh                              # Make the script executable, if needed
 $ ./create_unsafe_ppo_model.sh                                     # Run the script (ca. 2')
