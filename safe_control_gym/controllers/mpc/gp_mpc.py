@@ -96,7 +96,7 @@ class GPMPC(MPC):
             output_dir (str): directory to store model and results.
             prob (float): desired probabilistic safety level.
             initial_rollout_std (float): the initial std (across all states) for the mean_eq rollout.
-            inertial_prop (list): to initialize the inertial properties of the prior model.
+            prior_info (dict): Dictionary specifiy the algorithms prior model parameters.
             prior_param_coeff (float): constant multiplying factor to adjust the prior model intertial properties.
             input_mask (list): list of which input dimensions to use in GP model. If None, all are used.
             target_mask (list): list of which output dimensions to use in the GP model. If None, all are used.
