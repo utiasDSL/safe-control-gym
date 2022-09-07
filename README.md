@@ -222,11 +222,20 @@ edit_this.py : Controller.interEpisodeLearn(...)    # Update the controller's in
 
 ## Scoring
 
-Solutions will be evaluated and scored by:
-- **Safety**: avoid collisions with gates and obstacles and minimize the no. of constraint violations
-- **Performance**: minimizing the time (in sec.) required to complete the task (flying through the gates)
-- **Data & compute efficiency**: minimizing the no. of episodes and overall learning time (in sec.) used to improve performance 
-- **Robustness**: maximizing the success rate (across episodes) in uncertain scenarios (i.e., [`level3.yaml`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level3.yaml))
+For ALL simulation levels, solutions will be evaluated and scored—on the last executed episode—by:
+- **Safety**: avoid all *collisions* (max. allowed == 0) with gates and obstacles and minimize the no. of *constraint violations*
+- **Performance**: minimizing the *time* (in sec.) required to complete the task of flying through all the gates
+
+> Note: only solutions that can complete the task on the last execute episode will be further evaluated
+
+For ALL simulation levels, solutions on the Pareto front of safety and performance will also be scored—over ALL executed episodes—by:
+- **Data & compute efficiency**: minimizing the [no. of *episodes*](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/getting_started.yaml#L2) and overall *learning time* (in sec.) used by [`interStepLearn()`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py#L288) and [`interEpisodeLearn()`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py#L328) to improve performance 
+- **Robustness**: maximizing the *success rate* (|episodes ending in TASK COMPLETION|/|episodes|) in uncertain scenarios (in particular, [`level3.yaml`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level3.yaml))
+
+> Note: the 10 best solutions with the best (lowest) *compute time* and *success rate* > 67% will advance to the next level
+
+Sim2real "level":
+- The 5 solutions with the best (lowest) *compute time* and *success rate* > 67% in `level3` will be transferred to real robots and re-evaluated against all the metrics above 
 
 <img src="figures/terminal1.png" alt="terminal output" width="800">
 
