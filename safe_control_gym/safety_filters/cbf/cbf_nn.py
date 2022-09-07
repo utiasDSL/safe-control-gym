@@ -264,6 +264,12 @@ class CBF_NN(CBF):
         loss.backward()
         self.opt.step()
 
+    def reset(self):
+        '''Resets the safety filter. '''
+        super().reset()
+        if hasattr(self, 'buffer'):
+            self.buffer.reset()
+
     def save(self,
              path: str
              ):

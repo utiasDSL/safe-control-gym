@@ -61,7 +61,7 @@ class CBF(BaseSafetyFilter):
             raise Exception('CBF requires at least 1 state constraint')
         self.state_constraint = state_constraints[0]
 
-        self.model = self.env.symbolic
+        self.reset()
         self.X = self.model.x_sym
         self.u = self.model.u_sym
 
@@ -81,8 +81,6 @@ class CBF(BaseSafetyFilter):
 
         # Setup Optimizer
         self.setup_optimizer()
-
-        self.reset()
 
     def get_lie_derivative(self) -> cs.Function:
         '''Determines the Lie derivative of the CBF with respect to the known dynamics.
@@ -327,7 +325,8 @@ class CBF(BaseSafetyFilter):
         self.results_dict['correction'] = []
 
     def reset(self):
-        '''Resets the environment. '''
+        '''Resets the safety filter. '''
+        self.model = self.get_prior(self.env, self.prior_info)
         self.env.reset()
         self.setup_results_dict()
 

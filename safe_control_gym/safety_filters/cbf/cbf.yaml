@@ -3,3 +3,9 @@ slope: 0.1
 soft_constrained: True
 slack_weight: 10000.0
 slack_tolerance: 1.0E-3
+
+# Prior info
+prior_info:
+  prior_prop: null
+  randomize_prior_prop: False
+  prior_prop_rand_info: null
