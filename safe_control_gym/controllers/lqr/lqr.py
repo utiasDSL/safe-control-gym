@@ -14,6 +14,7 @@ class LQR(BaseController):
             # Model args.
             q_lqr: list = None,
             r_lqr: list = None,
+            prior_info: dict={},
             discrete_dynamics: bool = True,
             **kwargs):
         '''Creates task and controller.
@@ -22,15 +23,16 @@ class LQR(BaseController):
             env_func (Callable): Function to instantiate task/environment.
             q_lqr (list): Diagonals of state cost weight.
             r_lqr (list): Diagonals of input/action cost weight.
+            prior_info (dict): Dictionary specifiy the algorithms prior model parameters.
             discrete_dynamics (bool): If to use discrete or continuous dynamics.
         '''
 
         super().__init__(env_func, **kwargs)
 
         self.env = env_func()
-
         # Controller params.
-        self.model = self.env.symbolic
+        self.prior_info = prior_info
+        self.model = self.get_prior(self.env)
         self.discrete_dynamics = discrete_dynamics
         self.Q = get_cost_weight_matrix(q_lqr, self.model.nx)
         self.R = get_cost_weight_matrix(r_lqr, self.model.nu)
