@@ -15,6 +15,10 @@ register(id="cbf",
          entry_point="safe_control_gym.controllers.cbf.cbf_qp:CBF_QP",
          config_entry_point="safe_control_gym.controllers.cbf:cbf_qp.yaml")
 
+register(id="bblr",
+        entry_point="safe_control_gym.controllers.cbf.bblr_qp:BBLR_QP",
+        config_entry_point="safe_control_gym.controllers.cbf:bblr_qp.yaml")
+
 register(id="mpc",
          entry_point="safe_control_gym.controllers.mpc.mpc:MPC",
          config_entry_point="safe_control_gym.controllers.mpc:mpc.yaml")
