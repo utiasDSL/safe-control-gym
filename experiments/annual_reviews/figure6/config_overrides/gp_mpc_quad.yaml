@@ -29,9 +29,10 @@ algo_config:
     - 0.01
     - 0.01
   normalize_training_data: False
-  inertial_prop:
-    - 0.027
-    - 0.000014
+  prior_info:
+    prior_prop:
+      M: 0.027
+      Iyy: 0.000014
   prior_param_coeff: 1.5
   prob: 0.955
   initial_rollout_std: 0.001

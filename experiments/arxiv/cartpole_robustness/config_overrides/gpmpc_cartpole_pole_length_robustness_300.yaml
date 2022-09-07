@@ -37,10 +37,11 @@ algo_config:
     - 0.01
   normalize_training_data: False
   use_gpu: False
-  inertial_prop:
-    pole_length: 0.5
-    pole_mass: 0.1
-    cart_mass: 1.0
+  prior_info:
+    prior_prop:
+      pole_length: 0.5
+      pole_mass: 0.1
+      cart_mass: 1.0
   initial_rollout_std: 0.0
   prior_param_coeff: 3.0
   prob: 0.95

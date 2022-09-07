@@ -5,9 +5,9 @@ algo_config:
   gp_approx: mean_eq
   gp_model_path: null
   horizon: 8
-  inertial_prop:
-  - 0.027
-  - 1.4e-05
+  #inertial_prop:
+  #- 0.027
+  #- 1.4e-05
   initial_rollout_std: 0.005
   input_mask:
   - 0
@@ -37,6 +37,10 @@ algo_config:
   - 2500
   output_dir: reslts/temp-data/
   overwrite_saved_data: false
+  prior_info:
+    prior_prop: # values multiplied by prior_param_coeff inside gpmpc
+      M: 0.027
+      Iyy: 1.4e-05
   prior_param_coeff: 1.5
   prob: 0.99
   q_mpc:
