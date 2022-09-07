@@ -11,7 +11,7 @@ def cbf_cartpole(X: cs.MX,
                  ) -> cs.Function:
     '''Creates a control barrier function (CBF) candidate based on an ellipsoid function.
 
-    Attributes:
+    Args:
         X (cs.MX): Symbolic state variable.
         state_limits (list): List of the limits on the state.
 
@@ -31,7 +31,7 @@ def cbf_cartpole(X: cs.MX,
 def linear_function(slope: float) -> cs.Function:
     '''Creates a one dimensional linear function.
 
-    Attributes:
+    Args:
         slope (float): The slope of the linear function.
 
     Returns:
@@ -45,11 +45,11 @@ def cartesian_product(*arrays: list) -> np.ndarray:
     '''Creates the cartesian product of a list of arrays from:
        https://stackoverflow.com/a/11146645
 
-    Attributes:
+    Args:
         arrays (list): List of arrays.
 
     Returns:
-        cartesian (np.ndarray); Cartesian product of all arrays in the list.
+        cartesian (np.ndarray): Cartesian product of all arrays in the list.
     '''
     la = len(arrays)
     dtype = np.result_type(*arrays)
