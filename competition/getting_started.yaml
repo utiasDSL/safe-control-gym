@@ -96,16 +96,16 @@ quadrotor_config:
       high: 0.01
     Ixx:
       distrib: "uniform"
-      low: 0.0
-      high: 0.0
+      low: -0.000001
+      high: 0.000001
     Iyy:
       distrib: "uniform"
-      low: 0.0
-      high: 0.0
+      low: -0.000001
+      high: 0.000001
     Izz:
       distrib: "uniform"
-      low: 0.0
-      high: 0.0
+      low: -0.000001
+      high: 0.000001
 
   # Randomization of the gates and obstacles positions
   randomized_gates_and_obstacles: True
