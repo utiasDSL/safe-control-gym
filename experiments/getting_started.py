@@ -27,8 +27,8 @@ try:
     # outward_spiral_varying_z
     # ??? slalom - COMMENT: initial position not on trajectory
     # torus
-    # torus_bodyRates
-    # torus_cmdFullState
+    # torus_bodyRates (crashes after takeoff, see video)
+    # torus_cmdFullState (crashes after finishing the traj., see video)
     # zig_zag_climb
     # zig_zag_fall
     from torus.edit_this import Controller, Command
