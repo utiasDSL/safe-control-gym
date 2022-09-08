@@ -220,13 +220,15 @@ class FirmwareWrapper(BaseController):
         
         
         # Draws setpoint for debugging purposes 
-        if self.verbose:
-            if self.last_visualized_setpoint is not None:
-                p.removeBody(self.last_visualized_setpoint)
-            self.last_visualized_setpoint = p.loadURDF("/home/spencer/Documents/DSL/safe-control-gym/safe_control_gym/envs/gym_pybullet_drones/assets/sphere.urdf",
-                    [self.setpoint.position.x, self.setpoint.position.y, self.setpoint.position.z],
-                    p.getQuaternionFromEuler([0,0,0]),
-                    physicsClientId=self.pyb_clinet)
+        # if self.verbose:
+        #     if self.last_visualized_setpoint is not None:
+        #         p.removeBody(self.last_visualized_setpoint)
+        #     SPHERE_URDF = str(os.path.dirname(os.path.abspath(__file__))) + "/../../envs/gym_pybullet_drones/assets/sphere.urdf"
+        #     self.last_visualized_setpoint = p.loadURDF(
+        #             SPHERE_URDF,
+        #             [self.setpoint.position.x, self.setpoint.position.y, self.setpoint.position.z],
+        #             p.getQuaternionFromEuler([0,0,0]),
+        #             physicsClientId=self.pyb_clinet)
 
         while self.tick / self.firmware_freq < sim_time + self.ctrl_dt:
             # Step the environment and print all returned information.

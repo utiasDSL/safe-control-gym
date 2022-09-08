@@ -19,10 +19,22 @@ from safe_control_gym.utils.utils import sync
 from safe_control_gym.envs.gym_pybullet_drones.Logger import Logger
 
 try:
-    from line.edit_this import Controller, Command
+    # ellipse
+    # hypotrochoid
+    # ??? line - COMMENT: same as ellipse?
+    # lissajous
+    # outward_spiral
+    # outward_spiral_varying_z
+    # ??? slalom - COMMENT: initial position not on trajectory
+    # torus
+    # torus_bodyRates
+    # torus_cmdFullState
+    # zig_zag_climb
+    # zig_zag_fall
+    from torus.edit_this import Controller, Command
 except ImportError:
-    # Test import.
-    from .line.edit_this import Controller, Command
+    print("Controller import error")
+    exit()
 
 try:
     import pycffirmware
