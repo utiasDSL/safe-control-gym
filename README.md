@@ -218,24 +218,25 @@ edit_this.py : Controller.interEpisodeLearn(...)    # Update the controller's in
 - Checkout this branch (`beta-iros-competition`)
 - Implement your solution by modifying [`edit_this.py`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py)
 - Create a Pull Request into `utiasDSL/safe-control-gym:beta-iros-competition` from your fork ([help](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork))
+- Mention in the Pull Request's Conversation tab (i) how many `num_episodes` you want your solution to use in each level (mandatory) and (ii) what method(s) you used and results you obtained (optional)
 - Tag @JacopoPan in the Pull Request's Conversation tab
 
 ## Scoring
 
 For ALL simulation levels, solutions will be evaluated and scored—on the last executed episode—by:
 - **Safety**: avoid all *collisions* (max. allowed = 0) with gates & obstacles and minimize the no. of *constraint violations*
-- **Performance**: minimizing the *time* (in sec.) required to complete the task of flying through all the gates
+- **Performance**: minimizing the *task time* (in sec.) required to fly through all the gates and reach the goal
 
-> Note: only solutions that can complete the task on the last execute episode will be further evaluated
+> Note: only solutions that CAN complete the task on the last execute episode will be further evaluated
 
-For ALL simulation levels, solutions on the Pareto front of safety and performance will also be scored—over ALL executed episodes—by:
-- **Data & compute efficiency**: minimizing the [no. of *episodes*](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/getting_started.yaml#L2) and overall *learning time* (in sec.) used by [`interStepLearn()`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py#L288) and [`interEpisodeLearn()`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py#L328) to improve performance 
-- **Robustness**: maximizing the *success rate* (|episodes ending in TASK COMPLETION|/|episodes|) in uncertain scenarios (in particular, [`level3.yaml`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level3.yaml))
+For ALL simulation levels, solutions on the Pareto front of safety and performance (of the top half, whichever is larger) will also be scored—over ALL executed episodes—by:
+- **Data & compute efficiency**: minimizing the [no. of episodes](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/getting_started.yaml#L2) and their overall *learning time* (in sec.) used by [`interStepLearn()`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py#L288) and [`interEpisodeLearn()`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py#L328) to improve performance 
+- **Robustness**: maximizing the *success rate* (|episodes ending in TASK COMPLETION|/|episodes|) (in particular, for [`level3.yaml`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level3.yaml)) over 10 additional episodes run at the end of `num_episodes`
 
-> Note: the 10 solutions with *success rate* > 67% and the lowest *compute time* will advance to the next level
+> Note: the top half solutions with *success rate* > 60% and the lowest *compute time* will advance to the next level
 
 Sim2real "level":
-- The 5 solutions with the best (lowest) *compute time* and *success rate* > 67% in `level3` will be transferred to real robots and re-evaluated against all the metrics above 
+- The top 8 solutions with the best (lowest) *compute time* and *success rate* > 60% in `level3` will be transferred to real robots and re-evaluated against all the metrics above 
 
 <img src="figures/terminal1.png" alt="terminal output" width="800">
 
