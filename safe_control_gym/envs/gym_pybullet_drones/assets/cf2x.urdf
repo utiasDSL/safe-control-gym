@@ -8,7 +8,8 @@
 
     <inertial>
       <origin rpy="0 0 0" xyz="0 0 0"/>
-      <mass value="0.027"/>
+      <!-- IROS 2022 CF measured mass -->
+      <mass value="0.03454"/> 
       <inertia ixx="1.4e-5" ixy="0.0" ixz="0.0" iyy="1.4e-5" iyz="0.0" izz="2.17e-5"/>
     </inertial>
 

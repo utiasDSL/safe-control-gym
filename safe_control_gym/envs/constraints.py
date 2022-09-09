@@ -38,6 +38,7 @@ class Constraint:
                  strict: bool=False,
                  active_dims=None,
                  tolerance=None,
+                 rounding: int=8,
                  **kwargs
                  ):
         """Defines params (e.g. bounds) and state.
@@ -49,8 +50,10 @@ class Constraint:
             strict (optional, bool): Whether the constraint is violated also when equal to its threshold.
             active_dims (list of ints): Filters the constraint to only act only select certian dimensions.
             tolerance (list or np.array): The distance from the constraint at which is_almost_active returns True.
+            rounding (optional, int): Decimal places used in the `get_value()` method.
 
         """
+        self.rounding = rounding
         self.constrained_variable = ConstrainedVariableType(constrained_variable)
         if self.constrained_variable == ConstrainedVariableType.STATE:
             self.dim = env.state_dim
@@ -113,7 +116,7 @@ class Constraint:
 
         """
         env_value = self.get_env_constraint_var(env)
-        return np.atleast_1d(np.squeeze(self.sym_func(np.array(env_value, ndmin=1))))
+        return np.round_(np.atleast_1d(np.squeeze(self.sym_func(np.array(env_value, ndmin=1)))), decimals=self.rounding)
 
     def is_violated(self,
                     env,
@@ -357,8 +360,8 @@ class DefaultConstraint(BoundedConstraint):
             assert len(lower_bounds) == default_constraint_space.shape[0],\
                 ValueError("[ERROR]: Lower bound must have length equal to space dimension.")
         super().__init__(env,
-                         lower_bounds=lower_bounds,
-                         upper_bounds=upper_bounds,
+                         lower_bounds=lower_bounds.astype(np.float64),
+                         upper_bounds=upper_bounds.astype(np.float64),
                          constrained_variable=constrained_variable,
                          strict=strict,
                          active_dims=None,

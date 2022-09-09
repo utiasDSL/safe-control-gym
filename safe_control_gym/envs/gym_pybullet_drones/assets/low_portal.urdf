@@ -1,0 +1,170 @@
+<?xml version="1.0" ?>
+
+<robot name="architrave">
+
+  <link name="base_link"> 
+    <inertial>
+      <mass value="0.1"/>
+      <inertia ixx="0" ixy="0.0" ixz="0.0" iyy="0" iyz="0.0" izz="0"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <sphere radius="0.01"/>
+      </geometry> 
+      <material name="grey">
+        <color rgba=".5 .5 .5 1"/>
+      </material> 
+    </visual>
+  </link>
+
+
+
+  <link name="grey_edge"> 
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 -0.225"/>
+      <mass value="0.25"/>
+      <inertia ixx="0" ixy="0.0" ixz="0.0" iyy="0" iyz="0.0" izz="0"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 -0.225"/>
+      <geometry>
+        <box size=".5 .05 .05" />
+      </geometry> 
+      <material name="grey">
+        <color rgba=".5 .5 .5 1"/>
+      </material> 
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.225"/>
+      <geometry>
+        <box size=".5 .05 .05" />
+      </geometry>
+    </collision>  
+  </link>
+  <joint name="grey_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="grey_edge"/>
+  </joint>
+
+
+
+  <link name="blue_edge"> 
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0.225"/>
+      <mass value="0.25"/>
+      <inertia ixx="0" ixy="0.0" ixz="0.0" iyy="0" iyz="0.0" izz="0"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0.225"/>
+      <geometry>
+        <box size=".5 .05 .05" />
+      </geometry> 
+      <material name="blue">
+        <color rgba=".0 .0 .9 1"/>
+      </material> 
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.225"/>
+      <geometry>
+        <box size=".5 .05 .05" />
+      </geometry>
+    </collision>  
+  </link>
+  <joint name="blue_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="blue_edge"/>
+  </joint>
+
+
+
+  <link name="green_edge"> 
+    <inertial>
+      <origin rpy="0 1.57 0" xyz="0.225 0 0"/>
+      <mass value="0.25"/>
+      <inertia ixx="0" ixy="0.0" ixz="0.0" iyy="0" iyz="0.0" izz="0"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 1.57 0" xyz="0.225 0 0"/>
+      <geometry>
+        <box size=".5 .05 .05" />
+      </geometry> 
+      <material name="green">
+        <color rgba=".0 .9 .0 1"/>
+      </material> 
+    </visual>
+    <collision>
+      <origin rpy="0 1.57 0" xyz="0.225 0 0"/>
+      <geometry>
+        <box size=".5 .05 .05" />
+      </geometry>
+    </collision>  
+  </link>
+  <joint name="green_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="green_edge"/>
+  </joint>
+
+
+
+  <link name="red_edge"> 
+    <inertial>
+      <origin rpy="0 1.57 0" xyz="-0.225 0 0"/>
+      <mass value="0.25"/>
+      <inertia ixx="0" ixy="0.0" ixz="0.0" iyy="0" iyz="0.0" izz="0"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 1.57 0" xyz="-0.225 0 0"/>
+      <geometry>
+        <box size=".5 .05 .05" />
+      </geometry> 
+      <material name="red">
+        <color rgba=".9 .0 .0 1"/>
+      </material> 
+    </visual>
+    <collision>
+      <origin rpy="0 1.57 0" xyz="-0.225 0 0"/>
+      <geometry>
+        <box size=".5 .05 .05" />
+      </geometry>
+    </collision>  
+  </link>
+    <joint name="red_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="red_edge"/>
+  </joint>
+
+
+  <link name="box_link"> 
+
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 -0.4"/>
+      <mass value="1."/>
+      <inertia ixx="0" ixy="0.0" ixz="0.0" iyy="0" iyz="0.0" izz="0"/>
+    </inertial>
+
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 -0.4"/>
+      <geometry>
+        <box size=".15 .15 .25" />
+      </geometry> 
+      <material name="brown">
+        <color rgba=".92 .87 .79 1"/>
+      </material> 
+    </visual>
+
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.4"/>
+      <geometry>
+        <box size=".15 .15 .25" />
+      </geometry>
+    </collision>   
+
+  </link>
+    <joint name="box_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="box_link"/>
+  </joint>
+
+</robot>
+

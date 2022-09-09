@@ -342,6 +342,16 @@ class Quadrotor(BaseAviary):
             self.GATES_AND_OBS_RAND_INFO = kwargs['gates_and_obstacles_randomization_info']
         else:
             self.RANDOMIZED_GATES_AND_OBS = False
+        #
+        if 'done_on_collision' in kwargs:
+            self.DONE_ON_COLLISION = kwargs['done_on_collision']
+        else:
+            self.DONE_ON_COLLISION = False
+        #
+        if 'done_on_completion' in kwargs:
+            self.DONE_ON_COMPLETION = kwargs['done_on_completion']
+        else:
+            self.DONE_ON_COMPLETION = False
 
     def reset(self):
         """(Re-)initializes the environment to start an episode.
@@ -365,14 +375,16 @@ class Quadrotor(BaseAviary):
             d_args = rand_info_copy["obstacles"].pop("args", [])
             d_kwargs = rand_info_copy["obstacles"]
         for obstacle in self.OBSTACLES:
-            obs_height = 0.525 # URDF dependent.
+            obs_height = 0.525 # URDF dependent, places 'obstacle.urdf' at z == 0.
             if self.RANDOMIZED_GATES_AND_OBS:
                 offset = np.array([distrib(*d_args, **d_kwargs), distrib(*d_args, **d_kwargs), obs_height])
+                pose_disturbance = np.array([0, 0, distrib(*d_args, **d_kwargs)])
             else:
                 offset = np.array([0, 0, obs_height])
+                pose_disturbance = np.array([0, 0, 0])
             TMP_ID = p.loadURDF(os.path.join(self.URDF_DIR, "obstacle.urdf"),
                        np.array(obstacle[0:3]) + offset,
-                       p.getQuaternionFromEuler(obstacle[3:6]),
+                       p.getQuaternionFromEuler(np.array(obstacle[3:6])+pose_disturbance),
                        physicsClientId=self.PYB_CLIENT)
             p.addUserDebugText(str(TMP_ID),
                                textPosition=[0, 0, 0.5],
@@ -392,15 +404,24 @@ class Quadrotor(BaseAviary):
             d_args = rand_info_copy["gates"].pop("args", [])
             d_kwargs = rand_info_copy["gates"]
         for gate in self.GATES:
-            gate_height = 1. # URDF dependent.
+            if gate[6] == 0:
+                urdf_file = "portal.urdf"
+                gate_height = 1. # URDF dependent, places 'portal.urdf' at z == 0.
+            elif gate[6] == 1:
+                urdf_file = "low_portal.urdf"
+                gate_height = 0.525 # URDF dependent, places 'low_portal.urdf' at z == 0.
+            else:
+                raise ValueError("[ERROR] Unknown gate type.")
             if self.RANDOMIZED_GATES_AND_OBS:
                 offset = np.array([distrib(*d_args, **d_kwargs), distrib(*d_args, **d_kwargs), gate_height])
+                pose_disturbance = np.array([0, 0, distrib(*d_args, **d_kwargs)])
             else:
                 offset = np.array([0, 0, gate_height])
-            self.EFFECTIVE_GATES_POSITIONS.append(list(np.array(gate[0:3]) + offset) + gate[3:6])
-            TMP_ID = p.loadURDF(os.path.join(self.URDF_DIR, "portal.urdf"),
+                pose_disturbance = np.array([0, 0, 0])
+            self.EFFECTIVE_GATES_POSITIONS.append(list(np.array(gate[0:3]) + offset) + list(np.array(gate[3:6]) + pose_disturbance))
+            TMP_ID = p.loadURDF(os.path.join(self.URDF_DIR, urdf_file),
                        np.array(gate[0:3]) + offset,
-                       p.getQuaternionFromEuler(gate[3:6]),
+                       p.getQuaternionFromEuler(np.array(gate[3:6])+pose_disturbance),
                        physicsClientId=self.PYB_CLIENT)
             p.addUserDebugText(str(TMP_ID),
                                textPosition=[0, 0, 0.5],
@@ -425,9 +446,11 @@ class Quadrotor(BaseAviary):
         # 
         # Initialize IROS-specific attributes.
         self.stepped_through_gate = False
-        self.at_goal_pos = False
         self.currently_collided = False
-        
+        self.at_goal_pos = False
+        self.steps_at_goal_pos = 0
+        self.task_completed = False
+
         # Choose randomized or deterministic inertial properties.
         prop_values = {
             "M": self.MASS,
@@ -528,9 +551,8 @@ class Quadrotor(BaseAviary):
         super()._advance_simulation(rpm, disturb_force)
         # Standard Gym return.
         obs = self._get_observation()
-        # rew = self._get_reward()
-        done = self._get_done()
         info = self._get_info()
+        done = self._get_done()  # IROS 2022 - After _get_info() to use this step's 'self' attributes.
         rew = self._get_reward()  # IROS 2022 - After _get_info() to use this step's 'self' attributes.
         obs, rew, done, info = super().after_step(obs, rew, done, info)
         return obs, rew, done, info
@@ -907,18 +929,21 @@ class Quadrotor(BaseAviary):
                                                      Q=self.Q,
                                                      R=self.R)["l"])
 
-        # IROS 2022 - Competition sparse reward signal. 
+        # IROS 2022 - Competition sparse reward signal.
         if self.COST == Cost.COMPETITION:
             reward = 0
-            # Reward stepping through the right next gate.
+            # Reward for stepping through the (correct) next gate.
             if self.stepped_through_gate:
                 reward += 100
-            # Reward reaching goal position (after navigating the gates in the correct order).
+            # Reward for reaching goal position (after navigating the gates in the correct order).
             if self.at_goal_pos:
                 reward += 100
-            # Penalize by collision
+            # Penalize by collision.
             if self.currently_collided:
                 reward -= 1000
+            # Penalize by constraint violation.
+            if self.cnstr_violation:
+                reward -= 100
             # Penalize by loss from X_GOAL, U_GOAL state.
             # reward += float(-1 * self.symbolic.loss(x=self.state,
             #                                         Xr=self.X_GOAL,
@@ -966,6 +991,13 @@ class Quadrotor(BaseAviary):
             # Early terminate if needed.
             if out_of_bound:
                 return True
+
+        # IROS 2022 - Terminate episode on collision.
+        if self.DONE_ON_COLLISION and self.currently_collided:
+            return True
+        # IROS 2022 - Terminate episode on task completion.
+        if self.DONE_ON_COMPLETION and self.task_completed:
+            return True
 
         return False
 
@@ -1027,7 +1059,12 @@ class Quadrotor(BaseAviary):
         # Gates progress (note: allow 0.5 seconds for initial drop if objects are not on the gound).
         if self.pyb_step_counter > 0.5*self.PYB_FREQ and self.NUM_GATES > 0 and self.current_gate < self.NUM_GATES:
             x, y, _, _, _, rot = self.EFFECTIVE_GATES_POSITIONS[self.current_gate]
-            height = 1. # Obstacle URDF dependent.
+            if self.GATES[self.current_gate][6] == 0:
+                height = 1. # URDF dependent.
+            elif self.GATES[self.current_gate][6] == 1:
+                height = 0.525 # URDF dependent.
+            else:
+                raise ValueError("[ERROR] Unknown gate type.")
             half_length = 0.1875 # Obstacle URDF dependent.
             delta_x = 0.05*np.cos(rot)
             delta_y = 0.05*np.sin(rot)
@@ -1066,17 +1103,33 @@ class Quadrotor(BaseAviary):
                 info["current_target_gate_pos"] = self.EFFECTIVE_GATES_POSITIONS[self.current_gate]
             else:
                 info["current_target_gate_in_range"] = False
-                info["current_target_gate_pos"] = self.GATES[self.current_gate]
+                info["current_target_gate_pos"] = self.GATES[self.current_gate][0:6]
+            info["current_target_gate_type"] = self.GATES[self.current_gate][6]
         else:
             info["current_target_gate_id"] = -1
             info["current_target_gate_in_range"] = False
             info["current_target_gate_pos"] = []
+            info["current_target_gate_type"] = -1
         #
         # Final goal position reached
         info["at_goal_position"] = False
+        info["task_completed"] = False
         if self.current_gate == self.NUM_GATES:
-            self.at_goal_pos = bool(np.linalg.norm(self.state - self.X_GOAL) < self.TASK_INFO["stabilization_goal_tolerance"])
-            info["at_goal_position"] = self.at_goal_pos
+            if self.QUAD_TYPE == QuadType.THREE_D:
+                quad_xyz = np.array([self.state[0], self.state[2], self.state[4]])
+                goal_xyz = np.array([self.X_GOAL[0], self.X_GOAL[2], self.X_GOAL[4]])
+                if np.linalg.norm(quad_xyz - goal_xyz) < self.TASK_INFO["stabilization_goal_tolerance"]:
+                    self.at_goal_pos = True
+                    self.steps_at_goal_pos += 1
+                else:
+                    self.at_goal_pos = False
+                    self.steps_at_goal_pos = 0
+                if self.steps_at_goal_pos > self.CTRL_FREQ*2: # Remain near goal position for 2''.
+                    self.task_completed = True
+                info["at_goal_position"] = self.at_goal_pos
+                info["task_completed"] = self.task_completed
+            else:
+                print('[WARNING] "at_goal_position" and "task_completed" are only intended for used with the 3D quadrotor.')
 
         return info
 
@@ -1099,6 +1152,8 @@ class Quadrotor(BaseAviary):
         info["u_reference"] = self.U_GOAL
         if self.constraints is not None:
             info["symbolic_constraints"] = self.constraints.get_all_symbolic_models()
+        else:
+            info["symbolic_constraints"] = {}
         
         # IROS 2022 - Reset info.
         info["ctrl_timestep"] = self.CTRL_TIMESTEP
@@ -1107,24 +1162,37 @@ class Quadrotor(BaseAviary):
         info["quadrotor_kf"] = self.KF
         info["quadrotor_km"] = self.KM
         info["gate_dimensions"] = {
-            "shape": "square",
-            "height": 1.,
-            "edge": 0.45
+            "tall": {
+                "shape": "square",
+                "height": 1.,
+                "edge": 0.45
+            },
+            "low": {
+                "shape": "square",
+                "height": 0.525,
+                "edge": 0.45
+            }
         }
         info["obstacle_dimensions"] = {
             "shape": "cylinder",
-            "height": 0.8,
+            "height": 1.05,
             "radius": 0.05
         }
-        info["nominal_gates_pos"] = self.GATES
+        info["nominal_gates_pos_and_type"] = self.GATES
         info["nominal_obstacles_pos"] = self.OBSTACLES
 
         if self.RANDOMIZED_INIT:
             info["initial_state_randomization"] = self.INIT_STATE_RAND_INFO
+        else:
+            info["initial_state_randomization"] = {}
         if self.RANDOMIZED_INERTIAL_PROP:
             info["inertial_prop_randomization"] = self.INERTIAL_PROP_RAND_INFO
+        else:
+            info["inertial_prop_randomization"] = {}
         if self.RANDOMIZED_GATES_AND_OBS:
             info["gates_and_obs_randomization"] = self.GATES_AND_OBS_RAND_INFO
+        else:
+            info["gates_and_obs_randomization"] = {}
         info["disturbances"] = self.DISTURBANCES
 
         # INFO 2022 - Debugging.
