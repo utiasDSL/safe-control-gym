@@ -18,11 +18,7 @@ from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.utils import sync
 from safe_control_gym.envs.gym_pybullet_drones.Logger import Logger
 
-try:
-    from line.edit_this import Controller, Command
-except ImportError:
-    # Test import.
-    from .line.edit_this import Controller, Command
+from line.edit_this import Controller, Command
 
 try:
     import pycffirmware
@@ -97,7 +93,7 @@ def run(test=False):
     text_label_id = p.addUserDebugText("", textPosition=[0, 0, 1],physicsClientId=env.PYB_CLIENT)
 
     # Wait for keyboard input to start.
-    # input("Press any key to start")
+    input("Press any key to start")
 
     # Run an experiment.
     ep_start = time.time()

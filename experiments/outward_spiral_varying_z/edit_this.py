@@ -139,17 +139,23 @@ class Controller():
         #########################
 
         # Draw the trajectory on PyBullet's GUI
-        # self._draw_trajectory(initial_info)
         self.factor = 1.
+        self.ref_x = [self.get_x(t) for t in range(0, int(TRAJECTORY_LENGTH*30))]
+        self.ref_y = [self.get_y(t) for t in range(0, int(TRAJECTORY_LENGTH*30))]
+        self.ref_z = [self.get_z(t) for t in range(0, int(TRAJECTORY_LENGTH*30))]
+
+        if self.VERBOSE:
+            self._draw_trajectory(initial_info)
+        
 
         #########################
         # REPLACE THIS (END) ####
         #########################
-    def ref_x(self, step):
+    def get_x(self, step):
         return (step/100)**self.factor*np.cos(step/20)*2/3
-    def ref_y(self, step):
+    def get_y(self, step):
         return (step/100)**self.factor*np.sin(step/20)*2/3
-    def ref_z(self, step):
+    def get_z(self, step):
         return 1+0.7*np.sin(step/50)
 
     def cmdFirmware(self,
@@ -199,7 +205,7 @@ class Controller():
 
         elif iteration >= (2+TRANSITION_BUFFER)*self.CTRL_FREQ and iteration < (2+TRANSITION_BUFFER+TRAJECTORY_LENGTH)*self.CTRL_FREQ:
             step = iteration-(2+TRANSITION_BUFFER)*self.CTRL_FREQ
-            target_pos = np.array([self.ref_x(step), self.ref_y(step), self.ref_z(step)])
+            target_pos = np.array([self.get_x(step), self.get_y(step), self.get_z(step)])
             target_vel = np.zeros(3)
             target_acc = np.zeros(3)
             target_yaw = 0.
@@ -210,7 +216,7 @@ class Controller():
 
         elif iteration >= (2+TRANSITION_BUFFER+TRAJECTORY_LENGTH)*self.CTRL_FREQ and iteration < int(2+2*TRANSITION_BUFFER+TRAJECTORY_LENGTH)*self.CTRL_FREQ:
             step = TRAJECTORY_LENGTH*self.CTRL_FREQ
-            target_pos = np.array([self.ref_x(step), self.ref_y(step), self.ref_z(step)])
+            target_pos = np.array([self.get_x(step), self.get_y(step), self.get_z(step)])
             target_vel = np.zeros(3)
             target_acc = np.zeros(3)
             target_yaw = 0.
@@ -404,18 +410,19 @@ class Controller():
         """Do not modify this.
 
         """
-        for point in self.waypoints:
-            p.loadURDF(os.path.join(initial_info["urdf_dir"], "sphere.urdf"),
-                       [point[0], point[1], point[2]],
-                       p.getQuaternionFromEuler([0,0,0]),
-                       physicsClientId=initial_info["pyb_client"])
-        step = int(self.ref_x.shape[0]/50)
-        for i in range(step, self.ref_x.shape[0], step):
-            p.addUserDebugLine(lineFromXYZ=[self.ref_x[i-step], self.ref_y[i-step], self.ref_z[i-step]],
+        # for point in self.waypoints:
+        #     p.loadURDF(os.path.join(initial_info["urdf_dir"], "sphere.urdf"),
+        #                [point[0], point[1], point[2]],
+        #                p.getQuaternionFromEuler([0,0,0]),
+        #                physicsClientId=initial_info["pyb_client"])
+        # step = int(self.ref_x.shape[0]/50)
+        # for i in range(step, self.ref_x.shape[0], step):
+        for i in range(1, len(self.ref_x)):
+            p.addUserDebugLine(lineFromXYZ=[self.ref_x[i-1], self.ref_y[i-1], self.ref_z[i-1]],
                                lineToXYZ=[self.ref_x[i], self.ref_y[i], self.ref_z[i]],
                                lineColorRGB=[1, 0, 0],
                                physicsClientId=initial_info["pyb_client"])
-        p.addUserDebugLine(lineFromXYZ=[self.ref_x[i], self.ref_y[i], self.ref_z[i]],
-                           lineToXYZ=[self.ref_x[-1], self.ref_y[-1], self.ref_z[-1]],
-                           lineColorRGB=[1, 0, 0],
-                           physicsClientId=initial_info["pyb_client"])
+        # p.addUserDebugLine(lineFromXYZ=[self.ref_x[i], self.ref_y[i], self.ref_z[i]],
+        #                    lineToXYZ=[self.ref_x[-1], self.ref_y[-1], self.ref_z[-1]],
+        #                    lineColorRGB=[1, 0, 0],
+        #                    physicsClientId=initial_info["pyb_client"])

@@ -176,10 +176,12 @@ def get_average_run(trials, hz=200):
 
         run_data += [vicon_readings[:, [0] + list(range(header_map["vicon_pos_x"],header_map["vicon_orientation_w"]+1))]]
 
+    return align_data(run_data, hz)
 
+def align_data(trials, hz=200):
     # Run an averaging window across pose values
-    idxs = np.array([0 for _ in range(len(run_data))])    
-    lengths = np.array([len(trial) for trial in run_data])    
+    idxs = np.array([0 for _ in range(len(trials))])    
+    lengths = np.array([len(trial) for trial in trials])    
 
     aligned_data = []
     counter = 0
@@ -190,7 +192,7 @@ def get_average_run(trials, hz=200):
 
         avg_values = []
 
-        for i, trial in enumerate(run_data):
+        for i, trial in enumerate(trials):
             while idxs[i] < lengths[i]:
                 if trial[idxs[i], 0] < min_time:
                     idxs[i] += 1
