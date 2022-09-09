@@ -10,6 +10,8 @@ Look for instructions in `README.md` and `edit_this.py`.
 import time
 import numpy as np
 import pybullet as p
+import argparse
+import importlib
 
 from functools import partial
 
@@ -18,23 +20,6 @@ from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.utils import sync
 from safe_control_gym.envs.gym_pybullet_drones.Logger import Logger
 
-try:
-    # ellipse
-    # hypotrochoid
-    # ??? line - COMMENT: same as ellipse?
-    # lissajous
-    # outward_spiral
-    # outward_spiral_varying_z
-    # ??? slalom - COMMENT: initial position not on trajectory
-    # torus
-    # torus_bodyRates (crashes after takeoff, see video)
-    # torus_cmdFullState (crashes after finishing the traj., see video)
-    # zig_zag_climb
-    # zig_zag_fall
-    from torus.edit_this import Controller, Command
-except ImportError:
-    print("Controller import error")
-    exit()
 
 try:
     import pycffirmware
@@ -46,17 +31,18 @@ finally:
     print("Module 'cffirmware' available:", FIRMWARE_INSTALLED)
 
 
-def run(test=False):
+def run(run_type, test=False):
     """The main function creating, running, and closing an environment over N episodes.
 
     """
+    mod = importlib.import_module(f'{run_type}.edit_this')
 
     # Start a timer.
     START = time.time()
 
     # Load configuration.
     CONFIG_FACTORY = ConfigFactory()
-    config = CONFIG_FACTORY.merge()
+    config = CONFIG_FACTORY.merge(config_override=[f"{run_type}/getting_started.yaml"])
 
     # Testing (without pycffirmware).
     if test:
@@ -97,7 +83,7 @@ def run(test=False):
     vicon_obs = [obs[0], 0, obs[2], 0, obs[4], 0, obs[6], obs[7], obs[8], 0, 0, 0]
         # obs = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
         # vicon_obs = {x, 0, y, 0, z, 0, phi, theta, psi, 0, 0, 0}.
-    ctrl = Controller(vicon_obs, info, config.use_firmware, verbose=config.verbose)
+    ctrl = mod.Controller(vicon_obs, info, config.use_firmware, verbose=config.verbose)
 
     # Create a logger and counters
     logger = Logger(logging_freq_hz=CTRL_FREQ)
@@ -147,21 +133,21 @@ def run(test=False):
             command_type, args = ctrl.cmdFirmware(curr_time, vicon_obs, reward, done, info)
 
             # Select interface.
-            if command_type == Command.FULLSTATE:
+            if command_type == mod.Command.FULLSTATE:
                 firmware_wrapper.sendFullStateCmd(*args, curr_time)
-            elif command_type == Command.TAKEOFF:
+            elif command_type == mod.Command.TAKEOFF:
                 firmware_wrapper.sendTakeoffCmd(*args)
-            elif command_type == Command.LAND:
+            elif command_type == mod.Command.LAND:
                 firmware_wrapper.sendLandCmd(*args)
-            elif command_type == Command.STOP:
+            elif command_type == mod.Command.STOP:
                 firmware_wrapper.sendStopCmd()
-            elif command_type == Command.GOTO:
+            elif command_type == mod.Command.GOTO:
                 firmware_wrapper.sendGotoCmd(*args)
-            elif command_type == Command.NOTIFYSETPOINTSTOP:
+            elif command_type == mod.Command.NOTIFYSETPOINTSTOP:
                 firmware_wrapper.notifySetpointStop(*args)
-            elif command_type == Command.NONE:
+            elif command_type == mod.Command.NONE:
                 pass
-            elif command_type == Command.FINISHED:
+            elif command_type == mod.Command.FINISHED:
                 break
             else:
                 raise ValueError("[ERROR] Invalid command_type.")
@@ -259,8 +245,6 @@ def run(test=False):
             episode_start_iter = i+1
             ep_start = time.time()
 
-    print('\n'.join([str(item) for item in firmware_wrapper.cmds]))
-
     # Close the environment and print timing statistics.
     env.close()
     elapsed_sec = time.time() - START
@@ -275,4 +259,8 @@ def run(test=False):
           ))
 
 if __name__ == "__main__":
-    run()
+    parser = argparse.ArgumentParser() 
+    parser.add_argument("--run", type=str)
+    args = parser.parse_known_args()[0]
+
+    run(args.run)
