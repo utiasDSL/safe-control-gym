@@ -846,7 +846,7 @@ class Controller():
         self.VERBOSE = verbose and VERBOSE
 
         # Store a priori scenario information.
-        self.NOMINAL_GATES = initial_info["nominal_gates_pos"]
+        self.NOMINAL_GATES = initial_info["nominal_gates_pos_and_type"]
         self.NOMINAL_OBSTACLES = initial_info["nominal_obstacles_pos"]
 
         self.ctrl = None
