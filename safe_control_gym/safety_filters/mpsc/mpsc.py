@@ -55,7 +55,7 @@ class MPSC(BaseSafetyFilter, ABC):
             if k != 'self' and k != 'kwargs' and '__' not in k:
                 self.__dict__[k] = v
 
-        super().__init__(env_func)
+        super().__init__(env_func, **kwargs)
 
         # Setup the Environments.
         self.env = env_func(randomized_init=False)
@@ -66,19 +66,17 @@ class MPSC(BaseSafetyFilter, ABC):
                                     )
 
         # Setup attributes.
-        self.model = self.env.symbolic
+        self.reset()
         self.dt = self.model.dt
         self.Q = get_cost_weight_matrix(q_lin, self.model.nx)
         self.R = get_cost_weight_matrix(r_lin, self.model.nu)
 
         self.X_EQ = np.zeros(self.model.nx)
-        self.U_EQ = np.atleast_2d(self.env.U_GOAL)[0, :]
+        self.U_EQ = self.model.U_EQ
 
         self.set_dynamics()
         self.lqr_gain = -compute_lqr_gain(self.model, self.X_EQ, self.U_EQ, self.Q, self.R, discrete_dynamics=True)
 
-        self.z_prev = None
-        self.v_prev = None
         self.terminal_set = None
 
         if self.additional_constraints is None:
@@ -86,9 +84,6 @@ class MPSC(BaseSafetyFilter, ABC):
         self.constraints, self.state_constraints_sym, self.input_constraints_sym = reset_constraints(
                                                                                     self.env.constraints.constraints +
                                                                                     additional_constraints)
-
-        self.kinf = self.horizon - 1
-        self.setup_results_dict()
 
         if cost_function == Cost_Function.ONE_STEP_COST:
             self.cost_function = ONE_STEP_COST()
@@ -250,6 +245,7 @@ class MPSC(BaseSafetyFilter, ABC):
 
     def reset(self):
         '''Prepares for training or evaluation. '''
+        self.model = self.get_prior(self.env, self.prior_info)
         self.env.reset()
         self.training_env.reset()
         self.reset_before_run()
