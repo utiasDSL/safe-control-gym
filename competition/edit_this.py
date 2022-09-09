@@ -132,11 +132,12 @@ class Controller():
         self.ref_z = fz(t_scaled)
 
         if self.VERBOSE:
+            # Ensure that everything that requires pybullet is in the verbose option
             # Plot trajectory in each dimension and 3D.
             plot_trajectory(t_scaled, self.waypoints, self.ref_x, self.ref_y, self.ref_z)
 
-        # Draw the trajectory on PyBullet's GUI
-        draw_trajectory(initial_info, self.waypoints, self.ref_x, self.ref_y, self.ref_z)
+            # Draw the trajectory on PyBullet's GUI
+            draw_trajectory(initial_info, self.waypoints, self.ref_x, self.ref_y, self.ref_z)
 
         #########################
         # REPLACE THIS (END) ####
@@ -227,6 +228,10 @@ class Controller():
 
             command_type = Command(3)  # Land.
             args = [height, duration]
+
+        elif iteration == 33*self.CTRL_FREQ-1:
+            command_type = Command(-1)  # Terminate command to be sent once trajectory is completed.
+            args = []
 
         else:
             command_type = Command(0)  # None.
