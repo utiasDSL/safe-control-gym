@@ -18,7 +18,23 @@ from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.utils import sync
 from safe_control_gym.envs.gym_pybullet_drones.Logger import Logger
 
-from line.edit_this import Controller, Command
+try:
+    # ellipse
+    # hypotrochoid
+    # ??? line - COMMENT: same as ellipse?
+    # lissajous
+    # outward_spiral
+    # outward_spiral_varying_z
+    # ??? slalom - COMMENT: initial position not on trajectory
+    # torus
+    # torus_bodyRates (crashes after takeoff, see video)
+    # torus_cmdFullState (crashes after finishing the traj., see video)
+    # zig_zag_climb
+    # zig_zag_fall
+    from torus.edit_this import Controller, Command
+except ImportError:
+    print("Controller import error")
+    exit()
 
 try:
     import pycffirmware
@@ -93,7 +109,7 @@ def run(test=False):
     text_label_id = p.addUserDebugText("", textPosition=[0, 0, 1],physicsClientId=env.PYB_CLIENT)
 
     # Wait for keyboard input to start.
-    input("Press any key to start")
+    # input("Press any key to start")
 
     # Run an experiment.
     ep_start = time.time()
