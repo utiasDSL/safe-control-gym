@@ -526,9 +526,9 @@ class FirmwareWrapper(BaseController):
         self.setpoint.acceleration.y = acc[1]
         self.setpoint.acceleration.z = acc[2]
 
-        self.setpoint.attitudeRate.roll = rpy_rate[0] * self.MILLI_RAD_TO_DEG
-        self.setpoint.attitudeRate.pitch = rpy_rate[1] * self.MILLI_RAD_TO_DEG
-        self.setpoint.attitudeRate.yaw = rpy_rate[2] * self.MILLI_RAD_TO_DEG
+        self.setpoint.attitudeRate.roll = rpy_rate[0] * self.RAD_TO_DEG
+        self.setpoint.attitudeRate.pitch = rpy_rate[1] * self.RAD_TO_DEG
+        self.setpoint.attitudeRate.yaw = rpy_rate[2] * self.RAD_TO_DEG
 
         quat = _get_quaternion_from_euler(0, 0, yaw)
         self.setpoint.attitudeQuaternion.x = quat[0]
