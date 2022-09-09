@@ -23,7 +23,6 @@ class FirmwareWrapper(BaseController):
     MOTOR_SET_ENABLE = True
 
     RAD_TO_DEG = 180 / math.pi
-    MILLI_RAD_TO_DEG = 180 / (np.pi * 1000)
 
     def __init__(self, 
                 env_func, 
@@ -123,7 +122,6 @@ class FirmwareWrapper(BaseController):
         Todo:
             * Add support for state estimation 
         """
-        self.cmds = []
         # Initialize history  
         self.action_history = [[0, 0, 0, 0] for _ in range(self.ACTION_DELAY)]
         self.sensor_history = [[[0, 0, 0], [0, 0, 0]] for _ in range(self.SENSOR_DELAY)]
@@ -263,8 +261,8 @@ class FirmwareWrapper(BaseController):
             else:
                 self._update_sensorData(sensor_timestamp, body_rot.apply(cur_acc), cur_rotation_rates * self.RAD_TO_DEG)
 
-            # Update setpoint
-            self._updateSetpoint(self.tick / self.firmware_freq, log_setpoint=(self.tick+1) / self.firmware_freq >= sim_time + self.ctrl_dt) # setpoint looks right 
+            # Update setpoint 
+            self._updateSetpoint(self.tick / self.firmware_freq) # setpoint looks right 
 
             # Step controller 
             self._step_controller()
@@ -461,32 +459,11 @@ class FirmwareWrapper(BaseController):
         self.tick += 1
 
 
-    def _updateSetpoint(self, timestep, log_setpoint=False):
+    def _updateSetpoint(self, timestep):
         if not self.full_state_cmd_override:
             firm.crtpCommanderHighLevelTellState(self.state)
             firm.crtpCommanderHighLevelUpdateTime(timestep) # Sets commander time variable --- this is time in s from start of flight 
             firm.crtpCommanderHighLevelGetSetpoint(self.setpoint, self.state)
-
-            if log_setpoint:
-                self.cmds += [[
-                    timestep, 
-                    self.setpoint.position.x, 
-                    self.setpoint.position.y, 
-                    self.setpoint.position.z, 
-                    self.setpoint.velocity.x, 
-                    self.setpoint.velocity.y, 
-                    self.setpoint.velocity.z, 
-                    self.setpoint.acceleration.x,
-                    self.setpoint.acceleration.y,
-                    self.setpoint.acceleration.z,
-                    self.setpoint.attitudeRate.roll,
-                    self.setpoint.attitudeRate.pitch,
-                    self.setpoint.attitudeRate.yaw,
-                    self.setpoint.attitudeQuaternion.x,
-                    self.setpoint.attitudeQuaternion.y,
-                    self.setpoint.attitudeQuaternion.z,
-                    self.setpoint.attitudeQuaternion.w,
-                    ]]
 
 
     def _process_command_queue(self, sim_time):
@@ -508,7 +485,7 @@ class FirmwareWrapper(BaseController):
             vel (list): [x, y, z] velocity of the CF (m/s)
             acc (list): [x, y, z] acceleration of the CF (m/s^2)
             yaw (float): yaw of the CF (rad)
-            rpy_rate (list): roll, pitch, yaw rates (deg/s)
+            rpy_rate (list): roll, pitch, yaw rates (rad/s)
             timestep (float): simulation time when command is sent (s)
         """
         self.command_queue += [['_sendFullStateCmd', [pos, vel, acc, yaw, rpy_rate, timestep]]]

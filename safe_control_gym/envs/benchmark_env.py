@@ -207,6 +207,16 @@ class BenchmarkEnv(gym.Env):
         self.initial_reset = False
         self.INFO_IN_RESET = info_in_reset
 
+        # IROS 2022 - Save random seed for re-seeding.
+        self.RND_SEED = seed
+        if 'reseed_on_reset' in kwargs:
+            self.RESEED_ON_RESET = kwargs['reseed_on_reset']
+        else:
+            self.RESEED_ON_RESET = False
+
+        # IROS 2022 - Constrain violation flag for reward.
+        self.cnstr_violation = False
+
     def seed(self,
              seed=None
              ):
@@ -347,6 +357,10 @@ class BenchmarkEnv(gym.Env):
         """Pre-processing before calling `.reset()`.
         
         """
+        # IROS 2022 - Re-seed on reset.
+        if self.RESEED_ON_RESET:
+            self.seed(self.RND_SEED)
+
         # Housekeeping variables.
         self.initial_reset = True
         self.pyb_step_counter = 0
@@ -422,10 +436,18 @@ class BenchmarkEnv(gym.Env):
             c_value = self.constraints.get_values(self)
             info["constraint_values"] = c_value
             if self.constraints.is_violated(self, c_value=c_value):
+
+                # IROS 2022 - Constrain violation flag for reward.
+                self.cnstr_violation = True
+
                 info["constraint_violation"] = 1
                 if self.DONE_ON_VIOLATION:
                     done = True
             else:
+
+                # IROS 2022 - Constrain violation flag for reward.
+                self.cnstr_violation = False
+
                 info["constraint_violation"] = 0
 
         # Apply penalized reward when close to constraint violation

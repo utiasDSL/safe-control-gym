@@ -143,6 +143,7 @@ class Logger(object):
         if not os.path.exists(csv_dir):
             os.makedirs(csv_dir+'/')
         t = np.arange(0, self.timestamps.shape[1]/self.LOGGING_FREQ_HZ, 1/self.LOGGING_FREQ_HZ)
+        t = t[:len(self.states[0, 0, :])]
         for i in range(self.NUM_DRONES):
             with open(csv_dir+"/x"+str(i)+".csv", 'wb') as out_file:
                 np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 0, :]])), delimiter=",")
@@ -204,7 +205,8 @@ class Logger(object):
     
     def plot(self,
              comment: str="",
-             pwm=False):
+             pwm=False,
+             autoclose=False):
         """Logs entries for a single simulation step, of a single drone.
 
         Parameters
@@ -217,6 +219,7 @@ class Logger(object):
         plt.rc('axes', prop_cycle=(cycler('color', ['r', 'g', 'b', 'y']) + cycler('linestyle', ['-', '--', ':', '-.'])))
         fig, axs = plt.subplots(10, 2)
         t = np.arange(0, self.timestamps.shape[1]/self.LOGGING_FREQ_HZ, 1/self.LOGGING_FREQ_HZ)
+        t = t[:len(self.states[0, 0, :])]
 
         #### Column ################################################
         col = 0
@@ -405,7 +408,9 @@ class Logger(object):
                             hspace=0.0
                             )
         plt.savefig(os.path.join('results', comment+'-output_figure.png'))
-        plt.show()
-        # plt.show(block=False)
-        # plt.pause(3)
-        # plt.close()
+        if autoclose:
+            plt.show(block=False)
+            plt.pause(2)
+            plt.close()
+        else:
+            plt.show()

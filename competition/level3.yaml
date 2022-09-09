@@ -1,5 +1,11 @@
+# Level 3
+
+# | Evaluation Scenario | Constraints  | Rand. Inertial Properties | Randomized Obstacles, Gates | Rand. Between Episodes | Notes             |
+# | :-----------------: | :----------: | :-----------------------: | :-------------------------: | :--------------------: | :---------------: |
+# | `level3.yaml`       | **Yes**      | **Yes**                   | **Yes**                     | **Yes**                | Robustness        |
+
 # Configuration
-num_episodes: 3 # Customizable number of episodes (NOTE: solutions that require fewer episode will receive higher scores)
+num_episodes: 5 # Customizable number of episodes (NOTE: solutions that require fewer episode will receive higher scores)
 use_firmware: True # Whether to use pycffirmware or not (NOTE: only set to False for debugging purposes)
 verbose: True # Boolean passed to the Controller class, can be used to turn on and off additional printouts
 
@@ -9,8 +15,8 @@ verbose: True # Boolean passed to the Controller class, can be used to turn on a
 # Environment
 quadrotor_config:
   seed: 1337 # Random seed
-  reseed_on_reset: True # Whether to re-seed the random number generator between episodes
-  gui: True # Whether to spawn PyBullet's GUI
+  reseed_on_reset: False # Whether to re-seed the random number generator between episodes
+  gui: False # Whether to spawn PyBullet's GUI
   camera_view: [5, -40, -40, 0.5, -1, 0.5] # Distance, yaw, pitch, x, y, z target position
 
   ctrl_freq: 30 # Frequency of the controller's decision making
@@ -18,7 +24,7 @@ quadrotor_config:
   episode_len_sec: 33  # Maximum episode duration, in seconds
 
   done_on_violation: False # Whether `done` becomes True when a constraint is violated
-  done_on_completion: False # Whether `done` becomes True when the task is completed (traveled all gates and 2'' hover at stabilization_goal)
+  done_on_completion: True # Whether `done` becomes True when the task is completed (traveled all gates and 2'' hover at stabilization_goal)
   done_on_collision: True # Whether `done` becomes True when a collision happens
   cost: competition  # Sparse reward function, if you desire, re-implement it in Quadrotor._get_reward()
                      # github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/safe_control_gym/envs/gym_pybullet_drones/quadrotor.py
@@ -112,12 +118,12 @@ quadrotor_config:
   gates_and_obstacles_randomization_info:
     gates:
       distrib: "uniform"
-      low: -0.1
-      high: 0.1
+      low: -0.15
+      high: 0.15
     obstacles:
       distrib: "uniform"
-      low: -0.1
-      high: 0.1
+      low: -0.15
+      high: 0.15
 
   # Constraints
   constraints:
@@ -174,4 +180,3 @@ quadrotor_config:
   info_in_reset: True # Info dictionary as second return value (after the initial observation) of env.reset()
   normalized_rl_action_space: False
   done_on_out_of_bound: False
-
