@@ -229,7 +229,7 @@ For ALL simulation levels, solutions will be evaluated and scored—on the last 
 
 > Note: only solutions that CAN complete the task on the last execute episode will be further evaluated
 
-For ALL simulation levels, solutions on the Pareto front of safety and performance (of the top half, whichever is larger) will also be scored—over ALL executed episodes—by:
+For ALL simulation levels, solutions on the Pareto front of safety and performance (or the top half, whichever is larger) will also be scored—over ALL executed episodes—by:
 - **Data & compute efficiency**: minimizing the [no. of episodes](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/getting_started.yaml#L2) and their overall *learning time* (in sec.) used by [`interStepLearn()`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py#L288) and [`interEpisodeLearn()`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py#L328) to improve performance 
 - **Robustness**: maximizing the *success rate* (|episodes ending in TASK COMPLETION|/|episodes|) (in particular, for [`level3.yaml`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level3.yaml)) over 10 additional episodes run at the end of `num_episodes`
 
