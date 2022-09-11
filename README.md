@@ -2,16 +2,16 @@
 
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/dgni-58OSMs/maxresdefault.jpg)](https://www.youtube.com/watch?v=aBswwecLfYo)
 
-*(The image above links to the video of a flight example)*
-
-*Note: beta release subject to change throughout the month of August 2022; register for updates*
+> (The image above links to the video of a flight example)
+>
+> Note: beta release subject to change throughout the month of August 2022; register for updates
 
 - [Official Webpage](https://www.dynsyslab.org/iros-2022-safe-robot-learning-competition/)
 - [IROS Competition Page](https://iros2022.org/program/competition/#toggle-id-8)
 - [GitHub Discussions](https://github.com/utiasDSL/safe-control-gym/discussions/categories/iros-2022-competition)
 - [Google Form](https://forms.gle/vEmVK99n1SyaE4Zw9) (to register your interest and receive e-mail updates)
 
-## Description 
+## Description
 
 The task is to design a controller/planner that enables a quadrotor (*Crazyflie 2.x*) to **safely fly through a set of gates and reach a predefined target despite uncertainties in the robot dynamics (e.g., mass and inertia) and the environment (e.g., wind and position of the gates)**. The algorithms will be evaluated regarding their safety (e.g., no collisions) and performance (e.g., time to target). We encourage participants to explore both control and reinforcement learning approaches (e.g., robust, adaptive, predictive, learning-based and optimal control, and model-based/model-free reinforcement learning). The controller/planner has access to the position and attitude measurements provided by a motion capture system and the noisy pose of the closest next gate. The controller can [send position, velocity, acceleration and heading references to an onboard position controller](https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.cmdFullState).
 
@@ -33,7 +33,7 @@ conda create -n safe python=3.8
 conda activate safe
 ```
 
-Install the `safe-control-gym` repository 
+Install the `safe-control-gym` repository
 
 ```bash
 pip install --upgrade pip
@@ -64,6 +64,7 @@ conda activate safe
 ### On macOS
 
 Install [`brew`](https://brew.sh/), then
+
 ```bash
 brew install swig
 brew install gcc            # Also run `xcode-select --install` if prompted
@@ -77,11 +78,14 @@ conda activate safe
 Also see how to install [SWIG](https://www.dev2qa.com/how-to-install-swig-on-macos-linux-and-windows/) and [`pycffirmware`](https://github.com/utiasDSL/pycffirmware)'s `README.md`
 
 ## Getting Started
+
 Run the scripts in [`competition/`](https://github.com/utiasDSL/safe-control-gym/tree/beta-iros-competition/competition)
+
 ```bash
 cd ../../safe-control-gym/competition/
 python3 getting_started.py --overrides ./getting_started.yaml
 ```
+
 **Modify file [`edit_this.py`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py) to customize your controller based on [Crazyswarm's Crazyflie interface](https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie)**
 
 ## Development and Evaluation Scenarios
@@ -100,9 +104,9 @@ Proposed solutions will be evaluated in 5 scenarios with different challenges:
 | sim2real | **Yes** | Real-life hardware |  **Yes**, injected | *No* | Sim2real transfer |
 
 > "Rand. Between Episodes" (governed by argument `reseed_on_reset`) states whether randomized properties and positions vary or are kept constant (by re-seeding the random number generator on each `env.reset()`) across episodes
-> 
+>
 > Note 1: the random seed used to score solution will be picked at the time of the competition
-> 
+>
 > Note 2: if the base scenarios do not allow to determine a unique winner, we will progressively raise the difficulty by, alternately, (i) adding intermediate gates and (ii) increasing the parameters of the random distributions and input/dynamics disturbances by 50% (except in `level0`).
 
 [link0]: https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level0.yaml
@@ -110,13 +114,13 @@ Proposed solutions will be evaluated in 5 scenarios with different challenges:
 [link2]: https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level2.yaml
 [link3]: https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level3.yaml
 
-
 ## Implement Your Controller/Solution
 
 Methods to Re-implement in [`edit_this.py`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py)
 
-**Required**
-```
+### Required (1 of 2)
+
+```docstring
 edit_this.py : Controller.__init__(initial_obs, initial_info)           # Initialize the controller
 
     Args:
@@ -147,8 +151,9 @@ edit_this.py : Controller.__init__(initial_obs, initial_info)           # Initia
     Returns: N/A
 ```
 
-**Required**
-```
+### Required (2 of 2)
+
+```docstring
 edit_this.py : Controller.cmdFirmware(time, obs, reward, done, info)    # Select the next command for the quadrotor
 
     Args:
@@ -188,8 +193,9 @@ edit_this.py : Controller.cmdFirmware(time, obs, reward, done, info)    # Select
         and: https://crazyswarm.readthedocs.io/en/latest/api.html#crazyflie-class
 ```
 
-**Optional, recommended for learning, adaptive control**
-```
+### Optional, recommended for learning, adaptive control (1 of 2)
+
+```docstring
 edit_this.py : Controller.interStepLearn(...)       # Update the controller's internal state at each step
 
     Args:
@@ -200,8 +206,9 @@ edit_this.py : Controller.interStepLearn(...)       # Update the controller's in
     Returns: N/A     
 ```
 
-**Optional, recommended for learning, adaptive control**
-```
+### Optional, recommended for learning, adaptive control (2 of 2)
+
+```docstring
 edit_this.py : Controller.interEpisodeLearn(...)    # Update the controller's internal state between episodes
 
     Args:
@@ -221,31 +228,29 @@ edit_this.py : Controller.interEpisodeLearn(...)    # Update the controller's in
 - Mention in the Pull Request's Conversation tab (i) how many `num_episodes` you want your solution to use in each level (mandatory) and (ii) what method(s) you used and results you obtained (optional)
 - Tag @JacopoPan in the Pull Request's Conversation tab
 
-## Scoring
+## Scoring (v0.3)
 
-For ALL simulation levels, solutions will be evaluated and scored—on the last executed episode—by:
-- **Safety**: avoid all *collisions* (max. allowed = 0) with gates & obstacles and minimize the no. of *constraint violations*
-- **Performance**: minimizing the *task time* (in sec.) required to fly through all the gates and reach the goal
+A) For ALL levels (0-3, sim2real), solutions will be evaluated—on the **last episode**—by:
 
-> Note: only solutions that CAN complete the task on the last execute episode will be further evaluated
+- **Safety**: avoid ALL *collisions* with gates & obstacles and *constraint violations*—i.e., only runs with 0 collisions/violations will count as TASK COMPLETION
+- **Performance**: minimizing the *task time* (in sec.) required to complete the task (fly through all the gates and reach the goal)
 
-For ALL simulation levels, solutions on the Pareto front of safety and performance (or the top half, whichever is larger) will also be scored—over ALL executed episodes—by:
-- **Data & compute efficiency**: minimizing the [no. of episodes](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/getting_started.yaml#L2) and their overall *learning time* (in sec.) used by [`interStepLearn()`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py#L288) and [`interEpisodeLearn()`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py#L328) to improve performance 
-- **Robustness**: maximizing the *success rate* (|episodes ending in TASK COMPLETION|/|episodes|) (in particular, for [`level3.yaml`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level3.yaml)) over 10 additional episodes run at the end of `num_episodes`
+B) For ALL levels (0-3, sim2real), solutions that accomplish A) will be evaluated—across **all episodes**—by:
 
-> Note: the top half solutions with *success rate* > 60% and the lowest *compute time* will advance to the next level
+- **Data & compute efficiency**: minimizing the *simulation/flight-clock time of the [no. of episodes](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/getting_started.yaml#L2)* (in sec.) plus their overall *wall-clock learning time* (in sec.) used by [`interStepLearn()`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py#L288) and [`interEpisodeLearn()`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py#L328) to improve performance
 
-Sim2real "level":
-- The top 8 solutions with the best (lowest) *compute time* and *success rate* > 60% in `level3` will be transferred to real robots and re-evaluated against all the metrics above 
+C) For ALL levels (0-3, sim2real), the top 3 solutions ranked by the criteria in A) and the top 3 solutions ranked by the criteria in B) will score 20, 10, and 5 points respectively. The sum of these points will determine the final classification.
 
 <img src="figures/terminal1.png" alt="terminal output" width="800">
 
 ## Prizes
+
 - 1st: TBA
 - 2nd: TBA
 - 3rd: TBA
 
 ## Organizers
+
 - Angela Schoellig (Technische Universität München, University of Toronto, Vector Institute)
 - Davide Scaramuzza (University of Zurich)
 - Vijay Kumar (University of Pennsylvania)
