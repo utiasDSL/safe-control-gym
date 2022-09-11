@@ -303,9 +303,9 @@ def run(test=False):
             # Reset the environment.
             if config.use_firmware:
                 # Re-initialize firmware.
-                new_initial_obs, new_initial_info = firmware_wrapper.reset()
+                new_initial_obs, _ = firmware_wrapper.reset()
             else:
-                new_initial_obs, new_initial_info = env.reset()
+                new_initial_obs, _ = env.reset()
             first_ep_iteration = True
 
             if config.verbose:

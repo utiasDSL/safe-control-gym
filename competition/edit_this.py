@@ -26,7 +26,6 @@ Tips:
 
 """
 import numpy as np
-import pybullet as p
 
 from collections import deque
 
@@ -132,7 +131,6 @@ class Controller():
         self.ref_z = fz(t_scaled)
 
         if self.VERBOSE:
-            # Ensure that everything that requires pybullet is in the verbose option
             # Plot trajectory in each dimension and 3D.
             plot_trajectory(t_scaled, self.waypoints, self.ref_x, self.ref_y, self.ref_z)
 
@@ -178,7 +176,7 @@ class Controller():
         # REPLACE THIS (START) ##
         #########################
 
-        # Handwritten solution for GitHub's example scenario.
+        # Handwritten solution for GitHub's getting_stated scenario.
 
         if iteration == 0:
             height = 1
