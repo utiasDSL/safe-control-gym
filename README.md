@@ -1,6 +1,6 @@
 # IROS 2022 Safe Robot Learning Competition
 
-[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/dgni-58OSMs/maxresdefault.jpg)](https://www.youtube.com/watch?v=aBswwecLfYo)
+[![video](https://img.youtube.com/vi/dgni-58OSMs/maxresdefault.jpg)](https://www.youtube.com/watch?v=aBswwecLfYo)
 
 > (The image above links to the video of a flight example)
 >
@@ -241,7 +241,7 @@ B) For ALL levels (0-3, sim2real), solutions that accomplish A) will be evaluate
 
 C) For ALL levels (0-3, sim2real), the top 3 solutions ranked by the criteria in A) and the top 3 solutions ranked by the criteria in B) will score 20, 10, and 5 points respectively. The sum of these points will determine the final classification.
 
-<img src="figures/terminal1.png" alt="terminal output" width="800">
+![terminal output](./figures/terminal1.png)
 
 ## Prizes
 
