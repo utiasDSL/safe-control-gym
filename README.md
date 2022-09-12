@@ -1,6 +1,6 @@
 # IROS 2022 Safe Robot Learning Competition
 
-[![video](https://img.youtube.com/vi/dgni-58OSMs/maxresdefault.jpg)](https://www.youtube.com/watch?v=aBswwecLfYo)
+[![video](https://img.youtube.com/vi/dgni-58OSMs/maxresdefault.jpg)](https://www.youtube.com/watch?v=PwphA_jsNKw)
 
 > (The image above links to the video of a flight example)
 >
