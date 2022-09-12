@@ -372,7 +372,7 @@ class BenchmarkEnv(gym.Env, ABC):
         '''
         # Add initial constraint info (no action/input yet, so only state-based constraints)
         info['current_step'] = 0
-        if self.constraints is not None:
+        if self.constraints is not None and not(self.constraints.state_constraints == []):
             info['constraint_values'] = self.constraints.get_values(self, only_state=True)
         return obs, info
 
