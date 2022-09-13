@@ -188,7 +188,7 @@ class FirmwareWrapper(BaseController):
         
         # Initialize visualization tools 
         self.first_motor_killed_print = True
-        self.pyb_clinet = init_info['pyb_client']
+        self.pyb_client = init_info['pyb_client']
         self.last_visualized_setpoint = None
 
         self.results_dict = { 'obs': [],
@@ -227,7 +227,7 @@ class FirmwareWrapper(BaseController):
             self.last_visualized_setpoint = p.loadURDF("/home/spencer/Documents/DSL/safe-control-gym/safe_control_gym/envs/gym_pybullet_drones/assets/sphere.urdf",
                     [self.setpoint.position.x, self.setpoint.position.y, self.setpoint.position.z],
                     p.getQuaternionFromEuler([0,0,0]),
-                    physicsClientId=self.pyb_clinet)
+                    physicsClientId=self.pyb_client)
 
         while self.tick / self.firmware_freq < sim_time + self.ctrl_dt:
             # Step the environment and print all returned information.
