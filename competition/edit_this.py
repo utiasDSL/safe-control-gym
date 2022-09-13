@@ -132,7 +132,6 @@ class Controller():
         self.ref_z = fz(t_scaled)
 
         if self.VERBOSE:
-            # Ensure that everything that requires pybullet is in the verbose option
             # Plot trajectory in each dimension and 3D.
             plot_trajectory(t_scaled, self.waypoints, self.ref_x, self.ref_y, self.ref_z)
 
