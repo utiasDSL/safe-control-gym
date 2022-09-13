@@ -1,4 +1,4 @@
-# Sim2Real Experiment 
+# Sim2Real Experiments
 
 To run simulated trajectories:
 
