@@ -230,7 +230,7 @@ edit_this.py : Controller.interEpisodeLearn(...)    # Update the controller's in
 
 ### Note: Private Submissions
 
-If you prefer not to publicly disclose your solution implementation, you can instead create a [private import of this repository](https://docs.github.com/en/get-started/importing-your-projects-to-github/importing-source-code-to-github/importing-a-repository-with-github-importer) to develop it and give access to @JacopoPan and @utiasDSLadmin, or even send your `edit_this.py` to jacopo.panerati@utoronto.ca. In this case, please submit early to allow the time to run extra checks. 
+If you prefer not to publicly disclose your solution implementation, you can instead create a [private import of this repository](https://docs.github.com/en/get-started/importing-your-projects-to-github/importing-source-code-to-github/importing-a-repository-with-github-importer) to develop it and give access to @JacopoPan and @utiasDSLadmin, or even send your `edit_this.py` to jacopo.panerati@utoronto.ca. In this case, please submit early to allow the time to run extra checks.
 
 ## Scoring (v0.3)
 
