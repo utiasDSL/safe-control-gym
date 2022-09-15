@@ -1,0 +1,158 @@
+# Configuration
+num_episodes: 5 # Number of consecutive episodes
+use_firmware: True # Whether to use pycffirmware or not
+verbose: True # Boolean passed to the Controller class, can be used to turn on and off additional printouts
+
+# Environment
+quadrotor_config:
+  seed: 1337 # Random seed
+  ctrl_freq: 30 # Frequency of decision making
+  pyb_freq: 500 # If `use_firmware` == True, must be multiple of 500, else must be multiple of ctrl_freq
+  episode_len_sec: 18  # Episode duration in seconds
+  gui: True # Whether to spawn PyBullet's GUI
+  camera_view: [5, -40, -40, 0.5, -1, 0.5] # Distance, yaw, pitch, x, y, z target position
+  cost: competition  # Sparse reward function, if desired, re-implement it in Quadrotor._get_reward()
+                     # github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/safe_control_gym/envs/gym_pybullet_drones/quadrotor.py
+  done_on_violation: False # Wether `done` becomes True when a constraint is violated
+  task: stabilization
+  task_info:
+    stabilization_goal: [-0.5, 2.9, 0.75]  # Final goal (target position in x-y-z)
+    stabilization_goal_tolerance: 0.2
+
+  # Nominal (pre-randomization) initial state
+  init_state:
+    init_x: 0
+    init_x_dot: 0
+    init_y: 0
+    init_y_dot: 0
+    init_z: 0.03
+    init_z_dot: 0
+    init_phi: 0
+    init_theta: 0
+    init_psi: 0
+    init_p: 0
+    init_q: 0
+    init_r: 0
+
+  # Nominal (pre-randomization) positions of gates and obstacles
+  gates:
+    [
+    ]
+  obstacles:
+    [
+    ]
+
+  # Randomization of the initial state
+  randomized_init: False
+  init_state_randomization_info:
+    init_x: 
+      distrib: "uniform"
+      low: -0.1
+      high: 0.1
+    init_y: 
+      distrib: "uniform"
+      low: -0.1
+      high: 0.1
+    init_z:
+      distrib: "uniform"
+      low: 0.0
+      high: 0.02
+    init_phi:
+      distrib: "uniform"
+      low: -0.1
+      high: 0.1
+    init_theta:
+      distrib: "uniform"
+      low: -0.1
+      high: 0.1
+    init_psi:
+      distrib: "uniform"
+      low: -0.1
+      high: 0.1
+
+  # Randomization of the quadrotor inertial properties
+  randomized_inertial_prop: True
+  inertial_prop_randomization_info:
+    M:
+      distrib: "uniform"
+      low: -0.01
+      high: 0.01
+    Ixx:
+      distrib: "uniform"
+      low: 0.0
+      high: 0.0
+    Iyy:
+      distrib: "uniform"
+      low: 0.0
+      high: 0.0
+    Izz:
+      distrib: "uniform"
+      low: 0.0
+      high: 0.0
+  randomized_gates_and_obstacles: True
+
+  # Randomization of the gates and obstacles positions
+  gates_and_obstacles_randomization_info:
+    gates:
+      distrib: "uniform"
+      low: -0.1
+      high: 0.1
+    obstacles:
+      distrib: "uniform"
+      low: -0.1
+      high: 0.1
+
+  # Constraints
+  constraints:
+    # Input constraints
+    - constraint_form: default_constraint
+      constrained_variable: input
+    # State constraints
+    - constraint_form: bounded_constraint
+      constrained_variable: state
+      active_dims: [0, 2, 4] # The uncommented entries in the upper_bounds/lower_bounds vectors below
+      upper_bounds:
+      - 3     # x
+      # - 100 # x_dot
+      - 3     # y
+      # - 100 # y_dot
+      - 1.5 # z
+      # - 100 # z_dot
+      # - 3   # phi
+      # - 3   # theta
+      # - 3   # psi
+      # - 10  # p
+      # - 10  # q
+      # - 10  # r
+      lower_bounds:
+      - -3     # x
+      # - -100 # x_dot
+      - -3     # y
+      # - -100 # y_dot
+      - -0.1   # z
+      # - -100 # z_dot
+      # - -3   # phi
+      # - -3   # theta
+      # - -3   # psi
+      # - -10  # p
+      # - -10  # q
+      # - -10  # r
+
+  # Disturbances
+  # disturbances:
+  #   # Additive noise on the commanded input action
+  #   action:
+  #     - disturbance_func: white_noise
+  #       std: 0.001
+  #   # Random external force applied to the quadrotor (e.g. a push or wind)
+  #   dynamics:
+  #     - disturbance_func: uniform
+  #       low: [-0.05, -0.05, -0.05]
+  #       high: [0.05, 0.05, 0.05]
+
+  # Do not change
+  quad_type: 3  # 3D quadrotor
+  info_in_reset: True 
+  normalized_rl_action_space: False
+  done_on_out_of_bound: False
+

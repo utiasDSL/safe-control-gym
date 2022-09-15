@@ -122,6 +122,9 @@ class FirmwareWrapper(BaseController):
         Todo:
             * Add support for state estimation 
         """
+        self.states = []
+        self.takeoff_sent = False
+
         # Initialize history  
         self.action_history = [[0, 0, 0, 0] for _ in range(self.ACTION_DELAY)]
         self.sensor_history = [[[0, 0, 0], [0, 0, 0]] for _ in range(self.SENSOR_DELAY)]
@@ -237,6 +240,9 @@ class FirmwareWrapper(BaseController):
             cur_vel=np.array([obs[1], obs[3], obs[5]]) # global coord, m/s
             cur_rpy = np.array([obs[6], obs[7], obs[8]]) # body coord, rad 
             body_rot = R.from_euler('XYZ', cur_rpy).inv()
+
+            if self.takeoff_sent:
+                self.states += [[self.tick / self.firmware_freq, cur_pos[0], cur_pos[1], cur_pos[2]]]
 
             # Estimate rates 
             cur_rotation_rates = (cur_rpy - self.prev_rpy) / self.firmware_dt # body coord, rad/s
@@ -541,6 +547,7 @@ class FirmwareWrapper(BaseController):
         self.command_queue += [['_sendTakeoffCmd', [height, duration]]]
     def _sendTakeoffCmd(self, height, duration):
         print(f"INFO_{self.tick}: Takeoff command sent.")
+        self.takeoff_sent = True
         firm.crtpCommanderHighLevelTakeoff(height, duration)
         self.full_state_cmd_override = False
 
