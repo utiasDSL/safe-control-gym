@@ -7,7 +7,7 @@ Then run:
 Tips:
     Search for strings `INSTRUCTIONS:` and `REPLACE THIS (START)` in this file.
 
-    Change the code between the 5 blocks starting with
+    Change the code between the 4 blocks starting with
         #########################
         # REPLACE THIS (START) ##
         #########################
@@ -20,9 +20,8 @@ Tips:
     They are in methods:
         1) __init__
         2) cmdFirmware
-        3) cmdSimOnly (optional)
-        4) interStepLearn (optional)
-        5) interEpisodeLearn (optional)
+        3) interStepLearn (optional)
+        4) interEpisodeLearn (optional)
 
 """
 import numpy as np
@@ -81,7 +80,8 @@ class Controller():
         if use_firmware:
             self.ctrl = None
         else:
-            # Initialized simple PID Controller.
+            # Initialize a simple PID Controller ror debugging and test
+            # Do NOT use for the IROS 2022 competition. 
             self.ctrl = PIDController()
             # Save additonal environment parameters.
             self.KF = initial_info["quadrotor_kf"]
@@ -151,7 +151,7 @@ class Controller():
         """Pick command sent to the quadrotor through a Crazyswarm/Crazyradio-like interface.
 
         INSTRUCTIONS:
-            Re-implement this function to return the target position, velocity, acceleration, attitude, and attitude rates to be sent
+            Re-implement this method to return the target position, velocity, acceleration, attitude, and attitude rates to be sent
             from Crazyswarm to the Crazyflie using, e.g., a `cmdFullState` call.
 
         Args:
@@ -251,7 +251,8 @@ class Controller():
         """PID per-propeller thrusts with a simplified, software-only PID quadrotor controller.
 
         INSTRUCTIONS:
-            Re-implement this function to return the target position and velocity.
+            You do NOT need to re-implement this method for the IROS 2022 Safe Robot Learning competition.
+            Only re-implement this method when `use_firmware` == False to return the target position and velocity.
 
         Args:
             time (float): Episode's elapsed time, in seconds.
@@ -272,17 +273,11 @@ class Controller():
         iteration = int(time*self.CTRL_FREQ)
 
         #########################
-        # REPLACE THIS (START) ##
-        #########################
-
         if iteration < len(self.ref_x):
             target_p = np.array([self.ref_x[iteration], self.ref_y[iteration], self.ref_z[iteration]])
         else:
             target_p = np.array([self.ref_x[-1], self.ref_y[-1], self.ref_z[-1]])
         target_v = np.zeros(3)
-
-        #########################
-        # REPLACE THIS (END) ####
         #########################
 
         return target_p, target_v
