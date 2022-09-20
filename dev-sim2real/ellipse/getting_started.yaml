@@ -1,44 +1,29 @@
-# Level 1
-
-# | Evaluation Scenario | Constraints  | Rand. Inertial Properties | Randomized Obstacles, Gates | Rand. Between Episodes | Notes    |
-# | :-----------------: | :----------: | :-----------------------: | :-------------------------: | :--------------------: | :------: |
-# | `level1.yaml`       | **Yes**      | **Yes**                   | *No*                        | *No**                  | Adaptive |
-
 # Configuration
-num_episodes: 5 # Customizable number of episodes (NOTE: solutions that require fewer episode will receive higher scores)
-use_firmware: True # Whether to use pycffirmware or not (NOTE: only set to False for debugging purposes)
+num_episodes: 3 # Number of consecutive episodes
+use_firmware: True # Whether to use pycffirmware or not
 verbose: True # Boolean passed to the Controller class, can be used to turn on and off additional printouts
-
-# Note: DSL's flyable/usable space in Toronto extends from -3 to +3 meters in x and y and 0 and 2 meters in z
-# Thus, only scenarios that meet these constraints are suitable for sim2real experiments
 
 # Environment
 quadrotor_config:
   seed: 1337 # Random seed
-  reseed_on_reset: True # Whether to re-seed the random number generator between episodes
-  gui: False # Whether to spawn PyBullet's GUI
+  ctrl_freq: 30 # Frequency of decision making
+  pyb_freq: 500 # If `use_firmware` == True, must be multiple of 500, else must be multiple of ctrl_freq
+  episode_len_sec: 33  # Episode duration in seconds
+  gui: True # Whether to spawn PyBullet's GUI
   camera_view: [5, -40, -40, 0.5, -1, 0.5] # Distance, yaw, pitch, x, y, z target position
-
-  ctrl_freq: 30 # Frequency of the controller's decision making
-  pyb_freq: 500 # If `use_firmware` == True, must be multiple of 500, otherwise it must be multiple of ctrl_freq
-  episode_len_sec: 33  # Maximum episode duration, in seconds
-
-  done_on_violation: True # Whether `done` becomes True when a constraint is violated
-  done_on_completion: True # Whether `done` becomes True when the task is completed (traveled all gates and 2'' hover at stabilization_goal)
-  done_on_collision: True # Whether `done` becomes True when a collision happens
-  cost: competition  # Sparse reward function, if you desire, re-implement it in Quadrotor._get_reward()
+  cost: competition  # Sparse reward function, if desired, re-implement it in Quadrotor._get_reward()
                      # github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/safe_control_gym/envs/gym_pybullet_drones/quadrotor.py
-  
+  done_on_violation: False # Wether `done` becomes True when a constraint is violated
   task: stabilization
   task_info:
     stabilization_goal: [-0.5, 2.9, 0.75]  # Final goal (target position in x-y-z)
-    stabilization_goal_tolerance: 0.15
+    stabilization_goal_tolerance: 0.2
 
   # Nominal (pre-randomization) initial state
   init_state:
-    init_x: -0.9
+    init_x: 0
     init_x_dot: 0
-    init_y: -2.9
+    init_y: 0
     init_y_dot: 0
     init_z: 0.03
     init_z_dot: 0
@@ -51,18 +36,10 @@ quadrotor_config:
 
   # Nominal (pre-randomization) positions of gates and obstacles
   gates:
-    [  # x, y, z, r, p, y, type (0: `tall` obstacle, 1: `low` obstacle)
-      [0.5, -2.5, 0, 0, 0, -1.57, 0],
-      [2, -1.5, 0, 0, 0, 0, 1],
-      [0, 0.2, 0, 0, 0, 1.57, 1],
-      [-0.5, 1.5, 0, 0, 0, 0, 0]
+    [
     ]
   obstacles:
-    [  # x, y, z, r, p, y
-      [1.5, -2.5, 0, 0, 0, 0],
-      [0.5, -1, 0, 0, 0, 0],
-      [1.5, 0, 0, 0, 0, 0],
-      [-1, 0, 0, 0, 0, 0]
+    [
     ]
 
   # Randomization of the initial state
@@ -102,28 +79,28 @@ quadrotor_config:
       high: 0.01
     Ixx:
       distrib: "uniform"
-      low: -0.000001
-      high: 0.000001
+      low: 0.0
+      high: 0.0
     Iyy:
       distrib: "uniform"
-      low: -0.000001
-      high: 0.000001
+      low: 0.0
+      high: 0.0
     Izz:
       distrib: "uniform"
-      low: -0.000001
-      high: 0.000001
+      low: 0.0
+      high: 0.0
+  randomized_gates_and_obstacles: True
 
   # Randomization of the gates and obstacles positions
-  randomized_gates_and_obstacles: False
-  # gates_and_obstacles_randomization_info:
-  #   gates:
-  #     distrib: "uniform"
-  #     low: -0.15
-  #     high: 0.15
-  #   obstacles:
-  #     distrib: "uniform"
-  #     low: -0.15
-  #     high: 0.15
+  gates_and_obstacles_randomization_info:
+    gates:
+      distrib: "uniform"
+      low: -0.1
+      high: 0.1
+    obstacles:
+      distrib: "uniform"
+      low: -0.1
+      high: 0.1
 
   # Constraints
   constraints:
@@ -139,7 +116,7 @@ quadrotor_config:
       # - 100 # x_dot
       - 3     # y
       # - 100 # y_dot
-      - 2     # z
+      - 1.5 # z
       # - 100 # z_dot
       # - 3   # phi
       # - 3   # theta
@@ -173,10 +150,9 @@ quadrotor_config:
         low: [-0.1, -0.1, -0.1]
         high: [0.1, 0.1, 0.1]
 
-
-
-  # Do NOT edit
+  # Do not change
   quad_type: 3  # 3D quadrotor
-  info_in_reset: True # Info dictionary as second return value (after the initial observation) of env.reset()
+  info_in_reset: True 
   normalized_rl_action_space: False
   done_on_out_of_bound: False
+

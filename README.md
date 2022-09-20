@@ -228,6 +228,10 @@ edit_this.py : Controller.interEpisodeLearn(...)    # Update the controller's in
 - Mention in the Pull Request's Conversation tab (i) how many `num_episodes` you want your solution to use in each level (mandatory) and (ii) what method(s) you used and results you obtained (optional)
 - Tag @JacopoPan in the Pull Request's Conversation tab
 
+### Note: Private Submissions
+
+If you prefer not to publicly disclose your solution implementation, you can instead create a [private import of this repository](https://docs.github.com/en/get-started/importing-your-projects-to-github/importing-source-code-to-github/importing-a-repository-with-github-importer) to develop it and give access to @JacopoPan and @utiasDSLadmin, or even send your `edit_this.py` to jacopo.panerati@utoronto.ca. In this case, please submit early to allow the time to run extra checks.
+
 ## Scoring (v0.3)
 
 A) For ALL levels (0-3, sim2real), solutions will be evaluated—on the **last episode**—by:
@@ -242,6 +246,10 @@ B) For ALL levels (0-3, sim2real), solutions that accomplish A) will be evaluate
 C) For ALL levels (0-3, sim2real), the top 3 solutions ranked by the criteria in A) and the top 3 solutions ranked by the criteria in B) will score 20, 10, and 5 points respectively. The sum of these points will determine the final classification.
 
 ![terminal output](./figures/terminal1.png)
+
+## Important Dates
+
+- IROS Conference and Competition days: October 24-26, 2022
 
 ## Prizes
 
