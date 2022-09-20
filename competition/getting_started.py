@@ -170,8 +170,9 @@ def run(test=False):
                 info = {}
                 first_ep_iteration = False
             command_type, args = ctrl.cmdFirmware(curr_time, vicon_obs, reward, done, info)
-
-            # Select interface.
+            import pdb
+            # pdb.set_trace()
+            # Select interface. 
             if command_type == Command.FULLSTATE:
                 firmware_wrapper.sendFullStateCmd(*args, curr_time)
             elif command_type == Command.TAKEOFF:
