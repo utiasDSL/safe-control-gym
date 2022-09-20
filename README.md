@@ -18,7 +18,7 @@ These environments include (and evaluate) symbolic safety constraints and implem
          url = {https://arxiv.org/abs/2108.06266}}
 ```
 
-
+![baselines](./figures/baselines.png)
 
 
 ## Install on Ubuntu/macOS
