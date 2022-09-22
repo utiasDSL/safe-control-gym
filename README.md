@@ -137,7 +137,7 @@ edit_this.py : Controller.__init__(initial_obs, initial_info)           # Initia
             - 'gate_dimensions'                 Shape and measurements of the gates
             - 'obstacle_dimensions'             Shape and measurements of the obstacles
             - 'nominal_gates_pos_and_type'      *Nominal* pose and type (tall, low, etc.) of the gates
-            - 'nominal_obstacles_pos'           *Nominal* pose of the obstacles
+            - 'nominal_obstacles_pos'           *Nominal* pose of the obstacles (NOTE: these are provided once, through the controller's constructor, and might differ from the exact positions, if `randomized_gates_and_obstacles` is True, exact positions will also change across episodes if `reseed_on_reset` is False)
             - 'x_reference'                     Final position to reach/hover at
 
             - 'initial_state_randomization'     Distributions of the randomized additive error on the initial pose
@@ -168,7 +168,7 @@ edit_this.py : Controller.cmdFirmware(time, obs, reward, done, info)    # Select
             - 'current_target_gate_id'          ID of the next gate (-1 when all gates have been traveled through)
             - 'current_target_gate_type'        Type of the next gate (0: tall, 1: low)
             - 'current_target_gate_in_range'    Boolean, whether the next gate is close enough (i.e., <= VISIBILITY_RANGE == 0.45m) for perfect visibility (affects the value of the next key 'current_target_gate_pos')
-            - 'current_target_gate_pos'         *Nominal* or exact position of the next gate (depending on the value of the key above, 'current_target_gate_in_range')
+            - 'current_target_gate_pos'         *Nominal* or **exact** position of the next gate (depending on the value of the key above, 'current_target_gate_in_range')
             
             - 'at_goal_position'                Boolean, whether the quadrotor is at the final position ('x_reference')
             - 'task_completed'                  Boolean, whether the quadrotor stayed at the final position ('x_reference') for 2''
