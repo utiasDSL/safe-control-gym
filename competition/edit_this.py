@@ -25,6 +25,9 @@ Tips:
 
 """
 import numpy as np
+import scipy.interpolate
+import scipy.integrate
+from math import sqrt, sin, cos, atan2, pi
 
 from collections import deque
 
@@ -94,48 +97,188 @@ class Controller():
         # REPLACE THIS (START) ##
         #########################
 
-        # Example: harcode waypoints through the gates.
-        if use_firmware:
-            waypoints = [(self.initial_obs[0], self.initial_obs[2], initial_info["gate_dimensions"]["tall"]["height"])]  # Height is hardcoded scenario knowledge.
-        else:
-            waypoints = [(self.initial_obs[0], self.initial_obs[2], self.initial_obs[4])]
-        for idx, g in enumerate(self.NOMINAL_GATES):
-            height = initial_info["gate_dimensions"]["tall"]["height"] if g[6] == 0 else initial_info["gate_dimensions"]["low"]["height"]
-            if g[5] > 0.75 or g[5] < 0:
-                if idx == 2:  # Hardcoded scenario knowledge (direction in which to take gate 2).
-                    waypoints.append((g[0]+0.3, g[1]-0.3, height))
-                    waypoints.append((g[0]-0.3, g[1]-0.3, height))
-                else:
-                    waypoints.append((g[0]-0.3, g[1], height))
-                    waypoints.append((g[0]+0.3, g[1], height))
-            else:
-                if idx == 3:  # Hardcoded scenario knowledge (correct how to take gate 3).
-                    waypoints.append((g[0]+0.1, g[1]-0.3, height))
-                    waypoints.append((g[0]+0.1, g[1]+0.3, height))
-                else:
-                    waypoints.append((g[0], g[1]-0.3, height))
-                    waypoints.append((g[0], g[1]+0.3, height))
-        waypoints.append([initial_info["x_reference"][0], initial_info["x_reference"][2], initial_info["x_reference"][4]])
+        # hardcode gate yaw for testing
+        # TODO Replaced with more intelligent method of deciding direction to enter gate
+        self.NOMINAL_GATES[0][5] += pi
+        self.NOMINAL_GATES[2][5] += pi
 
-        # Polynomial fit
-        self.waypoints = np.array(waypoints)
-        deg = 6
-        t = np.arange(self.waypoints.shape[0])
-        fx = np.poly1d(np.polyfit(t, self.waypoints[:,0], deg))
-        fy = np.poly1d(np.polyfit(t, self.waypoints[:,1], deg))
-        fz = np.poly1d(np.polyfit(t, self.waypoints[:,2], deg))
-        duration = 15
-        t_scaled = np.linspace(t[0], t[-1], int(duration*self.CTRL_FREQ))
-        self.ref_x = fx(t_scaled)
-        self.ref_y = fy(t_scaled)
-        self.ref_z = fz(t_scaled)
+        ### Spline fitting between waypoints ###
+
+        length = len(self.NOMINAL_GATES) + 2
+        # end goal
+        if use_firmware:
+            waypoints = [(self.initial_obs[0], self.initial_obs[2], initial_info["gate_dimensions"]["tall"]["height"], self.initial_obs[8])]  # Height is hardcoded scenario knowledge.
+        else:
+            waypoints = [(self.initial_obs[0], self.initial_obs[2], self.initial_obs[4], self.initial_obs[8])]
+
+        for idx, g in enumerate(self.NOMINAL_GATES):
+            [x, y, _, _, _, yaw, typ] = g
+            z = initial_info["gate_dimensions"]["tall"]["height"] if typ == 0 else initial_info["gate_dimensions"]["low"]["height"]
+            waypoints.append((x, y, z, yaw))
+        # end goal
+        waypoints.append((initial_info["x_reference"][0], initial_info["x_reference"][2], initial_info["x_reference"][4], initial_info["x_reference"][8]))
+
+        # Affect curve radius around waypoints, higher value means larger curve, smaller value means tighter curve
+        grad_scale = 2
+
+        [x0, y0, _, yaw0] = waypoints[0]
+        dx0 = sin(yaw0)
+        dy0 = cos(yaw0)
+        x_coeffs = np.zeros((4,len(waypoints)-1))
+        y_coeffs = np.zeros((4,len(waypoints)-1))
+
+        # "time" for each waypoint
+        # TODO replace with more intelligent time intervals
+        ts = np.arange(length)
+        for idx in range(1, length):
+            [xf, yf, _, yawf] = waypoints[idx]
+            inv_t = 1/(ts[idx] - ts[idx - 1])
+            inv_t2 = inv_t*inv_t
+            dxf = sin(yawf) * grad_scale
+            dyf = cos(yawf) * grad_scale
+            dx = xf - x0
+            dy = yf - y0
+            x_a0 = x0
+            x_a1 = dx0
+            x_a2 = (3*dx*inv_t - 2*dx0 - dxf)*inv_t
+            x_a3 = (-2*dx*inv_t + (dxf + dx0))*inv_t2
+            x_coeffs[:,idx-1] = (x_a3, x_a2, x_a1, x_a0)
+            y_a0 = y0
+            y_a1 = dy0
+            y_a2 = (3*dy*inv_t - 2*dy0 - dyf)*inv_t
+            y_a3 = (-2*dy*inv_t + (dyf + dy0))*inv_t2
+            y_coeffs[:,idx-1] = (y_a3, y_a2, y_a1, y_a0)
+            [x0, y0] = [xf, yf]
+            [dx0, dy0] = [dxf, dyf]
+        waypoints = np.array(waypoints)
+        z_coeffs = scipy.interpolate.PchipInterpolator(ts, waypoints[:,2], 0).c   # ascending at start, descending at end
+
+        def df_idx(idx):
+            def df(t):
+                dx = (3*x_coeffs[1,idx]*t + 2*x_coeffs[2,idx])*t + x_coeffs[3,idx]
+                dy = (3*y_coeffs[1,idx]*t + 2*y_coeffs[2,idx])*t + y_coeffs[3,idx]
+                dz = (3*z_coeffs[1,idx]*t + 2*z_coeffs[2,idx])*t + z_coeffs[3,idx]
+                return sqrt(dx*dx+dy*dy+dz*dz)
+            return df
+
+        def f_(coeffs):
+            def f(t):
+                for idx in range(length-1):
+                    if (ts[idx+1] > t):
+                        break
+                t -= ts[idx]
+                return ((coeffs[0,idx]*t + coeffs[1,idx])*t + coeffs[2,idx])*t + coeffs[3,idx]
+            return f
+
+        def df_(coeffs):
+            def f(t):
+                for idx in range(length-1):
+                    if (ts[idx+1] > t):
+                        break
+                t -= ts[idx]
+                return (3*coeffs[0,idx]*t + 2*coeffs[1,idx])*t + coeffs[2,idx]
+            return f
+
+        def d2f_(coeffs):
+            def f(t):
+                for idx in range(length-1):
+                    if (ts[idx+1] > t):
+                        break
+                t -= ts[idx]
+                return 6*coeffs[0,idx]*t + 2*coeffs[1,idx]
+            return f
+
+        # Integrate to get pathlength
+        pathlength = 0
+        for idx in range(length-1):
+            pathlength += scipy.integrate.quad(df_idx(idx), 0, ts[idx+1] - ts[idx])[0]
+        self.scaling_factor = ts[-1] / pathlength
+
+        self.x = f_(x_coeffs)
+        self.y = f_(y_coeffs)
+        self.z = f_(z_coeffs)
+
+        self.dx = df_(x_coeffs)
+        self.dy = df_(y_coeffs)
+        self.dz = df_(z_coeffs)
+
+        self.d2x = d2f_(x_coeffs)
+        self.d2y = d2f_(y_coeffs)
+        self.d2z = d2f_(z_coeffs)
+
+        duration = ts[-1] - ts[0]
+        t_scaled = np.linspace(ts[0], ts[-1], int(duration*self.CTRL_FREQ))
+        x_scaled = np.array(tuple(map(self.x, t_scaled)))
+        y_scaled = np.array(tuple(map(self.y, t_scaled)))
+        z_scaled = np.array(tuple(map(self.z, t_scaled)))
 
         if self.VERBOSE:
+            print(x_coeffs)
+            print(y_coeffs)
+            print(z_coeffs)
+            print(waypoints)
+            print(t_scaled)
+            print(x_scaled)
+            print(y_scaled)
+            print(z_scaled)
             # Plot trajectory in each dimension and 3D.
-            plot_trajectory(t_scaled, self.waypoints, self.ref_x, self.ref_y, self.ref_z)
-
+            plot_trajectory(t_scaled, waypoints, x_scaled, y_scaled, z_scaled)
             # Draw the trajectory on PyBullet's GUI
-            draw_trajectory(initial_info, self.waypoints, self.ref_x, self.ref_y, self.ref_z)
+            draw_trajectory(initial_info, waypoints, x_scaled, y_scaled, z_scaled)
+
+        ### S-curve ###
+        sf = pathlength
+
+        # Kinematic limits
+        # TODO determine better estimates from model
+        v_max = 2.e-1
+        a_max = 2.e-1
+        j_max = 2.e-1
+
+        s = np.zeros(8)
+        v = np.zeros(8)
+        a = np.zeros(8)
+        j = np.array((j_max, 0, -j_max, 0, -j_max, 0, j_max, 0))
+        t = np.zeros(8)
+        T = np.zeros(8)
+
+        def fill():
+            for i in range(7):
+                dt = T[i+1]
+                t[i+1] = t[i] + dt
+                s[i+1] = ((j[i]/6*dt + a[i]/2)*dt + v[i])*dt+ s[i]
+                v[i+1] =  (j[i]/2*dt + a[i]  )*dt + v[i]
+                a[i+1] =   j[i]  *dt + a[i]
+
+        T[1] = T[3] = T[5] = T[7] = min(sqrt(v_max/j_max), a_max/j_max) # min(wont't hit a_max, will hit a_max)
+        fill()
+        ds = sf - s[-1]
+        if ds < 0:
+            # T[2] = T[4] = T[6] = 0
+            T[1] = T[3] = T[5] = T[7] = (xf/(2*j_max))**(1./3)
+        else:
+            T_2_max = (v_max - 2*v[1])/a_max
+            added_T_2 = (-v[1]+sqrt(v[1]*v[1]/2 + a_max*ds))/a_max
+            if added_T_2 > T_2_max:
+                T[2] = T[6] = T_2_max
+                ds -= (2*v[1] + a_max*T_2_max)*T_2_max
+                T[4] = ds/v_max
+            else:
+                # T[4] = 0
+                T[2] = T[6] = added_T_2
+        fill()
+        def s_curve(t_):
+            for i in range(7):
+                if t[i+1] > t_:
+                    break
+            dt = t_ - t[i]
+            s_ = ((j[i]/6*dt + a[i]/2)*dt + v[i])*dt+ s[i]
+            v_ =  (j[i]/2*dt + a[i]  )*dt + v[i]
+            a_ =   j[i]  *dt + a[i]
+            return [s_, v_, a_]
+        self.s = s_curve
+        self.start_t = -1
+        self.end_t = t[-1]
 
         #########################
         # REPLACE THIS (END) ####
@@ -176,60 +319,108 @@ class Controller():
         # REPLACE THIS (START) ##
         #########################
 
-        # Handwritten solution for GitHub's getting_stated scenario.
+        t = time / self.scaling_factor
 
+        # # Handwritten solution for GitHub's getting_stated scenario.
         if iteration == 0:
             height = 1
             duration = 2
 
             command_type = Command(2)  # Take-off.
             args = [height, duration]
+        elif iteration >= 3*self.CTRL_FREQ:
+            if self.start_t < 0:
+                self.start_t = t
+            t -= self.start_t
+            if t > self.end_t:
+                height = 0.
+                duration = 3
+                command_type = Command(3)  # Land.
+                args = [height, duration]
+            [curve_t, curve_v, curve_a] = self.s(t)
+            curve_t *= self.scaling_factor
+            curve_v *= self.scaling_factor
+            curve_a *= self.scaling_factor
+            x_c = self.x(curve_t)
+            y_c = self.y(curve_t)
+            z_c = self.z(curve_t)
+            target_pos = np.array([x_c, y_c, z_c])
+            print(target_pos)
 
-        elif iteration >= 3*self.CTRL_FREQ and iteration < 20*self.CTRL_FREQ:
-            step = min(iteration-3*self.CTRL_FREQ, len(self.ref_x) -1)
-            target_pos = np.array([self.ref_x[step], self.ref_y[step], self.ref_z[step]])
-            target_vel = np.zeros(3)
-            target_acc = np.zeros(3)
-            target_yaw = 0.
+            dx_c = self.dx(curve_t)
+            dy_c = self.dy(curve_t)
+            dz_c = self.dz(curve_t)
+            d2x_c = self.d2x(curve_t)
+            d2y_c = self.d2y(curve_t)
+            d2z_c = self.d2z(curve_t)
+            tangent = np.array((dx_c,dy_c,dz_c))
+            dtangent = np.array((d2x_c,d2y_c,d2z_c))
+            den = np.linalg.norm(tangent[:2])
+            if den < 1e-9:
+                w = 0
+            else:
+                num = dx_c * d2y_c - dy_c * d2x_c
+                w = num/den
+                w *= curve_v
+
+            target_vel = tangent * curve_v
+            target_acc = tangent * curve_a + dtangent * curve_v**2
+            target_yaw = atan2(dy_c, dx_c)
             target_rpy_rates = np.zeros(3)
+            # target_vel = np.zeros(3)
+            # target_acc = np.zeros(3)
+            # target_yaw = 0.
+            # target_rpy_rates = np.zeros(3)
 
             command_type = Command(1)  # cmdFullState.
             args = [target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
+            
 
-        elif iteration == 20*self.CTRL_FREQ:
-            command_type = Command(6)  # notify setpoint stop.
-            args = []
+        # elif iteration >= 3*self.CTRL_FREQ and iteration < 20*self.CTRL_FREQ:
+        #     step = min(iteration-3*self.CTRL_FREQ, len(self.ref_x) -1)
+        #     target_pos = np.array([self.ref_x[step], self.ref_y[step], self.ref_z[step]])
+        #     target_vel = np.zeros(3)
+        #     target_acc = np.zeros(3)
+        #     target_yaw = 0.
+        #     target_rpy_rates = np.zeros(3)
 
-        elif iteration == 20*self.CTRL_FREQ+1:
-            x = self.ref_x[-1]
-            y = self.ref_y[-1]
-            z = 1.5 
-            yaw = 0.
-            duration = 2.5
+        #     command_type = Command(1)  # cmdFullState.
+        #     args = [target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
 
-            command_type = Command(5)  # goTo.
-            args = [[x, y, z], yaw, duration, False]
+        # elif iteration == 20*self.CTRL_FREQ:
+        #     command_type = Command(6)  # notify setpoint stop.
+        #     args = []
 
-        elif iteration == 23*self.CTRL_FREQ:
-            x = self.initial_obs[0]
-            y = self.initial_obs[2]
-            z = 1.5
-            yaw = 0.
-            duration = 6
+        # elif iteration == 20*self.CTRL_FREQ+1:
+        #     x = self.ref_x[-1]
+        #     y = self.ref_y[-1]
+        #     z = 1.5 
+        #     yaw = 0.
+        #     duration = 2.5
 
-            command_type = Command(5)  # goTo.
-            args = [[x, y, z], yaw, duration, False]
+        #     command_type = Command(5)  # goTo.
+        #     args = [[x, y, z], yaw, duration, False]
 
-        elif iteration == 30*self.CTRL_FREQ:
-            height = 0.
-            duration = 3
+        # elif iteration == 23*self.CTRL_FREQ:
+        #     x = self.initial_obs[0]
+        #     y = self.initial_obs[2]
+        #     z = 1.5
+        #     yaw = 0.
+        #     duration = 6
 
-            command_type = Command(3)  # Land.
-            args = [height, duration]
+        #     command_type = Command(5)  # goTo.
+        #     args = [[x, y, z], yaw, duration, False]
 
-        elif iteration == 33*self.CTRL_FREQ-1:
-            command_type = Command(-1)  # Terminate command to be sent once trajectory is completed.
-            args = []
+        # elif iteration == 30*self.CTRL_FREQ:
+        #     height = 0.
+        #     duration = 3
+
+        #     command_type = Command(3)  # Land.
+        #     args = [height, duration]
+
+        # elif iteration == 33*self.CTRL_FREQ-1:
+        #     command_type = Command(-1)  # Terminate command to be sent once trajectory is completed.
+        #     args = []
 
         else:
             command_type = Command(0)  # None.
