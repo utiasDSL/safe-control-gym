@@ -7,16 +7,11 @@ References papers & code:
     * [rllab-adv](https://github.com/lerrel/rllab-adv)
     * [Robust Reinforcement Learning via adversary pools](https://github.com/eugenevinitsky/robust_RL_multi_adversary)
 
-Example: 
-    train on cartpole_adversary::
-    
+Example:
+    train on cartpole_adversary:
         $ python tests/test_main.py --mode train_two_phase --exp_id rap_cartpole_adv \
         --algo rap --task cartpole_adversary --num_workers 2 --max_env_steps 2000000 \
         --tensorboard --use_gae --num_adversaries 2
-
-Todo:
-    *
-
 """
 import os
 import time

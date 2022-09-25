@@ -25,10 +25,10 @@ class Experiment:
         '''Creates a generic experiment class to run evaluations and collect standard metrics.
 
         Args:
-            env (BenchmarkEnv): the environment for the task.
-            ctrl (BaseController): the controller for the task.
-            train_env (BenchmarkEnv): the environment used for training.
-            safety_filter (BaseSafetyFilter): the safety filter to filter the controller.
+            env (BenchmarkEnv): The environment for the task.
+            ctrl (BaseController): The controller for the task.
+            train_env (BenchmarkEnv): The environment used for training.
+            safety_filter (BaseSafetyFilter): The safety filter to filter the controller.
         '''
 
         self.env = env
@@ -43,18 +43,18 @@ class Experiment:
 
         self.reset()
 
-    def run_evaluation(self, training=False, n_episodes=None, n_steps=None, log_freq=None, **kwargs):
+    def run_evaluation(self, training=False, n_episodes=None, n_steps=None, log_freq=None, verbose=True, **kwargs):
         '''Evaluate a trained controller.
 
         Args:
-            training (bool): whether run_evaluation is being run as part of a training loop or not.
-            n_episodes (int): number of runs to execute.
-            n_steps (int): the number of steps to collect in total.
-            log_freq (int): the frequency with which to log information.
+            training (bool): Whether run_evaluation is being run as part of a training loop or not.
+            n_episodes (int): Number of runs to execute.
+            n_steps (int): The number of steps to collect in total.
+            log_freq (int): The frequency with which to log information.
 
         Returns:
-            trajs_data (dict): the raw data from the executed runs.
-            metrics (dict): the metrics calculated from the raw data.
+            trajs_data (dict): The raw data from the executed runs.
+            metrics (dict): The metrics calculated from the raw data.
         '''
 
         if not training:
@@ -63,9 +63,10 @@ class Experiment:
         metrics = self.compute_metrics(trajs_data)
 
         # terminal printouts
-        for metric_key, metric_val in metrics.items():
-            print('{}: {:.3f}'.format(colored(metric_key, 'yellow'), metric_val))
-        print('Evaluation done.')
+        if verbose:
+            for metric_key, metric_val in metrics.items():
+                print('{}: {:.3f}'.format(colored(metric_key, 'yellow'), metric_val))
+            print('Evaluation done.')
         return dict(trajs_data), metrics
 
     def _execute_evaluations(self, n_episodes=None, n_steps=None, log_freq=None):
@@ -80,14 +81,12 @@ class Experiment:
         '''Runs the experiments and collects all the required data.
 
         Args:
-            ctrl : Controller to run the task. Default is self.train.
-            env : Environment of the task to run. Defulat is self.env.
-            n_episodes (int): number of runs to execute.
-            n_steps (int): the number of steps to collect in total.
-            log_freq (int): the frequency with which to log information.
+            n_episodes (int): Number of runs to execute.
+            n_steps (int): The number of steps to collect in total.
+            log_freq (int): The frequency with which to log information.
 
         Returns:
-            trajs_data (defaultdict(list)): the raw data from the executed runs.
+            trajs_data (defaultdict(list)): The raw data from the executed runs.
         '''
 
         if n_episodes is None and n_steps is None:
@@ -104,12 +103,14 @@ class Experiment:
         steps, trajs = 0, 0
         obs, info = self._evaluation_reset(ctrl=ctrl,
                                            env=env,
-                                           ctrl_data=None)
+                                           ctrl_data=None,
+                                           sf_data=None)
         ctrl_data = defaultdict(list)
+        sf_data = defaultdict(list)
 
         if n_episodes is not None:
             while trajs < n_episodes:
-                action = ctrl.select_action(obs, info)
+                action = self._select_action(obs=obs, info=info, ctrl=ctrl)
                 # inner sim loop to accomodate different control frequencies
                 for _ in range(sim_steps):
                     obs, _, done, info = env.step(action)
@@ -117,11 +118,12 @@ class Experiment:
                         trajs += 1
                         self._evaluation_reset(ctrl=ctrl,
                                                env=env,
-                                               ctrl_data=ctrl_data)
+                                               ctrl_data=ctrl_data,
+                                               sf_data=sf_data)
                         break
         elif n_steps is not None:
             while steps < n_steps:
-                action = ctrl.select_action(obs, info)
+                action = self._select_action(obs=obs, info=info, ctrl=ctrl)
                 # inner sim loop to accomodate different control frequencies
                 for _ in range(sim_steps):
                     obs, _, done, info = env.step(action)
@@ -129,27 +131,60 @@ class Experiment:
                     if steps >= n_steps:
                         env.save_data()
                         for data_key, data_val in ctrl.results_dict.items():
-                            ctrl_data[data_key].append(data_val)
+                            ctrl_data[data_key].append(np.array(deepcopy(data_val)))
+                        if self.safety_filter is not None:
+                            for data_key, data_val in self.safety_filter.results_dict.items():
+                                sf_data[data_key].append(np.array(deepcopy(data_val)))
                         break
                     if done:
                         self._evaluation_reset(ctrl=ctrl,
                                                env=env,
-                                               ctrl_data=ctrl_data)
+                                               ctrl_data=ctrl_data,
+                                               sf_data=sf_data)
                         break
 
         trajs_data = env.data
         trajs_data['controller_data'].append(munchify(dict(ctrl_data)))
+        if self.safety_filter is not None:
+            trajs_data['safety_filter_data'].append(dict(sf_data))
         return munchify(trajs_data)
 
-    def _evaluation_reset(self, ctrl, env, ctrl_data):
+    def _select_action(self, obs, info, ctrl=None):
+        '''Determines the executed action using the controller and safety filter.
+
+        Args:
+            obs (ndarray): The observation at this timestep.
+            info (dict): The info at this timestep.
+
+        Returns:
+            action (ndarray): The action chosen by the controller and safety filter.
+        '''
+        if ctrl is None:
+            action = self.ctrl.select_action(obs, info)
+        else:
+            action = ctrl.select_action(obs, info)
+
+        if self.safety_filter is not None:
+            physical_action = self.env.denormalize_action(action)
+            unextended_obs = obs[:self.env.symbolic.nx]
+            certified_action, success = self.safety_filter.certify_action(unextended_obs, physical_action, info)
+            if success:
+                action = self.env.normalize_action(certified_action)
+
+        return action
+
+    def _evaluation_reset(self, ctrl, env, ctrl_data, sf_data):
         '''Resets the evaluation between runs.
 
         Args:
-            ctrl_data (defaultdict): the controller specific data collected during execution.
+            ctrl (BaseController): The controller being reset.
+            env (BenchmarkEnv): The environment being reset.
+            ctrl_data (defaultdict): The controller specific data collected during execution.
+            sf_data (defaultdict): The safety filter specific data collected during execution.
 
         Returns:
-            obs (ndarray): the initial observation.
-            info (dict): the initial info.
+            obs (ndarray): The initial observation.
+            info (dict): The initial info.
         '''
         if ctrl is None:
             ctrl = self.ctrl
@@ -162,12 +197,21 @@ class Experiment:
             info = None
         if ctrl_data is not None:
             for data_key, data_val in ctrl.results_dict.items():
-                ctrl_data[data_key].append(data_val)
+                ctrl_data[data_key].append(np.array(deepcopy(data_val)))
+        if sf_data is not None and self.safety_filter is not None:
+            for data_key, data_val in self.safety_filter.results_dict.items():
+                sf_data[data_key].append(np.array(deepcopy(data_val)))
         ctrl.reset_before_run(obs, info, env=env)
+        if self.safety_filter is not None:
+            self.safety_filter.reset_before_run(env=env)
         return obs, info
 
     def launch_training(self, **kwargs):
-        '''Since the learning loop varies among controllers, can only delegate to its own `learn()` method. '''
+        '''Since the learning loop varies among controllers, can only delegate to its own `learn()` method.
+
+        Returns:
+            trajs_data (defaultdict(list)): The raw data from the training.
+        '''
 
         self.reset()
         self.ctrl.learn(env=self.train_env, **kwargs)
@@ -186,10 +230,10 @@ class Experiment:
         '''Compute all standard metrics on the given trajectory data.
 
         Args:
-            trajs_data (defaultdict(list)): the raw data from the executed runs.
+            trajs_data (defaultdict(list)): The raw data from the executed runs.
 
         Returns:
-            metrics (dict): the metrics calculated from the raw data.
+            metrics (dict): The metrics calculated from the raw data.
         '''
 
         met = MetricExtractor(trajs_data)
@@ -236,8 +280,8 @@ class Experiment:
         '''Restores model of the controller and/or safety filter given checkpoint paths.
 
         Args:
-            ctrl_path (str): the path used to load the controller's model.
-            safety_filter_path (str): the path used to load the safety_filter's model.
+            ctrl_path (str): The path used to load the controller's model.
+            safety_filter_path (str): The path used to load the safety_filter's model.
         '''
 
         if ctrl_path is not None:
@@ -249,8 +293,8 @@ class Experiment:
         '''Saves the model of the controller and/or safety filter given checkpoint paths.
 
         Args:
-            ctrl_path (str): the path used to save the controller's model.
-            safety_filter_path (str): the path used to save the safety_filter's model.
+            ctrl_path (str): The path used to save the controller's model.
+            safety_filter_path (str): The path used to save the safety_filter's model.
         '''
 
         if ctrl_path is not None:
@@ -262,10 +306,10 @@ class Experiment:
 class RecordDataWrapper(gym.Wrapper):
     '''A wrapper to standardizes logging for benchmark envs.
 
-    currently saved info:
+    currently saved info
     * obs, reward, done, info, action
     * env.state, env.current_physical_action,
-    * env.current_noisy_physical_action, env.current_clipped_action
+    env.current_noisy_physical_action, env.current_clipped_action
     '''
 
     def __init__(self, env):
@@ -286,7 +330,7 @@ class RecordDataWrapper(gym.Wrapper):
             self.episode_data = defaultdict(list)
 
     def clear_data(self):
-        '''Clears all data in self.data and self.episode_data'''
+        '''Clears all data in self.data and self.episode_data. '''
         self.data = defaultdict(list)
         self.episode_data = defaultdict(list)
 
@@ -319,7 +363,7 @@ class RecordDataWrapper(gym.Wrapper):
         # save to episode data container
         step_data = dict(
             obs=obs,
-            action=action,
+            action=self.env.current_raw_action,
             done=float(done),
             info=info,
             reward=reward,
@@ -365,7 +409,7 @@ class MetricExtractor:
         '''Creates a class to extract metrics from standard trajectory data.
 
         Args:
-            data (defaultdict(list)): the raw data from the executed runs, in standard form from the Experiment class.
+            data (defaultdict(list)): The raw data from the executed runs, in standard form from the Experiment class.
         '''
         self.data = data
 
@@ -373,11 +417,11 @@ class MetricExtractor:
         '''Extract data field from recorded trajectory data, optionally postprocess each episode data (e.g. get sum).
 
         Args:
-            key (str): the key of the data to retrieve.
-            postprocess_func (lambda): a function to process the outgoing data.
+            key (str): The key of the data to retrieve.
+            postprocess_func (lambda): A function to process the outgoing data.
 
         Returns:
-            episode_data (list): the desired data.
+            episode_data (list): The desired data.
         '''
 
         if key in self.data:
@@ -391,24 +435,44 @@ class MetricExtractor:
         return episode_data
 
     def get_episode_lengths(self):
-        '''Total length of episodes. '''
+        '''Total length of episodes.
+
+        Returns:
+            episode_lengths (list): The lengths of each episode.
+        '''
         return self.get_episode_data('length', postprocess_func=sum)
 
     def get_episode_returns(self):
-        '''Total reward/return of episodes. '''
+        '''Total reward/return of episodes.
+
+        Returns:
+            episode_rewards (list): The total reward of each episode.
+        '''
         return self.get_episode_data('reward', postprocess_func=sum)
 
     def get_episode_rmse(self):
-        '''Root mean square error of episodes. '''
+        '''Root mean square error of episodes.
+
+        Returns:
+            episode_rmse (list): The total rmse of each episode.
+        '''
         return self.get_episode_data('mse',
-                                     postprocess_func=lambda x: np.sqrt(np.mean(x)))
+                                     postprocess_func=lambda x: float(np.sqrt(np.mean(x))))
 
     def get_episode_constraint_violations(self):
-        '''Occurence of any violation in episodes. '''
+        '''Occurence of any violation in episodes.
+
+        Returns:
+            episode_violated (list): Whether each episode had a constraint violation.
+        '''
         return self.get_episode_data('constraint_violation',
                                      postprocess_func=lambda x: float(any(x)))
 
     def get_episode_constraint_violation_steps(self):
-        '''Total violation steps of episodes. '''
+        '''Total violation steps of episodes.
+
+        Returns:
+            episode_violations (list): The total number of constraint violations of each episode.
+        '''
         return self.get_episode_data('constraint_violation',
                                      postprocess_func=sum)

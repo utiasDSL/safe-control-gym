@@ -334,8 +334,8 @@ class DefaultConstraint(BoundedConstraint):
                 default_constraint_space = env.observation_space
         elif constrained_variable == ConstrainedVariableType.INPUT:
             default_constraint_space = spaces.Box(low=env.physical_action_bounds[0],
-                                            high=env.physical_action_bounds[1],
-                                            dtype=np.float32)
+                                                  high=env.physical_action_bounds[1],
+                                                  dtype=np.float32)
         else:
             raise NotImplementedError('[ERROR] DefaultConstraint can only be of type STATE or INPUT')
         # extract bounds from the space
