@@ -10,6 +10,12 @@ warmstart: False
 integration_algo: rk4
 use_terminal_set: False
 
+# Prior info
+prior_info:
+  prior_prop: null
+  randomize_prior_prop: False
+  prior_prop_rand_info: null
+
 # Safe set calculation
 n_samples: 600
 n_samples_terminal_set: 10

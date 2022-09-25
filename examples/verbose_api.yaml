@@ -29,10 +29,6 @@ cartpole_config:
       distrib: 'uniform'
       low: -0.05
       high: 0.05
-  prior_prop:
-    pole_length: 0.5
-    pole_mass: 0.1
-    cart_mass: 1
   inertial_prop:
     pole_length: 1
     pole_mass: 0.1

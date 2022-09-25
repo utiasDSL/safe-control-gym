@@ -64,7 +64,7 @@ class LINEAR_MPSC(MPSC):
             if key != 'self' and key != 'kwargs' and '__' not in key:
                 self.__dict__[key] = value
 
-        super().__init__(env_func, horizon, q_lin, r_lin, integration_algo, warmstart, additional_constraints, use_terminal_set, cost_function)
+        super().__init__(env_func, horizon, q_lin, r_lin, integration_algo, warmstart, additional_constraints, use_terminal_set, cost_function, **kwargs)
 
         self.terminal_set_verts = None
 
