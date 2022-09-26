@@ -33,13 +33,13 @@ from safe_control_gym.controllers.rarl.rarl_utils import split_obs_by_adversary
 class RAP(BaseController):
     """rarl via adersarial population with PPO."""
 
-    def __init__(self, 
-                 env_func, 
-                 training=True, 
-                 checkpoint_path="model_latest.pt", 
-                 output_dir="temp", 
-                 use_gpu=False, 
-                 seed=0, 
+    def __init__(self,
+                 env_func,
+                 training=True,
+                 checkpoint_path="model_latest.pt",
+                 output_dir="temp",
+                 use_gpu=False,
+                 seed=0,
                  **kwargs):
         super().__init__(env_func, training, checkpoint_path, output_dir, use_gpu, seed, **kwargs)
         # task
@@ -68,7 +68,7 @@ class RAP(BaseController):
         self.agent = PPOAgent(self.env.observation_space, self.env.action_space, **shared_agent_args)
         self.agent.to(self.device)
 
-        # fetch adversary specs from env 
+        # fetch adversary specs from env
         if self.training:
             self.adv_obs_space = self.env.get_attr("adversary_observation_space")[0]
             self.adv_act_space = self.env.get_attr("adversary_action_space")[0]
@@ -300,15 +300,15 @@ class RAP(BaseController):
         # learning stats
         self.logger.add_scalars(
             {
-                k: results[k] 
+                k: results[k]
                 for k in ["policy_loss", "value_loss", "entropy_loss"]
-            }, 
-            step, 
+            },
+            step,
             prefix="loss")
         for adv_idx in results["adv_indices"]:
             self.logger.add_scalars(
                 {
-                    k: results[k + "_adv{}".format(adv_idx)] 
+                    k: results[k + "_adv{}".format(adv_idx)]
                     for k in ["policy_loss", "value_loss", "entropy_loss"]
                 },
                 step,

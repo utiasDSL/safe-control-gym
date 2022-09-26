@@ -248,7 +248,7 @@ class PID(BaseController):
         '''Resets the control classes. The previous step's and integral
            errors for both position and attitude are set to zero.
         '''
-        self.model = self.get_prior(self.env)
+        self.model = self.get_prior(self.env, self.prior_info)
         self.GRAVITY = self.g * self.model.quad_mass # The gravitational force (g*M) acting on each drone.
         self.env.reset()
         self.reset_before_run()

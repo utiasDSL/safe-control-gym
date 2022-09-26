@@ -19,17 +19,17 @@ Todos:
 * Use numba for some metric implementations to accelerate (refer to similaritymeasures).
 
 """
-import numpy as np
-import torch
+import numpy as np 
+import torch 
 from safe_control_gym.math_and_models.transformations import npRotXYZ
 
 
 
 def euclidean_distance(u, v, weights=None):
     """ Euclidean distance, or use https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.euclidean.html
-
+    
     Args:
-        u, v (ndarray): 1D array, shape (D,).
+        u, v (ndarray): 1D array, shape (D,). 
         weights (float|ndarray): weights for each vector dimension.
     """
     weights = np.array(weights) if weights else 1
@@ -38,9 +38,9 @@ def euclidean_distance(u, v, weights=None):
 
 def minkowski_distance(u, v, p=2, weights=None):
     """Minkowski distance, or use https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.minkowski.html
-
+    
     Args:
-        u, v (ndarray): 1D array, shape (D,).
+        u, v (ndarray): 1D array, shape (D,). 
         p (float): order of the norm.
         weights (float|ndarray): weights for each vector dimension.
     """
@@ -49,9 +49,9 @@ def minkowski_distance(u, v, p=2, weights=None):
 
 
 def rotation_distance(rot1, rot2, mode="geodesic"):
-    """Metrics for 3D Rotations.
+    """Metrics for 3D Rotations. 
     Reference: https://www.cs.cmu.edu/~cga/dynopt/readings/Rmetric.pdf
-
+    
     Args:
         rot1, rot2 (ndarray): rotation matrices, shape (3,3).
         mode (str): options from geodesic|dev_id|inner_unit_quad2|inner_unit_quad|norm_diff_quad.
@@ -60,11 +60,11 @@ def rotation_distance(rot1, rot2, mode="geodesic"):
     # use clipping to avoid NaNs for rounding errors
     # reference: https://github.com/utiasSTARS/liegroups/blob/fe1d376b7d33809dec78724b456f01833507c305/liegroups/numpy/so3.py#L180
     rot_d = np.arccos(np.clip(0.5*np.trace(rot1 @ np.transpose(rot2))-0.5, -1., 1.))
-    # can derive other metrics using their functional equivalence
+    # can derive other metrics using their functional equivalence 
     if mode == "geodesic":
         pass
     elif mode == "dev_id":
-        # # eqn 25 in reference
+        # # eqn 25 in reference 
         # rot_d = np.sqrt(2* (3 - np.trace(rot1 @ np.transpose(rot2))))
         # eqn 33, range [0, 2*sqrt(2)]
         rot_d = 2 * np.sqrt(2) * np.sin(rot_d/2)
@@ -79,12 +79,12 @@ def rotation_distance(rot1, rot2, mode="geodesic"):
         rot_d = np.sqrt(2 * (1 - np.cos(rot_d/2)))
     else:
         raise NotImplementedError("The given rotation metric is not available.")
-    return rot_d
+    return rot_d 
 
 
 def state_distance(state1, state2, weights=None, rot_mode="geodesic", task="cartpole", quad_type=3):
     """Metric distance between two env states.
-
+    
     Args:
         state1, state2 (ndarray): trajectory states, shape (D,).
         weights (list|ndarray): weights to different elements/groups in state.
@@ -92,7 +92,7 @@ def state_distance(state1, state2, weights=None, rot_mode="geodesic", task="cart
 
     Returns:
         state_d (float): distance metric between the 2 states.
-    """
+    """    
     if task == "cartpole":
         # state is [x, x_dot, theta, theta_dot]
         state_d = euclidean_distance(state1, state2, weights)
@@ -109,11 +109,11 @@ def state_distance(state1, state2, weights=None, rot_mode="geodesic", task="cart
             else:
                 weights = np.ones(4)
             # extract state
-            pos1, pos2 = state1[[0,2]], state2[[0,2]]
-            vel1, vel2 = state1[[1,3]], state2[[1,3]]
-            ang1, ang2 = state1[4], state2[4]
+            pos1, pos2 = state1[[0,2]], state2[[0,2]] 
+            vel1, vel2 = state1[[1,3]], state2[[1,3]] 
+            ang1, ang2 = state1[4], state2[4] 
             angvel1, angvel2 = state1[5], state2[5]
-            # convert euler angles to rotation matrices
+            # convert euler angles to rotation matrices 
             rot1, rot2 = npRotXYZ(0, ang1, 0), npRotXYZ(0, ang2, 0)
             # compose total state distance
             state_d = weights[0] * euclidean_distance(pos1, pos2) + \
@@ -127,11 +127,11 @@ def state_distance(state1, state2, weights=None, rot_mode="geodesic", task="cart
             else:
                 weights = np.ones(4)
             # extract state
-            pos1, pos2 = state1[[0,2,4]], state2[[0,2,4]]
-            vel1, vel2 = state1[[1,3,5]], state2[[1,3,5]]
-            ang1, ang2 = state1[6:9], state2[6:9]
+            pos1, pos2 = state1[[0,2,4]], state2[[0,2,4]] 
+            vel1, vel2 = state1[[1,3,5]], state2[[1,3,5]] 
+            ang1, ang2 = state1[6:9], state2[6:9] 
             angvel1_body, angvel2_body = state1[9:12], state2[9:12]
-            # convert euler angles to rotation matrices
+            # convert euler angles to rotation matrices 
             rot1, rot2 = npRotXYZ(*ang1), npRotXYZ(*ang2)
             # convert body rates to angular velocities w.r.t inertial frame
             angvel1, angvel2 = rot1 @ angvel1_body, rot2 @ angvel2_body
@@ -153,9 +153,9 @@ def encode_data(data, tuple_length=1, include_action=True):
             the values for `obs` and `action` are list of list of np.arrays.
         tuple_length (int): length of each tuple as 1 sample.
         include_action (bool): if to include action in each tuple sample.
-
+        
     Returns:
-        encoded_data (ndarray): Shape is (#tuples, obs_dim*(l+1)+act_dim*l) or
+        encoded_data (ndarray): Shape is (#tuples, obs_dim*(l+1)+act_dim*l) or 
             (#tuples, obs_dim*(l+1)) where l is tuple length.
     """
     # data = Munch(dict(n_steps=n_steps, obs=ep_obs_list, act=ep_act_list))
@@ -167,7 +167,7 @@ def encode_data(data, tuple_length=1, include_action=True):
         if include_action:
             ep_act = data["action"][i]
             ep_act_tuples = [ep_act[j:j+tuple_length] for j in range(len(ep_act) - tuple_length + 1)]
-            ep_tuples = [np.concatenate(o_tp + a_tp)
+            ep_tuples = [np.concatenate(o_tp + a_tp) 
                         for o_tp, a_tp in zip(ep_obs_tuples, ep_act_tuples)]
         else:
             ep_tuples = [np.concatenate(o_tp) for o_tp in ep_obs_tuples]
@@ -194,17 +194,17 @@ def mmd_loss(samples1, samples2, mode='gaussian', sigma=0.2, use_numpy=True):
         overall_loss (ndarray|torch.FloatTensor|float): MMD metric value.
     """
     if len(samples1.shape) != len(samples2.shape) or samples1.shape[-1] != samples2.shape[-1]:
-        raise ValueError("Unmatched input samples shape.")
+        raise ValueError("Unmatched input samples shape.") 
     # preprocessing
     if use_numpy:
         samples1 = torch.from_numpy(samples1)
         samples2 = torch.from_numpy(samples2)
-    # add batch dim if needed: (N,D) -> (1,N,D)
+    # add batch dim if needed: (N,D) -> (1,N,D) 
     input_shape = samples1.shape
     if len(input_shape) == 2:
         samples1 = samples1.unsqueeze(0)
         samples2 = samples2.unsqueeze(0)
-
+        
     # use torch's auto tensor shape expansion
     diff_x_x = samples1.unsqueeze(2) - samples1.unsqueeze(1)  # B x N x N x d
     diff_x_y = samples1.unsqueeze(2) - samples2.unsqueeze(1)
@@ -236,7 +236,7 @@ def mse(traj1, traj2, **kwargs):
     Args:
         traj1 (ndarray): shape (T1,D).
         traj1 (ndarray): shape (T2,D).
-
+    
     Returns:
         cost (float): final MSE cost.
     """
@@ -248,7 +248,7 @@ def mse(traj1, traj2, **kwargs):
 
 
 def lsed(traj1, traj2, distance_func=euclidean_distance, distance_func_kwargs={}):
-    """Lock-step Euclidean Distance, requires each traj pair to have same length.
+    """Lock-step Euclidean Distance, requires each traj pair to have same length. 
 
     Args:
         traj1, traj2 (ndarray): shape (T,D).
@@ -261,7 +261,7 @@ def lsed(traj1, traj2, distance_func=euclidean_distance, distance_func_kwargs={}
     if len(traj1) != len(traj2):
         raise ValueError("Input trajectories must have the same length.")
     subcosts = np.array([
-        distance_func(traj1[i], traj2[i], **distance_func_kwargs)
+        distance_func(traj1[i], traj2[i], **distance_func_kwargs) 
         for i in range(len(traj1))
     ])
     cost = np.sqrt(np.sum(subcosts**2))
@@ -269,7 +269,7 @@ def lsed(traj1, traj2, distance_func=euclidean_distance, distance_func_kwargs={}
 
 
 def dtw(traj1, traj2, w=np.inf, distance_func=euclidean_distance, distance_func_kwargs={}):
-    """Dynamic time wrapper.
+    """Dynamic time wrapper. 
     Reference: https://github.com/ymtoo/ts-dist/blob/30de6eba0969611cda58754e212bddef2b28772e/ts_dist.py#L8
     Reference2: https://github.com/cjekel/similarity_measures/blob/bfcd744a052ea50c4a318f5b38b275b3f93b67d5/similaritymeasures/similaritymeasures.py#L671
     Reference3: https://www.cs.unm.edu/~mueen/DTW.pdf
@@ -300,18 +300,18 @@ def dtw(traj1, traj2, w=np.inf, distance_func=euclidean_distance, distance_func_
 def edr(traj1, traj2, epsilon=0.05, distance_func=euclidean_distance, distance_func_kwargs={}):
     """Edit distance on real sequences.
     Reference: https://github.com/ymtoo/ts-dist/blob/30de6eba0969611cda58754e212bddef2b28772e/ts_dist.py#L88
-
+    
     Args:
         traj1 (ndarray): shape (T1,D).
         traj1 (ndarray): shape (T2,D).
         epsilon (float): threshold to decide if 2 elements are "equal".
-
+        
     Returns:
         cost (float): final EDR cost.
     """
     nx, ny = len(traj1), len(traj2)
     D = np.full((nx+1, ny+1), np.inf)
-    # base cases
+    # base cases 
     D[:, 0] = np.arange(nx+1)
     D[0, :] = np.arange(ny+1)
     for i in range(1, nx+1):
@@ -322,17 +322,17 @@ def edr(traj1, traj2, epsilon=0.05, distance_func=euclidean_distance, distance_f
             if distance_func(traj1[i-1], traj2[j-1], **distance_func_kwargs) < epsilon:
                 subcost = 0
             else:
-                subcost = 1
+                subcost = 1 
         D[i, j] = min(D[i-1, j-1]+subcost, D[i-1, j]+1, D[i, j-1]+1)
     # final EDR cost (normalized to [0,1])
     cost = D[nx, ny] / max(nx, ny)
-    return cost
-
-
+    return cost 
+    
+    
 def lcss(traj1, traj2, delta=np.inf, epsilon=0.05, distance_func=euclidean_distance, distance_func_kwargs={}):
-    """Longest common subsequence.
+    """Longest common subsequence. 
     Reference: https://github.com/ymtoo/ts-dist/blob/30de6eba0969611cda58754e212bddef2b28772e/ts_dist.py#L52
-
+    
     Args:
         traj1 (ndarray): shape (T1,D).
         traj1 (ndarray): shape (T2,D).
@@ -354,18 +354,18 @@ def lcss(traj1, traj2, delta=np.inf, epsilon=0.05, distance_func=euclidean_dista
                 S[i, j] = max(S[i, j-1], S[i-1, j])
     # final LCSS cost (normalized to [0,1], lower the better/more similar)
     cost = 1 - S[nx, ny] / min(nx, ny)
-    return cost
+    return cost 
 
 
 def discrete_frechet(traj1, traj2, p=2, distance_func=euclidean_distance, distance_func_kwargs={}):
-    """Discrete Frechet distance.
+    """Discrete Frechet distance. 
     Reference: https://github.com/cjekel/similarity_measures/blob/bfcd744a052ea50c4a318f5b38b275b3f93b67d5/similaritymeasures/similaritymeasures.py#L430
-
-    Args:
+    
+    Args: 
         traj1 (ndarray): shape (T1,D).
         traj1 (ndarray): shape (T2,D).
         p (float): 1 <= p <= inf, which Minkowski p-norm to use, default 2 is Euclidean.
-
+    
     Returns:
         cost (float): final DF cost.
     """
@@ -374,7 +374,7 @@ def discrete_frechet(traj1, traj2, p=2, distance_func=euclidean_distance, distan
     # base case
     # D[0, 0] = minkowski_distance(traj1[0], traj2[0], p=p)
     D[0, 0] = distance_func(traj1[0], traj2[0], **distance_func_kwargs)
-    # build DP table
+    # build DP table 
     for i in range(1, nx):
         # D[i, 0] = max(D[i-1, 0], minkowski_distance(traj1[i], traj2[0], p=p))
         D[i, 0] = max(D[i-1, 0], distance_func(traj1[i], traj2[0], **distance_func_kwargs))
@@ -389,6 +389,6 @@ def discrete_frechet(traj1, traj2, p=2, distance_func=euclidean_distance, distan
                            distance_func(traj1[i], traj2[j], **distance_func_kwargs))
     # final DF cost, not normalized
     cost = D[nx-1, ny-1]
-    return cost
+    return cost 
 
 
