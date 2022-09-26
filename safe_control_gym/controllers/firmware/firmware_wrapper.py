@@ -219,7 +219,8 @@ class FirmwareWrapper(BaseController):
         '''
         self._process_command_queue(sim_time)
         
-        
+        total_reward=0
+        break_violation_nums=0
         # Draws setpoint for debugging purposes 
         if self.verbose:
             if self.last_visualized_setpoint is not None:
@@ -233,8 +234,10 @@ class FirmwareWrapper(BaseController):
 
         while self.tick / self.firmware_freq < sim_time + self.ctrl_dt:
             # Step the environment and print all returned information.
+            # import pdb;pdb.set_trace()
             obs, reward, done, info = self.env.step(action)
-            
+            total_reward+=reward
+            break_violation_nums += info['constraint_violation']
             # Get state values from pybullet
             cur_pos=np.array([obs[0], obs[2], obs[4]]) # global coord, m
             cur_vel=np.array([obs[1], obs[3], obs[5]]) # global coord, m/s
@@ -292,7 +295,9 @@ class FirmwareWrapper(BaseController):
                 done = True
 
             self.action = action 
-        return obs, reward, done, info, action
+        # print(total_reward)
+        info['constraint_violation']=break_violation_nums
+        return obs, total_reward, done, info, action
 
 
     def _update_initial_state(self, obs):
@@ -494,6 +499,7 @@ class FirmwareWrapper(BaseController):
             rpy_rate (list): roll, pitch, yaw rates (rad/s)
             timestep (float): simulation time when command is sent (s)
         """
+        
         self.command_queue += [['_sendFullStateCmd', [pos, vel, acc, yaw, rpy_rate, timestep]]]
 
 

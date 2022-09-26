@@ -353,6 +353,10 @@ class Quadrotor(BaseAviary):
         else:
             self.DONE_ON_COMPLETION = False
 
+
+        ## 
+        self.last_state=None
+
     def reset(self):
         """(Re-)initializes the environment to start an episode.
 
@@ -505,6 +509,7 @@ class Quadrotor(BaseAviary):
         
 
     def step(self, action):
+        # import pdb;pdb.set_trace()
         """Advances the environment by one control step.
         
         Pass the commanded RPMs and the adversarial force to the superclass .step().
@@ -522,7 +527,7 @@ class Quadrotor(BaseAviary):
         """
         # Get the preprocessed rpm for each motor
         rpm = super().before_step(action)
-
+        # import pdb;pdb.set_trace()
         # Determine disturbance force.
         disturb_force = None
         passive_disturb = "dynamics" in self.disturbances
@@ -884,6 +889,7 @@ class Quadrotor(BaseAviary):
         return obs
 
     def _get_reward(self):
+        
         """Computes the current step's reward value.
 
         Returns:
@@ -931,19 +937,41 @@ class Quadrotor(BaseAviary):
 
         # IROS 2022 - Competition sparse reward signal.
         if self.COST == Cost.COMPETITION:
+            # import pdb;pdb.set_trace()
             reward = 0
+
+            ## --------------------------replace begin--------------------------
+
+            # current_target_gate_pos=self.EFFECTIVE_GATES_POSITIONS[self.current_gate]
+            if self.last_state is not None :
+                current_pos=self.state[[0,2,4]]
+                last_pos=self.last_state[[0,2,4]]
+                end_goal_pos=self.X_GOAL[[0,2,4]]
+                target_pos=np.array(self.EFFECTIVE_GATES_POSITIONS[self.current_gate])[[0,1,2]] if self.current_gate != self.NUM_GATES else end_goal_pos
+                std_dis= np.array([1 if _>0 else -1 for _ in (target_pos -last_pos)])
+                reward+= sum((current_pos-last_pos) * std_dis) * 10
+                #  this way do not work
+                # dis_aft_action=(target_pos[0]-current_pos[0])** 2  + (target_pos[1]-current_pos[1]) ** 2  + (target_pos[1]-current_pos[1]) ** 2 
+                # dis_bfe_action=(target_pos[0]-last_pos[0]) ** 2  + (target_pos[1]-last_pos[1]) ** 2  + (target_pos[1]-last_pos[1]) ** 2 
+                # reward += (dis_bfe_action-dis_aft_action)
+            # 
+
+            ## --------------------------replace end --------------------------
+            
+            
             # Reward for stepping through the (correct) next gate.
             if self.stepped_through_gate:
-                reward += 100
+                reward += 1
             # Reward for reaching goal position (after navigating the gates in the correct order).
             if self.at_goal_pos:
-                reward += 100
+                reward += 1
             # Penalize by collision.
             if self.currently_collided:
-                reward -= 1000
+                reward -= 10
             # Penalize by constraint violation.
             if self.cnstr_violation:
-                reward -= 100
+                # print("violation")
+                reward -= 1
             # Penalize by loss from X_GOAL, U_GOAL state.
             # reward += float(-1 * self.symbolic.loss(x=self.state,
             #                                         Xr=self.X_GOAL,
@@ -951,7 +979,12 @@ class Quadrotor(BaseAviary):
             #                                         Ur=self.U_GOAL,
             #                                         Q=self.Q,
             #                                         R=self.R)["l"])
+            
+            self.last_state=deepcopy(self.state)
+
             return reward
+
+        
 
     def _get_done(self):
         """Computes the conditions for termination of an episode.
@@ -1130,7 +1163,6 @@ class Quadrotor(BaseAviary):
                 info["task_completed"] = self.task_completed
             else:
                 print('[WARNING] "at_goal_position" and "task_completed" are only intended for used with the 3D quadrotor.')
-
         return info
 
     def _get_reset_info(self):

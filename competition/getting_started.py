@@ -23,11 +23,11 @@ from safe_control_gym.envs.gym_pybullet_drones.Logger import Logger
 
 try:
     from competition_utils import Command, thrusts
-    from edit_this import Controller
+    from edit_this_base_c import Controller
 except ImportError:
     # Test import.
     from .competition_utils import Command, thrusts
-    from .edit_this import Controller
+    from .edit_this_base_c import Controller
 
 try:
     import pycffirmware
@@ -38,6 +38,7 @@ else:
 finally:
     print("Module 'cffirmware' available:", FIRMWARE_INSTALLED)
 
+from safetyplusplus_folder.plus_logger import SafeLogger
 
 def run(test=False):
     """The main function creating, running, and closing an environment over N episodes.
@@ -73,6 +74,7 @@ def run(test=False):
         # we abstract the difference. This allows ctrl_freq to be the rate at which the user sends ctrl signals, 
         # not the firmware. 
         config.quadrotor_config['ctrl_freq'] = FIRMWARE_FREQ
+
         env_func = partial(make, 'quadrotor', **config.quadrotor_config)
         firmware_wrapper = make('firmware',
                     env_func, FIRMWARE_FREQ, CTRL_FREQ
@@ -81,6 +83,13 @@ def run(test=False):
         info['ctrl_timestep'] = CTRL_DT
         info['ctrl_freq'] = CTRL_FREQ
         env = firmware_wrapper.env
+
+        # eval_env_func = partial(make, 'quadrotor', **config.quadrotor_config)
+        # eval_firmware_wrapper = make('firmware',
+        #             eval_env_func, FIRMWARE_FREQ, CTRL_FREQ
+        #             ) 
+        # eval_obs, eval_info = eval_firmware_wrapper.reset()
+        # eval_env = eval_firmware_wrapper.env
     else:
         env = make('quadrotor', **config.quadrotor_config)
         # Reset the environment, obtain the initial observations and info dictionary.
@@ -136,9 +145,12 @@ def run(test=False):
         for fun in info['symbolic_constraints']:
             print('\t' + str(inspect.getsource(fun)).strip('\n'))
 
+    logger_plus = SafeLogger(exp_name='7_TD3', env_name="compitition", seed=0,
+                                fieldnames=['EpRet', 'EpCost', 'CostRate'])   
     # Run an experiment.
     ep_start = time.time()
     first_ep_iteration = True
+    episode_cost=0
     for i in range(config.num_episodes*CTRL_FREQ*env.EPISODE_LEN_SEC):
 
         # Step by keyboard input.
@@ -170,7 +182,8 @@ def run(test=False):
                 info = {}
                 first_ep_iteration = False
             command_type, args = ctrl.cmdFirmware(curr_time, vicon_obs, reward, done, info)
-            import pdb
+
+            #  'action_space': Box([0.02816169 0.02816169 0.02816169 0.02816169], [0.14834145 0.14834145 0.14834145 0.14834145], (4,), float32)
             # pdb.set_trace()
             # Select interface. 
             if command_type == Command.FULLSTATE:
@@ -187,11 +200,17 @@ def run(test=False):
                 firmware_wrapper.notifySetpointStop()
             elif command_type == Command.NONE:
                 pass
+            # elif command_type=='network':
+            #     action=args
+            #     obs, reward, done, info, _ = firmware_wrapper.step(curr_time, action)
             else:
                 raise ValueError("[ERROR] Invalid command_type.")
 
+            # action
             # Step the environment.
-            obs, reward, done, info, action = firmware_wrapper.step(curr_time, action)
+            # TODO reward is exactly?
+            # import pdb; pdb.set_trace()
+            obs, reward, done, info, _ = firmware_wrapper.step(curr_time, action)
         else:
             if first_ep_iteration:
                 reward = 0
@@ -203,15 +222,18 @@ def run(test=False):
             obs, reward, done, info = env.step(action)
 
         # Update the controller internal state and models.
-        ctrl.interStepLearn(action, obs, reward, done, info)
+        # print(f"c : {i}")
+        ctrl.interStepLearn(args, obs, reward, done, info)
 
         # Add up reward, collisions, violations.
         cumulative_reward += reward
         if info["collision"][1]:
             collisions_count += 1
             collided_objects.add(info["collision"][0])
+            episode_cost+=1
         if 'constraint_values' in info and info['constraint_violation'] == True:
             violations_count += 1
+            episode_cost+=1
 
         # Printouts.
         if config.verbose and i%int(CTRL_FREQ/2) == 0:
@@ -250,8 +272,8 @@ def run(test=False):
         # If an episode is complete, reset the environment.
         if done:
             # Plot logging (comment as desired).
-            if not test:
-                logger.plot(comment="get_start-episode-"+str(episodes_count), autoclose=True)
+            # if not test:
+                # logger.plot(comment="get_start-episode-"+str(episodes_count), autoclose=True)
 
             # CSV save.
             logger.save_as_csv(comment="get_start-episode-"+str(episodes_count))
@@ -291,10 +313,15 @@ def run(test=False):
             # Create a new logger.
             logger = Logger(logging_freq_hz=CTRL_FREQ)
 
+            print(f"Total T: {i + 1} Episode Num: {episodes_count}  Reward: {cumulative_reward:.3f} Cost: {episode_cost:.3f} violation: {violations_count:.3f}  collision:{collisions_count:.3f} ")
+            logger_plus.update([cumulative_reward, episode_cost, episode_cost], total_steps=i + 1)
+
             # Reset/update counters.
             episodes_count += 1
             if episodes_count > config.num_episodes:
                 break
+
+            episode_cost = 0
             cumulative_reward = 0
             collisions_count = 0
             collided_objects = set()
@@ -315,7 +342,15 @@ def run(test=False):
             
             episode_start_iter = i+1
             ep_start = time.time()
+        if (i + 1) % 10000==0:
 
+            avg_reward=0.
+            avg_cost=0.
+
+            for _ in range(5):
+                pass
+
+        # time.sleep(0.2) 
     # Close the environment and print timing statistics.
     env.close()
     elapsed_sec = time.time() - START
