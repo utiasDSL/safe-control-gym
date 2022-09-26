@@ -32,7 +32,6 @@ class LinearMPC(MPC):
             soft_constraints=False,
             terminate_run_on_done=True,
             constraint_tol: float=1e-8,
-            prior_info: dict=None,
             solver: str='sqpmethod',
             # runner args
             # shared/base args
@@ -50,7 +49,6 @@ class LinearMPC(MPC):
             soft_constraints (bool): Formulate the constraints as soft constraints.
             terminate_run_on_done (bool): Terminate the run when the environment returns done or not.
             constraint_tol (float): Tolerance to add the the constraint as sometimes solvers are not exact.
-            prior_info (dict): Dictionary specifiy the algorithms prior model parameters.
             solver (str): Specify which solver you wish to use (qrqp, qpoases, ipopt, sqpmethod)
             output_dir (str): output directory to write logs and results.
             additional_constraints (list): list of constraints.
@@ -70,7 +68,7 @@ class LinearMPC(MPC):
             soft_constraints=soft_constraints,
             terminate_run_on_done=terminate_run_on_done,
             constraint_tol=constraint_tol,
-            prior_info=prior_info,
+            #prior_info=prior_info,
             output_dir=output_dir,
             additional_constraints=additional_constraints,
             **kwargs
@@ -83,6 +81,7 @@ class LinearMPC(MPC):
         self.X_EQ = np.atleast_2d(self.model.X_EQ)[0,:].T
         self.U_EQ = np.atleast_2d(self.model.U_EQ)[0,:].T
         assert solver in ['qpoases', 'qrqp', 'sqpmethod', 'ipopt'], "[Error]. MPC Solver not supported."
+        self.solver = solver
 
     def set_dynamics_func(self):
         """Updates symbolic dynamics with actual control frequency.

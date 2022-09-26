@@ -21,7 +21,6 @@ class iLQR(BaseController):
             # Model args
             q_lqr: list = None,
             r_lqr: list = None,
-            prior_info: dict={},
             discrete_dynamics: bool = True,
             # iLQR args
             max_iterations: int = 15,
@@ -35,7 +34,6 @@ class iLQR(BaseController):
             env_func (Callable): Function to instantiate task/environment.
             q_lqr (list): Diagonals of state cost weight.
             r_lqr (list): Diagonals of input/action cost weight.
-            prior_info (dict): Dictionary specifiy the algorithms prior model parameters.
             discrete_dynamics (bool): If to use discrete or continuous dynamics.
             max_iterations (int): The number of iterations to train iLQR.
             lamb_factor (float): The amount for which to increase lambda when training fails.
@@ -59,7 +57,6 @@ class iLQR(BaseController):
         self.env = env_func(info_in_reset=True, done_on_out_of_bound=True)
 
         # Controller params.
-        self.prior_info = prior_info
         self.model = self.get_prior(self.env)
         self.Q = get_cost_weight_matrix(self.q_lqr, self.model.nx)
         self.R = get_cost_weight_matrix(self.r_lqr, self.model.nu)

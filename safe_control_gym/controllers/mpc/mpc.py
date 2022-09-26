@@ -27,7 +27,6 @@ class MPC(BaseController):
             soft_constraints: bool = False,
             terminate_run_on_done: bool = True,
             constraint_tol: float = 1e-6,
-            prior_info: dict=None,
             # runner args
             # shared/base args
             output_dir: str = "results/temp",
@@ -47,7 +46,6 @@ class MPC(BaseController):
             soft_constraints (bool): Formulate the constraints as soft constraints.
             terminate_run_on_done (bool): Terminate the run when the environment returns done or not.
             constraint_tol (float): Tolerance to add the the constraint as sometimes solvers are not exact.
-            prior_info (dict): Dictionary specifiy the algorithms prior model parameters.
             output_dir (str): output directory to write logs and results.
             additional_constraints (list): List of additional constraints
             use_gpu (bool): False (use cpu) True (use cuda).
@@ -59,8 +57,8 @@ class MPC(BaseController):
             if k != "self" and k != "kwargs" and "__" not in k:
                 self.__dict__.update({k: v})
 
-        if prior_info is None:
-            self.prior_info = {}
+        #if prior_info is None:
+        #    self.prior_info = {}
         # Task.
         self.env = env_func()
         if additional_constraints is not None:
@@ -78,7 +76,7 @@ class MPC(BaseController):
         self.T = horizon
         self.Q = get_cost_weight_matrix(self.q_mpc, self.model.nx)
         self.R = get_cost_weight_matrix(self.r_mpc, self.model.nu)
-        self.prior_info = prior_info
+        #self.prior_info = prior_info
 
         self.soft_constraints = soft_constraints
         self.warmstart = warmstart
