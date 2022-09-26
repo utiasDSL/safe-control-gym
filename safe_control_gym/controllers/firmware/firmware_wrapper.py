@@ -234,7 +234,6 @@ class FirmwareWrapper(BaseController):
 
         while self.tick / self.firmware_freq < sim_time + self.ctrl_dt:
             # Step the environment and print all returned information.
-            # import pdb;pdb.set_trace()
             obs, reward, done, info = self.env.step(action)
             total_reward+=reward
             break_violation_nums += info['constraint_violation']

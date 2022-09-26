@@ -509,7 +509,6 @@ class Quadrotor(BaseAviary):
         
 
     def step(self, action):
-        # import pdb;pdb.set_trace()
         """Advances the environment by one control step.
         
         Pass the commanded RPMs and the adversarial force to the superclass .step().
@@ -527,7 +526,7 @@ class Quadrotor(BaseAviary):
         """
         # Get the preprocessed rpm for each motor
         rpm = super().before_step(action)
-        # import pdb;pdb.set_trace()
+
         # Determine disturbance force.
         disturb_force = None
         passive_disturb = "dynamics" in self.disturbances
@@ -889,7 +888,6 @@ class Quadrotor(BaseAviary):
         return obs
 
     def _get_reward(self):
-        
         """Computes the current step's reward value.
 
         Returns:
@@ -970,7 +968,6 @@ class Quadrotor(BaseAviary):
                 reward -= 10
             # Penalize by constraint violation.
             if self.cnstr_violation:
-                # print("violation")
                 reward -= 1
             # Penalize by loss from X_GOAL, U_GOAL state.
             # reward += float(-1 * self.symbolic.loss(x=self.state,
@@ -983,8 +980,6 @@ class Quadrotor(BaseAviary):
             self.last_state=deepcopy(self.state)
 
             return reward
-
-        
 
     def _get_done(self):
         """Computes the conditions for termination of an episode.
@@ -1163,6 +1158,7 @@ class Quadrotor(BaseAviary):
                 info["task_completed"] = self.task_completed
             else:
                 print('[WARNING] "at_goal_position" and "task_completed" are only intended for used with the 3D quadrotor.')
+
         return info
 
     def _get_reset_info(self):

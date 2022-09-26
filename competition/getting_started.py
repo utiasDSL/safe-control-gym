@@ -74,7 +74,6 @@ def run(test=False):
         # we abstract the difference. This allows ctrl_freq to be the rate at which the user sends ctrl signals, 
         # not the firmware. 
         config.quadrotor_config['ctrl_freq'] = FIRMWARE_FREQ
-
         env_func = partial(make, 'quadrotor', **config.quadrotor_config)
         firmware_wrapper = make('firmware',
                     env_func, FIRMWARE_FREQ, CTRL_FREQ
@@ -200,9 +199,6 @@ def run(test=False):
                 firmware_wrapper.notifySetpointStop()
             elif command_type == Command.NONE:
                 pass
-            # elif command_type=='network':
-            #     action=args
-            #     obs, reward, done, info, _ = firmware_wrapper.step(curr_time, action)
             else:
                 raise ValueError("[ERROR] Invalid command_type.")
 
@@ -222,7 +218,6 @@ def run(test=False):
             obs, reward, done, info = env.step(action)
 
         # Update the controller internal state and models.
-        # print(f"c : {i}")
         ctrl.interStepLearn(args, obs, reward, done, info)
 
         # Add up reward, collisions, violations.
@@ -320,7 +315,6 @@ def run(test=False):
             episodes_count += 1
             if episodes_count > config.num_episodes:
                 break
-
             episode_cost = 0
             cumulative_reward = 0
             collisions_count = 0
@@ -350,7 +344,6 @@ def run(test=False):
             for _ in range(5):
                 pass
 
-        # time.sleep(0.2) 
     # Close the environment and print timing statistics.
     env.close()
     elapsed_sec = time.time() - START
