@@ -474,6 +474,7 @@ class Quadrotor(BaseAviary):
         # Define states.
         z = cs.MX.sym('z')
         z_dot = cs.MX.sym('z_dot')
+        u_eq = m*g
         if self.QUAD_TYPE == QuadType.ONE_D:
             nx, nu = 2, 1
             # Define states.
@@ -557,6 +558,9 @@ class Quadrotor(BaseAviary):
             X_dot = cs.vertcat(pos_dot[0], pos_ddot[0], pos_dot[1], pos_ddot[1], pos_dot[2], pos_ddot[2], ang_dot, rate_dot)
 
             Y = cs.vertcat(x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p_body, q_body, r_body)
+        # Set the equilibrium values for linearizations.
+        X_EQ = np.zeros(self.state_dim)
+        U_EQ = np.ones(self.action_dim) * u_eq / self.action_dim
         # Define cost (quadratic form).
         Q = cs.MX.sym('Q', nx, nx)
         R = cs.MX.sym('R', nu, nu)
@@ -584,8 +588,8 @@ class Quadrotor(BaseAviary):
             "quad_Ixx": Ixx if "Ixx" in locals() else None,
             "quad_Izz": Izz if "Izz" in locals() else None,
             # equilibrium point for linearization
-            "X_EQ": np.zeros(self.state_dim),
-            "U_EQ": self.U_GOAL,
+            "X_EQ": X_EQ,
+            "U_EQ": U_EQ,
         }
         # Setup symbolic model.
         self.symbolic = SymbolicModel(dynamics=dynamics, cost=cost, dt=dt, params=params)

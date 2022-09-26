@@ -165,8 +165,8 @@ class GPMPC(MPC):
         self.data_inputs = None
         self.data_targets = None
         self.prior_dynamics_func = self.prior_ctrl.linear_dynamics_func
-        self.X_EQ = np.atleast_2d(self.env.X_EQ)[0,:].T
-        self.U_EQ = np.atleast_2d(self.env.U_EQ)[0,:].T
+        self.X_EQ = np.atleast_2d(self.env.symbolic.X_EQ)[0,:].T
+        self.U_EQ = np.atleast_2d(self.env.symbolic.U_EQ)[0,:].T
         # GP and training parameters.
         self.gaussian_process = None
         self.train_iterations = train_iterations

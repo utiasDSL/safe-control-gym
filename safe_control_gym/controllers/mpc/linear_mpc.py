@@ -74,8 +74,8 @@ class LinearMPC(MPC):
         #self.X_EQ = np.atleast_2d(self.env.X_GOAL)[0,:].T
         #self.U_EQ = np.atleast_2d(self.env.U_GOAL)[0,:]
 
-        self.X_EQ = np.atleast_2d(self.env.X_EQ)[0,:].T
-        self.U_EQ = np.atleast_2d(self.env.U_EQ)[0,:].T
+        self.X_EQ = np.atleast_2d(self.env.symbolic.X_EQ)[0,:].T
+        self.U_EQ = np.atleast_2d(self.env.symbolic.U_EQ)[0,:].T
 
 
     def set_dynamics_func(self):
