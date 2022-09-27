@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 
-from safe_control_gym.experiment import Experiment
+from safe_control_gym.experiments.experiment import Experiment
 from safe_control_gym.envs.benchmark_env import Task
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make

@@ -4,19 +4,19 @@ import yaml
 import numpy as np
 import matplotlib.pyplot as plt
 from functools import partial
-from copy import deepcopy
 import munch
 
 from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.configuration import ConfigFactory
-from safe_control_gym.utils.utils import mkdirs, set_dir_from_config, is_wrapped
-from safe_control_gym.experiment import EpochExp
+from safe_control_gym.utils.utils import mkdirs, set_dir_from_config
+from safe_control_gym.experiments.epoch_experiment import EpochExp
 
 # To set relative pathing of experiment imports.
 import sys
 import os.path as path
 sys.path.append(path.abspath(path.join(__file__, "../../../utils/")))
-from gpmpc_plotting_utils import make_traking_plot, make_quad_plots, gather_training_samples, plot_impossible_traj_from_csv
+from gpmpc_plotting_utils import gather_training_samples
+
 
 def gather_training_samples(trajs_data, episode_i, num_samples, rand_generator=None):
     """

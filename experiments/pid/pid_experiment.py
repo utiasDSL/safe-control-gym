@@ -4,7 +4,7 @@ import os
 import pickle
 from functools import partial
 
-from safe_control_gym.experiment import Experiment
+from safe_control_gym.experiments.experiment import Experiment
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 
