@@ -163,10 +163,12 @@ def main(config):
                   num_epochs,
                   num_train_episodes_per_epoch,
                   num_test_episodes_per_epoch,
-                  config.output_dir)
+                  config.output_dir,
+                  save_train_trajs=True,
+                  save_test_trajs=True)
     ref = exp.env.X_GOAL
-    train_data, test_data, metrics = exp.launch_training(num_samples=num_samples,
-                                             rand_kernel_selection=config.rand_kernel_selection)
+    metrics, train_data, test_data, = exp.launch_training(num_samples=num_samples,
+                                                          rand_kernel_selection=config.rand_kernel_selection)
     return train_data, test_data, metrics, ref, exp
 
 if __name__ == "__main__":

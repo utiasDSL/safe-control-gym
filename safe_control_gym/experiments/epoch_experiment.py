@@ -1,9 +1,10 @@
 '''Epoch based training for experiments. '''
-
+import numpy as np
 from copy import deepcopy
 
 from safe_control_gym.utils.utils import is_wrapped
-from safe_control_gym.experiments.base_experiment import BaseExperiment, RecordDataWrapper
+from safe_control_gym.experiments.base_experiment import BaseExperiment, RecordDataWrapper, MetricExtractor
+from safe_control_gym.math_and_models.metrics.performance_metrics import compute_cvar
 
 
 class EpochExp(BaseExperiment):
@@ -14,7 +15,9 @@ class EpochExp(BaseExperiment):
                  n_epochs,
                  n_train_episodes_per_epoch,
                  n_test_episodes_per_epoch,
-                 output_dir
+                 output_dir,
+                 save_train_trajs: bool=False,
+                 save_test_trajs: bool=False
                  ):
         """ Class for an experiment using Epoch training with evaluation every iteration.
 
@@ -28,9 +31,11 @@ class EpochExp(BaseExperiment):
             n_epochs (int): The number of epochs.
             n_train_episodes_per_epoch (int): The number of train episodes to run per epoch.
             n_test_episodes_per_epoch (int): The number of test episodes to run per epoch.
-            ref = self.env.X_GOAL
-            make_traking_plot(self.all_test_data, ref, self.output_dir)
             output_dir (str): Output dir to store any saved data.
+            save_train_trajs (bool): Save all training trajectories. Note that this might result in memory issues for
+                algorithms that require lots of training data.
+            save_test_trajs (bool): Save all test trajectories. Note that this might result in memory issues for
+                algorithms that require lots of training data.
         """
 
         super().__init__(test_envs[0], ctrl, train_env=train_envs[0], safety_filter=None)
@@ -63,6 +68,8 @@ class EpochExp(BaseExperiment):
         self.n_test_episodes_per_epoch = n_test_episodes_per_epoch
         self.output_dir = output_dir
         self.metrics = None
+        self.save_train_trajs = save_train_trajs
+        self.save_test_trajs = save_test_trajs
         self.all_train_data = None
         self.all_test_data = None
 
@@ -77,7 +84,8 @@ class EpochExp(BaseExperiment):
                                            n_episodes=self.n_test_episodes_per_epoch,
                                            n_steps=None,
                                            log_freq=self.env.CTRL_FREQ)
-            self.add_to_all_test_data(eval_data)
+            if self.save_test_trajs:
+                self.add_to_all_test_data(eval_data)
             metrics = self.compute_metrics(eval_data)
             self.add_to_metrics(metrics)
             # Train with prior model.
@@ -93,7 +101,8 @@ class EpochExp(BaseExperiment):
                                            n_episodes=self.n_test_episodes_per_epoch,
                                            n_steps=None,
                                            log_freq=self.env.CTRL_FREQ)
-            self.add_to_all_test_data(eval_data)
+            if self.save_test_trajs:
+                self.add_to_all_test_data(eval_data)
             metrics = self.compute_metrics(eval_data)
             self.add_to_metrics(metrics)
             epoch_start_ind = 1
@@ -112,6 +121,8 @@ class EpochExp(BaseExperiment):
 
             if len(self.test_envs) == 1:
                 test_env_num = 0
+            elif self.prior_ctrl_exists:
+                test_env_num = episode_i + 1
             else:
                 test_env_num = episode_i
             eval_data = self._execute_task(ctrl=self.ctrl,
@@ -119,12 +130,18 @@ class EpochExp(BaseExperiment):
                                            n_episodes=self.n_test_episodes_per_epoch,
                                            n_steps=None,
                                            log_freq=self.env.CTRL_FREQ)
-            self.add_to_all_test_data(eval_data)
+            if self.save_test_trajs:
+                self.add_to_all_test_data(eval_data)
             metrics = self.compute_metrics(eval_data)
             self.add_to_metrics(metrics)
 
         # return learning stats
-        return deepcopy(self.all_train_data), deepcopy(self.all_test_data), deepcopy(self.metrics)
+        return_values = [deepcopy(self.metrics)]
+        if self.save_train_trajs:
+            return_values.append(deepcopy(self.all_train_data))
+        if self.save_test_trajs:
+            return_values.append(deepcopy(self.all_test_data))
+        return tuple(return_values)
 
     def launch_single_train_epoch(self,
                                   run_ctrl,
@@ -142,7 +159,8 @@ class EpochExp(BaseExperiment):
                                        n_steps=n_steps,
                                        log_freq=log_freq)
         # Add trajectory data to all training data.
-        self.add_to_all_train_data(traj_data)
+        if self.save_train_trajs:
+            self.add_to_all_train_data(traj_data)
         # Parsing of training Data.
         train_inputs, train_outputs = self.preprocess_training_data(traj_data, **kwargs)
         # Learning of training data.
@@ -191,3 +209,18 @@ class EpochExp(BaseExperiment):
         else:
             for key in self.metrics:
                 self.metrics[key].append(deepcopy(metrics[key][0]))
+    def compute_metrics(self, trajs_data):
+        '''Compute all standard metrics on the given trajectory data.
+
+        Args:
+            trajs_data (defaultdict(list)): The raw data from the executed runs.
+
+        Returns:
+            metrics (dict): The metrics calculated from the raw data.
+        '''
+
+        metrics = super().compute_metrics(trajs_data)
+        list_metrics = {}
+        for key, value in metrics.items():
+            list_metrics[key] = [value]
+        return list_metrics

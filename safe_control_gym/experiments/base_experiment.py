@@ -239,13 +239,13 @@ class BaseExperiment:
         met = MetricExtractor(trajs_data)
         # collect & compute all sorts of metrics here
         metrics = {
-            'average_length': [np.asarray(met.get_episode_lengths()).mean()],
-            'average_return': [np.asarray(met.get_episode_returns()).mean()],
-            'average_rmse': [np.asarray(met.get_episode_rmse()).mean()],
-            'rmse_std': [np.asarray(met.get_episode_rmse()).std()],
-            'worst_case_rmse_at_0.5': [compute_cvar(np.asarray(met.get_episode_rmse()), 0.5, lower_range=False)],
-            'failure_rate':  [np.asarray(met.get_episode_constraint_violations()).mean()],
-            'average_constraint_violation': [np.asarray(met.get_episode_constraint_violation_steps()).mean()],
+            'average_length': np.asarray(met.get_episode_lengths()).mean(),
+            'average_return': np.asarray(met.get_episode_returns()).mean(),
+            'average_rmse': np.asarray(met.get_episode_rmse()).mean(),
+            'rmse_std': np.asarray(met.get_episode_rmse()).std(),
+            'worst_case_rmse_at_0.5': compute_cvar(np.asarray(met.get_episode_rmse()), 0.5, lower_range=False),
+            'failure_rate':  np.asarray(met.get_episode_constraint_violations()).mean(),
+            'average_constraint_violation': np.asarray(met.get_episode_constraint_violation_steps()).mean(),
             # others ???
         }
         return metrics
