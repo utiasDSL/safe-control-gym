@@ -21,7 +21,7 @@ quadrotor_config:
 
   ctrl_freq: 30 # Frequency of the controller's decision making
   pyb_freq: 500 # If `use_firmware` == True, must be multiple of 500, otherwise it must be multiple of ctrl_freq
-  episode_len_sec: 33  # Maximum episode duration, in seconds
+  episode_len_sec: 66  # Maximum episode duration, in seconds
 
   done_on_violation: False # Whether `done` becomes True when a constraint is violated
   done_on_completion: True # Whether `done` becomes True when the task is completed (traveled all gates and 2'' hover at stabilization_goal)

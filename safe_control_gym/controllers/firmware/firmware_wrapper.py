@@ -296,7 +296,7 @@ class FirmwareWrapper(BaseController):
 
             self.action = action 
             i+=1
-        info['constraint_violation']=break_violation_nums
+        # info['constraint_violation']=break_violation_nums
         return obs, total_reward, done, info, action
 
 

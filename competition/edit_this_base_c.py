@@ -112,7 +112,7 @@ class Controller():
         #########################
 
         self.net_work_freq=0.5   #  time gap
-        self.state=np.zeros(7)
+        self.curent_state=np.zeros(7)
         state_dim = 7
         action_dim = 3
         max_action = 1.
@@ -160,7 +160,7 @@ class Controller():
         self.agent_type='passing'
         self.arrival_iteration =1e6
         self.goal_pos=[initial_info['x_reference'][0],initial_info['x_reference'][2],initial_info['x_reference'][4]]
-
+        self.one_step_reward = 0 
         #########################
         # REPLACE THIS (END) ####
         #########################
@@ -208,7 +208,7 @@ class Controller():
             current_target_gate_in_range= 0 
             current_target_gate_pos = np.zeros(4)
             current_goal_pos=np.zeros(3)
-        state=np.array([current_x,current_y,current_z,current_goal_pos[0],current_goal_pos[1],current_goal_pos[2],current_target_gate_in_range])
+        state=np.array([current_x,current_y,current_z,current_goal_pos[0]-current_x,current_goal_pos[1]-current_y,current_goal_pos[2]-current_z,current_target_gate_in_range])
         # state=np.append(state,all_obstacles_pos)
         # state=np.append(state,all_gates_pos)
         # state=np.append(state,current_target_gate_pos)
@@ -302,14 +302,13 @@ class Controller():
             
             if self.episode_iteration % (30*self.net_work_freq) ==0:
                 command_type =  Command(1)  # "network"  # cmdFullState.
+                current_state=self.get_state(obs,info)
                 if self.interepisode_counter <= 10:
-                    self.state=self.get_state(obs,info)
-                    action=self.action_space.sample() 
+                    action= self.action_space.sample() 
                 else:
-                    self.state=self.get_state(obs,info)
-                    action = self.policy.select_action(self.state, exploration=True)  # array  delta_x , delta_y, delta_z
+                    action = self.policy.select_action(current_state, exploration=True)  # array  delta_x , delta_y, delta_z
                 action /= 10
-                target_pos=self.state[[0,1,2]] + action
+                target_pos = current_state[[0,1,2]] + action
                 target_vel = np.zeros(3)
                 target_acc = np.zeros(3)
                 target_yaw = 0.
@@ -616,23 +615,31 @@ class Controller():
         # REPLACE THIS (START) ##
         #########################
 
-
         # add experience when use network to decide
+        if  self.episode_iteration== 2 * self.CTRL_FREQ:
+            self.current_state= self.get_state(obs,info)
+            self.current_args = args
+
         if  self.episode_iteration> 2 * self.CTRL_FREQ  and (not self.go_back)  and self.episode_iteration % (30*self.net_work_freq) ==0:
             # 
             # Store the last step's events.
-            target_pos=args[0]
-            action=(target_pos-self.state[[0,1,2]]) * 10
+            current_action=(self.current_args[0]-self.current_state[[0,1,2]]) * 10
             next_state=self.get_state(obs,info)
+            next_args=args
             # import pdb;pdb.set_trace()
             #  ok  buffer no problem
             if self.episode_iteration % 600 ==0  :
-                print(f"add buffer:\nstate: {[float('{:.4f}'.format(i)) for i in self.state]}  \t\naction: {action} \t\nnext_state: {[float('{:.4f}'.format(i)) for i in next_state]} reward: {reward}")
+                print(f"add buffer:\nstate: {[float('{:.4f}'.format(i)) for i in self.current_state]}  \t\naction: {current_action} \t\nnext_state: {[float('{:.4f}'.format(i)) for i in next_state]} reward: {self.one_step_reward}")
+                print(f"{np.array(next_state-self.current_state)[[0,1,2]] * 100}")
                 print("*********************************************")
-            self.replay_buffer.add(self.state,action,next_state,reward,done)
-
-            if self.interepisode_counter >= 20:
-                self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(1))
+            self.replay_buffer.add(self.current_state,current_action,next_state,self.one_step_reward,done)
+            self.one_step_reward=reward
+            self.current_state=next_state
+            self.current_args=next_args
+        else :
+            self.one_step_reward+=reward
+        if self.interepisode_counter >= 20:
+            self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(1))
         #########################
         # REPLACE THIS (END) ####
         #########################
@@ -661,7 +668,7 @@ class Controller():
         # if self.interepisode_counter >= 20 :
         #     self.policy.train(self.replay_buffer,batch_size=256,train_nums=(30 /self.net_work_freq ))
 
-        if self.interepisode_counter >= 10 and self.interepisode_counter % 10 == 0 :
+        if self.interepisode_counter >= 15 and self.interepisode_counter % 10 == 0 :
             self.policy.save(filename=file_name)
         #########################
         # REPLACE THIS (END) ####
