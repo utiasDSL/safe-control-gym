@@ -193,7 +193,7 @@ class iLQR(BaseController):
 
         # Initialize backward pass.
         state_k = self.state_stack[-1]
-        input_k = env.symbolic.U_EQ
+        input_k = self.model.U_EQ
 
         if env.TASK == Task.STABILIZATION:
             x_goal = self.x_0
@@ -202,7 +202,7 @@ class iLQR(BaseController):
         loss_k = loss(x=state_k,
                       u=input_k,
                       Xr=x_goal,
-                      Ur=env.symbolic.U_EQ,
+                      Ur=self.model.U_EQ,
                       Q=self.Q,
                       R=self.R)
         s = loss_k['l'].toarray()
@@ -229,7 +229,7 @@ class iLQR(BaseController):
             loss_k = loss(x=state_k,
                           u=input_k,
                           Xr=x_goal,
-                          Ur=env.symbolic.U_EQ,
+                          Ur=self.model.U_EQ,
                           Q=self.Q,
                           R=self.R)
 
