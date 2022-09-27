@@ -653,7 +653,7 @@ class FirmwareWrapper(BaseController):
         """
         self.command_queue += [['_sendGotoCmd', [pos, yaw, duration_s, relative]]]
     def _sendGotoCmd(self, pos, yaw, duration_s, relative):
-        print(f"INFO_{self.tick}: Go to command sent.")
+        # print(f"INFO_{self.tick}: Go to command sent.")
         firm.crtpCommanderHighLevelGoTo(*pos, yaw, duration_s, relative)
         self.full_state_cmd_override = False
 

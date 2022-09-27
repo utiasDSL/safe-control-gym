@@ -5,7 +5,7 @@
 # | `level0.yaml`       | **Yes**      | *No*                      | *No*                        | *No*                   | Perfect knowledge |
 
 # Configuration
-num_episodes: 10000 # Customizable number of episodes (NOTE: solutions that require fewer episode will receive higher scores)
+num_episodes: 1000 # Customizable number of episodes (NOTE: solutions that require fewer episode will receive higher scores)
 use_firmware: True # Whether to use pycffirmware or not (NOTE: only set to False for debugging purposes)
 verbose: False # Boolean passed to the Controller class, can be used to turn on and off additional printouts
 
@@ -21,7 +21,7 @@ quadrotor_config:
 
   ctrl_freq: 30 # Frequency of the controller's decision making
   pyb_freq: 500 # If `use_firmware` == True, must be multiple of 500, otherwise it must be multiple of ctrl_freq
-  episode_len_sec: 66  # Maximum episode duration, in seconds
+  episode_len_sec: 33  # Maximum episode duration, in seconds
 
   done_on_violation: False # Whether `done` becomes True when a constraint is violated
   done_on_completion: True # Whether `done` becomes True when the task is completed (traveled all gates and 2'' hover at stabilization_goal)

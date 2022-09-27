@@ -11,6 +11,8 @@ import time
 import inspect
 import numpy as np
 import pybullet as p
+import sys 
+sys.path.append("..") 
 
 from functools import partial
 from rich.tree import Tree
@@ -39,6 +41,8 @@ finally:
     print("Module 'cffirmware' available:", FIRMWARE_INSTALLED)
 
 from safetyplusplus_folder.plus_logger import SafeLogger
+
+file_name='0927_FullState_3(short)'
 
 def eval(firmware_wrapper,env,eval_times):
     CONFIG_FACTORY = ConfigFactory()
@@ -307,7 +311,7 @@ def run(test=False):
         for fun in info['symbolic_constraints']:
             print('\t' + str(inspect.getsource(fun)).strip('\n'))
     
-    file_name='0926_td3_4_end'
+    
     logger_plus = SafeLogger(exp_name=file_name, env_name="compitition", seed=0,
                                 fieldnames=['EpRet', 'EpCost', 'CostRate','collision_num','vilation_num','target_gate'])   
     # Run an experiment.
@@ -353,7 +357,6 @@ def run(test=False):
                 # import pdb; pdb.set_trace()
                 firmware_wrapper.sendFullStateCmd(*args, curr_time)
             elif command_type == Command.TAKEOFF:
-                
                 firmware_wrapper.sendTakeoffCmd(*args)
             elif command_type == Command.LAND:
                 firmware_wrapper.sendLandCmd(*args)
@@ -388,6 +391,8 @@ def run(test=False):
         ctrl.interStepLearn(args, obs, reward, done, info)
 
         # Add up reward, collisions, violations.
+
+        # base (not used )
         cumulative_reward += reward
         if info["collision"][1]:
             collisions_count += 1
@@ -438,46 +443,46 @@ def run(test=False):
                 # logger.plot(comment="get_start-episode-"+str(episodes_count), autoclose=True)
 
             # CSV save.
-            logger.save_as_csv(comment="get_start-episode-"+str(episodes_count))
+            # logger.save_as_csv(comment="get_start-episode-"+str(episodes_count))
 
             # Update the controller internal state and models.
-            ctrl.interEpisodeLearn(file_name)
+            episode_reward=ctrl.interEpisodeLearn(file_name)
 
             # Append episode stats.
-            if info['current_target_gate_id'] == -1:
-                gates_passed = num_of_gates
-            else:
-                gates_passed = info['current_target_gate_id']
-            if config.quadrotor_config.done_on_collision and info["collision"][1]:
-                termination = 'COLLISION'
-            elif config.quadrotor_config.done_on_completion and info['task_completed']:
-                termination = 'TASK COMPLETION'
-            elif config.quadrotor_config.done_on_violation and info['constraint_violation']:
-                termination = 'CONSTRAINT VIOLATION'
-            else:
-                termination = 'MAX EPISODE DURATION'
-            if ctrl.interstep_learning_occurrences != 0:
-                interstep_learning_avg = ctrl.interstep_learning_time/ctrl.interstep_learning_occurrences
-            else:
-                interstep_learning_avg = ctrl.interstep_learning_time
-            episode_stats = [
-                '[yellow]Flight time (s): '+str(curr_time),
-                '[yellow]Reason for termination: '+termination,
-                '[green]Gates passed: '+str(gates_passed),
-                '[green]Total reward: '+str(cumulative_reward),
-                '[red]Number of collisions: '+str(collisions_count),
-                '[red]Number of constraint violations: '+str(violations_count),
-                '[white]Total and average interstep learning time (s): '+str(ctrl.interstep_learning_time)+', '+str(interstep_learning_avg),
-                '[white]Interepisode learning time (s): '+str(ctrl.interepisode_learning_time),
-                ]
-            stats.append(episode_stats)
+            # if info['current_target_gate_id'] == -1:
+            #     gates_passed = num_of_gates
+            # else:
+            #     gates_passed = info['current_target_gate_id']
+            # if config.quadrotor_config.done_on_collision and info["collision"][1]:
+            #     termination = 'COLLISION'
+            # elif config.quadrotor_config.done_on_completion and info['task_completed']:
+            #     termination = 'TASK COMPLETION'
+            # elif config.quadrotor_config.done_on_violation and info['constraint_violation']:
+            #     termination = 'CONSTRAINT VIOLATION'
+            # else:
+            #     termination = 'MAX EPISODE DURATION'
+            # if ctrl.interstep_learning_occurrences != 0:
+            #     interstep_learning_avg = ctrl.interstep_learning_time/ctrl.interstep_learning_occurrences
+            # else:
+            #     interstep_learning_avg = ctrl.interstep_learning_time
+            # episode_stats = [
+            #     '[yellow]Flight time (s): '+str(curr_time),
+            #     '[yellow]Reason for termination: '+termination,
+            #     '[green]Gates passed: '+str(gates_passed),
+            #     '[green]Total reward: '+str(cumulative_reward),
+            #     '[red]Number of collisions: '+str(collisions_count),
+            #     '[red]Number of constraint violations: '+str(violations_count),
+            #     '[white]Total and average interstep learning time (s): '+str(ctrl.interstep_learning_time)+', '+str(interstep_learning_avg),
+            #     '[white]Interepisode learning time (s): '+str(ctrl.interepisode_learning_time),
+            #     ]
+            # stats.append(episode_stats)
 
             # Create a new logger.
             logger = Logger(logging_freq_hz=CTRL_FREQ)
 
-            print(f"Total T: {i + 1} Episode Num: {episodes_count}  Reward: {cumulative_reward:.3f} Cost: {episode_cost:.3f} violation: {violations_count:.3f}  collision:{collisions_count:.3f} gates_passed:{info['current_target_gate_id']},")
+            print(f"Total T: {i + 1} Episode Num: {episodes_count}  Reward: {episode_reward:.3f} Cost: {episode_cost:.3f} violation: {violations_count:.3f}  collision:{collisions_count:.3f} gates_passed:{info['current_target_gate_id']},")
             print(f"at_goal_position : {info['at_goal_position']}  task_completed: {info['task_completed']}")
-            logger_plus.update([cumulative_reward, episode_cost, episode_cost,collisions_count,violations_count,info['current_target_gate_id']], total_steps=i + 1)
+            logger_plus.update([episode_reward, episode_cost, episode_cost,collisions_count,violations_count,info['current_target_gate_id']], total_steps=i + 1)
 
             # Reset/update counters.
             episodes_count += 1
@@ -532,14 +537,14 @@ def run(test=False):
           ))
 
     # Print episodes summary.
-    tree = Tree("Summary")
-    for idx, ep in enumerate(stats):
-        ep_tree = tree.add('Episode ' + str(idx+1))
-        for val in ep:
-            ep_tree.add(val)
-    print('\n\n')
-    print(tree)
-    print('\n\n')
+    # tree = Tree("Summary")
+    # for idx, ep in enumerate(stats):
+    #     ep_tree = tree.add('Episode ' + str(idx+1))
+    #     for val in ep:
+    #         ep_tree.add(val)
+    # print('\n\n')
+    # print(tree)
+    # print('\n\n')
 
 if __name__ == "__main__":
     run()
