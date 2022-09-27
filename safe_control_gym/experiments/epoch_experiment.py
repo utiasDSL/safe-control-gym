@@ -3,10 +3,10 @@
 from copy import deepcopy
 
 from safe_control_gym.utils.utils import is_wrapped
-from safe_control_gym.experiments.experiment import Experiment, RecordDataWrapper
+from safe_control_gym.experiments.base_experiment import BaseExperiment, RecordDataWrapper
 
 
-class EpochExp(Experiment):
+class EpochExp(BaseExperiment):
     def __init__(self,
                  test_envs,
                  ctrl,

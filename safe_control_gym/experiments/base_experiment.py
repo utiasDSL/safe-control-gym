@@ -13,7 +13,7 @@ from safe_control_gym.utils.utils import is_wrapped
 from safe_control_gym.math_and_models.metrics.performance_metrics import compute_cvar
 
 
-class Experiment:
+class BaseExperiment:
     '''Generic Experiment Class. '''
 
     def __init__(self,
