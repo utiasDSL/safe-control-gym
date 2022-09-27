@@ -106,11 +106,11 @@ class TD3(object):
             
             
     def save(self, filename):
-        torch.save(self.critic.state_dict(), filename + "_critic")
-        torch.save(self.critic_optimizer.state_dict(), filename + "_critic_optimizer")
+        torch.save(self.critic.state_dict(), "logs/"+filename + "_critic")
+        torch.save(self.critic_optimizer.state_dict(), "logs/"+filename + "_critic_optimizer")
  
-        torch.save(self.actor.state_dict(), filename + "_actor")
-        torch.save(self.actor_optimizer.state_dict(), filename + "_actor_optimizer")
+        torch.save(self.actor.state_dict(), "logs/"+filename + "_actor")
+        torch.save(self.actor_optimizer.state_dict(), "logs/"+filename + "_actor_optimizer")
 
 
     def load(self, filename):
