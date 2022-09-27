@@ -231,8 +231,9 @@ class FirmwareWrapper(BaseController):
                     [self.setpoint.position.x, self.setpoint.position.y, self.setpoint.position.z],
                     p.getQuaternionFromEuler([0,0,0]),
                     physicsClientId=self.pyb_client)
-
+        i=1
         while self.tick / self.firmware_freq < sim_time + self.ctrl_dt:
+            
             # Step the environment and print all returned information.
             obs, reward, done, info = self.env.step(action)
             total_reward+=reward
@@ -294,7 +295,7 @@ class FirmwareWrapper(BaseController):
                 done = True
 
             self.action = action 
-        # print(total_reward)
+            i+=1
         info['constraint_violation']=break_violation_nums
         return obs, total_reward, done, info, action
 

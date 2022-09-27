@@ -40,6 +40,174 @@ finally:
 
 from safetyplusplus_folder.plus_logger import SafeLogger
 
+def eval(firmware_wrapper,env,eval_times):
+    CONFIG_FACTORY = ConfigFactory()
+    config = CONFIG_FACTORY.merge()
+    CTRL_FREQ = config.quadrotor_config['ctrl_freq']
+    CTRL_DT = 1/CTRL_FREQ
+    obs, info = firmware_wrapper.reset()
+    vicon_obs = [obs[0], 0, obs[2], 0, obs[4], 0, obs[6], obs[7], obs[8], 0, 0, 0]
+        # obs = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
+        # vicon_obs = {x, 0, y, 0, z, 0, phi, theta, psi, 0, 0, 0}.
+    ctrl = Controller(vicon_obs, info, config.use_firmware, verbose=config.verbose)
+
+    # Create a logger and counters
+    episodes_count = 1
+    cumulative_reward = 0
+    collisions_count = 0
+    collided_objects = set()
+    violations_count = 0
+    episode_start_iter = 0
+    time_label_id = p.addUserDebugText("", textPosition=[0, 0, 1],physicsClientId=env.PYB_CLIENT)
+    num_of_gates = len(config.quadrotor_config.gates)
+    stats = []
+    ep_start = time.time()
+    first_ep_iteration = True
+    episode_cost=0
+    for i in range(config.num_episodes*CTRL_FREQ*env.EPISODE_LEN_SEC):
+
+        # Step by keyboard input.
+        # _ = input("Press any key to continue")
+
+        # Elapsed sim time.
+        curr_time = (i-episode_start_iter)*CTRL_DT
+
+        # Print episode time in seconds on the GUI.
+        time_label_id = p.addUserDebugText("Ep. time: {:.2f}s".format(curr_time),
+                                           textPosition=[0, 0, 1.5],
+                                           textColorRGB=[1, 0, 0],
+                                           lifeTime=3*CTRL_DT,
+                                           textSize=1.5,
+                                           parentObjectUniqueId=0,
+                                           parentLinkIndex=-1,
+                                           replaceItemUniqueId=time_label_id,
+                                           physicsClientId=env.PYB_CLIENT)
+
+        # Compute control input.
+        # if config.use_firmware:
+        vicon_obs = [obs[0], 0, obs[2], 0, obs[4], 0, obs[6], obs[7], obs[8], 0, 0, 0]
+            # obs = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
+            # vicon_obs = {x, 0, y, 0, z, 0, phi, theta, psi, 0, 0, 0}.
+        if first_ep_iteration:
+            action = np.zeros(4)
+            reward = 0
+            done = False
+            info = {}
+            first_ep_iteration = False
+        command_type, args = ctrl.cmdFirmware(curr_time, vicon_obs, reward, done, info,False)
+
+        #  'action_space': Box([0.02816169 0.02816169 0.02816169 0.02816169], [0.14834145 0.14834145 0.14834145 0.14834145], (4,), float32)
+        # pdb.set_trace()
+        # Select interface. 
+        if command_type == Command.FULLSTATE:
+            firmware_wrapper.sendFullStateCmd(*args, curr_time)
+        elif command_type == Command.TAKEOFF:
+            firmware_wrapper.sendTakeoffCmd(*args)
+        elif command_type == Command.LAND:
+            firmware_wrapper.sendLandCmd(*args)
+        elif command_type == Command.STOP:
+            firmware_wrapper.sendStopCmd()
+        elif command_type == Command.GOTO:
+            firmware_wrapper.sendGotoCmd(*args)
+        elif command_type == Command.NOTIFYSETPOINTSTOP:
+            firmware_wrapper.notifySetpointStop()
+        elif command_type == Command.NONE:
+            pass
+        else:
+            raise ValueError("[ERROR] Invalid command_type.")
+
+        # action
+        # Step the environment.
+        # TODO reward is exactly?
+        # import pdb; pdb.set_trace()
+        obs, reward, done, info, _ = firmware_wrapper.step(curr_time, action)
+
+        # Add up reward, collisions, violations.
+        cumulative_reward += reward
+        if info["collision"][1]:
+            collisions_count += 1
+            collided_objects.add(info["collision"][0])
+            episode_cost+=1
+        if 'constraint_values' in info and info['constraint_violation'] == True:
+            violations_count += 1
+            episode_cost+=1
+
+        # Synchronize the GUI.
+        if config.quadrotor_config.gui:
+            sync(i-episode_start_iter, ep_start, CTRL_DT)
+
+        # If an episode is complete, reset the environment.
+        if done:
+            # Append episode stats.
+            if info['current_target_gate_id'] == -1:
+                gates_passed = num_of_gates
+            else:
+                gates_passed = info['current_target_gate_id']
+            if config.quadrotor_config.done_on_collision and info["collision"][1]:
+                termination = 'COLLISION'
+            elif config.quadrotor_config.done_on_completion and info['task_completed']:
+                termination = 'TASK COMPLETION'
+            elif config.quadrotor_config.done_on_violation and info['constraint_violation']:
+                termination = 'CONSTRAINT VIOLATION'
+            else:
+                termination = 'MAX EPISODE DURATION'
+            if ctrl.interstep_learning_occurrences != 0:
+                interstep_learning_avg = ctrl.interstep_learning_time/ctrl.interstep_learning_occurrences
+            else:
+                interstep_learning_avg = ctrl.interstep_learning_time
+            episode_stats = [
+                '[yellow]Flight time (s): '+str(curr_time),
+                '[yellow]Reason for termination: '+termination,
+                '[green]Gates passed: '+str(gates_passed),
+                '[green]Total reward: '+str(cumulative_reward),
+                '[red]Number of collisions: '+str(collisions_count),
+                '[red]Number of constraint violations: '+str(violations_count),
+                '[white]Total and average interstep learning time (s): '+str(ctrl.interstep_learning_time)+', '+str(interstep_learning_avg),
+                '[white]Interepisode learning time (s): '+str(ctrl.interepisode_learning_time),
+                ]
+            stats.append(episode_stats)
+
+
+            print(f"Total T: {i + 1} Episode Num: {episodes_count}  Reward: {cumulative_reward:.3f} Cost: {episode_cost:.3f} violation: {violations_count:.3f}  collision:{collisions_count:.3f} gates_passed:{num_of_gates},")
+            print(f"at_goal_position : {info['at_goal_position']}  task_completed: {info['task_completed']}")
+
+            # Reset/update counters.
+            episodes_count += 1
+            if episodes_count > config.num_episodes:
+                break
+            episode_cost = 0
+            cumulative_reward = 0
+            collisions_count = 0
+            collided_objects = set()
+            violations_count = 0
+            ctrl.interEpisodeReset()
+
+            # Reset the environment.
+            if config.use_firmware:
+                # Re-initialize firmware.
+                new_initial_obs, _ = firmware_wrapper.reset()
+            else:
+                new_initial_obs, _ = env.reset()
+            first_ep_iteration = True
+
+            if config.verbose:
+                print(str(episodes_count)+'-th reset.')
+                print('Reset obs' + str(new_initial_obs))
+            
+            episode_start_iter = i+1
+            ep_start = time.time()
+    # Close the environment and print timing statistics.
+    env.close()
+    # Print episodes summary.
+    tree = Tree("Summary")
+    for idx, ep in enumerate(stats):
+        ep_tree = tree.add('Episode ' + str(idx+1))
+        for val in ep:
+            ep_tree.add(val)
+    print('\n\n')
+    print(tree)
+    print('\n\n')
+
 def run(test=False):
     """The main function creating, running, and closing an environment over N episodes.
 
@@ -82,13 +250,8 @@ def run(test=False):
         info['ctrl_timestep'] = CTRL_DT
         info['ctrl_freq'] = CTRL_FREQ
         env = firmware_wrapper.env
-
-        # eval_env_func = partial(make, 'quadrotor', **config.quadrotor_config)
-        # eval_firmware_wrapper = make('firmware',
-        #             eval_env_func, FIRMWARE_FREQ, CTRL_FREQ
-        #             ) 
-        # eval_obs, eval_info = eval_firmware_wrapper.reset()
-        # eval_env = eval_firmware_wrapper.env
+        
+        
     else:
         env = make('quadrotor', **config.quadrotor_config)
         # Reset the environment, obtain the initial observations and info dictionary.
@@ -143,9 +306,10 @@ def run(test=False):
         print('\tSymbolic constraints: ')
         for fun in info['symbolic_constraints']:
             print('\t' + str(inspect.getsource(fun)).strip('\n'))
-
-    logger_plus = SafeLogger(exp_name='7_TD3', env_name="compitition", seed=0,
-                                fieldnames=['EpRet', 'EpCost', 'CostRate'])   
+    
+    file_name='0926_td3_4_end'
+    logger_plus = SafeLogger(exp_name=file_name, env_name="compitition", seed=0,
+                                fieldnames=['EpRet', 'EpCost', 'CostRate','collision_num','vilation_num','target_gate'])   
     # Run an experiment.
     ep_start = time.time()
     first_ep_iteration = True
@@ -186,8 +350,10 @@ def run(test=False):
             # pdb.set_trace()
             # Select interface. 
             if command_type == Command.FULLSTATE:
+                # import pdb; pdb.set_trace()
                 firmware_wrapper.sendFullStateCmd(*args, curr_time)
             elif command_type == Command.TAKEOFF:
+                
                 firmware_wrapper.sendTakeoffCmd(*args)
             elif command_type == Command.LAND:
                 firmware_wrapper.sendLandCmd(*args)
@@ -205,8 +371,9 @@ def run(test=False):
             # action
             # Step the environment.
             # TODO reward is exactly?
-            # import pdb; pdb.set_trace()
+           
             obs, reward, done, info, _ = firmware_wrapper.step(curr_time, action)
+            #
         else:
             if first_ep_iteration:
                 reward = 0
@@ -274,7 +441,7 @@ def run(test=False):
             logger.save_as_csv(comment="get_start-episode-"+str(episodes_count))
 
             # Update the controller internal state and models.
-            ctrl.interEpisodeLearn()
+            ctrl.interEpisodeLearn(file_name)
 
             # Append episode stats.
             if info['current_target_gate_id'] == -1:
@@ -308,8 +475,9 @@ def run(test=False):
             # Create a new logger.
             logger = Logger(logging_freq_hz=CTRL_FREQ)
 
-            print(f"Total T: {i + 1} Episode Num: {episodes_count}  Reward: {cumulative_reward:.3f} Cost: {episode_cost:.3f} violation: {violations_count:.3f}  collision:{collisions_count:.3f} ")
-            logger_plus.update([cumulative_reward, episode_cost, episode_cost], total_steps=i + 1)
+            print(f"Total T: {i + 1} Episode Num: {episodes_count}  Reward: {cumulative_reward:.3f} Cost: {episode_cost:.3f} violation: {violations_count:.3f}  collision:{collisions_count:.3f} gates_passed:{info['current_target_gate_id']},")
+            print(f"at_goal_position : {info['at_goal_position']}  task_completed: {info['task_completed']}")
+            logger_plus.update([cumulative_reward, episode_cost, episode_cost,collisions_count,violations_count,info['current_target_gate_id']], total_steps=i + 1)
 
             # Reset/update counters.
             episodes_count += 1
@@ -334,16 +502,22 @@ def run(test=False):
                 print(str(episodes_count)+'-th reset.')
                 print('Reset obs' + str(new_initial_obs))
             
+            # import pdb; pdb.set_trace()
+            obs=new_initial_obs
             episode_start_iter = i+1
             ep_start = time.time()
+        
         if (i + 1) % 10000==0:
-
-            avg_reward=0.
-            avg_cost=0.
-
-            for _ in range(5):
-                pass
-
+            pass 
+            # import copy
+            # config2=copy.deepcopy(config)
+            # config2.quadrotor_config['gui'] = True
+            # eval_env_func = partial(make, 'quadrotor', **config2.quadrotor_config)
+            # eval_firmware_wrapper = make('firmware',
+            #             eval_env_func, FIRMWARE_FREQ, CTRL_FREQ
+            #             ) 
+            # eval_env = eval_firmware_wrapper.env
+            # eval(eval_firmware_wrapper,eval_env,5)
     # Close the environment and print timing statistics.
     env.close()
     elapsed_sec = time.time() - START

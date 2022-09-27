@@ -171,7 +171,7 @@ class Controller():
             raise RuntimeError("[ERROR] Using method 'cmdFirmware' but Controller was created with 'use_firmware' = False.")
 
         iteration = int(time*self.CTRL_FREQ)
-
+        # print(iteration)
         #########################
         # REPLACE THIS (START) ##
         #########################
@@ -323,7 +323,7 @@ class Controller():
         #########################
 
     @timing_ep
-    def interEpisodeLearn(self):
+    def interEpisodeLearn(self,file_name):
         """Learning and controller updates called between episodes.
 
         INSTRUCTIONS:

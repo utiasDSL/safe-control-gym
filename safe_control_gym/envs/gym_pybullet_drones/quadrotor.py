@@ -555,6 +555,8 @@ class Quadrotor(BaseAviary):
         super()._advance_simulation(rpm, disturb_force)
         # Standard Gym return.
         obs = self._get_observation()
+        # import pdb; pdb.set_trace()
+        # print(obs)
         info = self._get_info()
         done = self._get_done()  # IROS 2022 - After _get_info() to use this step's 'self' attributes.
         rew = self._get_reward()  # IROS 2022 - After _get_info() to use this step's 'self' attributes.
@@ -935,7 +937,7 @@ class Quadrotor(BaseAviary):
 
         # IROS 2022 - Competition sparse reward signal.
         if self.COST == Cost.COMPETITION:
-            # import pdb;pdb.set_trace()
+            
             reward = 0
 
             ## --------------------------replace begin--------------------------
@@ -946,14 +948,18 @@ class Quadrotor(BaseAviary):
                 last_pos=self.last_state[[0,2,4]]
                 end_goal_pos=self.X_GOAL[[0,2,4]]
                 target_pos=np.array(self.EFFECTIVE_GATES_POSITIONS[self.current_gate])[[0,1,2]] if self.current_gate != self.NUM_GATES else end_goal_pos
-                std_dis= np.array([1 if _>0 else -1 for _ in (target_pos -last_pos)])
-                reward+= sum((current_pos-last_pos) * std_dis) * 10
+                # std_dis=std_dis/(min(abs(std_dis)))
+                # std_dis=[max(min(_,1),-1) for _ in std_dis]
+                std_dis= np.array(target_pos -last_pos)
+                std_dis=std_dis/(min(abs(std_dis)))
+                std_dis=[max(min(_,1),-1) for _ in std_dis]
+                reward += sum((current_pos-last_pos) * std_dis) * 100
                 #  this way do not work
                 # dis_aft_action=(target_pos[0]-current_pos[0])** 2  + (target_pos[1]-current_pos[1]) ** 2  + (target_pos[1]-current_pos[1]) ** 2 
                 # dis_bfe_action=(target_pos[0]-last_pos[0]) ** 2  + (target_pos[1]-last_pos[1]) ** 2  + (target_pos[1]-last_pos[1]) ** 2 
                 # reward += (dis_bfe_action-dis_aft_action)
             # 
-
+            # import pdb;pdb.set_trace()
             ## --------------------------replace end --------------------------
             
             
@@ -965,10 +971,13 @@ class Quadrotor(BaseAviary):
                 reward += 1
             # Penalize by collision.
             if self.currently_collided:
-                reward -= 10
+                # reward -= 10
+                pass
             # Penalize by constraint violation.
             if self.cnstr_violation:
-                reward -= 1
+                # reward -= 1
+                pass
+                # print('gosh!')
             # Penalize by loss from X_GOAL, U_GOAL state.
             # reward += float(-1 * self.symbolic.loss(x=self.state,
             #                                         Xr=self.X_GOAL,
