@@ -21,6 +21,9 @@ class TD3(object):
         expl_noise = 0.1,
     ):
 
+        torch.manual_seed(0)
+        np.random.seed(0)
+        
         self.actor = Actor(state_dim, action_dim, max_action).to(device)
         self.actor_target = copy.deepcopy(self.actor)
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=3e-4)
@@ -40,8 +43,7 @@ class TD3(object):
         self.expl_noise = expl_noise
 
         self.total_it = 0
-        torch.manual_seed(0)
-        np.random.seed(0)
+        
 
 
     def select_action(self, state,exploration=False):

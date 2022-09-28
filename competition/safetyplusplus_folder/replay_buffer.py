@@ -5,16 +5,16 @@ class SimpleReplayBufferIros(object):
     def __init__(self, state_dim, action_dim, max_size=int(1e6)):
         self.max_size = max_size
         self.phrase=4
-        self.one_phrase_max_size= max_size/self.phrase
+        self.one_phrase_max_size= int(max_size/self.phrase)
         self.ptr = [0,0,0,0]
 
         self.size = [0,0,0,0]
         
         self.state = np.zeros(( self.phrase,self.one_phrase_max_size, state_dim))
-        self.action = np.zeros(( self.phrase,self.one_phrase_max_size, state_dim))
+        self.action = np.zeros(( self.phrase,self.one_phrase_max_size, action_dim))
         self.next_state = np.zeros(( self.phrase,self.one_phrase_max_size, state_dim))
-        self.reward = np.zeros(( self.phrase,self.one_phrase_max_size, state_dim))
-        self.not_done = np.zeros(( self.phrase,self.one_phrase_max_size, state_dim))
+        self.reward = np.zeros(( self.phrase,self.one_phrase_max_size, 1))
+        self.not_done = np.zeros(( self.phrase,self.one_phrase_max_size, 1))
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
