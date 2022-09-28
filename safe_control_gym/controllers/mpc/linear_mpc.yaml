@@ -5,7 +5,8 @@ r_mpc:
 q_mpc:
   - 1.
 use_prev_start: True
-
+prior_info: null
+solver: sqpmethod
 # Runner args
 deque_size: 10
 eval_batch_size: 10

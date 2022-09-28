@@ -28,16 +28,15 @@ class LQR(BaseController):
         super().__init__(env_func, **kwargs)
 
         self.env = env_func()
-
         # Controller params.
-        self.model = self.env.symbolic
+        self.model = self.get_prior(self.env)
         self.discrete_dynamics = discrete_dynamics
         self.Q = get_cost_weight_matrix(q_lqr, self.model.nx)
         self.R = get_cost_weight_matrix(r_lqr, self.model.nu)
         self.env.set_cost_function_param(self.Q, self.R)
 
         if self.env.TASK == Task.STABILIZATION:
-            self.gain = compute_lqr_gain(self.model, self.env.X_GOAL, self.env.U_GOAL,
+            self.gain = compute_lqr_gain(self.model, self.model.X_EQ, self.model.U_EQ,
                                          self.Q, self.R, self.discrete_dynamics)
 
     def reset(self):
@@ -62,9 +61,9 @@ class LQR(BaseController):
         step = self.extract_step(info)
 
         if self.env.TASK == Task.STABILIZATION:
-            return -self.gain @ (obs - self.env.X_GOAL) + self.env.U_GOAL
+            return -self.gain @ (obs - self.model.X_EQ) + self.model.U_EQ
         elif self.env.TASK == Task.TRAJ_TRACKING:
             self.gain = compute_lqr_gain(self.model, self.env.X_GOAL[step],
-                                         self.env.U_GOAL, self.Q, self.R,
+                                         self.model.U_EQ, self.Q, self.R,
                                          self.discrete_dynamics)
-            return -self.gain @ (obs - self.env.X_GOAL[step]) + self.env.U_GOAL
+            return -self.gain @ (obs - self.env.X_GOAL[step]) + self.model.U_EQ

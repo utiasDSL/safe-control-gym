@@ -5,9 +5,10 @@ algo_config:
   gp_approx: mean_eq
   gp_model_path: null
   horizon: 15
-  inertial_prop:
-  - 0.027
-  - 1.4e-05
+  prior_info:
+    prior_prop: # values multiplied by prior_param_coeff inside gpmpc
+      M: 0.027
+      Iyy: 1.4e-05
   initial_rollout_std: 0.0
   input_mask:
   - 0
@@ -80,7 +81,7 @@ terminate_test_on_done: False
 output_dir: temp-data
 rand_kernel_selection: false
 restore: null
-seed: 1234
+seed: 42 #1234
 tag: quad_data_eff
 task_config:
   constraints:

@@ -32,6 +32,7 @@ class LinearMPC(MPC):
             soft_constraints=False,
             terminate_run_on_done=True,
             constraint_tol: float=1e-8,
+            solver: str='sqpmethod',
             # runner args
             # shared/base args
             output_dir="results/temp",
@@ -48,6 +49,7 @@ class LinearMPC(MPC):
             soft_constraints (bool): Formulate the constraints as soft constraints.
             terminate_run_on_done (bool): Terminate the run when the environment returns done or not.
             constraint_tol (float): Tolerance to add the the constraint as sometimes solvers are not exact.
+            solver (str): Specify which solver you wish to use (qrqp, qpoases, ipopt, sqpmethod)
             output_dir (str): output directory to write logs and results.
             additional_constraints (list): list of constraints.
 
@@ -56,6 +58,7 @@ class LinearMPC(MPC):
         for k, v in locals().items():
             if k != "self" and k != "kwargs" and "__" not in k:
                 self.__dict__[k] = v
+
         super().__init__(
             env_func,
             horizon=horizon,
@@ -65,6 +68,7 @@ class LinearMPC(MPC):
             soft_constraints=soft_constraints,
             terminate_run_on_done=terminate_run_on_done,
             constraint_tol=constraint_tol,
+            #prior_info=prior_info,
             output_dir=output_dir,
             additional_constraints=additional_constraints,
             **kwargs
@@ -74,9 +78,10 @@ class LinearMPC(MPC):
         #self.X_EQ = np.atleast_2d(self.env.X_GOAL)[0,:].T
         #self.U_EQ = np.atleast_2d(self.env.U_GOAL)[0,:]
 
-        self.X_EQ = np.atleast_2d(self.env.X_EQ)[0,:].T
-        self.U_EQ = np.atleast_2d(self.env.U_EQ)[0,:].T
-
+        self.X_EQ = np.atleast_2d(self.model.X_EQ)[0,:].T
+        self.U_EQ = np.atleast_2d(self.model.U_EQ)[0,:].T
+        assert solver in ['qpoases', 'qrqp', 'sqpmethod', 'ipopt'], "[Error]. MPC Solver not supported."
+        self.solver = solver
 
     def set_dynamics_func(self):
         """Updates symbolic dynamics with actual control frequency.
@@ -134,7 +139,10 @@ class LinearMPC(MPC):
         nx, nu = self.model.nx, self.model.nu
         T = self.T
         # Define optimizer and variables.
-        opti = cs.Opti()
+        if self.solver in ['qrqp', 'qpoases']:
+            opti = cs.Opti('conic')
+        else:
+            opti = cs.Opti()
         # States.
         x_var = opti.variable(nx, T + 1)
         # Inputs.
@@ -203,7 +211,7 @@ class LinearMPC(MPC):
         opts = {"expand": True}
         if platform == "linux":
             opts.update({"print_time": 1, "print_header": 0})
-            opti.solver('sqpmethod', opts)
+            opti.solver(self.solver, opts)
         elif platform == "darwin":
             opts.update({"ipopt.max_iter": 100})
             opti.solver('ipopt', opts)

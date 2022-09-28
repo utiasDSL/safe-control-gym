@@ -22,8 +22,7 @@ gp_approx: mean_eq
 online_learning: False
 
 # Prior Model args
-inertial_prop:
-  - 1.0
+prior_info: {}
 prior_param_coeff: 1.
 
 # Runner args
