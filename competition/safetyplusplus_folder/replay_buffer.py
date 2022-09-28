@@ -1,6 +1,76 @@
 import numpy as np
 import torch
 
+class SimpleReplayBufferIros(object):
+    def __init__(self, state_dim, action_dim, max_size=int(1e6)):
+        self.max_size = max_size
+        self.phrase=4
+        self.one_phrase_max_size= max_size/self.phrase
+        self.ptr = [0,0,0,0]
+
+        self.size = [0,0,0,0]
+        
+        self.state = np.zeros(( self.phrase,self.one_phrase_max_size, state_dim))
+        self.action = np.zeros(( self.phrase,self.one_phrase_max_size, state_dim))
+        self.next_state = np.zeros(( self.phrase,self.one_phrase_max_size, state_dim))
+        self.reward = np.zeros(( self.phrase,self.one_phrase_max_size, state_dim))
+        self.not_done = np.zeros(( self.phrase,self.one_phrase_max_size, state_dim))
+
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+    def add(self,phrase, state, action, next_state, reward, done):
+        ptr=self.ptr[phrase]
+        self.state[phrase][ptr] = state
+        self.action[phrase][ptr] = action
+        self.next_state[phrase][ptr] = next_state
+        self.reward[phrase][ptr] = reward
+        self.not_done[phrase][ptr] = 1. - done
+
+        self.ptr[phrase] = (self.ptr[phrase] + 1) % self.one_phrase_max_size
+        self.size[phrase] = min(self.size[phrase] + 1, self.one_phrase_max_size)
+
+
+    def sample(self, batch_size):
+        # inverse sample  , give the end phrase the top priotity
+        size_3= 64 if self.size[3] > batch_size/4  else self.size[3]
+        size_2= 64 if self.size[2] > batch_size/4  else self.size[2]
+        size_1= 64 if self.size[1] > batch_size/4  else self.size[1]
+        size_0= batch_size -size_1 - size_2-size_3
+
+        ind0 = np.random.randint(0, self.size[0], size=size_0)
+        ind1 = np.random.randint(0, self.size[1], size=size_1)
+        ind2 = np.random.randint(0, self.size[2], size=size_2)
+        ind3 = np.random.randint(0, self.size[3], size=size_3)
+
+        self.state=np.vstack((self.state[0][ind0],self.state[1][ind1]))
+        self.state=np.vstack((self.state,self.state[2][ind2]))
+        self.state=np.vstack((self.state,self.state[3][ind3]))
+
+        self.action=np.vstack((self.action[0][ind0],self.action[1][ind1]))
+        self.action=np.vstack((self.action,self.action[2][ind2]))
+        self.action=np.vstack((self.action,self.action[3][ind3]))
+
+        self.next_state=np.vstack((self.next_state[0][ind0],self.next_state[1][ind1]))
+        self.next_state=np.vstack((self.next_state,self.next_state[2][ind2]))
+        self.next_state=np.vstack((self.next_state,self.next_state[3][ind3]))
+
+        self.reward=np.vstack((self.reward[0][ind0],self.reward[1][ind1]))
+        self.reward=np.vstack((self.reward,self.reward[2][ind2]))
+        self.reward=np.vstack((self.reward,self.reward[3][ind3]))
+
+        self.not_done=np.vstack((self.not_done[0][ind0],self.not_done[1][ind1]))
+        self.not_done=np.vstack((self.not_done,self.not_done[2][ind2]))
+        self.not_done=np.vstack((self.not_done,self.not_done[3][ind3]))
+        return (
+            torch.FloatTensor(self.state).to(self.device),
+            torch.FloatTensor(self.action).to(self.device),
+            torch.FloatTensor(self.next_state).to(self.device),
+            torch.FloatTensor(self.reward).to(self.device),
+            torch.FloatTensor(self.not_done).to(self.device),
+        )
+
+
 class SimpleReplayBuffer(object):
     def __init__(self, state_dim, action_dim, max_size=int(1e6)):
         self.max_size = max_size
