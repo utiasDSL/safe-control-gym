@@ -111,13 +111,17 @@ class Controller():
         # REPLACE THIS (START) ##
         #########################
 
-        self.net_work_freq=0.5   #  time gap
+        self.net_work_freq=0.3   #  time gap
         self.curent_state=np.zeros(7)
         state_dim = 7
         action_dim = 3
-        max_action = 1.
-        min_action = -1
-        self.action_space=Box(np.array([-1,-1,-1],dtype=np.float64),np.array([1,1,1],dtype=np.float64))
+        max_action = 2
+        min_action = -2
+        self.action_space=Box(np.array([-2,-2,-2],dtype=np.float64),np.array([2,2,2],dtype=np.float64))
+        # max_action=self.action_space.high[0]
+
+        self.action_space.seed(0)
+        
         kwargs = {
             "state_dim": state_dim,
             "action_dim": action_dim,
@@ -146,10 +150,6 @@ class Controller():
         # replay_buffer = replay_buffer.CostReplayBuffer(state_dim, action_dim)
         self.episode_reward = 0
         self.episode_cost = 0
-        self.episode_timesteps = 0
-        self.episode_num = 0
-        self.cost_total = 0
-        self.prev_cost = 0
         self.episode_iteration=-1
 
         self.pass_time = 1e6
@@ -214,7 +214,7 @@ class Controller():
         # state=np.append(state,current_target_gate_pos)
         return state
             
-    def cmdFirmware(self,time,obs,reward=None,done=None,info=None,):
+    def cmdFirmware(self,time,obs,reward=None,done=None,info=None,exploration=True):
         """Pick command sent to the quadrotor through a Crazyswarm/Crazyradio-like interface.
 
         INSTRUCTIONS:
@@ -281,6 +281,7 @@ class Controller():
 
             #  arrival for 2s  or task_completed
             elif self.agent_type=='going goal place' and (self.episode_iteration == self.arrival_iteration + 2 * self.CTRL_FREQ + 1 or info['task_completed'] ==True):
+                print(f" arrival goal place : {self.get_state(obs, info)} ,task_completed : {info['task_completed']}")
                 print("landing")
                 height = 0.
                 duration = 2
@@ -289,24 +290,40 @@ class Controller():
                 args = [height, duration]
                 self.agent_type='landing'
 
-            # after land , exit
+            # after land , exit do not implement
             elif self.agent_type=='landing' and self.episode_iteration==self.arrival_iteration + 1:
-                command_type = Command(-1)  # Terminate command to be sent once trajectory is completed.
+                print(f"have landed, step : {self.episode_iteration}")
+                command_type = Command(0)  # Terminate command to be sent once trajectory is completed.
                 args = []
             else :
                 command_type = Command(0)  # None.
                 args = []
         
         # using network to choose action
-        elif self.episode_iteration >= 2 * self.CTRL_FREQ :
+        elif self.episode_iteration >= 3 * self.CTRL_FREQ :
             
             if self.episode_iteration % (30*self.net_work_freq) ==0:
+                
+                # goTo
+                # duration = self.net_work_freq - 0.02
+                # command_type = Command(5)  # goTo.
+                # current_state=self.get_state(obs,info)
+                # if self.interepisode_counter <= 10:
+                #     action= self.action_space.sample() 
+                # else:
+                #     action = self.policy.select_action(current_state, exploration=True)  # array  delta_x , delta_y, delta_z
+                # action /= 10
+                # yaw=0.
+                # args = [action.astype(np.float64), 0, duration, True]
+
+                # import pdb;pdb.set_trace()
+                # cmdFullState
                 command_type =  Command(1)  # "network"  # cmdFullState.
                 current_state=self.get_state(obs,info)
                 if self.interepisode_counter <= 10:
                     action= self.action_space.sample() 
                 else:
-                    action = self.policy.select_action(current_state, exploration=True)  # array  delta_x , delta_y, delta_z
+                    action = self.policy.select_action(current_state, exploration=exploration)  # array  delta_x , delta_y, delta_z
                 action /= 10
                 target_pos = current_state[[0,1,2]] + action
                 target_vel = np.zeros(3)
@@ -322,227 +339,6 @@ class Controller():
         else :
             command_type = Command(0)  # None.
             args = []
-
-
-        """ test 
-        #----------------test action---------------------
-        # if self.iteration == 0:
-        #     z = 1
-        #     yaw = 0.
-        #     # duration 会影响时间
-        #     duration = 2
-        #     command_type = Command(5)  # goTo.
-        #     args = [[0, 0, z], yaw, duration, True]
-
-        # elif self.iteration > 0.5 *self.CTRL_FREQ and self.iteration < 1.5 *self.CTRL_FREQ :
-        #     command_type = Command(4)  # Stop.
-        #     args = []
-        # else:
-        #     command_type = Command(0)  # None.
-        #     args = []
-        #----------------test action---------------------
-        """
-
-        """ test  go to action
-        #------------------------------------- 
-        # go to not very exactly(exist error).  if not random , always this (getting_started.yaml)
-        #         x                                   y                                z
-        # even if send  command "only change y " from 60steps (2*CTRL_FREQ)  z will continue increase  ,meybe the problem about the Asynchronous 
-        # init:  [-0.96609923  0.                  -2.90654614  0.                   0.04960551  0. 0.02840174 -0.05744736  0.07373744  0.          0.          0.        ]
-        # 0-- [-0.96661885 -0.0279078           -2.90698836 -0.00873109            0.04799388 -0.05964756 0.02340614 -0.04682872  0.07295734 -0.60471722  1.66696169 -0.06040739]
-        # 15- [-0.98957009  0.0177486           -2.91855744  0.01612694            0.08783306  0.40195587 -0.01363278  0.039587    0.07313598  0.1224719  -0.18560217 -0.0133112 ]
-        # 30- [-9.74126116e-01 -6.12250160e-03  -2.90933867e+00  2.79855108e-02    5.77164080e-01  1.57968746e+00  1.13573342e-03  2.79637762e-04 7.34927365e-02 -3.14627467e-02  1.04491797e-01 -3.82468499e-05]
-        # 45- [-0.96690019  0.02592517          -2.9244567  -0.04027908            1.58570938  2.21925943 -0.04590852  0.00406897  0.07356948 -0.20060068 -0.07108402 -0.00401296]
-        # 60- [-0.97490167 -0.00690929          -2.90244781  0.03042487            2.5512753   1.51622867 0.03011076  0.02357646  0.07466138 -0.6881512  -0.51120803  0.0308384 ]
-        # 75- [-0.95789148  0.04922068          -2.84188733  0.34668242            3.25083697  1.17400743 -0.23051172 -0.00670337  0.07419264 -1.46396087  0.74862298  0.10745695]
-        # 90- [-0.96644482  0.03573701          -2.35380695  1.60398413            3.55250003 -0.0314102 -0.30132277  0.04541282  0.06064814 -0.13881515  1.02686106 -0.1751778 ]
-        # 105-[-0.96541722  0.00741155          -1.35492773  2.16873779            3.27599927 -0.96907974 -0.02264677  0.00403805  0.07491015  0.86021552  1.42216285  0.04174302]
-        # 120-[-9.69886183e-01  3.45681240e-02  -3.70208598e-01  1.58408557e+00    2.75920080e+00 -8.91757966e-01  1.95222977e-01  6.89915684e-04 7.17125806e-02 -2.54350558e-01  9.00435832e-01  2.10910125e-01]
-        # 135-[-0.93853971  0.14409335          0.299702    1.2196867              2.35446502 -0.66440774 0.08730616  0.0404132   0.0763123   1.39507016 -0.06357986 -0.14670249]
-        # if self.iteration == 0:
-        #     z = 3
-        #     yaw = 0.
-        #     # duration 会影响时间
-        #     duration = 3
-        #     command_type = Command(5)  # goTo.
-        #     args = [[0, 0, z], yaw, duration, True]
-        # elif self.iteration == 2  *self.CTRL_FREQ:
-        #     y = 3
-        #     yaw = 0.
-        #     # duration 会影响时间
-        #     duration = 3
-        #     command_type = Command(5)  # goTo.
-        #     args = [[0, y, 0], yaw, duration, True]
-        # elif self.iteration == 4  *self.CTRL_FREQ  + 1:
-        #     x = 1
-        #     yaw = 0.
-        #     # duration 会影响时间
-        #     duration = 3
-        #     command_type = Command(5)  # goTo.
-        #     args = [[x, 0, 0], yaw, duration, True]
-        # else:
-        #     command_type = Command(0)  # None.
-        #     args = []
-        #----------------test action end ---------------------
-        """
-
-        """test  go to  and stop action
-        #----------------test  go to  and stop action---------------------
-        # result :  stop can break the commmand but have to observe the rule about the intertia.
-        # if self.iteration == 0:
-        #     z = 1
-        #     yaw = 0.
-        #     # duration 会影响时间
-        #     duration = 0.2
-        #     command_type = Command(5)  # goTo.
-        #     args = [[0, 0, z], yaw, duration, True]
-        # elif self.iteration == 2  *self.CTRL_FREQ :
-        #     command_type = Command(4)  # Stop.  
-        #     args = []
-        # elif self.iteration == 3  *self.CTRL_FREQ:
-        #     y = -3
-        #     yaw = 0.
-        #     # duration 会影响时间
-        #     duration = 5
-        #     command_type = Command(5)  # goTo.
-        #     args = [[0, y, 0], yaw, duration, True]
-        # elif self.iteration == 5  *self.CTRL_FREQ  :
-        #     command_type = Command(4)  # Stop.
-        #     args = []
-        # elif self.iteration == 6  *self.CTRL_FREQ  :
-        #     x = -1
-        #     yaw = 0.
-        #     # duration 会影响时间
-        #     duration = 5
-        #     command_type = Command(5)  # goTo.
-        #     args = [[x, 0, 0], yaw, duration, True]
-        # else:
-        #     command_type = Command(0)  # None.
-        #     args = []
-        #----------------test action end ---------------------
-        """
-
-        """test the min time and the max distance about the go to  action
-        #----------------test   the min time and the max distance about the go to  action---------------------
-        # result :  
-        if self.iteration == 0:
-            z = 0.15
-            # duration 会影响时间
-            duration = 0.33
-            command_type = Command(5)  # goTo.
-            args = [[0, 0, z], 0, duration, True]
-        else:
-            command_type = Command(0)  # None.
-            args = []
-        #----------------test action end ---------------------
-        """
-
-        """ tst the cmdFullState command  the next command will break the last command
-        x=obs[0]
-        y=obs[2]
-        z=obs[4]
-        if self.iteration == 0:
-            height = 1
-            duration = 2
-            command_type = Command(2)  # Take-off.
-            args = [height, duration]
-        # 90-[-9.75560513e-01  3.98563938e-02 -2.90579683e+00 -2.46277672e-03 9.46152214e-01 -4.69072173e-02  5.22578314e-03  3.41655474e-02 5.11630895e-02 -2.64937344e-01  1.81993538e+00 -7.07496076e-01]
-        elif self.iteration == 3 *self.CTRL_FREQ:
-            target_pos = np.array([x+0.1,y,z])
-            target_vel = np.zeros(3)
-            target_acc = np.zeros(3)
-            target_yaw = 0.
-            target_rpy_rates = np.zeros(3)
-
-            command_type = Command(1)  # cmdFullState.
-            args = [target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
-        
-        # 105-[-9.09596873e-01  2.00324028e-01 -2.90993115e+00 -3.19762174e-02 9.08722645e-01 -6.57070694e-02 -4.07341352e-02 -3.57578141e-02 2.78315544e-03 -4.06931208e-01  1.00299233e+00  2.78734319e-01]
-        elif self.iteration == 3.5 *self.CTRL_FREQ:
-            target_pos = np.array([x, y+0.1, z])
-            target_vel = np.zeros(3)
-            target_acc = np.zeros(3)
-            target_yaw = 0.
-            target_rpy_rates = np.zeros(3)
-
-            command_type = Command(1)  # cmdFullState.
-            args = [target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
-       
-        # 120-[-9.09082306e-01 -8.87231485e-02 -2.84472628e+00  2.40919527e-01 8.64559996e-01  1.77237485e-02  3.32461760e-02  2.48394834e-02 2.12280677e-03  9.54833499e-01  1.31716466e+00  1.11926138e-01]
-        elif self.iteration == 4 *self.CTRL_FREQ:
-            target_pos = np.array([x, y, z+0.1])
-            target_vel = np.zeros(3)
-            target_acc = np.zeros(3)
-            target_yaw = 0.
-            target_rpy_rates = np.zeros(3)
-
-            command_type = Command(1)  # cmdFullState.
-            args = [target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
-        else :
-            command_type = Command(0)  # None.
-            args = []
-        #  135-[-0.90734541  0.07334976 -2.83234816 -0.10398782  0.90615406  0.03580154 -0.0083358  -0.00963472  0.00332174  0.67757902  0.5731973   0.09230706]
-        """
-
-        """
-        # Example action : Handwritten solution for GitHub's getting_stated scenario.
-        # # default action
-        # if self.iteration == 0:
-        #     height = 1
-        #     duration = 2
-        #     command_type = Command(2)  # Take-off.
-        #     args = [height, duration]
-
-        # elif self.iteration >= 3*self.CTRL_FREQ and self.iteration < 20*self.CTRL_FREQ:
-        #     step = min(self.iteration-3*self.CTRL_FREQ, len(self.ref_x) -1)
-        #     target_pos = np.array([self.ref_x[step], self.ref_y[step], self.ref_z[step]])
-        #     target_vel = np.zeros(3)
-        #     target_acc = np.zeros(3)
-        #     target_yaw = 0.
-        #     target_rpy_rates = np.zeros(3)
-
-        #     command_type = Command(1)  # cmdFullState.
-        #     args = [target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
-
-        # elif self.iteration == 20*self.CTRL_FREQ:
-        #     command_type = Command(6)  # notify setpoint stop.
-        #     args = []
-
-        # elif self.iteration == 20*self.CTRL_FREQ+1:
-        #     x = self.ref_x[-1]
-        #     y = self.ref_y[-1]
-        #     z = 1.5 
-        #     yaw = 0.
-        #     duration = 2.5
-
-        #     command_type = Command(5)  # goTo.
-        #     args = [[x, y, z], yaw, duration, False]
-
-        # elif self.iteration == 23*self.CTRL_FREQ:
-        #     x = self.initial_obs[0]
-        #     y = self.initial_obs[2]
-        #     z = 1.5
-        #     yaw = 0.
-        #     duration = 6
-
-        #     command_type = Command(5)  # goTo.
-        #     args = [[x, y, z], yaw, duration, False]
-
-        # elif self.iteration == 30*self.CTRL_FREQ:
-        #     height = 0.
-        #     duration = 3
-
-        #     command_type = Command(3)  # Land.
-        #     args = [height, duration]
-
-        # elif self.iteration == 33*self.CTRL_FREQ-1:
-        #     command_type = Command(-1)  # Terminate command to be sent once trajectory is completed.
-        #     args = []
-
-        # else:
-        #     command_type = Command(0)  # None.
-        #     args = []
-        """
 
         #########################
         # REPLACE THIS (END) ####
@@ -610,36 +406,51 @@ class Controller():
         """
         self.interstep_counter += 1
 
-        
         #########################
         # REPLACE THIS (START) ##
         #########################
 
         # add experience when use network to decide
-        if  self.episode_iteration== 2 * self.CTRL_FREQ:
+        if  self.episode_iteration == 3 * self.CTRL_FREQ:
             self.current_state= self.get_state(obs,info)
             self.current_args = args
 
-        if  self.episode_iteration> 2 * self.CTRL_FREQ  and (not self.go_back)  and self.episode_iteration % (30*self.net_work_freq) ==0:
+        if  self.episode_iteration> 3 * self.CTRL_FREQ  and (not self.go_back)  :
             # 
             # Store the last step's events.
-            current_action=(self.current_args[0]-self.current_state[[0,1,2]]) * 10
-            next_state=self.get_state(obs,info)
-            next_args=args
-            # import pdb;pdb.set_trace()
-            #  ok  buffer no problem
-            if self.episode_iteration % 600 ==0  :
-                print(f"add buffer:\nstate: {[float('{:.4f}'.format(i)) for i in self.current_state]}  \t\naction: {current_action} \t\nnext_state: {[float('{:.4f}'.format(i)) for i in next_state]} reward: {self.one_step_reward}")
-                print(f"{np.array(next_state-self.current_state)[[0,1,2]] * 100}")
-                print("*********************************************")
-            self.replay_buffer.add(self.current_state,current_action,next_state,self.one_step_reward,done)
-            self.one_step_reward=reward
-            self.current_state=next_state
-            self.current_args=next_args
-        else :
-            self.one_step_reward+=reward
-        if self.interepisode_counter >= 20:
-            self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(1))
+            if self.episode_iteration % (30*self.net_work_freq) ==0:
+                # cmdFullState
+                # import pdb;pdb.set_trace()
+                current_action=(self.current_args[0]-self.current_state[[0,1,2]]) * 10
+                # goTo
+                # current_action=(self.current_args[0]) * 10
+        
+                next_state=self.get_state(obs,info)
+                next_args=args
+
+                # import pdb;pdb.set_trace()
+                if self.episode_iteration % 900 ==0  :
+                    print(f"add buffer:\nstate: {[float('{:.4f}'.format(i)) for i in self.current_state]}  \taction: {current_action} \t\nnext_state: {[float('{:.4f}'.format(i)) for i in next_state]} reward: {self.one_step_reward}")
+                    print(f"next_state-self.current_state: {np.array(next_state-self.current_state)[[0,1,2]] * 100}")
+                    print(f"target_gate_id:{info['current_target_gate_id']} ; pos: {info['current_target_gate_pos']}")
+                    print("*********************************************")
+                
+                # 09.28 improve buffer
+                self.replay_buffer.add(info['current_target_gate_id'],self.current_state,current_action,next_state,self.one_step_reward,done)
+                # self.replay_buffer.add(self.current_state,current_action,next_state,self.one_step_reward,done)
+
+                self.episode_reward+=self.one_step_reward
+
+                # ready for next update
+                self.one_step_reward=reward
+                self.current_state=next_state
+                self.current_args=next_args
+            else :
+                self.one_step_reward+=reward
+
+        # network do one step , train 100 steps.
+        if self.interepisode_counter >= 20 and self.episode_iteration % (15*self.net_work_freq) ==0:
+            self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(10))
         #########################
         # REPLACE THIS (END) ####
         #########################
@@ -670,6 +481,7 @@ class Controller():
 
         if self.interepisode_counter >= 15 and self.interepisode_counter % 10 == 0 :
             self.policy.save(filename=file_name)
+        return self.episode_reward
         #########################
         # REPLACE THIS (END) ####
         #########################
@@ -701,4 +513,15 @@ class Controller():
         self.interstep_learning_time = 0
         self.interstep_learning_occurrences = 0
         self.interepisode_learning_time = 0
-        self.episode_iteration = -1
+
+        self.episode_reward = 0
+        self.episode_cost = 0
+
+        self.episode_iteration=-1
+        self.pass_time = 1e6
+        # env-based variable
+        self.go_back=False
+        self.pass_bool=False
+        self.agent_type='passing'
+        self.arrival_iteration =1e6
+        self.one_step_reward = 0 
