@@ -297,7 +297,7 @@ class Controller():
             
             if self.episode_iteration % (30*self.net_work_freq) ==0:
                 
-                # goTo
+                #goTo
                 # duration = self.net_work_freq - 0.02
                 # command_type = Command(5)  # goTo.
                 # current_state=self.get_state(obs,info)
@@ -308,10 +308,10 @@ class Controller():
                 # action /= 10
                 # yaw=0.
                 # args = [action.astype(np.float64), 0, duration, True]
-
                 # import pdb;pdb.set_trace()
+                
                 # cmdFullState
-                command_type =  Command(1)  # "network"  # cmdFullState.
+                command_type =  Command(1)   # cmdFullState.
                 current_state=self.get_state(obs,info)
                 if self.interepisode_counter <= 20:
                     action= self.action_space.sample() 
@@ -412,25 +412,26 @@ class Controller():
             # 
             # Store the last step's events.
             if self.episode_iteration % (30*self.net_work_freq) ==0:
-                # cmdFullState
-                # import pdb;pdb.set_trace()
-                current_action=(self.current_args[0]-self.current_state[[0,1,2]]) * 10
-                # goTo
-                # current_action=(self.current_args[0]) * 10
-        
                 next_state=self.get_state(obs,info)
                 next_args=args
 
+                # cmdFullState
+                current_action_infer=(self.current_args[0]-self.current_state[[0,1,2]]) * 10
+                current_action_act=np.array(next_state-self.current_state)[[0,1,2]]
+                current_action_act=current_action_act / max(abs(current_action_act)) * 2
+                # goTo
+                # current_action=(self.current_args[0]) * 10
+
                 # import pdb;pdb.set_trace()
                 if self.episode_iteration % 600 ==0  :
-                    print(f"add buffer:\n aim to : {self.current_state[3:6]} \t action: {current_action} \t reward: {self.one_step_reward}")
+                    print(f"add buffer:\n aim to : {self.current_state[3:6]} \t action_infer: {current_action_infer} \taction_act {current_action_act}: \t reward: {self.one_step_reward}")
                     print(f"next_state-self.current_state: {np.array(next_state-self.current_state)[[0,1,2]] * 100}")
                     print(f"target_gate_id:{info['current_target_gate_id']} ; pos: {info['current_target_gate_pos']}")
                     print("*********************************************")
                 
                 # 09.28 improve buffer
                 # self.replay_buffer.add(info['current_target_gate_id'],self.current_state,current_action,next_state,self.one_step_reward,done)
-                self.replay_buffer.add(self.current_state,current_action,next_state,self.one_step_reward,done)
+                self.replay_buffer.add(self.current_state,current_action_act,next_state,self.one_step_reward,done)
 
                 self.episode_reward+=self.one_step_reward
 

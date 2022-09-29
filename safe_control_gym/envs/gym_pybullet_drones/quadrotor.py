@@ -954,7 +954,7 @@ class Quadrotor(BaseAviary):
                 std_dis=std_dis/(min(abs(std_dis)))
                 std_dis=[max(min(_,1.),-1.) for _ in std_dis]
                 # import pdb;pdb.set_trace()
-                reward += sum((current_pos-last_pos) * std_dis) * 100
+                reward += sum((current_pos-last_pos) * std_dis) * 5
                 #  this way do not work
                 # dis_aft_action=(target_pos[0]-current_pos[0])** 2  + (target_pos[1]-current_pos[1]) ** 2  + (target_pos[1]-current_pos[1]) ** 2 
                 # dis_bfe_action=(target_pos[0]-last_pos[0]) ** 2  + (target_pos[1]-last_pos[1]) ** 2  + (target_pos[1]-last_pos[1]) ** 2 
