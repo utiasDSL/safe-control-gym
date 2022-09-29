@@ -17,7 +17,7 @@ class SimpleReplayBufferIros(object):
         self.reward = np.zeros(( self.phrase,self.one_phrase_max_size, 1))
         self.not_done = np.zeros(( self.phrase,self.one_phrase_max_size, 1))
 
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 
     def add(self,phrase, state, action, next_state, reward, done):
