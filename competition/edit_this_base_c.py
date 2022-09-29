@@ -111,16 +111,16 @@ class Controller():
         # REPLACE THIS (START) ##
         #########################
 
-        self.net_work_freq=0.3   #  time gap
+        self.net_work_freq=0.5   #  time gap
         self.curent_state=np.zeros(7)
         state_dim = 7
         action_dim = 3
-        max_action = 2
-        min_action = -2
+        max_action = 2.
+        min_action = -2.
         self.action_space=Box(np.array([-2,-2,-2],dtype=np.float64),np.array([2,2,2],dtype=np.float64))
         # max_action=self.action_space.high[0]
 
-        self.action_space.seed(0)
+        self.action_space.seed(1)
         
         kwargs = {
             "state_dim": state_dim,
@@ -189,21 +189,20 @@ class Controller():
         all_gates_pos=all_gates_pos[:,[0,1,2,5]].flatten()
 
         if info !={}:
-            # 1 or 0  1
-            current_target_gate_in_range= 1 if info['current_target_gate_in_range'] == True else 0
-
-            # [x,y,z,r] exactly if current_target_gate_in_range==1 else [x,y,z,y] noisy  (r,p is zero ,ignored )
-            current_target_gate_pos = info['current_target_gate_pos']
-            if current_target_gate_pos[2]==0: #  means that  current_target_gate_in_range is False, add default height.
-                current_target_gate_pos[2]=1 if info['current_target_gate_type'] == 0 else 0.525
-            current_target_gate_pos=np.array(current_target_gate_pos)[[0,1,2,5]]
-
             # goal [x,y,z]
             if info['current_target_gate_id'] == -1 :
                 current_goal_pos = self.goal_pos
+                current_target_gate_in_range= 0 
             else :
-                # TODO using the center of the gate.
+                # 1 or 0  1
+                current_target_gate_in_range= 1 if info['current_target_gate_in_range'] == True else 0
+                # [x,y,z,r] exactly if current_target_gate_in_range==1 else [x,y,z,y] noisy  (r,p is zero ,ignored )
+                current_target_gate_pos = info['current_target_gate_pos']
+                if current_target_gate_pos[2]==0: #  means that  current_target_gate_in_range is False, add default height.
+                    current_target_gate_pos[2]=1 if info['current_target_gate_type'] == 0 else 0.525
+                current_target_gate_pos=np.array(current_target_gate_pos)[[0,1,2,5]]
                 current_goal_pos=current_target_gate_pos[:3]
+                  
         else :
             current_target_gate_in_range= 0 
             current_target_gate_pos = np.zeros(4)
@@ -262,18 +261,18 @@ class Controller():
             args = [height, duration]
         # end with rule-based when have passed all the gate 
         elif self.go_back  :
-            # up
-            if self.agent_type=='just_pass':
-                print("Just passed,going up")
-                duration = 2
-                self.arrival_iteration=self.episode_iteration+ duration *self.CTRL_FREQ
-                command_type = Command(5)  # goTo.
-                args = [[0, 0, 1], 0, duration, True]
-                self.agent_type='going up'
-            # go to goal place
-            elif self.agent_type=='going up' and self.episode_iteration==self.arrival_iteration + 1 :
+            # # up
+            # if self.agent_type=='just_pass':
+            #     print("Just passed,going up")
+            #     duration = 2
+            #     self.arrival_iteration=self.episode_iteration+ duration *self.CTRL_FREQ
+            #     command_type = Command(5)  # goTo.
+            #     args = [[0, 0, 1], 0, duration, True]
+            #     self.agent_type='going up'
+            # # go to goal place
+            if self.agent_type=='just_pass' :
                 print("going goal place")
-                duration = 3
+                duration = 2
                 self.arrival_iteration=self.episode_iteration+ duration *self.CTRL_FREQ
                 command_type = Command(5)  # goTo.
                 args = [[self.goal_pos[0], self.goal_pos[1], self.goal_pos[2]], 0, duration, False]
@@ -284,7 +283,7 @@ class Controller():
                 print(f" arrival goal place : {self.get_state(obs, info)} ,task_completed : {info['task_completed']}")
                 print("landing")
                 height = 0.
-                duration = 2
+                duration = 1
                 self.arrival_iteration=self.episode_iteration+ duration *self.CTRL_FREQ
                 command_type = Command(3)  # Land.
                 args = [height, duration]
@@ -429,15 +428,15 @@ class Controller():
                 next_args=args
 
                 # import pdb;pdb.set_trace()
-                if self.episode_iteration % 900 ==0  :
-                    print(f"add buffer:\nstate: {[float('{:.4f}'.format(i)) for i in self.current_state]}  \taction: {current_action} \t\nnext_state: {[float('{:.4f}'.format(i)) for i in next_state]} reward: {self.one_step_reward}")
+                if self.episode_iteration % 500 ==0  :
+                    print(f"add buffer:\n aim to : {self.current_state[3:6]} \t action: {current_action} \t reward: {self.one_step_reward}")
                     print(f"next_state-self.current_state: {np.array(next_state-self.current_state)[[0,1,2]] * 100}")
                     print(f"target_gate_id:{info['current_target_gate_id']} ; pos: {info['current_target_gate_pos']}")
                     print("*********************************************")
                 
                 # 09.28 improve buffer
-                self.replay_buffer.add(info['current_target_gate_id'],self.current_state,current_action,next_state,self.one_step_reward,done)
-                # self.replay_buffer.add(self.current_state,current_action,next_state,self.one_step_reward,done)
+                # self.replay_buffer.add(info['current_target_gate_id'],self.current_state,current_action,next_state,self.one_step_reward,done)
+                self.replay_buffer.add(self.current_state,current_action,next_state,self.one_step_reward,done)
 
                 self.episode_reward+=self.one_step_reward
 
@@ -450,7 +449,13 @@ class Controller():
 
         # network do one step , train 100 steps.
         if self.interepisode_counter >= 20 and self.episode_iteration % (15*self.net_work_freq) ==0:
-            self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(10))
+            self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(30))
+        #
+        # train_num_per_network = 60
+        # train_num_per_s= train_num_per_network/self.net_work_freq
+        # train_freq = train_num_per_s / 30  # every command step , should train num
+        # if self.interepisode_counter >= 20  :
+        #     self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(train_freq))
         #########################
         # REPLACE THIS (END) ####
         #########################

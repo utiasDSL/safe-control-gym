@@ -5,7 +5,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from safetyplusplus_folder.networks import Critic,Actor
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+
 
 class TD3(object):
     def __init__(
@@ -21,9 +22,8 @@ class TD3(object):
         expl_noise = 0.1,
     ):
 
-        torch.manual_seed(0)
-        np.random.seed(0)
-        
+        # torch.manual_seed(1001)
+        # np.random.seed(1001)
         self.actor = Actor(state_dim, action_dim, max_action).to(device)
         self.actor_target = copy.deepcopy(self.actor)
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=3e-4)
@@ -41,7 +41,6 @@ class TD3(object):
         self.policy_freq = policy_freq
 
         self.expl_noise = expl_noise
-
         self.total_it = 0
         
 
@@ -110,11 +109,11 @@ class TD3(object):
             
             
     def save(self, filename):
-        torch.save(self.critic.state_dict(), f"{filename}/_critic")
+        torch.save(self.critic.state_dict(), f"{filename}_critic")
         torch.save(self.critic_optimizer.state_dict(), f"{filename}_critic_optimizer")
  
-        torch.save(self.actor.state_dict(), f"{filename}/_actor")
-        torch.save(self.actor_optimizer.state_dict(), f"{filename}/_actor_optimizer")
+        torch.save(self.actor.state_dict(), f"{filename}_actor")
+        torch.save(self.actor_optimizer.state_dict(), f"{filename}_actor_optimizer")
 
 
     def load(self, filename):
