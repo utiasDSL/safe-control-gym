@@ -313,7 +313,7 @@ class Controller():
                 # cmdFullState
                 command_type =  Command(1)   # cmdFullState.
                 current_state=self.get_state(obs,info)
-                if self.interepisode_counter <= 20:
+                if self.interepisode_counter <= 10:
                     action= self.action_space.sample() 
                 else:
                     action = self.policy.select_action(current_state, exploration=exploration)  # array  delta_x , delta_y, delta_z
@@ -424,14 +424,14 @@ class Controller():
 
                 # import pdb;pdb.set_trace()
                 if self.episode_iteration % 600 ==0  :
-                    print(f"add buffer:\n aim to : {self.current_state[3:6]} \t action_infer: {current_action_infer} \taction_act {current_action_act}: \t reward: {self.one_step_reward}")
+                    print(f"add buffer:\n aim to : {self.current_state[3:6]} \t action_infer: {current_action_infer} \t reward: {self.one_step_reward}")
                     print(f"next_state-self.current_state: {np.array(next_state-self.current_state)[[0,1,2]] * 100}")
                     print(f"target_gate_id:{info['current_target_gate_id']} ; pos: {info['current_target_gate_pos']}")
                     print("*********************************************")
                 
                 # 09.28 improve buffer
                 # self.replay_buffer.add(info['current_target_gate_id'],self.current_state,current_action,next_state,self.one_step_reward,done)
-                self.replay_buffer.add(self.current_state,current_action_act,next_state,self.one_step_reward,done)
+                self.replay_buffer.add(self.current_state,current_action_infer,next_state,self.one_step_reward,done)
 
                 self.episode_reward+=self.one_step_reward
 
@@ -441,7 +441,7 @@ class Controller():
                 self.current_args=next_args
 
                 # network do one step , train 60 steps.
-                if self.interepisode_counter >= 30 :
+                if self.interepisode_counter >= 20 :
                     self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(60))
             else :
                 self.one_step_reward+=reward
