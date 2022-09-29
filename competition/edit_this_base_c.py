@@ -422,7 +422,7 @@ class Controller():
                 next_args=args
 
                 # import pdb;pdb.set_trace()
-                if self.episode_iteration % 500 ==0  :
+                if self.episode_iteration % 600 ==0  :
                     print(f"add buffer:\n aim to : {self.current_state[3:6]} \t action: {current_action} \t reward: {self.one_step_reward}")
                     print(f"next_state-self.current_state: {np.array(next_state-self.current_state)[[0,1,2]] * 100}")
                     print(f"target_gate_id:{info['current_target_gate_id']} ; pos: {info['current_target_gate_pos']}")
