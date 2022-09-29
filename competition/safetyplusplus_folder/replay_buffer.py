@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 
+
 class SimpleReplayBufferIros(object):
     def __init__(self, state_dim, action_dim, max_size=int(1e6)):
         self.max_size = max_size
@@ -43,31 +44,36 @@ class SimpleReplayBufferIros(object):
         ind2 = np.random.randint(0, self.size[2], size=size_2)
         ind3 = np.random.randint(0, self.size[3], size=size_3)
 
-        self.state=np.vstack((self.state[0][ind0],self.state[1][ind1]))
-        self.state=np.vstack((self.state,self.state[2][ind2]))
-        self.state=np.vstack((self.state,self.state[3][ind3]))
-
-        self.action=np.vstack((self.action[0][ind0],self.action[1][ind1]))
-        self.action=np.vstack((self.action,self.action[2][ind2]))
-        self.action=np.vstack((self.action,self.action[3][ind3]))
-
-        self.next_state=np.vstack((self.next_state[0][ind0],self.next_state[1][ind1]))
-        self.next_state=np.vstack((self.next_state,self.next_state[2][ind2]))
-        self.next_state=np.vstack((self.next_state,self.next_state[3][ind3]))
-
-        self.reward=np.vstack((self.reward[0][ind0],self.reward[1][ind1]))
-        self.reward=np.vstack((self.reward,self.reward[2][ind2]))
-        self.reward=np.vstack((self.reward,self.reward[3][ind3]))
-
-        self.not_done=np.vstack((self.not_done[0][ind0],self.not_done[1][ind1]))
-        self.not_done=np.vstack((self.not_done,self.not_done[2][ind2]))
-        self.not_done=np.vstack((self.not_done,self.not_done[3][ind3]))
+        if size_0 !=0:
+            state=self.state[0][ind0]
+            action=self.action[0][ind0]
+            next_state=self.next_state[0][ind0]
+            reward=self.reward[0][ind0]
+            not_done=self.not_done[0][ind0]
+        if size_1!=0:
+            state=np.vstack((state,self.state[1][ind1]))
+            action=np.vstack((action,self.action[1][ind1]))
+            next_state=np.vstack((next_state,self.next_state[1][ind1]))
+            reward=np.vstack((reward,self.reward[1][ind1]))
+            not_done=np.vstack((not_done,self.not_done[1][ind1]))
+        if size_2!=0:
+            state=np.vstack((state,self.state[2][ind2]))
+            action=np.vstack((action,self.action[2][ind2]))
+            next_state=np.vstack((next_state,self.next_state[2][ind2]))
+            reward=np.vstack((reward,self.reward[2][ind2]))
+            not_done=np.vstack((not_done,self.not_done[2][ind2]))
+        if size_3!=0:
+            state=np.vstack((state,self.state[3][ind3]))
+            action=np.vstack((action,self.action[3][ind3]))
+            next_state=np.vstack((next_state,self.next_state[3][ind3]))
+            reward=np.vstack((reward,self.reward[3][ind3]))
+            not_done=np.vstack((not_done,self.not_done[3][ind3])) 
         return (
-            torch.FloatTensor(self.state).to(self.device),
-            torch.FloatTensor(self.action).to(self.device),
-            torch.FloatTensor(self.next_state).to(self.device),
-            torch.FloatTensor(self.reward).to(self.device),
-            torch.FloatTensor(self.not_done).to(self.device),
+            torch.FloatTensor(state).to(self.device),
+            torch.FloatTensor(action).to(self.device),
+            torch.FloatTensor(next_state).to(self.device),
+            torch.FloatTensor(reward).to(self.device),
+            torch.FloatTensor(not_done).to(self.device),
         )
 
 
@@ -83,7 +89,7 @@ class SimpleReplayBuffer(object):
         self.reward = np.zeros((max_size, 1))
         self.not_done = np.zeros((max_size, 1))
 
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 
     def add(self, state, action, next_state, reward, done):

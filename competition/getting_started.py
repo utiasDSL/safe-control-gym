@@ -42,7 +42,7 @@ finally:
 
 from safetyplusplus_folder.plus_logger import SafeLogger
 
-file_name='0928_FullState5_Len33_Step0.3s_train20_maxAction2'
+file_name='0929_04_seed_step0.5_train60_maxAct2_noSeed_reward'
 
 # def eval(firmware_wrapper,env,eval_times):
 
