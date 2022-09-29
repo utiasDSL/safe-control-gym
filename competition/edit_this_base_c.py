@@ -111,7 +111,7 @@ class Controller():
         # REPLACE THIS (START) ##
         #########################
 
-        self.net_work_freq=1   #  time gap
+        self.net_work_freq=0.5   #  time gap
         self.curent_state=np.zeros(7)
         state_dim = 7
         action_dim = 3
@@ -448,7 +448,7 @@ class Controller():
 
             
         
-        # impTraining
+        # impTraining 没什么用，更新了又不用神经网络推断，和使用神经网络时推断是一样的
         # train_num_per_network = 60
         # train_num_per_s= train_num_per_network/self.net_work_freq
         # train_freq = train_num_per_s / 30  # every command step , should train num
