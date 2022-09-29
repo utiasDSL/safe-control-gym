@@ -115,10 +115,8 @@ class Controller():
         self.curent_state=np.zeros(7)
         state_dim = 7
         action_dim = 3
-        max_action = 2.
-        min_action = -2.
         self.action_space=Box(np.array([-2,-2,-2],dtype=np.float64),np.array([2,2,2],dtype=np.float64))
-        # max_action=self.action_space.high[0]
+        max_action=self.action_space.high[0]
 
         self.action_space.seed(1)
         
@@ -142,28 +140,32 @@ class Controller():
         # td3 policy
         self.policy = unconstrained.TD3(**kwargs)
         # self.policy.load("td3_2")
-        self.replay_buffer = replay_buffer.SimpleReplayBuffer(state_dim, action_dim)
+        self.replay_buffer = replay_buffer.SimpleReplayBufferIros(state_dim, action_dim)
 
+        # USL policy
         # kwargs.update(kwargs_safe)
         # kwargs.update({'kappa':5})
         # self.policy = safetyplusplus.TD3Usl(**kwargs)
         # replay_buffer = replay_buffer.CostReplayBuffer(state_dim, action_dim)
+
+        # env-based variable
         self.episode_reward = 0
         self.episode_cost = 0
         self.episode_iteration=-1
-
         self.pass_time = 1e6
-
-        # env-based variable
         self.go_back=False
         self.pass_bool=False
         self.agent_type='passing'
         self.arrival_iteration =1e6
         self.goal_pos=[initial_info['x_reference'][0],initial_info['x_reference'][2],initial_info['x_reference'][4]]
         self.one_step_reward = 0 
+
+
         #########################
         # REPLACE THIS (END) ####
         #########################
+
+
     def get_state(self,obs,info):
         # state info : obs_info(3) + goal_info(3) + all_gate_info(1 + 16) + all_obstacle_info(12)     = 35
         # x,y,z  3 
@@ -261,15 +263,7 @@ class Controller():
             args = [height, duration]
         # end with rule-based when have passed all the gate 
         elif self.go_back  :
-            # # up
-            # if self.agent_type=='just_pass':
-            #     print("Just passed,going up")
-            #     duration = 2
-            #     self.arrival_iteration=self.episode_iteration+ duration *self.CTRL_FREQ
-            #     command_type = Command(5)  # goTo.
-            #     args = [[0, 0, 1], 0, duration, True]
-            #     self.agent_type='going up'
-            # # go to goal place
+            # go to goal place
             if self.agent_type=='just_pass' :
                 print("going goal place")
                 duration = 2
@@ -435,8 +429,8 @@ class Controller():
                     print("*********************************************")
                 
                 # 09.28 improve buffer
-                # self.replay_buffer.add(info['current_target_gate_id'],self.current_state,current_action,next_state,self.one_step_reward,done)
-                self.replay_buffer.add(self.current_state,current_action,next_state,self.one_step_reward,done)
+                self.replay_buffer.add(info['current_target_gate_id'],self.current_state,current_action,next_state,self.one_step_reward,done)
+                # self.replay_buffer.add(self.current_state,current_action,next_state,self.one_step_reward,done)
 
                 self.episode_reward+=self.one_step_reward
 
@@ -450,12 +444,14 @@ class Controller():
         # network do one step , train 100 steps.
         if self.interepisode_counter >= 20 and self.episode_iteration % (15*self.net_work_freq) ==0:
             self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(30))
-        #
+        
+        # impTraining
         # train_num_per_network = 60
         # train_num_per_s= train_num_per_network/self.net_work_freq
         # train_freq = train_num_per_s / 30  # every command step , should train num
         # if self.interepisode_counter >= 20  :
         #     self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(train_freq))
+
         #########################
         # REPLACE THIS (END) ####
         #########################
