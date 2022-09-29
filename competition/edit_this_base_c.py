@@ -140,7 +140,7 @@ class Controller():
         # td3 policy
         self.policy = unconstrained.TD3(**kwargs)
         # self.policy.load("td3_2")
-        self.replay_buffer = replay_buffer.SimpleReplayBufferIros(state_dim, action_dim)
+        self.replay_buffer = replay_buffer.SimpleReplayBuffer(state_dim, action_dim)
 
         # USL policy
         # kwargs.update(kwargs_safe)
@@ -429,8 +429,8 @@ class Controller():
                     print("*********************************************")
                 
                 # 09.28 improve buffer
-                self.replay_buffer.add(info['current_target_gate_id'],self.current_state,current_action,next_state,self.one_step_reward,done)
-                # self.replay_buffer.add(self.current_state,current_action,next_state,self.one_step_reward,done)
+                # self.replay_buffer.add(info['current_target_gate_id'],self.current_state,current_action,next_state,self.one_step_reward,done)
+                self.replay_buffer.add(self.current_state,current_action,next_state,self.one_step_reward,done)
 
                 self.episode_reward+=self.one_step_reward
 
