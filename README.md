@@ -136,7 +136,7 @@ edit_this.py : Controller.__init__(initial_obs, initial_info)           # Initia
 
             - 'gate_dimensions'                 Shape and measurements of the gates
             - 'obstacle_dimensions'             Shape and measurements of the obstacles
-            - 'nominal_gates_pos_and_type'      *Nominal* pose and type (tall, low, etc.) of the gates
+            - 'nominal_gates_pos_and_type'      *Nominal* pose and type (tall, low, etc.) of the gates (NOTE: this is the ordering in which the gates must be traversed)
             - 'nominal_obstacles_pos'           *Nominal* pose of the obstacles (NOTE: these are provided once, through the controller's constructor, and might differ from the exact positions, if `randomized_gates_and_obstacles` is True, exact positions will also change across episodes if `reseed_on_reset` is False)
             - 'x_reference'                     Final position to reach/hover at
 
