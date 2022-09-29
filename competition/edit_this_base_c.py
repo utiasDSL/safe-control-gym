@@ -111,7 +111,7 @@ class Controller():
         # REPLACE THIS (START) ##
         #########################
 
-        self.net_work_freq=0.5   #  time gap
+        self.net_work_freq=1   #  time gap
         self.curent_state=np.zeros(7)
         state_dim = 7
         action_dim = 3
@@ -313,7 +313,7 @@ class Controller():
                 # cmdFullState
                 command_type =  Command(1)  # "network"  # cmdFullState.
                 current_state=self.get_state(obs,info)
-                if self.interepisode_counter <= 10:
+                if self.interepisode_counter <= 20:
                     action= self.action_space.sample() 
                 else:
                     action = self.policy.select_action(current_state, exploration=exploration)  # array  delta_x , delta_y, delta_z
@@ -438,12 +438,14 @@ class Controller():
                 self.one_step_reward=reward
                 self.current_state=next_state
                 self.current_args=next_args
+
+                # network do one step , train 60 steps.
+                if self.interepisode_counter >= 30 :
+                    self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(60))
             else :
                 self.one_step_reward+=reward
 
-        # network do one step , train 100 steps.
-        if self.interepisode_counter >= 20 and self.episode_iteration % (15*self.net_work_freq) ==0:
-            self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(30))
+            
         
         # impTraining
         # train_num_per_network = 60
