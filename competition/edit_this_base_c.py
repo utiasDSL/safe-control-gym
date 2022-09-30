@@ -115,8 +115,9 @@ class Controller():
         self.curent_state=np.zeros(7)
         state_dim = 7
         action_dim = 3
-        self.action_space=Box(np.array([-2,-2,-2],dtype=np.float64),np.array([2,2,2],dtype=np.float64))
-        max_action=self.action_space.high[0]
+        max_action=2
+        min_action=max_action * (-1)
+        self.action_space=Box(np.array([min_action,min_action,min_action],dtype=np.float64),np.array([max_action,max_action,max_action],dtype=np.float64))
 
         self.action_space.seed(1)
         
@@ -235,7 +236,6 @@ class Controller():
             List: arguments for the type of command (see comments in class `Command`)
 
         """
-        prt=False
         self.episode_iteration+=1
        
         if self.ctrl is not None:
@@ -248,10 +248,11 @@ class Controller():
 
         # whether goback
         if info != {} and info['current_target_gate_id'] == -1 and self.pass_bool==False:
+            self.end_add_buffer_iteration=self.next_infer_iteration
             self.pass_time=self.episode_iteration
             self.pass_bool=True
             print(f"pass_all_gate_time : {self.pass_time}")
-        if self.episode_iteration == self.pass_time + 2:
+        if self.episode_iteration == self.pass_time + 2:  
             self.agent_type='just_pass'
             self.go_back=True
 
@@ -296,7 +297,7 @@ class Controller():
         elif self.episode_iteration >= 3 * self.CTRL_FREQ :
             
             if self.episode_iteration % (30*self.net_work_freq) ==0:
-                
+                self.next_infer_iteration=self.episode_iteration + (30*self.net_work_freq)
                 #goTo
                 # duration = self.net_work_freq - 0.02
                 # command_type = Command(5)  # goTo.
@@ -408,30 +409,35 @@ class Controller():
             self.current_state= self.get_state(obs,info)
             self.current_args = args
 
+        # step through the last gate , give reward
+        if self.episode_iteration == self.end_add_buffer_iteration:
+            current_action=(self.current_args[0]-self.current_state[[0,1,2]]) * 10
+            next_state=self.get_state(obs,info)
+            self.replay_buffer.add(self.current_state,current_action,next_state,100,done)
+
         if  self.episode_iteration> 3 * self.CTRL_FREQ  and (not self.go_back)  :
             # 
             # Store the last step's events.
             if self.episode_iteration % (30*self.net_work_freq) ==0:
+                # cmdFullState
+                # import pdb;pdb.set_trace()
+                current_action=(self.current_args[0]-self.current_state[[0,1,2]]) * 10
+                # goTo
+                # current_action=(self.current_args[0]) * 10
+        
                 next_state=self.get_state(obs,info)
                 next_args=args
 
-                # cmdFullState
-                current_action_infer=(self.current_args[0]-self.current_state[[0,1,2]]) * 10
-                current_action_act=np.array(next_state-self.current_state)[[0,1,2]]
-                current_action_act=current_action_act / max(abs(current_action_act)) * 2
-                # goTo
-                # current_action=(self.current_args[0]) * 10
-
                 # import pdb;pdb.set_trace()
                 if self.episode_iteration % 600 ==0  :
-                    print(f"add buffer:\n aim to : {self.current_state[3:6]} \t action_infer: {current_action_infer} \t reward: {self.one_step_reward}")
+                    print(f"add buffer:\n aim to : {self.current_state[3:6]} \t action_infer: {current_action} \t reward: {self.one_step_reward}")
                     print(f"next_state-self.current_state: {np.array(next_state-self.current_state)[[0,1,2]] * 100}")
                     print(f"target_gate_id:{info['current_target_gate_id']} ; pos: {info['current_target_gate_pos']}")
                     print("*********************************************")
                 
                 # 09.28 improve buffer
                 # self.replay_buffer.add(info['current_target_gate_id'],self.current_state,current_action,next_state,self.one_step_reward,done)
-                self.replay_buffer.add(self.current_state,current_action_infer,next_state,self.one_step_reward,done)
+                self.replay_buffer.add(self.current_state,current_action,next_state,self.one_step_reward,done)
 
                 self.episode_reward+=self.one_step_reward
 
@@ -439,16 +445,13 @@ class Controller():
                 self.one_step_reward=reward
                 self.current_state=next_state
                 self.current_args=next_args
-
-                # network do one step , train 60 steps.
-                if self.interepisode_counter >= 20 :
-                    self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(60))
             else :
                 self.one_step_reward+=reward
 
-            
-        
-        # impTraining 没什么用，更新了又不用神经网络推断，和使用神经网络时推断是一样的
+        # network do one step , train 100 steps.
+        if self.interepisode_counter >= 20 and self.episode_iteration % (15*self.net_work_freq) ==0:
+            self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(30))
+        #
         # train_num_per_network = 60
         # train_num_per_s= train_num_per_network/self.net_work_freq
         # train_freq = train_num_per_s / 30  # every command step , should train num
@@ -529,3 +532,5 @@ class Controller():
         self.agent_type='passing'
         self.arrival_iteration =1e6
         self.one_step_reward = 0 
+        self.next_infer_iteration=0
+        self.end_add_buffer_iteration=0
