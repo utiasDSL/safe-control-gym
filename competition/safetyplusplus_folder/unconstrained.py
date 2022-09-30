@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from safetyplusplus_folder.networks import Critic,Actor
 
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 class TD3(object):
@@ -22,8 +22,6 @@ class TD3(object):
         expl_noise = 0.1,
     ):
 
-        torch.manual_seed(101)
-        np.random.seed(101)
         self.actor = Actor(state_dim, action_dim, max_action).to(device)
         self.actor_target = copy.deepcopy(self.actor)
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=3e-4)

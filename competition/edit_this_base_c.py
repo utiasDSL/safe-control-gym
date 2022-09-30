@@ -110,7 +110,9 @@ class Controller():
         #########################
         # REPLACE THIS (START) ##
         #########################
-
+        import torch
+        torch.manual_seed(101)
+        np.random.seed(101)
         self.net_work_freq=0.5   #  time gap
         self.net_control=False
         self.net_begin_time= 3 * 30
@@ -282,7 +284,7 @@ class Controller():
                 # cmdFullState
                 command_type =  Command(1)   # cmdFullState.
                 current_state=self.get_state(obs,info)
-                if self.interepisode_counter <= 50:
+                if self.interepisode_counter <= 10:
                     action= self.action_space.sample() 
                 else:
                     action = self.policy.select_action(current_state, exploration=exploration)  # array  delta_x , delta_y, delta_z
@@ -424,7 +426,7 @@ class Controller():
 
 
         # network do one step , train 60 steps.
-        if self.interepisode_counter >= 100 and self.episode_iteration % (15*self.net_work_freq) ==0:
+        if self.interepisode_counter >= 20 and self.episode_iteration % (15*self.net_work_freq) ==0:
             self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(30))
 
         #########################

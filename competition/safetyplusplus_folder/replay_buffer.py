@@ -4,7 +4,6 @@ import torch
 
 class SimpleReplayBufferIros(object):
     def __init__(self, state_dim, action_dim, max_size=int(1e6)):
-        np.random.seed(101)
         self.max_size = max_size
         self.phrase=4
         self.one_phrase_max_size= int(max_size/self.phrase)
@@ -18,7 +17,7 @@ class SimpleReplayBufferIros(object):
         self.reward = np.zeros(( self.phrase,self.one_phrase_max_size, 1))
         self.not_done = np.zeros(( self.phrase,self.one_phrase_max_size, 1))
 
-        self.device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
     def add(self,phrase, state, action, next_state, reward, done):
@@ -77,10 +76,8 @@ class SimpleReplayBufferIros(object):
             torch.FloatTensor(not_done).to(self.device),
         )
 
-
 class SimpleReplayBuffer(object):
     def __init__(self, state_dim, action_dim, max_size=int(1e6)):
-        np.random.seed(101)
         self.max_size = max_size
         self.ptr = 0
         self.size = 0
@@ -91,7 +88,7 @@ class SimpleReplayBuffer(object):
         self.reward = np.zeros((max_size, 1))
         self.not_done = np.zeros((max_size, 1))
 
-        self.device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
     def add(self, state, action, next_state, reward, done):
@@ -117,7 +114,6 @@ class SimpleReplayBuffer(object):
 
 class CostReplayBuffer(object):
     def __init__(self, state_dim, action_dim, max_size=int(1e6)):
-        np.random.seed(101)
         self.max_size = max_size
         self.ptr = 0
         self.size = 0
@@ -157,7 +153,6 @@ class CostReplayBuffer(object):
 
 class RecReplayBuffer(object):
     def __init__(self, state_dim, action_dim, max_size=int(1e6)):
-        np.random.seed(101)
         self.max_size = max_size
         self.ptr = 0
         self.size = 0
@@ -201,7 +196,6 @@ class RecReplayBuffer(object):
 
 class SafetyLayerReplayBuffer(object):
     def __init__(self, state_dim, action_dim, max_size=int(1e6)):
-        np.random.seed(101)
         self.max_size = max_size
         self.ptr = 0
         self.size = 0

@@ -970,10 +970,10 @@ class Quadrotor(BaseAviary):
                 reward += 100
             # Reward for reaching goal position (after navigating the gates in the correct order).
             if self.at_goal_pos:
-                reward += 10
+                reward += 100
             # Penalize by collision.
             if self.currently_collided:
-                # reward -= 10
+                reward -= 1
                 pass
             # Penalize by constraint violation.
             if self.cnstr_violation:
