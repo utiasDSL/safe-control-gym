@@ -115,7 +115,7 @@ class Controller():
         self.curent_state=np.zeros(7)
         state_dim = 7
         action_dim = 3
-        max_action=2
+        max_action=3
         min_action=max_action * (-1)
         self.action_space=Box(np.array([min_action,min_action,min_action],dtype=np.float64),np.array([max_action,max_action,max_action],dtype=np.float64))
 
@@ -154,6 +154,8 @@ class Controller():
         self.episode_cost = 0
         self.episode_iteration=-1
         self.pass_time = 1e6
+        self.end_add_buffer_iteration=1e6
+        self.next_infer_iteration=1e6
         self.go_back=False
         self.pass_bool=False
         self.agent_type='passing'
@@ -252,7 +254,7 @@ class Controller():
             self.pass_time=self.episode_iteration
             self.pass_bool=True
             print(f"pass_all_gate_time : {self.pass_time}")
-        if self.episode_iteration == self.pass_time + 2:  
+        if self.episode_iteration == self.pass_time:  
             self.agent_type='just_pass'
             self.go_back=True
 
@@ -409,11 +411,7 @@ class Controller():
             self.current_state= self.get_state(obs,info)
             self.current_args = args
 
-        # step through the last gate , give reward
-        if self.episode_iteration == self.end_add_buffer_iteration:
-            current_action=(self.current_args[0]-self.current_state[[0,1,2]]) * 10
-            next_state=self.get_state(obs,info)
-            self.replay_buffer.add(self.current_state,current_action,next_state,100,done)
+       
 
         if  self.episode_iteration> 3 * self.CTRL_FREQ  and (not self.go_back)  :
             # 
@@ -447,6 +445,12 @@ class Controller():
                 self.current_args=next_args
             else :
                 self.one_step_reward+=reward
+        # step through the last gate , give reward
+        
+        elif self.episode_iteration == self.end_add_buffer_iteration:
+            current_action=(self.current_args[0]-self.current_state[[0,1,2]]) * 10
+            next_state=self.get_state(obs,info)
+            self.replay_buffer.add(self.current_state,current_action,next_state,100,True)
 
         # network do one step , train 100 steps.
         if self.interepisode_counter >= 20 and self.episode_iteration % (15*self.net_work_freq) ==0:
@@ -532,5 +536,5 @@ class Controller():
         self.agent_type='passing'
         self.arrival_iteration =1e6
         self.one_step_reward = 0 
-        self.next_infer_iteration=0
-        self.end_add_buffer_iteration=0
+        self.next_infer_iteration=1e6
+        self.end_add_buffer_iteration=1e6
