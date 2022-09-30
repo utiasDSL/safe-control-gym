@@ -42,123 +42,7 @@ finally:
 
 from safetyplusplus_folder.plus_logger import SafeLogger
 
-file_name='0930_02_step0.5_train60_maxAct2_Seed101_1500_changeLastGateR'
-
-# def eval(firmware_wrapper,env,eval_times):
-
-#     CONFIG_FACTORY = ConfigFactory()
-#     config2 = CONFIG_FACTORY.merge()
-#     CTRL_FREQ = config2.quadrotor_config['ctrl_freq']
-#     CTRL_DT = 1/CTRL_FREQ
-#     obs, info = firmware_wrapper.reset()
-#     vicon_obs = [obs[0], 0, obs[2], 0, obs[4], 0, obs[6], obs[7], obs[8], 0, 0, 0]
-#         # obs = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
-#         # vicon_obs = {x, 0, y, 0, z, 0, phi, theta, psi, 0, 0, 0}.
-#     ctrl = Controller(vicon_obs, info, config2.use_firmware, verbose=config2.verbose)
-
-#     # Create a logger and counters
-#     episodes_count = 1
-#     cumulative_reward = 0
-#     collisions_count = 0
-#     collided_objects = set()
-#     violations_count = 0
-#     episode_start_iter = 0
-
-#     num_of_gates = len(config2.quadrotor_config.gates)
-
-#     ep_start = time.time()
-#     first_ep_iteration = True
-#     episode_cost=0
-
-#     success_time=0
-#     success_rate=0
-#     avg_pass_gates=0
-#     avg_cost=0
-#     total_pass_gates=0
-#     total_cost=0
-#     for i in range(eval_times*CTRL_FREQ*env.EPISODE_LEN_SEC):
-
-#         # Elapsed sim time.
-#         curr_time = (i-episode_start_iter)*CTRL_DT
-
-#         # Compute control input.
-#         # if config.use_firmware:
-#         vicon_obs = [obs[0], 0, obs[2], 0, obs[4], 0, obs[6], obs[7], obs[8], 0, 0, 0]
-#             # obs = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
-#             # vicon_obs = {x, 0, y, 0, z, 0, phi, theta, psi, 0, 0, 0}.
-#         if first_ep_iteration:
-#             action = np.zeros(4)
-#             reward = 0
-#             done = False
-#             info = {}
-#             first_ep_iteration = False
-#         command_type, args = ctrl.cmdFirmware(curr_time, vicon_obs, reward, done, info,False)
-
-#         # Select interface. 
-#         if command_type == Command.FULLSTATE:
-#             firmware_wrapper.sendFullStateCmd(*args, curr_time)
-#         elif command_type == Command.TAKEOFF:
-#             firmware_wrapper.sendTakeoffCmd(*args)
-#         elif command_type == Command.LAND:
-#             firmware_wrapper.sendLandCmd(*args)
-#         elif command_type == Command.STOP:
-#             firmware_wrapper.sendStopCmd()
-#         elif command_type == Command.GOTO:
-#             firmware_wrapper.sendGotoCmd(*args)
-#         elif command_type == Command.NOTIFYSETPOINTSTOP:
-#             firmware_wrapper.notifySetpointStop()
-#         elif command_type == Command.NONE:
-#             pass
-#         else:
-#             raise ValueError("[ERROR] Invalid command_type.")
-
-#         obs, reward, done, info, _ = firmware_wrapper.step(curr_time, action)
-
-#         # Add up reward, collisions, violations.
-#         cumulative_reward += reward
-#         if info["collision"][1]:
-#             collisions_count += 1
-#             collided_objects.add(info["collision"][0])
-#             episode_cost+=1
-#         if 'constraint_values' in info and info['constraint_violation'] == True:
-#             violations_count += 1
-#             episode_cost+=1
-
-
-#         # If an episode is complete, reset the environment.
-#         if done:
-#             pass_gate_num=info['current_target_gate_id'] if info['current_target_gate_id']!=-1 else num_of_gates
-#             success_time= success_time + (1 if pass_gate_num==num_of_gates else 0)
-#             total_pass_gates+=pass_gate_num
-#             total_cost+=episode_cost
-#             # Reset/update counters.
-#             episodes_count += 1
-#             if episodes_count > eval_times:
-#                 break
-#             episode_cost = 0
-#             cumulative_reward = 0
-#             collisions_count = 0
-#             collided_objects = set()
-#             violations_count = 0
-#             ctrl.interEpisodeReset()
-#             # Reset the environment.
-#             if config.use_firmware:
-#                 # Re-initialize firmware.
-#                 new_initial_obs, _ = firmware_wrapper.reset()
-#             else:
-#                 new_initial_obs, _ = env.reset()
-#             first_ep_iteration = True
-            
-#             episode_start_iter = i+1
-#             ep_start = time.time()
-    
-#     # Close the environment and print timing statistics.
-#     env.close()
-#     avg_cost=total_cost / eval_times
-#     avg_pass_gates = total_pass_gates / eval_times
-#     success_rate = success_time / eval_times
-#     return avg_pass_gates,success_rate,avg_cost
-
+file_name='0930_03_l1_1500'
 
 def run(test=False):
     """The main function creating, running, and closing an environment over N episodes.
@@ -323,7 +207,7 @@ def run(test=False):
             # Step the environment.
             # TODO reward is exactly?
            
-            obs, reward, done, info, _ = firmware_wrapper.step(curr_time, action)
+            obs, reward, done, info, action = firmware_wrapper.step(curr_time, action)
             #
         else:
             if first_ep_iteration:
