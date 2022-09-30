@@ -112,10 +112,11 @@ class Controller():
         #########################
 
         self.net_work_freq=0.5   #  time gap
-        self.curent_state=np.zeros(7)
-        state_dim = 7
+        
+        state_dim = 8
+        self.curent_state=np.zeros(state_dim)
         action_dim = 3
-        max_action=3
+        max_action=2
         min_action=max_action * (-1)
         self.action_space=Box(np.array([min_action,min_action,min_action],dtype=np.float64),np.array([max_action,max_action,max_action],dtype=np.float64))
 
@@ -212,7 +213,7 @@ class Controller():
             current_target_gate_in_range= 0 
             current_target_gate_pos = np.zeros(4)
             current_goal_pos=np.zeros(3)
-        state=np.array([current_x,current_y,current_z,current_goal_pos[0]-current_x,current_goal_pos[1]-current_y,current_goal_pos[2]-current_z,current_target_gate_in_range])
+        state=np.array([current_x,current_y,current_z,current_goal_pos[0]-current_x,current_goal_pos[1]-current_y,current_goal_pos[2]-current_z,current_target_gate_in_range,info['current_target_gate_id']])
         # state=np.append(state,all_obstacles_pos)
         # state=np.append(state,all_gates_pos)
         # state=np.append(state,current_target_gate_pos)
@@ -249,14 +250,14 @@ class Controller():
 
 
         # whether goback
-        if info != {} and info['current_target_gate_id'] == -1 and self.pass_bool==False:
-            self.end_add_buffer_iteration=self.next_infer_iteration
-            self.pass_time=self.episode_iteration
-            self.pass_bool=True
-            print(f"pass_all_gate_time : {self.pass_time}")
-        if self.episode_iteration == self.pass_time:  
-            self.agent_type='just_pass'
-            self.go_back=True
+        # if info != {} and info['current_target_gate_id'] == -1 and self.pass_bool==False:
+        #     self.end_add_buffer_iteration=self.next_infer_iteration
+        #     self.pass_time=self.episode_iteration
+        #     self.pass_bool=True
+        #     print(f"pass_all_gate_time : {self.pass_time}")
+        # if self.episode_iteration == self.pass_time:  
+        #     self.agent_type='just_pass'
+        #     self.go_back=True
 
         # begin with take off 
         if self.episode_iteration == 0:
@@ -265,35 +266,35 @@ class Controller():
             command_type = Command(2)  # Take-off.
             args = [height, duration]
         # end with rule-based when have passed all the gate 
-        elif self.go_back  :
-            # go to goal place
-            if self.agent_type=='just_pass' :
-                print("going goal place")
-                duration = 2
-                self.arrival_iteration=self.episode_iteration+ duration *self.CTRL_FREQ
-                command_type = Command(5)  # goTo.
-                args = [[self.goal_pos[0], self.goal_pos[1], self.goal_pos[2]], 0, duration, False]
-                self.agent_type='going goal place'
+        # elif self.go_back  :
+        #     # go to goal place
+        #     if self.agent_type=='just_pass' :
+        #         print("going goal place")
+        #         duration = 2
+        #         self.arrival_iteration=self.episode_iteration+ duration *self.CTRL_FREQ
+        #         command_type = Command(5)  # goTo.
+        #         args = [[self.goal_pos[0], self.goal_pos[1], self.goal_pos[2]], 0, duration, False]
+        #         self.agent_type='going goal place'
 
-            #  arrival for 2s  or task_completed
-            elif self.agent_type=='going goal place' and (self.episode_iteration == self.arrival_iteration + 2 * self.CTRL_FREQ + 1 or info['task_completed'] ==True):
-                print(f" arrival goal place : {self.get_state(obs, info)} ,task_completed : {info['task_completed']}")
-                print("landing")
-                height = 0.
-                duration = 1
-                self.arrival_iteration=self.episode_iteration+ duration *self.CTRL_FREQ
-                command_type = Command(3)  # Land.
-                args = [height, duration]
-                self.agent_type='landing'
+        #     #  arrival for 2s  or task_completed
+        #     elif self.agent_type=='going goal place' and (self.episode_iteration == self.arrival_iteration + 2 * self.CTRL_FREQ + 1 or info['task_completed'] ==True):
+        #         print(f" arrival goal place : {self.get_state(obs, info)} ,task_completed : {info['task_completed']}")
+        #         print("landing")
+        #         height = 0.
+        #         duration = 1
+        #         self.arrival_iteration=self.episode_iteration+ duration *self.CTRL_FREQ
+        #         command_type = Command(3)  # Land.
+        #         args = [height, duration]
+        #         self.agent_type='landing'
 
-            # after land , exit do not implement
-            elif self.agent_type=='landing' and self.episode_iteration==self.arrival_iteration + 1:
-                print(f"have landed, step : {self.episode_iteration}")
-                command_type = Command(0)  # Terminate command to be sent once trajectory is completed.
-                args = []
-            else :
-                command_type = Command(0)  # None.
-                args = []
+        #     # after land , exit do not implement
+        #     elif self.agent_type=='landing' and self.episode_iteration==self.arrival_iteration + 1:
+        #         print(f"have landed, step : {self.episode_iteration}")
+        #         command_type = Command(0)  # Terminate command to be sent once trajectory is completed.
+        #         args = []
+        #     else :
+        #         command_type = Command(0)  # None.
+        #         args = []
         
         # using network to choose action
         elif self.episode_iteration >= 3 * self.CTRL_FREQ :
@@ -411,9 +412,7 @@ class Controller():
             self.current_state= self.get_state(obs,info)
             self.current_args = args
 
-       
-
-        if  self.episode_iteration> 3 * self.CTRL_FREQ  and (not self.go_back)  :
+        if  self.episode_iteration> 3 * self.CTRL_FREQ   :
             # 
             # Store the last step's events.
             if self.episode_iteration % (30*self.net_work_freq) ==0:
@@ -445,12 +444,12 @@ class Controller():
                 self.current_args=next_args
             else :
                 self.one_step_reward+=reward
+
         # step through the last gate , give reward
-        
-        elif self.episode_iteration == self.end_add_buffer_iteration:
-            current_action=(self.current_args[0]-self.current_state[[0,1,2]]) * 10
-            next_state=self.get_state(obs,info)
-            self.replay_buffer.add(self.current_state,current_action,next_state,100,True)
+        # elif self.episode_iteration == self.end_add_buffer_iteration:
+        #     current_action=(self.current_args[0]-self.current_state[[0,1,2]]) * 10
+        #     next_state=self.get_state(obs,info)
+        #     self.replay_buffer.add(self.current_state,current_action,next_state,100,True)
 
         # network do one step , train 100 steps.
         if self.interepisode_counter >= 20 and self.episode_iteration % (15*self.net_work_freq) ==0:

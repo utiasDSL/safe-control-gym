@@ -4,6 +4,7 @@ import torch
 
 class SimpleReplayBufferIros(object):
     def __init__(self, state_dim, action_dim, max_size=int(1e6)):
+        np.random.seed(101)
         self.max_size = max_size
         self.phrase=4
         self.one_phrase_max_size= int(max_size/self.phrase)
@@ -79,6 +80,7 @@ class SimpleReplayBufferIros(object):
 
 class SimpleReplayBuffer(object):
     def __init__(self, state_dim, action_dim, max_size=int(1e6)):
+        np.random.seed(101)
         self.max_size = max_size
         self.ptr = 0
         self.size = 0
@@ -115,6 +117,7 @@ class SimpleReplayBuffer(object):
 
 class CostReplayBuffer(object):
     def __init__(self, state_dim, action_dim, max_size=int(1e6)):
+        np.random.seed(101)
         self.max_size = max_size
         self.ptr = 0
         self.size = 0
@@ -154,6 +157,7 @@ class CostReplayBuffer(object):
 
 class RecReplayBuffer(object):
     def __init__(self, state_dim, action_dim, max_size=int(1e6)):
+        np.random.seed(101)
         self.max_size = max_size
         self.ptr = 0
         self.size = 0
@@ -197,6 +201,7 @@ class RecReplayBuffer(object):
 
 class SafetyLayerReplayBuffer(object):
     def __init__(self, state_dim, action_dim, max_size=int(1e6)):
+        np.random.seed(101)
         self.max_size = max_size
         self.ptr = 0
         self.size = 0
