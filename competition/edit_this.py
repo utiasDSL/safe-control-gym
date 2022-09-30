@@ -7,7 +7,7 @@ Then run:
 Tips:
     Search for strings `INSTRUCTIONS:` and `REPLACE THIS (START)` in this file.
 
-    Change the code between the 4 blocks starting with
+    Change the code between the 5 blocks starting with
         #########################
         # REPLACE THIS (START) ##
         #########################
@@ -31,9 +31,24 @@ from collections import deque
 try:
     from competition_utils import Command, PIDController, timing_step, timing_ep, plot_trajectory, draw_trajectory
 except ImportError:
-    # Test import.
+    # PyTest import.
     from .competition_utils import Command, PIDController, timing_step, timing_ep, plot_trajectory, draw_trajectory
 
+#########################
+# REPLACE THIS (START) ##
+#########################
+
+# Optionally, create and import modules you wrote.
+# Please refrain from importing large or unstable 3rd party packages.
+try:
+    import example_custom_utils as ecu
+except ImportError:
+    # PyTest import.
+    from . import example_custom_utils as ecu
+
+#########################
+# REPLACE THIS (END) ####
+#########################
 
 class Controller():
     """Template controller class.
@@ -65,7 +80,7 @@ class Controller():
             verbose (bool, optional): Turn on and off additional printouts and plots.
 
         """
-        # Save environment and conrol parameters.
+        # Save environment and control parameters.
         self.CTRL_TIMESTEP = initial_info["ctrl_timestep"]
         self.CTRL_FREQ = initial_info["ctrl_freq"]
         self.initial_obs = initial_obs
@@ -80,7 +95,7 @@ class Controller():
         if use_firmware:
             self.ctrl = None
         else:
-            # Initialize a simple PID Controller ror debugging and test
+            # Initialize a simple PID Controller for debugging and test.
             # Do NOT use for the IROS 2022 competition. 
             self.ctrl = PIDController()
             # Save additonal environment parameters.
@@ -94,7 +109,10 @@ class Controller():
         # REPLACE THIS (START) ##
         #########################
 
-        # Example: harcode waypoints through the gates.
+        # Call a function in module `example_custom_utils`.
+        ecu.exampleFunction()
+
+        # Example: hardcode waypoints through the gates.
         if use_firmware:
             waypoints = [(self.initial_obs[0], self.initial_obs[2], initial_info["gate_dimensions"]["tall"]["height"])]  # Height is hardcoded scenario knowledge.
         else:
@@ -117,7 +135,7 @@ class Controller():
                     waypoints.append((g[0], g[1]+0.3, height))
         waypoints.append([initial_info["x_reference"][0], initial_info["x_reference"][2], initial_info["x_reference"][4]])
 
-        # Polynomial fit
+        # Polynomial fit.
         self.waypoints = np.array(waypoints)
         deg = 6
         t = np.arange(self.waypoints.shape[0])
@@ -134,7 +152,7 @@ class Controller():
             # Plot trajectory in each dimension and 3D.
             plot_trajectory(t_scaled, self.waypoints, self.ref_x, self.ref_y, self.ref_z)
 
-            # Draw the trajectory on PyBullet's GUI
+            # Draw the trajectory on PyBullet's GUI.
             draw_trajectory(initial_info, self.waypoints, self.ref_x, self.ref_y, self.ref_z)
 
         #########################
@@ -197,7 +215,7 @@ class Controller():
             args = [target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
 
         elif iteration == 20*self.CTRL_FREQ:
-            command_type = Command(6)  # notify setpoint stop.
+            command_type = Command(6)  # Notify setpoint stop.
             args = []
 
         elif iteration == 20*self.CTRL_FREQ+1:
@@ -228,7 +246,7 @@ class Controller():
             args = [height, duration]
 
         elif iteration == 33*self.CTRL_FREQ-1:
-            command_type = Command(-1)  # Terminate command to be sent once trajectory is completed.
+            command_type = Command(-1)  # Terminate command to be sent once the trajectory is completed.
             args = []
 
         else:

@@ -118,6 +118,8 @@ Proposed solutions will be evaluated in 5 scenarios with different challenges:
 
 Methods to Re-implement in [`edit_this.py`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py)
 
+You can also use/create additional custom modules such as [`example_custom_utils.py`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/example_custom_utils.py)
+
 ### Required (1 of 2)
 
 ```docstring
@@ -253,9 +255,13 @@ C) For ALL levels (0-3, sim2real), the top 3 solutions ranked by the criteria in
 
 ## Prizes
 
-- 1st: TBA
-- 2nd: TBA
-- 3rd: TBA
+Kindly supported by [Bitcraze](https://www.bitcraze.io):
+
+- 1st: [Bitcraze Crazyflie AI Bundle](https://store.bitcraze.io/collections/bundles/products/the-ai-bundle)
+- 2nd: [Bitcraze Crazyflie STEM Ranging Bundle](https://store.bitcraze.io/collections/bundles/products/stem-ranging-bundle)
+- 3rd: [Bitcraze Crazyflie STEM Bundle](https://store.bitcraze.io/collections/bundles/products/stem-drone-bundle)
+
+The authors of the best solutions will be invited to co-author a "lessons learned" paper with the organizers.
 
 ## Organizers
 
