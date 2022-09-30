@@ -967,7 +967,7 @@ class Quadrotor(BaseAviary):
             # Reward for stepping through the (correct) next gate.
             if self.stepped_through_gate:  # if stepped all the gates, freq 500Hz,
                 # print(f"step throuth gate : {self.current_gate-1}")
-                reward += 10
+                reward += 100
             # Reward for reaching goal position (after navigating the gates in the correct order).
             if self.at_goal_pos:
                 reward += 10

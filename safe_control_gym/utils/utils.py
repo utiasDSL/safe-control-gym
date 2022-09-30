@@ -163,7 +163,7 @@ def set_device_from_config(config):
 
     """
     use_cuda = config.use_gpu and torch.cuda.is_available()
-    config.device = "cuda:2" if use_cuda else "cpu"
+    config.device = "cuda:1" if use_cuda else "cpu"
 
 
 def save_video(name, frames, fps=20):

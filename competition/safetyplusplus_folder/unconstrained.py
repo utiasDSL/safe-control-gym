@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from safetyplusplus_folder.networks import Critic,Actor
 
-device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 
 class TD3(object):
