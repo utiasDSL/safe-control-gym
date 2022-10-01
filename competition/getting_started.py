@@ -42,7 +42,7 @@ finally:
 
 from safetyplusplus_folder.plus_logger import SafeLogger
 
-file_name='0930_05_StepNoAct_addCollisionReward'
+file_name='0930_06_StepNoAct_BackBest_train20'
 
 def run(test=False):
     """The main function creating, running, and closing an environment over N episodes.
@@ -145,7 +145,7 @@ def run(test=False):
     
     
     logger_plus = SafeLogger(exp_name=file_name, env_name="compitition", seed=0,
-                                fieldnames=['EpRet', 'EpCost', 'CostRate','collision_num','vilation_num','target_gate'])   
+                                fieldnames=['Eptime','EpRet', 'EpCost', 'CostRate','collision_num','vilation_num','target_gate'])   
     # Run an experiment.
     ep_start = time.time()
     first_ep_iteration = True
@@ -206,7 +206,7 @@ def run(test=False):
             # action
             # Step the environment.
             # TODO reward is exactly?
-           
+            # print(i)
             obs, reward, done, info, action = firmware_wrapper.step(curr_time, action)
             #
         else:

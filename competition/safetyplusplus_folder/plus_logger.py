@@ -99,9 +99,8 @@ class SafeLogger():
 
     def update(self, fieldvalues, total_steps):
         epinfo = {}
-        fieldvalues = [total_steps] + fieldvalues
-
         current_log_time = time.time()
+        fieldvalues = [total_steps] + [int(current_log_time - self.previous_log_time)]+ fieldvalues
         print(lu.colorize(f"\nTime: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}, Time spent from previous logger: {(current_log_time - self.previous_log_time):.3f} s", 'blue', bold=True))
         print(lu.colorize(f"CustomLogger with fileds: {self.fieldnames}", 'blue', bold=True))
         print(lu.colorize(f"fieldvalues: {fieldvalues}\n", 'blue', bold=True))

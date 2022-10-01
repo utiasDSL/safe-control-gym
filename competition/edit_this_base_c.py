@@ -114,10 +114,7 @@ class Controller():
         torch.manual_seed(101)
         np.random.seed(101)
         self.net_work_freq=0.5   #  time gap
-        self.net_control=False
-        self.net_begin_time= 3 * 30
-        self.net_end_time= 1e6
-        self.NotifySetPointStop_time = 1e6
+        
         state_dim = 8
         self.curent_state=np.zeros(state_dim)
         action_dim = 3
@@ -254,20 +251,15 @@ class Controller():
         #########################
 
 
-        # net will control after take-off , until have passed all gates for one net_infer times
-        if self.episode_iteration == self.net_begin_time:
-            print(f"step { self.episode_iteration} , net_begin_control")
-            self.net_control=True
-
-        if info != {} and info['current_target_gate_id'] == -1 and self.pass_bool==False:
-            print(f"step { self.episode_iteration} , pass_all_gates")
-            self.net_end_time=self.episode_iteration + 30*self.net_work_freq
-            self.pass_bool=True
-            print(f"pass_all_gate_time : {self.episode_iteration}")
-
-        if self.episode_iteration == self.net_end_time:
-            print(f"step { self.episode_iteration} , net_end_control")
-            self.net_control=False
+        # whether goback
+        # if info != {} and info['current_target_gate_id'] == -1 and self.pass_bool==False:
+        #     self.end_add_buffer_iteration=self.next_infer_iteration
+        #     self.pass_time=self.episode_iteration
+        #     self.pass_bool=True
+        #     print(f"pass_all_gate_time : {self.pass_time}")
+        # if self.episode_iteration == self.pass_time:  
+        #     self.agent_type='just_pass'
+        #     self.go_back=True
 
         # begin with take off 
         if self.episode_iteration == 0:
@@ -278,13 +270,27 @@ class Controller():
             args = [height, duration]
 
         # using network to choose action
-        elif self.net_control :
+        elif self.episode_iteration >= 3 * self.CTRL_FREQ :
+            
             if self.episode_iteration % (30*self.net_work_freq) ==0:
-                # print(f"step { self.episode_iteration} , net infer once")
+                self.next_infer_iteration=self.episode_iteration + (30*self.net_work_freq)
+                #goTo
+                # duration = self.net_work_freq - 0.02
+                # command_type = Command(5)  # goTo.
+                # current_state=self.get_state(obs,info)
+                # if self.interepisode_counter <= 10:
+                #     action= self.action_space.sample() 
+                # else:
+                #     action = self.policy.select_action(current_state, exploration=True)  # array  delta_x , delta_y, delta_z
+                # action /= 10
+                # yaw=0.
+                # args = [action.astype(np.float64), 0, duration, True]
+                # import pdb;pdb.set_trace()
+                
                 # cmdFullState
                 command_type =  Command(1)   # cmdFullState.
                 current_state=self.get_state(obs,info)
-                if self.interepisode_counter <= 10:
+                if self.interepisode_counter <= 20:
                     action= self.action_space.sample() 
                 else:
                     action = self.policy.select_action(current_state, exploration=exploration)  # array  delta_x , delta_y, delta_z
@@ -295,24 +301,6 @@ class Controller():
                 command_type = Command(0)  # None.
                 args = []
         
-        # when net step control, set NotifySetPointStop
-        elif not self.net_control and self.episode_iteration==self.net_end_time :
-            print(f"step { self.episode_iteration} , NotifySetPointStop_time")
-            command_type = Command(6)  # None.
-            args = []
-            self.NotifySetPointStop_time=self.episode_iteration
-        #
-        elif self.episode_iteration ==  self.NotifySetPointStop_time + 1:
-            print(f"step { self.episode_iteration} , go_to_goal")
-            current_goal_pos = self.goal_pos
-            x = self.goal_pos[0]
-            y = self.goal_pos[1]
-            z = self.goal_pos[2]
-            yaw = 0.
-            duration = 2
-            command_type = Command(5)  # goTo.
-            args = [[x, y, z], yaw, duration, False]
-        #other time do none
         else :
             command_type = Command(0)  # None.
             args = []
@@ -388,13 +376,12 @@ class Controller():
         #########################
 
         # add experience when use network to decide
-        if  self.episode_iteration == self.net_begin_time:
-            print(f"step { self.episode_iteration} , net_init_add_buffer")
+        if  self.episode_iteration == 3 * self.CTRL_FREQ:
             self.current_state= self.get_state(obs,info)
             self.current_args = args
 
-        if  self.episode_iteration> self.net_begin_time and self.net_control   :
-            
+        if  self.episode_iteration> 3 * self.CTRL_FREQ   :
+            # 
             # Store the last step's events.
             if self.episode_iteration % (30*self.net_work_freq) ==0:
                 # print(f"step { self.episode_iteration} , net_add_buffer")
@@ -426,8 +413,8 @@ class Controller():
 
 
         # network do one step , train 60 steps.
-        if self.interepisode_counter >= 20 and self.episode_iteration % (15*self.net_work_freq) ==0:
-            self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(30))
+        if self.interepisode_counter >= 30 and self.episode_iteration % (30*self.net_work_freq) ==0:
+            self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(20))
 
         #########################
         # REPLACE THIS (END) ####
