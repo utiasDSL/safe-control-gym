@@ -97,10 +97,11 @@ class Controller():
         # REPLACE THIS (START) ##
         #########################
 
-        # hardcode gate yaw for testing
-        # TODO Replaced with more intelligent method of deciding direction to enter gate
-        self.NOMINAL_GATES[0][5] += pi
-        self.NOMINAL_GATES[2][5] += pi
+        # Kinematic limits
+        # TODO determine better estimates from model
+        v_max = 2
+        a_max = .2
+        j_max = .2
 
         ### Spline fitting between waypoints ###
 
@@ -128,8 +129,15 @@ class Controller():
         y_coeffs = np.zeros((4,len(waypoints)-1))
 
         # "time" for each waypoint
-        # TODO replace with more intelligent time intervals
-        ts = np.arange(length)
+        # time interval determined by eulcidean distance between waypoints along xy plane
+        # ts = np.arange(length)
+        ts = np.zeros(length)
+        [x_prev, y_prev, _, _] = waypoints[0]
+        for idx in range(1,length):
+            [x_curr, y_curr, _, _] = waypoints[idx]
+            xy_norm = sqrt((x_curr-x_prev)**2 + (y_curr-y_prev)**2)
+            ts[idx] = ts[idx-1] + xy_norm / v_max
+
         for idx in range(1, length):
             [xf, yf, _, yawf] = waypoints[idx]
             inv_t = 1/(ts[idx] - ts[idx - 1])
@@ -228,12 +236,6 @@ class Controller():
 
         ### S-curve ###
         sf = pathlength
-
-        # Kinematic limits
-        # TODO determine better estimates from model
-        v_max = 2.e-1
-        a_max = 2.e-1
-        j_max = 2.e-1
 
         s = np.zeros(8)
         v = np.zeros(8)
