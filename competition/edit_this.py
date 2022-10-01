@@ -102,29 +102,25 @@ class Controller():
         v_max = 2
         a_max = .2
         j_max = .2
+        # Affect curve radius around waypoints, higher value means larger curve, smaller value means tighter curve
+        grad_scale = 1
 
         ### Spline fitting between waypoints ###
 
         length = len(self.NOMINAL_GATES) + 2
         # end goal
         if use_firmware:
-            waypoints = [(self.initial_obs[0], self.initial_obs[2], initial_info["gate_dimensions"]["tall"]["height"], self.initial_obs[8])]  # Height is hardcoded scenario knowledge.
+            waypoints = [[self.initial_obs[0], self.initial_obs[2], initial_info["gate_dimensions"]["tall"]["height"], self.initial_obs[8]],]  # Height is hardcoded scenario knowledge.
         else:
-            waypoints = [(self.initial_obs[0], self.initial_obs[2], self.initial_obs[4], self.initial_obs[8])]
+            waypoints = [[self.initial_obs[0], self.initial_obs[2], self.initial_obs[4], self.initial_obs[8]],]
 
         for idx, g in enumerate(self.NOMINAL_GATES):
             [x, y, _, _, _, yaw, typ] = g
             z = initial_info["gate_dimensions"]["tall"]["height"] if typ == 0 else initial_info["gate_dimensions"]["low"]["height"]
-            waypoints.append((x, y, z, yaw))
+            waypoints.append([x, y, z, yaw])
         # end goal
-        waypoints.append((initial_info["x_reference"][0], initial_info["x_reference"][2], initial_info["x_reference"][4], initial_info["x_reference"][8]))
+        waypoints.append([initial_info["x_reference"][0], initial_info["x_reference"][2], initial_info["x_reference"][4], initial_info["x_reference"][8]])
 
-        # Affect curve radius around waypoints, higher value means larger curve, smaller value means tighter curve
-        grad_scale = 2
-
-        [x0, y0, _, yaw0] = waypoints[0]
-        dx0 = sin(yaw0)
-        dy0 = cos(yaw0)
         x_coeffs = np.zeros((4,len(waypoints)-1))
         y_coeffs = np.zeros((4,len(waypoints)-1))
 
@@ -138,9 +134,45 @@ class Controller():
             xy_norm = sqrt((x_curr-x_prev)**2 + (y_curr-y_prev)**2)
             ts[idx] = ts[idx-1] + xy_norm / v_max
 
+        # Flip gates
+        # Selectively flip gate orientation based on vector from previous and to next waypoint,
+        # and current gate's orientation
+        [x_prev, y_prev, _, _] = waypoints[0]
+        [x_curr, y_curr, _, yaw_curr] = waypoints[1]
+        dt = ts[1] - ts[0]
+        for idx in range(1,length-1):
+            [x_next, y_next, _, yaw_next] = waypoints[idx+1]
+            dt_next = ts[idx+1] - ts[idx]
+            dxf = sin(yaw_curr) * grad_scale
+            dyf = cos(yaw_curr) * grad_scale
+            vx1 = np.array((x_curr - x_prev,dt))
+            vx21 = np.array((dxf,1))
+            vx22 = np.array((-dxf,1))
+            vx3 = np.array((x_next - x_curr,dt_next))
+
+            vy1 = np.array((y_curr - y_prev,dt))
+            vy21 = np.array((dyf,1))
+            vy22 = np.array((-dyf,1))
+            vy3 = np.array((y_next - y_curr,dt_next))
+            choice_1 = vx1.dot(vx21)/np.linalg.norm(vx1)/np.linalg.norm(vx21)+vx21.dot(vx3)/np.linalg.norm(vx21)/np.linalg.norm(vx3)
+            choice_1 += vy1.dot(vy21)/np.linalg.norm(vy1)/np.linalg.norm(vy21)+vy21.dot(vy3)/np.linalg.norm(vy21)/np.linalg.norm(vy3)
+            choice_2 = vx1.dot(vx22)/np.linalg.norm(vx1)/np.linalg.norm(vx22)+vx22.dot(vx3)/np.linalg.norm(vx22)/np.linalg.norm(vx3)
+            choice_2 += vy1.dot(vy22)/np.linalg.norm(vy1)/np.linalg.norm(vy22)+vy22.dot(vy3)/np.linalg.norm(vy22)/np.linalg.norm(vy3)
+            if choice_2 > choice_1:
+                waypoints[idx][3] += pi
+                print("flipping", idx)
+            x_prev, y_prev = x_curr, y_curr
+            x_curr, y_curr = x_next, y_next
+            yaw_curr = yaw_next
+            dt = dt_next
+
+        [x0, y0, _, yaw0] = waypoints[0]
+        dx0 = sin(yaw0)
+        dy0 = cos(yaw0)
         for idx in range(1, length):
             [xf, yf, _, yawf] = waypoints[idx]
-            inv_t = 1/(ts[idx] - ts[idx - 1])
+            dt = ts[idx] - ts[idx - 1]
+            inv_t = 1/dt
             inv_t2 = inv_t*inv_t
             dxf = sin(yawf) * grad_scale
             dyf = cos(yawf) * grad_scale
@@ -159,7 +191,7 @@ class Controller():
             [x0, y0] = [xf, yf]
             [dx0, dy0] = [dxf, dyf]
         waypoints = np.array(waypoints)
-        z_coeffs = scipy.interpolate.PchipInterpolator(ts, waypoints[:,2], 0).c   # ascending at start, descending at end
+        z_coeffs = scipy.interpolate.PchipInterpolator(ts, waypoints[:,2], 0).c
 
         def df_idx(idx):
             def df(t):
@@ -347,7 +379,7 @@ class Controller():
             y_c = self.y(curve_t)
             z_c = self.z(curve_t)
             target_pos = np.array([x_c, y_c, z_c])
-            print(target_pos)
+            # print(obs[0] - x_c, obs[2] - y_c, obs[4] - z_c)
 
             dx_c = self.dx(curve_t)
             dy_c = self.dy(curve_t)
