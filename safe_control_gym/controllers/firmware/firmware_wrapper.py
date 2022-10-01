@@ -637,7 +637,7 @@ class FirmwareWrapper(BaseController):
         """
         self.command_queue += [['_sendStopCmd', []]]
     def _sendStopCmd(self):
-        print(f"INFO_{self.tick}: Stop command sent.")
+        # print(f"INFO_{self.tick}: Stop command sent.")
         firm.crtpCommanderHighLevelStop()
         self.full_state_cmd_override = False
         

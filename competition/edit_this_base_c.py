@@ -29,6 +29,8 @@ from tkinter import Y
 import numpy as np
 
 from collections import deque
+import sys
+sys.path.append("..") 
 import utils
 try:
     from competition_utils import Command, PIDController, timing_step, timing_ep, plot_trajectory, draw_trajectory
@@ -114,6 +116,7 @@ class Controller():
         torch.manual_seed(101)
         np.random.seed(101)
         self.net_work_freq=0.5   #  time gap
+        self.iteration_per_infer= 30 * self.net_work_freq
         
         state_dim = 8
         self.curent_state=np.zeros(state_dim)
@@ -202,30 +205,19 @@ class Controller():
         # REPLACE THIS (START) ##
         #########################
 
-
-        # whether goback
-        # if info != {} and info['current_target_gate_id'] == -1 and self.pass_bool==False:
-        #     self.end_add_buffer_iteration=self.next_infer_iteration
-        #     self.pass_time=self.episode_iteration
-        #     self.pass_bool=True
-        #     print(f"pass_all_gate_time : {self.pass_time}")
-        # if self.episode_iteration == self.pass_time:  
-        #     self.agent_type='just_pass'
-        #     self.go_back=True
-
         # begin with take off 
         if self.episode_iteration == 0:
             print(f"step { self.episode_iteration} , take-off")
             height = 1
             duration = 1.5
-            command_type = Command(2)  # Take-off.
+            command_type = Command(2.5)  # Take-off.
             args = [height, duration]
 
         # using network to choose action
         elif self.episode_iteration >= 3 * self.CTRL_FREQ :
             
-            if self.episode_iteration % (30*self.net_work_freq) ==0:
-                self.next_infer_iteration=self.episode_iteration + (30*self.net_work_freq)
+            if self.episode_iteration % self.iteration_per_infer ==0:
+                self.next_infer_iteration=self.episode_iteration + self.iteration_per_infer
                 #goTo
                 # duration = self.net_work_freq - 0.02
                 # command_type = Command(5)  # goTo.
@@ -241,7 +233,7 @@ class Controller():
                 
                 # cmdFullState
                 command_type =  Command(1)   # cmdFullState.
-                current_state=utils.get_state(obs,info)
+                current_state=utils.get_state(obs,info,NOMINAL_OBSTACLES,NOMINAL_GATES)
                 if self.interepisode_counter <= 20:
                     action= self.action_space.sample() 
                 else:
@@ -250,9 +242,9 @@ class Controller():
                 args=self.act2args(current_state,action)
 
             # avoid inertia
-            elif self.episode_iteration % (30*self.net_work_freq) == 30*self.net_work_freq - 3:
-                command_type = Command(4)  # Stop.
-                args = []
+            # elif self.episode_iteration % self.iteration_per_infer == self.iteration_per_infer - 3:
+            #     command_type = Command(4)  # Stop.
+            #     args = []
             # other time do nothing
             else :
                 command_type = Command(0)  # None.
@@ -347,7 +339,6 @@ class Controller():
                 next_state=utils.get_state(obs,info)
                 next_args=args
 
-                # import pdb;pdb.set_trace()
                 if self.episode_iteration % 600 ==0  :
                     print(f"add buffer:\n aim to : {self.current_state[3:6]} \t action_infer: {current_action} \t reward: {self.one_step_reward}")
                     print(f"next_state-self.current_state: {np.array(next_state-self.current_state)[[0,1,2]] * 100}")
