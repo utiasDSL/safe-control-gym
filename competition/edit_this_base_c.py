@@ -29,9 +29,7 @@ from tkinter import Y
 import numpy as np
 
 from collections import deque
-import sys
-sys.path.append("..") 
-import utils
+
 try:
     from competition_utils import Command, PIDController, timing_step, timing_ep, plot_trajectory, draw_trajectory
 except ImportError:
@@ -175,6 +173,54 @@ class Controller():
         #########################
 
 
+    def get_state(self,obs,info):
+        # state info : obs_info(3) + goal_info(3) + all_gate_info(1 + 16) + all_obstacle_info(12)     = 35
+        # x,y,z  3 
+        current_x=obs[0]
+        current_y=obs[2]
+        current_z=obs[4]
+
+        # import pdb;pdb.set_trace()
+        # [[x,y,z,(rpy all zero)]] 
+        # 3 * obstacle num(4)
+        #      [1.5, -2.5, 0, 0, 0, 0],[0.5, -1, 0, 0, 0, 0],[1.5, 0, 0, 0, 0, 0],[-1, 0, 0, 0, 0, 0]
+        # ->   [1.5, -2.5, 1.05, 0.5, -1, 1.05,1.5, 0, 1.05, -1, 0, 1.05]
+        all_obstacles_pos=np.array(self.NOMINAL_OBSTACLES)[:,0:3]
+        for one_obstacle_info in all_obstacles_pos:
+                one_obstacle_info[2] = 1.05  # quadrotor.py reset()
+        all_obstacles_pos=all_obstacles_pos.flatten()
+
+        #   [0.5, -2.5, 0, 0, 0, -1.57, 0],[2, -1.5, 0, 0, 0, 0, 1],[0, 0.2, 0, 0, 0, 1.57, 1],[-0.5, 1.5, 0, 0, 0, 0, 0]
+        #-> [0.5,-2.5,1,-1.57 ,  2,-1.5,0.525,0  , 0,0.2,0.525,1.57,   -0.5,1.5,1,0 ]
+        all_gates_pos=np.array(self.NOMINAL_GATES)
+        for one_gete_info in all_gates_pos:
+            one_gete_info[2]=1 if one_gete_info[6] == 0 else 0.525
+        all_gates_pos=all_gates_pos[:,[0,1,2,5]].flatten()
+
+        if info !={}:
+            # goal [x,y,z]
+            if info['current_target_gate_id'] == -1 :
+                current_goal_pos = self.goal_pos
+                current_target_gate_in_range= 0 
+            else :
+                # 1 or 0  1
+                current_target_gate_in_range= 1 if info['current_target_gate_in_range'] == True else 0
+                # [x,y,z,r] exactly if current_target_gate_in_range==1 else [x,y,z,y] noisy  (r,p is zero ,ignored )
+                current_target_gate_pos = info['current_target_gate_pos']
+                if current_target_gate_pos[2]==0: #  means that  current_target_gate_in_range is False, add default height.
+                    current_target_gate_pos[2]=1 if info['current_target_gate_type'] == 0 else 0.525
+                current_target_gate_pos=np.array(current_target_gate_pos)[[0,1,2,5]]
+                current_goal_pos=current_target_gate_pos[:3]
+                  
+        else :
+            current_target_gate_in_range= 0 
+            current_target_gate_pos = np.zeros(4)
+            current_goal_pos=np.zeros(3)
+        state=np.array([current_x,current_y,current_z,current_goal_pos[0]-current_x,current_goal_pos[1]-current_y,current_goal_pos[2]-current_z,current_target_gate_in_range,info['current_target_gate_id']])
+        # state=np.append(state,all_obstacles_pos)
+        # state=np.append(state,all_gates_pos)
+        # state=np.append(state,current_target_gate_pos)
+        return state
            
     def cmdFirmware(self,time,obs,reward=None,done=None,info=None,exploration=True):
         """Pick command sent to the quadrotor through a Crazyswarm/Crazyradio-like interface.
@@ -205,46 +251,86 @@ class Controller():
         # REPLACE THIS (START) ##
         #########################
 
+
+        # whether goback
+        # if info != {} and info['current_target_gate_id'] == -1 and self.pass_bool==False:
+        #     self.end_add_buffer_iteration=self.next_infer_iteration
+        #     self.pass_time=self.episode_iteration
+        #     self.pass_bool=True
+        #     print(f"pass_all_gate_time : {self.pass_time}")
+        # if self.episode_iteration == self.pass_time:  
+        #     self.agent_type='just_pass'
+        #     self.go_back=True
+
         # begin with take off 
         if self.episode_iteration == 0:
-            print(f"step { self.episode_iteration} , take-off")
             height = 1
             duration = 1.5
             command_type = Command(2)  # Take-off.
             args = [height, duration]
+        # end with rule-based when have passed all the gate 
+        # elif self.go_back  :
+        #     # go to goal place
+        #     if self.agent_type=='just_pass' :
+        #         print("going goal place")
+        #         duration = 2
+        #         self.arrival_iteration=self.episode_iteration+ duration *self.CTRL_FREQ
+        #         command_type = Command(5)  # goTo.
+        #         args = [[self.goal_pos[0], self.goal_pos[1], self.goal_pos[2]], 0, duration, False]
+        #         self.agent_type='going goal place'
+
+        #     #  arrival for 2s  or task_completed
+        #     elif self.agent_type=='going goal place' and (self.episode_iteration == self.arrival_iteration + 2 * self.CTRL_FREQ + 1 or info['task_completed'] ==True):
+        #         print(f" arrival goal place : {self.get_state(obs, info)} ,task_completed : {info['task_completed']}")
+        #         print("landing")
+        #         height = 0.
+        #         duration = 1
+        #         self.arrival_iteration=self.episode_iteration+ duration *self.CTRL_FREQ
+        #         command_type = Command(3)  # Land.
+        #         args = [height, duration]
+        #         self.agent_type='landing'
+
+        #     # after land , exit do not implement
+        #     elif self.agent_type=='landing' and self.episode_iteration==self.arrival_iteration + 1:
+        #         print(f"have landed, step : {self.episode_iteration}")
+        #         command_type = Command(0)  # Terminate command to be sent once trajectory is completed.
+        #         args = []
+        #     else :
+        #         command_type = Command(0)  # None.
+        #         args = []
 
         # using network to choose action
         elif self.episode_iteration >= 3 * self.CTRL_FREQ :
             
-            if self.episode_iteration % self.iteration_per_infer ==0:
-                self.next_infer_iteration=self.episode_iteration + self.iteration_per_infer
+            if self.episode_iteration % (30*self.net_work_freq) ==0:
+                self.next_infer_iteration=self.episode_iteration + (30*self.net_work_freq)
                 #goTo
-                duration = self.net_work_freq - 0.04
-                command_type = Command(5)  # goTo.
-                current_state=utils.get_state(obs,info,self.NOMINAL_OBSTACLES,self.NOMINAL_GATES)
+                # duration = self.net_work_freq - 0.02
+                # command_type = Command(5)  # goTo.
+                # current_state=self.get_state(obs,info)
+                # if self.interepisode_counter <= 10:
+                #     action= self.action_space.sample() 
+                # else:
+                #     action = self.policy.select_action(current_state, exploration=True)  # array  delta_x , delta_y, delta_z
+                # action /= 10
+                # yaw=0.
+                # args = [action.astype(np.float64), 0, duration, True]
+                # import pdb;pdb.set_trace()
+
+                # cmdFullState
+                command_type =  Command(1)   # cmdFullState.
+                current_state=self.get_state(obs,info)
                 if self.interepisode_counter <= 10:
                     action= self.action_space.sample() 
                 else:
-                    action = self.policy.select_action(current_state, exploration=True)  # array  delta_x , delta_y, delta_z
+                    action = self.policy.select_action(current_state, exploration=exploration)  # array  delta_x , delta_y, delta_z
                 action /= 10
-                yaw=0.
-                args = [action.astype(np.float64), 0, duration, True]
-                # import pdb;pdb.set_trace()
-                
-                # cmdFullState
-                # command_type =  Command(1)   # cmdFullState.
-                # current_state=utils.get_state(obs,info,self.NOMINAL_OBSTACLES,self.NOMINAL_GATES)
-                # if self.interepisode_counter <= 20:
-                #     action= self.action_space.sample() 
-                # else:
-                #     action = self.policy.select_action(current_state, exploration=exploration)  # array  delta_x , delta_y, delta_z
-                # action /= 10
-                # args=self.act2args(current_state,action)
-
-            # avoid inertia
-            # elif self.episode_iteration % self.iteration_per_infer == self.iteration_per_infer - 3:
-            #     command_type = Command(4)  # Stop.
-            #     args = []
+                target_pos = current_state[[0,1,2]] + action
+                target_vel = np.zeros(3)
+                target_acc = np.zeros(3)
+                target_yaw = 0.
+                target_rpy_rates = np.zeros(3)
+                args=[target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
             # other time do nothing
             else :
                 command_type = Command(0)  # None.
@@ -326,20 +412,20 @@ class Controller():
 
         # add experience when use network to decide
         if  self.episode_iteration == 3 * self.CTRL_FREQ:
-            self.current_state= utils.get_state(obs,info,self.NOMINAL_OBSTACLES,self.NOMINAL_GATES)
+            self.current_state= self.get_state(obs,info)
             self.current_args = args
 
         if  self.episode_iteration> 3 * self.CTRL_FREQ   :
             # 
             # Store the last step's events.
             if self.episode_iteration % (30*self.net_work_freq) ==0:
-                # print(f"step { self.episode_iteration} , net_add_buffer")
-                # goTo
-                current_action=(self.current_args[0]) * 10
-
                 # cmdFullState
-                # current_action=(self.current_args[0]-self.current_state[[0,1,2]]) * 10
-                next_state=utils.get_state(obs,info,self.NOMINAL_OBSTACLES,self.NOMINAL_GATES)
+                # import pdb;pdb.set_trace()
+                current_action=(self.current_args[0]-self.current_state[[0,1,2]]) * 10
+                # goTo
+                # current_action=(self.current_args[0]) * 10
+
+                next_state=self.get_state(obs,info)
                 next_args=args
 
                 if self.episode_iteration % 600 ==0  :
@@ -362,9 +448,15 @@ class Controller():
                 self.one_step_reward+=reward
 
 
-        # network do one step , train 60 steps.
-        if self.interepisode_counter >= 30 and self.episode_iteration % (30*self.net_work_freq) ==0:
-            self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(60))
+        # network do one step , train 100 steps.
+        if self.interepisode_counter >= 20 and self.episode_iteration % (15*self.net_work_freq) ==0:
+            self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(30))
+        #
+        # train_num_per_network = 60
+        # train_num_per_s= train_num_per_network/self.net_work_freq
+        # train_freq = train_num_per_s / 30  # every command step , should train num
+        # if self.interepisode_counter >= 20  :
+        #     self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(train_freq))
 
         #########################
         # REPLACE THIS (END) ####
@@ -385,16 +477,10 @@ class Controller():
         # REPLACE THIS (START) ##
         #########################
 
-        # _ = self.action_buffer
-        # _ = self.obs_buffer
-        # _ = self.reward_buffer
-        # _ = self.done_buffer
-        # _ = self.info_buffer
-
         # if self.interepisode_counter >= 20 :
         #     self.policy.train(self.replay_buffer,batch_size=256,train_nums=(30 /self.net_work_freq ))
 
-        if self.interepisode_counter >= 15 and self.interepisode_counter % 50 == 0 :
+        if self.interepisode_counter >= 15 and self.interepisode_counter % 10 == 0 :
             self.policy.save(filename=file_name)
         return self.episode_reward
         #########################
@@ -434,7 +520,6 @@ class Controller():
 
         self.episode_iteration=-1
         self.pass_time = 1e6
-
         # env-based variable
         self.go_back=False
         self.pass_bool=False
@@ -443,16 +528,3 @@ class Controller():
         self.one_step_reward = 0 
         self.next_infer_iteration=1e6
         self.end_add_buffer_iteration=1e6
-        self.net_control=False
-        self.net_begin_time= 3 * 30
-        self.net_end_time = 1e6
-        self.NotifySetPointStop_time=1e6
-    
-    def act2args(self,current_state,action):
-        target_pos = current_state[[0,1,2]] + action
-        target_vel = np.zeros(3)
-        target_acc = np.zeros(3)
-        target_yaw = 0.
-        target_rpy_rates = np.zeros(3)
-        args=[target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
-        return args

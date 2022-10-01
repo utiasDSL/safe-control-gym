@@ -42,7 +42,7 @@ finally:
 
 from safetyplusplus_folder.plus_logger import SafeLogger
 
-file_name='1001_03_StepNoAct_BackBest_goTo_collisionReward-100'
+file_name='1001_04_td3'
 
 def run(test=False):
     """The main function creating, running, and closing an environment over N episodes.
@@ -206,8 +206,8 @@ def run(test=False):
             # action
             # Step the environment.
             # TODO reward is exactly?
-            # print(i)
-            obs, reward, done, info, action = firmware_wrapper.step(curr_time, action)
+           
+            obs, reward, done, info, _ = firmware_wrapper.step(curr_time, action)
             #
         else:
             if first_ep_iteration:
