@@ -973,7 +973,7 @@ class Quadrotor(BaseAviary):
                 reward += 100
             # Penalize by collision.
             if self.currently_collided:
-                # reward -= 1
+                reward -= 100
                 pass
             # Penalize by constraint violation.
             if self.cnstr_violation:

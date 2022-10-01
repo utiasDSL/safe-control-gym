@@ -210,7 +210,7 @@ class Controller():
             print(f"step { self.episode_iteration} , take-off")
             height = 1
             duration = 1.5
-            command_type = Command(2.5)  # Take-off.
+            command_type = Command(2)  # Take-off.
             args = [height, duration]
 
         # using network to choose action
@@ -219,27 +219,27 @@ class Controller():
             if self.episode_iteration % self.iteration_per_infer ==0:
                 self.next_infer_iteration=self.episode_iteration + self.iteration_per_infer
                 #goTo
-                # duration = self.net_work_freq - 0.02
-                # command_type = Command(5)  # goTo.
-                # current_state=utils.get_state(obs,info)
-                # if self.interepisode_counter <= 10:
-                #     action= self.action_space.sample() 
-                # else:
-                #     action = self.policy.select_action(current_state, exploration=True)  # array  delta_x , delta_y, delta_z
-                # action /= 10
-                # yaw=0.
-                # args = [action.astype(np.float64), 0, duration, True]
+                duration = self.net_work_freq - 0.04
+                command_type = Command(5)  # goTo.
+                current_state=utils.get_state(obs,info,self.NOMINAL_OBSTACLES,self.NOMINAL_GATES)
+                if self.interepisode_counter <= 10:
+                    action= self.action_space.sample() 
+                else:
+                    action = self.policy.select_action(current_state, exploration=True)  # array  delta_x , delta_y, delta_z
+                action /= 10
+                yaw=0.
+                args = [action.astype(np.float64), 0, duration, True]
                 # import pdb;pdb.set_trace()
                 
                 # cmdFullState
-                command_type =  Command(1)   # cmdFullState.
-                current_state=utils.get_state(obs,info,NOMINAL_OBSTACLES,NOMINAL_GATES)
-                if self.interepisode_counter <= 20:
-                    action= self.action_space.sample() 
-                else:
-                    action = self.policy.select_action(current_state, exploration=exploration)  # array  delta_x , delta_y, delta_z
-                action /= 10
-                args=self.act2args(current_state,action)
+                # command_type =  Command(1)   # cmdFullState.
+                # current_state=utils.get_state(obs,info,self.NOMINAL_OBSTACLES,self.NOMINAL_GATES)
+                # if self.interepisode_counter <= 20:
+                #     action= self.action_space.sample() 
+                # else:
+                #     action = self.policy.select_action(current_state, exploration=exploration)  # array  delta_x , delta_y, delta_z
+                # action /= 10
+                # args=self.act2args(current_state,action)
 
             # avoid inertia
             # elif self.episode_iteration % self.iteration_per_infer == self.iteration_per_infer - 3:
@@ -326,7 +326,7 @@ class Controller():
 
         # add experience when use network to decide
         if  self.episode_iteration == 3 * self.CTRL_FREQ:
-            self.current_state= utils.get_state(obs,info)
+            self.current_state= utils.get_state(obs,info,self.NOMINAL_OBSTACLES,self.NOMINAL_GATES)
             self.current_args = args
 
         if  self.episode_iteration> 3 * self.CTRL_FREQ   :
@@ -334,9 +334,12 @@ class Controller():
             # Store the last step's events.
             if self.episode_iteration % (30*self.net_work_freq) ==0:
                 # print(f"step { self.episode_iteration} , net_add_buffer")
+                # goTo
+                current_action=(self.current_args[0]) * 10
+
                 # cmdFullState
-                current_action=(self.current_args[0]-self.current_state[[0,1,2]]) * 10
-                next_state=utils.get_state(obs,info)
+                # current_action=(self.current_args[0]-self.current_state[[0,1,2]]) * 10
+                next_state=utils.get_state(obs,info,self.NOMINAL_OBSTACLES,self.NOMINAL_GATES)
                 next_args=args
 
                 if self.episode_iteration % 600 ==0  :

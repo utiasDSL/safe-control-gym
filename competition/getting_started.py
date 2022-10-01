@@ -42,7 +42,7 @@ finally:
 
 from safetyplusplus_folder.plus_logger import SafeLogger
 
-file_name='1001_01_StepNoAct_BackBest_addStopCommand'
+file_name='1001_03_StepNoAct_BackBest_goTo_collisionReward-100'
 
 def run(test=False):
     """The main function creating, running, and closing an environment over N episodes.
