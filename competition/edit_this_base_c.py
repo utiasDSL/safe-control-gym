@@ -451,12 +451,7 @@ class Controller():
         # network do one step , train 100 steps.
         if self.interepisode_counter >= 20 and self.episode_iteration % (15*self.net_work_freq) ==0:
             self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(30))
-        #
-        # train_num_per_network = 60
-        # train_num_per_s= train_num_per_network/self.net_work_freq
-        # train_freq = train_num_per_s / 30  # every command step , should train num
-        # if self.interepisode_counter >= 20  :
-        #     self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(train_freq))
+
 
         #########################
         # REPLACE THIS (END) ####
@@ -494,11 +489,11 @@ class Controller():
 
         """
         # Data buffers.
-        self.action_buffer = deque([], maxlen=self.BUFFER_SIZE)
-        self.obs_buffer = deque([], maxlen=self.BUFFER_SIZE)
-        self.reward_buffer = deque([], maxlen=self.BUFFER_SIZE)
-        self.done_buffer = deque([], maxlen=self.BUFFER_SIZE)
-        self.info_buffer = deque([], maxlen=self.BUFFER_SIZE)
+        # self.action_buffer = deque([], maxlen=self.BUFFER_SIZE)
+        # self.obs_buffer = deque([], maxlen=self.BUFFER_SIZE)
+        # self.reward_buffer = deque([], maxlen=self.BUFFER_SIZE)
+        # self.done_buffer = deque([], maxlen=self.BUFFER_SIZE)
+        # self.info_buffer = deque([], maxlen=self.BUFFER_SIZE)
 
         # Counters.
         self.interstep_counter = 0

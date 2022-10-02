@@ -11,13 +11,12 @@ import time
 import inspect
 import numpy as np
 import pybullet as p
-import sys 
-sys.path.append("..") 
 
 from functools import partial
 from rich.tree import Tree
 from rich import print
-
+import sys
+sys.path.append("..")
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.utils import sync
@@ -41,6 +40,7 @@ finally:
     print("Module 'cffirmware' available:", FIRMWARE_INSTALLED)
 
 from safetyplusplus_folder.plus_logger import SafeLogger
+from slam import SLAM
 
 file_name='1001_04_td3'
 
@@ -86,13 +86,14 @@ def run(test=False):
         info['ctrl_timestep'] = CTRL_DT
         info['ctrl_freq'] = CTRL_FREQ
         env = firmware_wrapper.env
-        
-        
     else:
         env = make('quadrotor', **config.quadrotor_config)
         # Reset the environment, obtain the initial observations and info dictionary.
         obs, info = env.reset()
     
+    m_slam = SLAM()
+    m_slam.reset_occ_map()
+
     # Create controller.
     vicon_obs = [obs[0], 0, obs[2], 0, obs[4], 0, obs[6], obs[7], obs[8], 0, 0, 0]
         # obs = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
@@ -152,6 +153,12 @@ def run(test=False):
     episode_cost=0
     for i in range(config.num_episodes*CTRL_FREQ*env.EPISODE_LEN_SEC):
 
+        m_slam.update_occ_map(info)
+        save=False
+        # if i % 20== 0:
+        #     save = True
+        obs_2d = m_slam.generate_obs_img(obs,name=str(int(round(time.time() * 1000))),save=save)
+
         # Step by keyboard input.
         # _ = input("Press any key to continue")
 
@@ -182,11 +189,8 @@ def run(test=False):
                 first_ep_iteration = False
             command_type, args = ctrl.cmdFirmware(curr_time, vicon_obs, reward, done, info,True)
 
-            #  'action_space': Box([0.02816169 0.02816169 0.02816169 0.02816169], [0.14834145 0.14834145 0.14834145 0.14834145], (4,), float32)
-            # pdb.set_trace()
             # Select interface. 
             if command_type == Command.FULLSTATE:
-                # import pdb; pdb.set_trace()
                 firmware_wrapper.sendFullStateCmd(*args, curr_time)
             elif command_type == Command.TAKEOFF:
                 firmware_wrapper.sendTakeoffCmd(*args)
@@ -203,7 +207,6 @@ def run(test=False):
             else:
                 raise ValueError("[ERROR] Invalid command_type.")
 
-            # action
             # Step the environment.
             # TODO reward is exactly?
            
@@ -223,8 +226,6 @@ def run(test=False):
         ctrl.interStepLearn(args, obs, reward, done, info)
 
         # Add up reward, collisions, violations.
-
-        # base (not used )
         cumulative_reward += reward
         if info["collision"][1]:
             collisions_count += 1
@@ -259,10 +260,10 @@ def run(test=False):
         rpy = [obs[6],obs[7],obs[8]]
         vel = [obs[1],obs[3],obs[5]]
         bf_rates = [obs[9],obs[10],obs[11]]
-        logger.log(drone=0,
-                   timestamp=i/CTRL_FREQ,
-                   state=np.hstack([pos, np.zeros(4), rpy, vel, bf_rates, np.sqrt(action/env.KF)])
-                   )
+        # logger.log(drone=0,
+        #            timestamp=i/CTRL_FREQ,
+        #            state=np.hstack([pos, np.zeros(4), rpy, vel, bf_rates, np.sqrt(action/env.KF)])
+        #            )
 
         # Synchronize the GUI.
         if config.quadrotor_config.gui:
@@ -270,11 +271,12 @@ def run(test=False):
 
         # If an episode is complete, reset the environment.
         if done:
+            m_slam.reset_occ_map()
             # Plot logging (comment as desired).
             # if not test:
-                # logger.plot(comment="get_start-episode-"+str(episodes_count), autoclose=True)
+            #     logger.plot(comment="get_start-episode-"+str(episodes_count), autoclose=True)
 
-            # CSV save.
+            # # CSV save.
             # logger.save_as_csv(comment="get_start-episode-"+str(episodes_count))
 
             # Update the controller internal state and models.
@@ -310,7 +312,7 @@ def run(test=False):
             # stats.append(episode_stats)
 
             # Create a new logger.
-            logger = Logger(logging_freq_hz=CTRL_FREQ)
+            # logger = Logger(logging_freq_hz=CTRL_FREQ)
 
             print(f"Total T: {i + 1} Episode Num: {episodes_count}  Reward: {episode_reward:.3f} Cost: {episode_cost:.3f} violation: {violations_count:.3f}  collision:{collisions_count:.3f} gates_passed:{info['current_target_gate_id']},")
             print(f"at_goal_position : {info['at_goal_position']}  task_completed: {info['task_completed']}")
@@ -343,17 +345,6 @@ def run(test=False):
             obs=new_initial_obs
             episode_start_iter = i+1
             ep_start = time.time()
-        
-        # if (i + 1) % 5000==0:
-        #     import copy
-        #     config2=copy.deepcopy(config)
-        #     config2.quadrotor_config['gui'] = False
-        #     eval_env_func = partial(make, 'quadrotor', **config2.quadrotor_config)
-        #     eval_firmware_wrapper = make('firmware',
-        #                 eval_env_func, FIRMWARE_FREQ, CTRL_FREQ
-        #                 ) 
-        #     eval_env = eval_firmware_wrapper.env
-        #     avg_pass_gates,success_rate,avg_cost=eval(eval_firmware_wrapper,eval_env,5)
 
     # Close the environment and print timing statistics.
     env.close()
