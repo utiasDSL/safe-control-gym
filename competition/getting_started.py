@@ -42,7 +42,7 @@ finally:
 from safetyplusplus_folder.plus_logger import SafeLogger
 from slam import SLAM
 
-file_name='1001_04_td3'
+file_name='1002_01_merged'
 
 def run(test=False):
     """The main function creating, running, and closing an environment over N episodes.
