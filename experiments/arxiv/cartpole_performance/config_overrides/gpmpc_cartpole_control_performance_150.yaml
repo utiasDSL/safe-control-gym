@@ -6,10 +6,11 @@ algo_config:
   gp_approx: mean_eq
   gp_model_path: trained_models/gpmpc/model_150
   horizon: 25
-  inertial_prop:
-    cart_mass: 1.0
-    pole_length: 0.5
-    pole_mass: 0.1
+  prior_info:
+    prior_prop:
+      cart_mass: 1.0
+      pole_length: 0.5
+      pole_mass: 0.1
   initial_rollout_std: 0.0
   input_mask: null
   learing_rate: null

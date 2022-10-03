@@ -70,7 +70,8 @@ class GPMPC(MPC):
             inducing_point_selection_method: str = 'kmeans',
             recalc_inducing_points_at_every_step: bool = False,
             online_learning: bool = False,
-            inertial_prop: list = [1.0],
+            prior_info: dict=None,
+            #inertial_prop: list = [1.0],
             prior_param_coeff: float = 1.0,
             terminate_run_on_done: bool = True,
             output_dir: str = "results/temp",
@@ -95,7 +96,7 @@ class GPMPC(MPC):
             output_dir (str): directory to store model and results.
             prob (float): desired probabilistic safety level.
             initial_rollout_std (float): the initial std (across all states) for the mean_eq rollout.
-            inertial_prop (list): to initialize the inertial properties of the prior model.
+            prior_info (dict): Dictionary specifiy the algorithms prior model parameters.
             prior_param_coeff (float): constant multiplying factor to adjust the prior model intertial properties.
             input_mask (list): list of which input dimensions to use in GP model. If None, all are used.
             target_mask (list): list of which output dimensions to use in the GP model. If None, all are used.
@@ -108,16 +109,11 @@ class GPMPC(MPC):
             additional_constraints (list): list of Constraint objects defining additional constraints to be used.
 
         """
-        if type(inertial_prop) is list:
-            self.prior_env_func = partial(env_func,
-                                          inertial_prop=np.array(inertial_prop)*prior_param_coeff,
-                                          prior_prop=np.array(inertial_prop)*prior_param_coeff)
-        else:
-            assert (type(inertial_prop) is dict) or (type(inertial_prop) == munch.Munch), '[Error]: GPMPC.__init__(): Intertial properties must be a list, dict, or munch.Munch'
-            inertial_prop.update((prop, val*prior_param_coeff) for prop, val in inertial_prop.items())
-            self.prior_env_func = partial(env_func,
-                                          inertial_prop=inertial_prop,
-                                          prior_prop=inertial_prop)
+
+        if prior_info is None or prior_info == {}:
+            raise ValueError('GPMPC requires prior_prop to be defined. You may use the real mass properties and then use prior_param_coeff to modify them accordingly.')
+        prior_info['prior_prop'].update((prop, val * prior_param_coeff) for prop, val in prior_info['prior_prop'].items())
+        self.prior_env_func = partial(env_func, inertial_prop=prior_info['prior_prop'])
         if soft_constraints is None:
             self.soft_constraints_params = {'gp_soft_constraints': False,
                                             'gp_soft_constraints_coeff': 0,
@@ -135,12 +131,14 @@ class GPMPC(MPC):
             warmstart=warmstart,
             soft_constraints=self.soft_constraints_params['prior_soft_constraints'],
             terminate_run_on_done=terminate_run_on_done,
+            prior_info=prior_info,
             # runner args
             # shared/base args
             output_dir=output_dir,
             additional_constraints=additional_constraints,
         )
         self.prior_ctrl.reset()
+        self.sparse_gp = sparse_gp
         super().__init__(
             self.prior_env_func,
             horizon=horizon,
@@ -150,6 +148,7 @@ class GPMPC(MPC):
             soft_constraints=self.soft_constraints_params['gp_soft_constraints'],
             terminate_run_on_done=terminate_run_on_done,
             constraint_tol=constraint_tol,
+            prior_info=prior_info,
             # runner args
             # shared/base args
             output_dir=output_dir,
@@ -158,6 +157,7 @@ class GPMPC(MPC):
             seed=seed,
             **kwargs)
         # Setup environments.
+        self.env_func = env_func
         self.env = env_func(randomized_init=False, seed=seed)
         self.env_training = env_func(randomized_init=True, seed=seed)
         # No training data accumulated yet so keep the dynamics function as linear prior.
@@ -165,8 +165,8 @@ class GPMPC(MPC):
         self.data_inputs = None
         self.data_targets = None
         self.prior_dynamics_func = self.prior_ctrl.linear_dynamics_func
-        self.X_EQ = np.atleast_2d(self.env.X_EQ)[0,:].T
-        self.U_EQ = np.atleast_2d(self.env.U_EQ)[0,:].T
+        self.X_EQ = self.prior_ctrl.X_EQ
+        self.U_EQ = self.prior_ctrl.U_EQ
         # GP and training parameters.
         self.gaussian_process = None
         self.train_iterations = train_iterations
@@ -177,7 +177,6 @@ class GPMPC(MPC):
         self.gp_model_path = gp_model_path
         self.normalize_training_data = normalize_training_data
         self.prob = prob
-        self.sparse_gp = sparse_gp
         if input_mask is None:
             self.input_mask = np.arange(self.model.nx + self.model.nu).tolist()
         else:
@@ -626,6 +625,7 @@ class GPMPC(MPC):
         if self.warmstart and self.x_prev is None and self.u_prev is None:
             x_guess, u_guess = self.prior_ctrl.compute_initial_guess(obs, goal_states, self.X_EQ, self.U_EQ)
             opti.set_initial(x_var, x_guess)
+            u_guess = np.clip(u_guess, 0.06, 0.26)
             opti.set_initial(u_var, u_guess)  # Initial guess for optimization problem.
         elif self.warmstart and self.x_prev is not None and self.u_prev is not None:
             # shift previous solutions by 1 step
@@ -869,12 +869,12 @@ class GPMPC(MPC):
         self.env_training.close()
         self.env.close()
 
-    def reset_results_dict(self):
+    def setup_results_dict(self):
         """
 
         """
         "Result the results_dict before running."
-        super().reset_results_dict()
+        super().setup_results_dict()
         self.results_dict['input_constraint_set'] = []
         self.results_dict['state_constraint_set'] = []
         self.results_dict['state_horizon_cov'] = []

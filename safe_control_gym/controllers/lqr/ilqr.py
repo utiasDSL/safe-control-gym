@@ -57,13 +57,13 @@ class iLQR(BaseController):
         self.env = env_func(info_in_reset=True, done_on_out_of_bound=True)
 
         # Controller params.
-        self.model = self.env.symbolic
+        self.model = self.get_prior(self.env)
         self.Q = get_cost_weight_matrix(self.q_lqr, self.model.nx)
         self.R = get_cost_weight_matrix(self.r_lqr, self.model.nu)
         self.env.set_cost_function_param(self.Q, self.R)
 
         # Linearize at operating point (equilibrium for stabilization).
-        self.x_0, self.u_0 = self.env.X_GOAL, self.env.U_GOAL
+        self.x_0, self.u_0 = self.env.X_GOAL, self.model.U_EQ
 
         if self.env.TASK == Task.STABILIZATION:
             self.gain = compute_lqr_gain(self.model, self.x_0, self.u_0,
@@ -193,7 +193,7 @@ class iLQR(BaseController):
 
         # Initialize backward pass.
         state_k = self.state_stack[-1]
-        input_k = env.U_GOAL
+        input_k = self.model.U_EQ
 
         if env.TASK == Task.STABILIZATION:
             x_goal = self.x_0
@@ -202,7 +202,7 @@ class iLQR(BaseController):
         loss_k = loss(x=state_k,
                       u=input_k,
                       Xr=x_goal,
-                      Ur=env.U_GOAL,
+                      Ur=self.model.U_EQ,
                       Q=self.Q,
                       R=self.R)
         s = loss_k['l'].toarray()
@@ -229,7 +229,7 @@ class iLQR(BaseController):
             loss_k = loss(x=state_k,
                           u=input_k,
                           Xr=x_goal,
-                          Ur=env.U_GOAL,
+                          Ur=self.model.U_EQ,
                           Q=self.Q,
                           R=self.R)
 
