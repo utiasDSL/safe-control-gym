@@ -1,0 +1,26 @@
+xlabel: n_episodes
+variant_name: pid (1.5x scaled prior) 
+
+base_data_dir: temp_data/data/base
+base_data_paths: null
+
+variant_data_dir: temp_data/data/pid_prior
+variants:
+- name: 10
+  data_paths: quad2d_pid-prior1.5x_ep10.hdf5
+- name: 20
+  data_paths: quad2d_pid-prior1.5x_ep20.hdf5
+- name: 30
+  data_paths: quad2d_pid-prior1.5x_ep30.hdf5
+- name: 40
+  data_paths: quad2d_pid-prior1.5x_ep40.hdf5
+- name: 50
+  data_paths: quad2d_pid-prior1.5x_ep50.hdf5
+- name: 100
+  data_paths: quad2d_pid-prior1.5x_ep100.hdf5
+- name: 200
+  data_paths: quad2d_pid-prior1.5x_ep200.hdf5
+- name: 400
+  data_paths: quad2d_pid-prior1.5x_ep400.hdf5
+- name: 800
+  data_paths: quad2d_pid-prior1.5x_ep800.hdf5

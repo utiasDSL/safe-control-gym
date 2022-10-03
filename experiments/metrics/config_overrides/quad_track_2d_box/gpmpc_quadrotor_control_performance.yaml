@@ -1,0 +1,71 @@
+algo_config:
+  horizon: 15
+  r_mpc:
+    - 0.1
+    - 0.1
+  q_mpc:
+    - 1.0
+    - 1.0
+    - 1.0
+    - 1.0
+    - 1.0
+    - 1.0
+  soft_constraints: null
+  warmstart: True
+  additional_constraints: null
+
+task_config:
+  seed: 1337 # Implement this elsewhere.
+  ctrl_freq: 10
+  pyb_freq: 1000
+  gui: False
+  quad_type: 2
+  info_in_reset: False
+  randomized_init: False
+  cost: quadratic
+  task: traj_tracking
+  inertial_prop:
+    - 0.027
+    - 0.000014
+  constraints:
+    - constraint_form: default_constraint
+      constrained_variable: input
+    - constraint_form: default_constraint
+      constrained_variable: state
+      upper_bounds:
+        - 100
+        - 100
+        - 100
+        - 100
+        - 100
+        - 100
+      lower_bounds:
+        - -100
+        - -100
+        - 0
+        - -100
+        - -100
+        - -100
+  done_on_violation: False
+  disturbances: null
+    #observation:
+    #  white_noise:
+    #    std: 0.0005
+  #stab_goal_tol: 0.005
+  task_info:
+    trajectory_type: circle
+    num_cycles: 1
+    trajectory_plane: zx
+    trajectory_position_offset:
+      - 0.5
+      - 0.0
+    trajectory_scale: -0.5
+  episode_len_sec: 5
+  init_state:
+    init_x: 0.0
+    init_x_dot: 0.0
+    init_z: 0.01
+    init_z_dot: 0.0
+    init_theta: 0.0
+    init_theta_dot: 0.0
+

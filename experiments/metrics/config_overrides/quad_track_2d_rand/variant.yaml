@@ -1,0 +1,21 @@
+# vary quad mass, nominal M 0.027
+xlabel: M
+reference: 0.027
+variants: [0.021, 0.024, 0.027, 0.03, 0.033] 
+
+variant_config:
+- task_config:
+    inertial_prop:
+        M: 0.021
+- task_config:
+    inertial_prop:
+        M: 0.024
+- task_config:
+    inertial_prop:
+        M: 0.027
+- task_config:
+    inertial_prop:
+        M: 0.03
+- task_config:
+    inertial_prop:
+        M: 0.033

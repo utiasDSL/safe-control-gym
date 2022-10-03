@@ -1,0 +1,29 @@
+algo_config:
+    hidden_dim: 256
+    use_gae: True
+    max_env_steps: 5000000
+    entropy_coef: 0.01
+
+    opt_epochs: 10
+    mini_batch_size: 256
+    actor_lr: 0.0003
+    critic_lr: 0.001
+
+    rollout_batch_size: 4
+    rollout_steps: 1000
+
+    log_interval: 1000
+    save_interval: 1000
+    num_checkpoints: 100
+    eval_interval: 1000
+    eval_save_best: True
+    tensorboard: True
+
+task_config:
+    cost: rl_reward
+    normalized_rl_action_space: True
+    obs_goal_horizon: 1
+    rew_state_weight: [1, 0, 1, 0, 0, 0]
+    rew_act_weight: 0.0
+    rew_exponential: True
+    done_on_out_of_bound: True 

@@ -233,12 +233,12 @@ for seed in "${test_metric_seeds[@]}"
 do
 cmd="python ${EVAL_SCRIPT} \
 --func test_trajectory_metric \
---algo pid 
---task quadrotor 
---overrides ${CONFIG_DIR}/base.yaml ${CONFIG_DIR}/variant.yaml 
---n_episodes ${n_episodes} 
---metric ${metric} 
---eval_output_dir ${OUTPUT_DIR}/${exp_name}/${sub_exp_name}/seed${seed} 
+--algo ${algo} \
+--task ${env} \ 
+--overrides ${CONFIG_DIR}/base.yaml ${CONFIG_DIR}/variant.yaml \
+--n_episodes ${n_episodes} \
+--metric ${metric} \
+--eval_output_dir ${OUTPUT_DIR}/${exp_name}/${sub_exp_name}/seed${seed} \
 --seed ${seed} \
 ${kwargs} \
 "
@@ -264,8 +264,8 @@ for seed in "${test_metric_seeds[@]}"
 do
 cmd="python ${EVAL_SCRIPT} \
 --func test_trajectory_metric \
---algo pid \
---task quadrotor \
+--algo ${algo} \
+--task ${env} \
 --overrides ${CONFIG_DIR}/base.yaml ${CONFIG_DIR}/variant.yaml \
 --n_episodes ${n_episodes} \
 --metric ${metric} \
@@ -279,7 +279,81 @@ $cmd
 done 
 }
 
+#####################################################################
 
+function test_metric_gt {
+# 
+algo=$1
+env=$2
+metric=$3
+sub_exp_name=$4 
+if [ ${sub_exp_name} = "-" ]; then 
+    sub_exp_name="${metric}/${algo}"
+fi 
+algo_config=$5
+if [ ${algo_config} = "-" ]; then 
+    algo_config="${algo}"
+fi 
+kwargs=${@:6}
+
+for seed in "${test_metric_seeds[@]}" 
+do
+cmd="python ${EVAL_SCRIPT} \
+--func test_metric_to_gt \
+--algo ${algo} \
+--task ${env} \
+--overrides ${CONFIG_DIR}/base.yaml ${CONFIG_DIR}/${algo_config} \
+--n_episodes ${n_episodes} \
+--metric ${metric} \
+--eval_output_dir ${OUTPUT_DIR}/${exp_name}/${sub_exp_name}/seed${seed} \
+--seed ${seed} \
+${kwargs} \
+"
+echo "Execute command: "
+echo ${cmd}
+$cmd &
+done 
+wait
+}
+
+function test_metric_gt_nonparallel {
+# 
+algo=$1
+env=$2
+metric=$3
+sub_exp_name=$4 
+if [ ${sub_exp_name} = "-" ]; then 
+    sub_exp_name="${metric}/${algo}"
+fi 
+algo_config=$5
+if [ ${algo_config} = "-" ]; then 
+    algo_config="${algo}.yaml"
+fi 
+kwargs=${@:6}
+
+for seed in "${test_metric_seeds[@]}" 
+do
+cmd="python ${EVAL_SCRIPT} \
+--func test_metric_to_gt \
+--algo ${algo} \
+--task ${env} \
+--overrides ${CONFIG_DIR}/base.yaml ${CONFIG_DIR}/${algo_config} \
+--n_episodes ${n_episodes} \
+--metric ${metric} \
+--eval_output_dir ${OUTPUT_DIR}/${exp_name}/${sub_exp_name}/seed${seed} \
+--seed ${seed} \
+${kwargs} \
+"
+echo "Execute command: "
+echo ${cmd}
+$cmd
+done 
+}
+
+
+#####################################################################
+#####################################################################
+#####################################################################
 
 
 ####################### execution 

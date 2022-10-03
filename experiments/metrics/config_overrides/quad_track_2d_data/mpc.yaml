@@ -1,0 +1,36 @@
+algo_config:
+  horizon: 30
+  r_mpc:
+    - 0.1
+    - 0.1
+  q_mpc:
+    - 1.0
+    - 1.0
+    - 1.0
+    - 1.0
+    - 1.0
+    - 1.0
+  soft_constraints: null
+  warmstart: True
+  additional_constraints: null
+
+task_config:
+  constraints:
+    - constraint_form: default_constraint
+      constrained_variable: input
+    - constraint_form: default_constraint
+      constrained_variable: state
+      upper_bounds:
+        - 100
+        - 100
+        - 100
+        - 100
+        - 100
+        - 100
+      lower_bounds:
+        - -100
+        - -100
+        - 0
+        - -100
+        - -100
+        - -100

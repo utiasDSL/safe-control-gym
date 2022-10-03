@@ -1,0 +1,21 @@
+# vary prior quad mass, nominal M 0.027
+xlabel: prior_M
+reference: 0.027
+variants: [0.021, 0.024, 0.027, 0.03, 0.033] 
+
+variant_config:
+- algo_config:
+    prior_inertial_prop:
+        M: 0.021
+- algo_config:
+    prior_inertial_prop:
+        M: 0.024
+- algo_config:
+    prior_inertial_prop:
+        M: 0.027
+- algo_config:
+    prior_inertial_prop:
+        M: 0.03
+- algo_config:
+    prior_inertial_prop:
+        M: 0.033

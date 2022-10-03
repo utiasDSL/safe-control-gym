@@ -1,0 +1,41 @@
+# vary traj, nominal scale 1.0
+xlabel: traj_scale
+reference: 1.0
+variants: [0.6, 0.8, 1.0, 1.2, 1.4] 
+
+variant_config:
+- task_config:
+    task_info:
+        trajectory_type: figure8
+        num_cycles: 1
+        trajectory_plane: 'xz'
+        trajectory_position_offset: [0, 1]
+        trajectory_scale: 0.6
+- task_config:
+    task_info:
+        trajectory_type: figure8
+        num_cycles: 1
+        trajectory_plane: 'xz'
+        trajectory_position_offset: [0, 1]
+        trajectory_scale: 0.8
+- task_config:
+    task_info:
+        trajectory_type: figure8
+        num_cycles: 1
+        trajectory_plane: 'xz'
+        trajectory_position_offset: [0, 1]
+        trajectory_scale: 1
+- task_config:
+    task_info:
+        trajectory_type: figure8
+        num_cycles: 1
+        trajectory_plane: 'xz'
+        trajectory_position_offset: [0, 1]
+        trajectory_scale: 1.2
+- task_config:
+    task_info:
+        trajectory_type: figure8
+        num_cycles: 1
+        trajectory_plane: 'xz'
+        trajectory_position_offset: [0, 1]
+        trajectory_scale: 1.4

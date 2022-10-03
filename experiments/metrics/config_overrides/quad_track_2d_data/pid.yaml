@@ -1,0 +1,7 @@
+algo_config:
+  # this is the default params in cartpole so don't need to specify again here
+  # but it serves as a example/template if any change to the prior is needed
+  prior_info:
+    prior_prop:
+      M: 0.027
+      Iyy: 0.000014
