@@ -164,10 +164,11 @@ def encode_data(data, tuple_length=1, include_action=True):
     sas_tuples = []
     for i in range(n_trajs):
         ep_obs = data["obs"][i]
-        ep_obs_tuples = [ep_obs[j:j+tuple_length+1] for j in range(len(ep_obs) - tuple_length)]
+        # TODO: since experiments are saving those as np.array type
+        ep_obs_tuples = [ep_obs[j:j+tuple_length+1].tolist() for j in range(len(ep_obs) - tuple_length)]
         if include_action:
             ep_act = data["action"][i]
-            ep_act_tuples = [ep_act[j:j+tuple_length] for j in range(len(ep_act) - tuple_length + 1)]
+            ep_act_tuples = [ep_act[j:j+tuple_length].tolist() for j in range(len(ep_act) - tuple_length + 1)]
             ep_tuples = [np.concatenate(o_tp + a_tp) 
                         for o_tp, a_tp in zip(ep_obs_tuples, ep_act_tuples)]
         else:
@@ -178,7 +179,7 @@ def encode_data(data, tuple_length=1, include_action=True):
     return encoded_data
 
 
-def mmd_loss(samples1, samples2, mode='gaussian', sigma=0.2, use_numpy=True):
+def mmd_loss(samples1, samples2, mode='gaussian', sigma=0.2, use_numpy=True, **kwargs):
     """Computes the MMD loss as similarity metric between 2 sets of trajectories samples.
 
     adapted from https://github.com/aviralkumar2907/BEAR/blob/f2e31c1b5f81c4fb0e692a34949c7d8b48582d8f/algos.py#L326
@@ -282,7 +283,7 @@ def mse(traj1, traj2, **kwargs):
     return cost
 
 
-def lsed(traj1, traj2, distance_func=euclidean_distance, distance_func_kwargs={}):
+def lsed(traj1, traj2, distance_func=euclidean_distance, distance_func_kwargs={}, **kwargs):
     """Lock-step Euclidean Distance, requires each traj pair to have same length. 
 
     Args:
@@ -303,7 +304,7 @@ def lsed(traj1, traj2, distance_func=euclidean_distance, distance_func_kwargs={}
     return cost
 
 
-def dtw(traj1, traj2, w=np.inf, distance_func=euclidean_distance, distance_func_kwargs={}):
+def dtw(traj1, traj2, w=np.inf, distance_func=euclidean_distance, distance_func_kwargs={}, **kwargs):
     """Dynamic time wrapper. 
     Reference: https://github.com/ymtoo/ts-dist/blob/30de6eba0969611cda58754e212bddef2b28772e/ts_dist.py#L8
     Reference2: https://github.com/cjekel/similarity_measures/blob/bfcd744a052ea50c4a318f5b38b275b3f93b67d5/similaritymeasures/similaritymeasures.py#L671
@@ -332,7 +333,7 @@ def dtw(traj1, traj2, w=np.inf, distance_func=euclidean_distance, distance_func_
     return cost
 
 
-def edr(traj1, traj2, epsilon=0.05, distance_func=euclidean_distance, distance_func_kwargs={}):
+def edr(traj1, traj2, epsilon=0.05, distance_func=euclidean_distance, distance_func_kwargs={}, **kwargs):
     """Edit distance on real sequences.
     Reference: https://github.com/ymtoo/ts-dist/blob/30de6eba0969611cda58754e212bddef2b28772e/ts_dist.py#L88
     
@@ -364,7 +365,7 @@ def edr(traj1, traj2, epsilon=0.05, distance_func=euclidean_distance, distance_f
     return cost 
     
     
-def lcss(traj1, traj2, delta=np.inf, epsilon=0.05, distance_func=euclidean_distance, distance_func_kwargs={}):
+def lcss(traj1, traj2, delta=np.inf, epsilon=0.05, distance_func=euclidean_distance, distance_func_kwargs={}, **kwargs):
     """Longest common subsequence. 
     Reference: https://github.com/ymtoo/ts-dist/blob/30de6eba0969611cda58754e212bddef2b28772e/ts_dist.py#L52
     
@@ -392,7 +393,7 @@ def lcss(traj1, traj2, delta=np.inf, epsilon=0.05, distance_func=euclidean_dista
     return cost 
 
 
-def discrete_frechet(traj1, traj2, p=2, distance_func=euclidean_distance, distance_func_kwargs={}):
+def discrete_frechet(traj1, traj2, p=2, distance_func=euclidean_distance, distance_func_kwargs={}, **kwargs):
     """Discrete Frechet distance. 
     Reference: https://github.com/cjekel/similarity_measures/blob/bfcd744a052ea50c4a318f5b38b275b3f93b67d5/similaritymeasures/similaritymeasures.py#L430
     
@@ -427,3 +428,63 @@ def discrete_frechet(traj1, traj2, p=2, distance_func=euclidean_distance, distan
     return cost 
 
 
+def edr_continuous(traj1, traj2, epsilon=0.05, distance_func=euclidean_distance, distance_func_kwargs={}, **kwargs):
+    """Edit distance on real sequences.
+    Reference: https://github.com/ymtoo/ts-dist/blob/30de6eba0969611cda58754e212bddef2b28772e/ts_dist.py#L88
+    
+    Args:
+        traj1 (ndarray): shape (T1,D).
+        traj1 (ndarray): shape (T2,D).
+        epsilon (float): threshold to decide if 2 elements are "equal".
+        
+    Returns:
+        cost (float): final EDR cost.
+    """
+    nx, ny = len(traj1), len(traj2)
+    D = np.full((nx+1, ny+1), np.inf)
+    # base cases 
+    D[:, 0] = np.arange(nx+1)
+    D[0, :] = np.arange(ny+1)
+    for i in range(1, nx+1):
+        for j in range(1, ny+1):
+            # if np.all(np.abs(traj1[i-1]-traj2[j-1]) < epsilon):
+            # adapt a custom state-pair distance metric here
+            # TODO: should we also adapt subcost to be continuous instead of discrete
+            subcost = distance_func(traj1[i-1], traj2[j-1], **distance_func_kwargs)
+            if subcost < epsilon:
+                subcost = 0
+        D[i, j] = min(D[i-1, j-1]+subcost, D[i-1, j]+1, D[i, j-1]+1)
+    # final EDR cost (normalized to [0,1])
+    # TODO: how to deal with normalization?
+    cost = D[nx, ny] / max(nx, ny)
+    return cost 
+    
+    
+def lcss_continuous(traj1, traj2, delta=np.inf, epsilon=0.05, distance_func=euclidean_distance, distance_func_kwargs={}, **kwargs):
+    """Longest common subsequence. 
+    Reference: https://github.com/ymtoo/ts-dist/blob/30de6eba0969611cda58754e212bddef2b28772e/ts_dist.py#L52
+    
+    Args:
+        traj1 (ndarray): shape (T1,D).
+        traj1 (ndarray): shape (T2,D).
+        delta (float): time shreshold to decide if 2 timestamps are "equal".
+        epsilon (float): threshold to decide if 2 elements are "equal".
+    Returns:
+        cost (float): final LCSS cost.
+    """
+    nx, ny = len(traj1), len(traj2)
+    S = np.zeros((nx+1, ny+1))
+    for i in range(1, nx+1):
+        for j in range(1, ny+1):
+            # if np.all(np.abs(traj1[i-1]-traj2[j-1]) < epsilon) and (np.abs(i-j) < delta):
+            # adapt a custom state-pair distance metric here
+            # TODO: should we also adapt the +1 to be continuous state distance
+            subcost = distance_func(traj1[i-1], traj2[j-1], **distance_func_kwargs)
+            if subcost < epsilon:
+                S[i, j] = S[i-1, j-1]+subcost
+            else:
+                S[i, j] = max(S[i, j-1], S[i-1, j])
+    # final LCSS cost (normalized to [0,1], lower the better/more similar)
+    # TODO: how to deal with normalization?
+    cost = 1 - S[nx, ny] / min(nx, ny)
+    return cost 
