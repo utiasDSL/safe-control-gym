@@ -5,9 +5,9 @@
 # | `level2.yaml`       | **Yes**      | **Yes**                   | **Yes**                     | *No*                   | Learning, re-planning |
 
 # Configuration
-num_episodes: 5 # Customizable number of episodes (NOTE: solutions that require fewer episode will receive higher scores)
+num_episodes: 1500 # Customizable number of episodes (NOTE: solutions that require fewer episode will receive higher scores)
 use_firmware: True # Whether to use pycffirmware or not (NOTE: only set to False for debugging purposes)
-verbose: True # Boolean passed to the Controller class, can be used to turn on and off additional printouts
+verbose: False # Boolean passed to the Controller class, can be used to turn on and off additional printouts
 
 # Note: DSL's flyable/usable space in Toronto extends from -3 to +3 meters in x and y and 0 and 2 meters in z
 # Thus, only scenarios that meet these constraints are suitable for sim2real experiments

@@ -953,31 +953,25 @@ class Quadrotor(BaseAviary):
                 std_dis= np.array(target_pos -last_pos)
                 std_dis=std_dis/(min(abs(std_dis)))
                 std_dis=[max(min(_,1.),-1.) for _ in std_dis]
-                # import pdb;pdb.set_trace()
-                reward += sum((current_pos-last_pos) * std_dis) * 100
-                #  this way do not work
-                # dis_aft_action=(target_pos[0]-current_pos[0])** 2  + (target_pos[1]-current_pos[1]) ** 2  + (target_pos[1]-current_pos[1]) ** 2 
-                # dis_bfe_action=(target_pos[0]-last_pos[0]) ** 2  + (target_pos[1]-last_pos[1]) ** 2  + (target_pos[1]-last_pos[1]) ** 2 
-                # reward += (dis_bfe_action-dis_aft_action)
+                reward += sum((current_pos-last_pos) * std_dis) * 500
             # 
-            # import pdb;pdb.set_trace()
             ## --------------------------replace end --------------------------
             
             
             # Reward for stepping through the (correct) next gate.
             if self.stepped_through_gate:
                 # print(f"step throuth gate : {self.current_gate-1}")
-                reward += 100
+                reward += 10
             # Reward for reaching goal position (after navigating the gates in the correct order).
             if self.at_goal_pos:
-                reward += 100
+                reward += 10
             # Penalize by collision.
             if self.currently_collided:
-                # reward -= 10
+                reward -= 100
                 pass
             # Penalize by constraint violation.
             if self.cnstr_violation:
-                # reward -= 1
+                reward -= 10
                 pass
                 # print('gosh!')
             # Penalize by loss from X_GOAL, U_GOAL state.

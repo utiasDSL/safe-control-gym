@@ -144,6 +144,7 @@ class SLAM():
         plt.savefig(name+'.png')
 
     # 根据所在高度，生成2d 障碍物图像
+    # TODO 出现问题，在刚开始训练的时候会超过约定的边界，
     def generate_obs_img(self,obs,name='test',save=False):
         x,y,z=obs[0],obs[2],obs[4]
         x_idx = round((x-self.X_MIN)/self.gs)

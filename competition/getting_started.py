@@ -42,7 +42,7 @@ finally:
 from safetyplusplus_folder.plus_logger import SafeLogger
 from slam import SLAM
 
-file_name='1002_01_merged'
+file_name='1004_02_level0'
 
 def run(test=False):
     """The main function creating, running, and closing an environment over N episodes.
@@ -157,7 +157,7 @@ def run(test=False):
         save=False
         # if i % 20== 0:
         #     save = True
-        obs_2d = m_slam.generate_obs_img(obs,name=str(int(round(time.time() * 1000))),save=save)
+        # obs_2d = m_slam.generate_obs_img(obs,name=str(int(round(time.time() * 1000))),save=save)
 
         # Step by keyboard input.
         # _ = input("Press any key to continue")
@@ -210,7 +210,7 @@ def run(test=False):
             # Step the environment.
             # TODO reward is exactly?
            
-            obs, reward, done, info, _ = firmware_wrapper.step(curr_time, action)
+            obs, reward, done, info, _ = firmware_wrapper.step(curr_time, action) # 30Hz
             #
         else:
             if first_ep_iteration:
