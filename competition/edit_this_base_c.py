@@ -27,7 +27,7 @@ Tips:
 from bdb import set_trace
 from tkinter import Y
 import numpy as np
-
+import time
 from collections import deque
 
 try:
@@ -36,7 +36,7 @@ except ImportError:
     # Test import.
     from .competition_utils import Command, PIDController, timing_step, timing_ep, plot_trajectory, draw_trajectory
 from gym.spaces import Box
-
+from slam import SLAM
 class Controller():
     """Template controller class.
 
@@ -103,9 +103,7 @@ class Controller():
             # Save additonal environment parameters.
             self.KF = initial_info["quadrotor_kf"]
 
-        # Reset counters and buffers.
-        self.reset()
-        self.interEpisodeReset()
+
 
         #########################
         # REPLACE THIS (START) ##
@@ -114,16 +112,21 @@ class Controller():
         torch.manual_seed(101)
         np.random.seed(101)
         self.net_work_freq=0.033     #  time gap  1  1s/次  0.5s/次   0.2m  400episode 
-        # import pdb;pdb.set_trace()
+
+        # state-based 
+        self.mass=initial_info['nominal_physical_parameters']['quadrotor_mass']
         state_dim = 8
         self.curent_state=np.zeros(state_dim)
+        self.m_slam = SLAM()
+        self.m_slam.reset_occ_map()
+
+        # action    
         action_dim = 3
         max_action=2
         min_action=max_action * (-1)
         self.action_space=Box(np.array([min_action,min_action,min_action],dtype=np.float64),np.array([max_action,max_action,max_action],dtype=np.float64))
-
         self.action_space.seed(1)
-        
+        # network
         kwargs = {
             "state_dim": state_dim,
             "action_dim": action_dim,
@@ -134,23 +137,10 @@ class Controller():
             "noise_clip": 0.5 * max_action,
             "policy_freq": 2,
         }
-
-        kwargs_safe = {
-            "cost_discount": 0.99,
-            "delta": 0.1,                     
-        }
         from safetyplusplus_folder import safetyplusplus,replay_buffer,unconstrained
-
         # td3 policy
         self.policy = unconstrained.TD3(**kwargs)
-        # self.policy.load("td3_2")
         self.replay_buffer = replay_buffer.SimpleReplayBuffer(state_dim, action_dim)
-
-        # USL policy
-        # kwargs.update(kwargs_safe)
-        # kwargs.update({'kappa':5})
-        # self.policy = safetyplusplus.TD3Usl(**kwargs)
-        # replay_buffer = replay_buffer.CostReplayBuffer(state_dim, action_dim)
 
         # env-based variable
         self.episode_reward = 0
@@ -165,8 +155,11 @@ class Controller():
         self.arrival_iteration =1e6
         self.goal_pos=[initial_info['x_reference'][0],initial_info['x_reference'][2],initial_info['x_reference'][4]]
         self.one_step_reward = 0 
-
-        self.mass=initial_info['nominal_physical_parameters']['quadrotor_mass']
+        
+        
+        # Reset counters and buffers.
+        self.reset()
+        self.interEpisodeReset()
 
         #########################
         # REPLACE THIS (END) ####
@@ -179,23 +172,6 @@ class Controller():
         current_x=obs[0]
         current_y=obs[2]
         current_z=obs[4]
-
-        # import pdb;pdb.set_trace()
-        # [[x,y,z,(rpy all zero)]] 
-        # 3 * obstacle num(4)
-        #      [1.5, -2.5, 0, 0, 0, 0],[0.5, -1, 0, 0, 0, 0],[1.5, 0, 0, 0, 0, 0],[-1, 0, 0, 0, 0, 0]
-        # ->   [1.5, -2.5, 1.05, 0.5, -1, 1.05,1.5, 0, 1.05, -1, 0, 1.05]
-        all_obstacles_pos=np.array(self.NOMINAL_OBSTACLES)[:,0:3]
-        for one_obstacle_info in all_obstacles_pos:
-                one_obstacle_info[2] = 1.05  # quadrotor.py reset()
-        all_obstacles_pos=all_obstacles_pos.flatten()
-
-        #   [0.5, -2.5, 0, 0, 0, -1.57, 0],[2, -1.5, 0, 0, 0, 0, 1],[0, 0.2, 0, 0, 0, 1.57, 1],[-0.5, 1.5, 0, 0, 0, 0, 0]
-        #-> [0.5,-2.5,1,-1.57 ,  2,-1.5,0.525,0  , 0,0.2,0.525,1.57,   -0.5,1.5,1,0 ]
-        all_gates_pos=np.array(self.NOMINAL_GATES)
-        for one_gete_info in all_gates_pos:
-            one_gete_info[2]=1 if one_gete_info[6] == 0 else 0.525
-        all_gates_pos=all_gates_pos[:,[0,1,2,5]].flatten()
 
         if info !={}:
             # goal [x,y,z]
@@ -214,12 +190,9 @@ class Controller():
                   
         else :
             current_target_gate_in_range= 0 
-            current_target_gate_pos = np.zeros(4)
             current_goal_pos=np.zeros(3)
         state=np.array([current_x,current_y,current_z,current_goal_pos[0]-current_x,current_goal_pos[1]-current_y,current_goal_pos[2]-current_z,current_target_gate_in_range,info['current_target_gate_id']])
-        # state=np.append(state,all_obstacles_pos)
-        # state=np.append(state,all_gates_pos)
-        # state=np.append(state,current_target_gate_pos)
+
         return state
            
     def cmdFirmware(self,time,obs,reward=None,done=None,info=None,exploration=True):
@@ -250,8 +223,8 @@ class Controller():
         #########################
         # REPLACE THIS (START) ##
         #########################
-
-
+        self.m_slam.update_occ_map(info)
+        
 
 
         # begin with take off 
@@ -278,6 +251,11 @@ class Controller():
                 # yaw=0.
                 # args = [action.astype(np.float64), 0, duration, True]
                 # import pdb;pdb.set_trace()
+            save=False
+            # if i % 20== 0:
+            #     save = True
+            obs_2d = self.m_slam.generate_obs_img(obs,name=self.episode_iteration,save=save)
+
 
             # cmdFullState
             command_type =  Command(1)   # cmdFullState.
@@ -384,16 +362,16 @@ class Controller():
             # cmdFullState
             # import pdb;pdb.set_trace()
             current_action=(self.current_args[0]-self.current_state[[0,1,2]]) * 10
-            # goTo
-            # current_action=(self.current_args[0]) * 10
-
             next_state=self.get_state(obs,info)
             next_args=args
             self.one_step_reward=reward
-
+            if info['constraint_violation'] :
+                self.one_step_reward -= 10
+            if info["collision"][1] :
+                self.one_step_reward -= 100
             if self.episode_iteration % 600 ==0  :
-                print(f"add buffer:\n aim to : {self.current_state[3:6]} \t action_infer: {current_action} \t reward: {self.one_step_reward}")
-                print(f"next_state-self.current_state: {np.array(next_state-self.current_state)[[0,1,2]] * 100}")
+                print(f"add buffer:\ncurrent_state:{self.current_state[0:3]} aim vector: {self.current_state[3:6]} \naction_infer: {current_action} ")
+                print(f"next_state-self.current_state: {np.array(next_state-self.current_state)[[0,1,2]] * 100} \t reward: {self.one_step_reward}")
                 print(f"target_gate_id:{info['current_target_gate_id']} ; pos: {info['current_target_gate_pos']}")
                 print("*********************************************")
             
@@ -484,3 +462,5 @@ class Controller():
         self.one_step_reward = 0 
         self.next_infer_iteration=1e6
         self.end_add_buffer_iteration=1e6
+
+        self.m_slam.reset_occ_map()

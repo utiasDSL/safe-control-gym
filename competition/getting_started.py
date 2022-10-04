@@ -40,9 +40,9 @@ finally:
     print("Module 'cffirmware' available:", FIRMWARE_INSTALLED)
 
 from safetyplusplus_folder.plus_logger import SafeLogger
-from slam import SLAM
 
-file_name='1004_02_level0'
+
+file_name='1004_02_level0_totalReward_changed1'
 
 def run(test=False):
     """The main function creating, running, and closing an environment over N episodes.
@@ -91,8 +91,7 @@ def run(test=False):
         # Reset the environment, obtain the initial observations and info dictionary.
         obs, info = env.reset()
     
-    m_slam = SLAM()
-    m_slam.reset_occ_map()
+    
 
     # Create controller.
     vicon_obs = [obs[0], 0, obs[2], 0, obs[4], 0, obs[6], obs[7], obs[8], 0, 0, 0]
@@ -152,12 +151,6 @@ def run(test=False):
     first_ep_iteration = True
     episode_cost=0
     for i in range(config.num_episodes*CTRL_FREQ*env.EPISODE_LEN_SEC):
-
-        m_slam.update_occ_map(info)
-        save=False
-        # if i % 20== 0:
-        #     save = True
-        # obs_2d = m_slam.generate_obs_img(obs,name=str(int(round(time.time() * 1000))),save=save)
 
         # Step by keyboard input.
         # _ = input("Press any key to continue")
@@ -271,7 +264,7 @@ def run(test=False):
 
         # If an episode is complete, reset the environment.
         if done:
-            m_slam.reset_occ_map()
+            
             # Plot logging (comment as desired).
             # if not test:
             #     logger.plot(comment="get_start-episode-"+str(episodes_count), autoclose=True)

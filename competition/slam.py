@@ -157,7 +157,8 @@ class SLAM():
             except:
                 print('out of region')
             cv2.imwrite('obs/'+name+'.png',occ_map_2d)
-        return self.occ_map[z_idx]
+        z_max=len(self.occ_map) - 1 
+        return self.occ_map[z_idx] if z_idx<=z_max else self.occ_map[z_max]
         
 
 # if __name__ == '__main__':

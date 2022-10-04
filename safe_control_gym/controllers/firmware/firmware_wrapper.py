@@ -298,7 +298,7 @@ class FirmwareWrapper(BaseController):
             self.action = action 
             i+=1
         # info['constraint_violation']=break_violation_nums
-        return obs, reward, done, info, action
+        return obs, total_reward, done, info, action
 
 
     def _update_initial_state(self, obs):
