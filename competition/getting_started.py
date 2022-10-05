@@ -42,7 +42,7 @@ finally:
 from safetyplusplus_folder.plus_logger import SafeLogger
 
 
-file_name='1004_02_level0_totalReward_changed1'
+file_name='1004_02_clean_code_rewardDistance_*20_batch256'
 
 def run(test=False):
     """The main function creating, running, and closing an environment over N episodes.

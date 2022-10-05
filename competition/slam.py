@@ -159,7 +159,26 @@ class SLAM():
             cv2.imwrite('obs/'+name+'.png',occ_map_2d)
         z_max=len(self.occ_map) - 1 
         return self.occ_map[z_idx] if z_idx<=z_max else self.occ_map[z_max]
-        
+    
+    def generate_3obs_img(self,obs,name='test',save=False):
+        x,y,z=obs[0],obs[2],obs[4]
+        x_idx = round((x-self.X_MIN)/self.gs)
+        y_idx = round((y-self.Y_MIN)/self.gs)
+        z_idx = round((z-self.Z_MIN)/self.gs)
+        if save:
+            occ_map_2d = self.occ_map[z_idx] * 255
+            try:
+                occ_map_2d[x_idx][y_idx] = 125
+            except:
+                print('out of region')
+            cv2.imwrite('obs/'+name+'.png',occ_map_2d)
+        if x <self.X_MIN or x>=self.X_MAX:
+            
+            pass
+        if y <self.Y_MIN or y>=self.Y_MAX:
+            pass
+        z_max=len(self.occ_map) - 1 
+        return self.occ_map[z_idx] if z_idx<=z_max else self.occ_map[z_max]
 
 # if __name__ == '__main__':
 #     m_slam = SLAM()

@@ -111,7 +111,7 @@ class Controller():
         import torch
         torch.manual_seed(101)
         np.random.seed(101)
-        self.net_work_freq=0.033     #  time gap  1  1s/次  0.5s/次   0.2m  400episode 
+        self.net_work_freq=0.5     #  time gap  1  1s/次  0.5s/次   0.2m  400episode 
 
         # state-based 
         self.mass=initial_info['nominal_physical_parameters']['quadrotor_mass']
@@ -167,7 +167,8 @@ class Controller():
 
 
     def get_state(self,obs,info):
-        # state info : obs_info(3) + goal_info(3) + all_gate_info(1 + 16) + all_obstacle_info(12)     = 35
+        # obs_2d = self.m_slam.generate_obs_img(obs,name=self.episode_iteration,save=False)   
+        # state info : mass(1) + obs_info(3) + goal_info(3) + pic_info     
         # x,y,z  3 
         current_x=obs[0]
         current_y=obs[2]
@@ -237,44 +238,26 @@ class Controller():
         # using network to choose action
         elif self.episode_iteration >= 3 * self.CTRL_FREQ :
             
-            # if self.episode_iteration % (30*self.net_work_freq) ==0:
-                # self.next_infer_iteration=self.episode_iteration + (30*self.net_work_freq)
-                #goTo
-                # duration = self.net_work_freq - 0.02
-                # command_type = Command(5)  # goTo.
-                # current_state=self.get_state(obs,info)
-                # if self.interepisode_counter <= 10:
-                #     action= self.action_space.sample() 
-                # else:
-                #     action = self.policy.select_action(current_state, exploration=True)  # array  delta_x , delta_y, delta_z
-                # action /= 10
-                # yaw=0.
-                # args = [action.astype(np.float64), 0, duration, True]
-                # import pdb;pdb.set_trace()
-            save=False
-            # if i % 20== 0:
-            #     save = True
-            obs_2d = self.m_slam.generate_obs_img(obs,name=self.episode_iteration,save=save)
+            if self.episode_iteration % (30*self.net_work_freq) ==0:
 
-
-            # cmdFullState
-            command_type =  Command(1)   # cmdFullState.
-            current_state=self.get_state(obs,info)
-            if self.interepisode_counter <= 10:
-                action= self.action_space.sample() 
-            else:
-                action = self.policy.select_action(current_state, exploration=exploration)  # array  delta_x , delta_y, delta_z
-            action /= 10
-            target_pos = current_state[[0,1,2]] + action
-            target_vel = np.zeros(3)
-            target_acc = np.zeros(3)
-            target_yaw = 0.
-            target_rpy_rates = np.zeros(3)
-            args=[target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
-            # other time do nothing
-            # else :
-            #     command_type = Command(0)  # None.
-            #     args = []
+                # cmdFullState
+                command_type =  Command(1)   # cmdFullState.
+                current_state=self.get_state(obs,info)
+                if self.interepisode_counter <= 10:
+                    action= self.action_space.sample() 
+                else:
+                    action = self.policy.select_action(current_state, exploration=exploration)  # array  delta_x , delta_y, delta_z
+                action /= 10
+                target_pos = current_state[[0,1,2]] + action
+                target_vel = np.zeros(3)
+                target_acc = np.zeros(3)
+                target_yaw = 0.
+                target_rpy_rates = np.zeros(3)
+                args=[target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
+                # other time do nothing
+            else :
+                command_type = Command(0)  # None.
+                args = []
        
         else :
             command_type = Command(0)  # None.
@@ -345,7 +328,7 @@ class Controller():
 
         """
         self.interstep_counter += 1
-
+        reward=0
         #########################
         # REPLACE THIS (START) ##
         #########################
@@ -354,43 +337,74 @@ class Controller():
         if  self.episode_iteration == 3 * self.CTRL_FREQ:
             self.current_state= self.get_state(obs,info)
             self.current_args = args
+            self.current_action=(self.current_args[0]-self.current_state[[0,1,2]]) * 10
 
         if  self.episode_iteration> 3 * self.CTRL_FREQ   :
-            # 
-            # Store the last step's events.
-            # if self.episode_iteration % (30*self.net_work_freq) ==0:
-            # cmdFullState
-            # import pdb;pdb.set_trace()
-            current_action=(self.current_args[0]-self.current_state[[0,1,2]]) * 10
-            next_state=self.get_state(obs,info)
-            next_args=args
-            self.one_step_reward=reward
-            if info['constraint_violation'] :
-                self.one_step_reward -= 10
-            if info["collision"][1] :
-                self.one_step_reward -= 100
-            if self.episode_iteration % 600 ==0  :
-                print(f"add buffer:\ncurrent_state:{self.current_state[0:3]} aim vector: {self.current_state[3:6]} \naction_infer: {current_action} ")
-                print(f"next_state-self.current_state: {np.array(next_state-self.current_state)[[0,1,2]] * 100} \t reward: {self.one_step_reward}")
-                print(f"target_gate_id:{info['current_target_gate_id']} ; pos: {info['current_target_gate_pos']}")
-                print("*********************************************")
             
-            self.replay_buffer.add(self.current_state,current_action,next_state,self.one_step_reward,done)
+            if self.episode_iteration % (30*self.net_work_freq) ==0:
+                next_state=self.get_state(obs,info)
+                current_pos= self.current_state[[0,1,2]]
+                next_pos=next_state[[0,1,2]]
 
-            self.episode_reward+=self.one_step_reward
+                # current2goal_vector= self.current_state[[3,4,5]]
+                # std_current2goal_vector=current2goal_vector/(min(abs(current2goal_vector)))
+                # std_current2goal_vector=np.array([max(min(_,1.),-1.) for _ in std_current2goal_vector])
 
-            # ready for next update
-           
-            self.current_state=next_state
-            self.current_args=next_args
-            # else :
-            #     self.one_step_reward+=reward
+                # cur2next_vector=next_pos-current_pos
+                # cur2next_vector=cur2next_vector/(min(abs(cur2next_vector)))
+                # cur2next_vector=np.array([max(min(_,1.),-1.) for _ in cur2next_vector])
+               
+                next2goal_dis=sum(next_state[[3,4,5]] * next_state[[3,4,5]])
+                current2goal_dis=sum(self.current_state[[3,4,5]]*self.current_state[[3,4,5]])
+                # import pdb;pdb.set_trace()
 
+                # 对于跨过门动作 给一个大的奖励
+                if next_state[-1] == self.current_state[-1]:
+                    reward =( current2goal_dis - next2goal_dis ) * 20
+                else:
+                    reward = 10
+                # the direction is right
+                
+                # if int(sum(current2goal_vector * cur2next_vector))==3:
+                #     reward = sum((next_pos-current_pos) * current2goal_vector) * 10
+                # else:
+                #     reward_raw=sum((next_pos-current_pos) * current2goal_vector) * 10
+                #     reward = reward_raw if reward_raw<0 else -reward_raw
+                # cross the gate
+                if info['current_target_gate_id']!=self.target_gate_id :
+                    print(f"STEP{self.episode_iteration} , step gate{self.target_gate_id}")
+                    reward += 100
+                if info['at_goal_position']:
+                    reward += 100
+                if info['constraint_violation'] :
+                    reward -= 10
+                if info["collision"][1] :
+                    reward -= 10
+            # cmdFullState
+                next_args=args
+                if self.episode_iteration % 900 ==0  :
+                    print(f"Step{self.episode_iteration} add buffer:\ncurrent_pos:{self.current_state[0:3]} aim vector: {self.current_state[3:6]} ")
+                    print(f"action_infer: {self.current_action}\t curDis-nextDis:{( current2goal_dis - next2goal_dis ) * 10}")
+                    print(f"next_pos-current_pos: {np.array(next_pos-self.current_state[[0,1,2]]) } \t reward: {reward}")
+                    print(f"target_gate_id:{info['current_target_gate_id']} ; pos: {info['current_target_gate_pos']}")
+                    print("*********************************************")
+                self.replay_buffer.add(self.current_state,self.current_action,next_state,reward,done)
+
+                self.episode_reward+=reward
+                # self.one_step_reward=reward
+                # ready for next update
+                self.current_state=next_state
+                self.current_args=next_args
+                self.current_action=(self.current_args[0]-self.current_state[[0,1,2]]) * 10
+                self.target_gate_id= info['current_target_gate_id']
+            else :
+                pass
+                # self.one_step_reward+=reward
 
         # network do one step , train 100 steps.
-        if self.interepisode_counter >= 20: #and self.episode_iteration % (15*self.net_work_freq) ==0:
-            self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(1))
-
+        if self.interepisode_counter >= 20 and self.episode_iteration % (15*self.net_work_freq) ==0:
+            self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(30))
+        
 
         #########################
         # REPLACE THIS (END) ####
@@ -414,8 +428,8 @@ class Controller():
         # if self.interepisode_counter >= 20 :
         #     self.policy.train(self.replay_buffer,batch_size=256,train_nums=(30 /self.net_work_freq ))
 
-        if self.interepisode_counter >= 15 and self.interepisode_counter % 10 == 0 :
-            self.policy.save(filename=file_name)
+        if self.interepisode_counter >= 15 and self.interepisode_counter % 50 == 0 :
+            self.policy.save(filename=f"{file_name}/{self.interepisode_counter}")
         return self.episode_reward
         #########################
         # REPLACE THIS (END) ####
@@ -462,5 +476,5 @@ class Controller():
         self.one_step_reward = 0 
         self.next_infer_iteration=1e6
         self.end_add_buffer_iteration=1e6
-
+        self.target_gate_id=0
         self.m_slam.reset_occ_map()
