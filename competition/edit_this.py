@@ -254,6 +254,15 @@ class Controller():
                 return 6*coeffs[0,idx]*t + 2*coeffs[1,idx]
             return f
 
+        def d3f_(coeffs):
+            def f(t):
+                for idx in range(length-1):
+                    if (ts[idx+1] > t):
+                        break
+                t -= ts[idx]
+                return 6*coeffs[0,idx]
+            return f
+
         # Integrate to get pathlength
         pathlength = 0
         for idx in range(length-1):
@@ -271,6 +280,10 @@ class Controller():
         self.d2x = d2f_(x_coeffs)
         self.d2y = d2f_(y_coeffs)
         self.d2z = d2f_(z_coeffs)
+
+        self.d3x = d3f_(x_coeffs)
+        self.d3y = d3f_(y_coeffs)
+        self.d3z = d3f_(z_coeffs)
 
         duration = ts[-1] - ts[0]
         t_scaled = np.linspace(ts[0], ts[-1], int(duration*self.CTRL_FREQ))
@@ -335,10 +348,24 @@ class Controller():
             s_ = ((j[i]/6*dt + a[i]/2)*dt + v[i])*dt+ s[i]
             v_ =  (j[i]/2*dt + a[i]  )*dt + v[i]
             a_ =   j[i]  *dt + a[i]
-            return [s_, v_, a_]
+            j_ =   j[i]
+            return [s_, v_, a_, j_]
         self.s = s_curve
         self.start_t = -1
         self.end_t = t[-1]
+        def rpy2rot(roll, pitch, yaw):
+            sr = sin(roll)
+            cr = cos(roll)
+            sp = sin(pitch)
+            cp = cos(pitch)
+            sy = sin(yaw)
+            cy = cos(yaw)
+            m = np.matrix(((cy*cp, -sy*cr+cy*sp*sr,  sy*sr+cy*cr*sp),
+                        (sy*cp,  cy*cr+sy*sp*sr, -cy*sr+sp*sy*cr),
+                        (-sp   ,  cp*sr         ,  cp*cr)))
+            return m
+        self.rpy2rot = rpy2rot
+
 
         #########################
         # REPLACE THIS (END) ####
@@ -397,10 +424,11 @@ class Controller():
                 duration = 3
                 command_type = Command(3)  # Land.
                 args = [height, duration]
-            [curve_t, curve_v, curve_a] = self.s(t)
+            [curve_t, curve_v, curve_a, curve_j] = self.s(self.scaled_t)
             curve_t *= self.scaling_factor
             curve_v *= self.scaling_factor
             curve_a *= self.scaling_factor
+            curve_j *= self.scaling_factor
             x_c = self.x(curve_t)
             y_c = self.y(curve_t)
             z_c = self.z(curve_t)
@@ -413,20 +441,35 @@ class Controller():
             d2x_c = self.d2x(curve_t)
             d2y_c = self.d2y(curve_t)
             d2z_c = self.d2z(curve_t)
+            d3x_c = self.d3x(curve_t)
+            d3y_c = self.d3y(curve_t)
+            d3z_c = self.d3z(curve_t)
             tangent = np.array((dx_c,dy_c,dz_c))
             dtangent = np.array((d2x_c,d2y_c,d2z_c))
-            den = np.linalg.norm(tangent[:2])
-            if den < 1e-9:
-                w = 0
-            else:
-                num = dx_c * d2y_c - dy_c * d2x_c
-                w = num/den
-                w *= curve_v
+            d2tangent = np.array((d3x_c,d3y_c,d3z_c))
 
+            target_yaw = atan2(dy_c, dx_c)
             target_vel = tangent * curve_v
             target_acc = tangent * curve_a + dtangent * curve_v**2
-            target_yaw = atan2(dy_c, dx_c)
-            target_rpy_rates = np.zeros(3)
+            
+            # Roll, pitch rate
+            # Small angle approximation
+            target_jerk = tangent * curve_j + d2tangent * curve_v**3 + 3 * dtangent * curve_v * curve_a
+            Jinv = self.rpy2rot(obs[6], obs[7], obs[8]).transpose()
+            body_jerk = np.matmul(Jinv, target_jerk.transpose())
+            p = 0.027/9.8*body_jerk[0,1]  #  roll rate = mass / g * y_jerk
+            q = 0.027/9.8*body_jerk[0,0]  # pitch rate = mass / g * x_jerk
+
+            # Yaw rate
+            den = np.linalg.norm(tangent[:2])
+            if den < 1e-9:
+                r = 0
+            else:
+                num = dx_c * d2y_c - dy_c * d2x_c
+                r = num/den
+                r *= curve_v
+
+            target_rpy_rates = np.array((p,q,r))
             # target_vel = np.zeros(3)
             # target_acc = np.zeros(3)
             # target_yaw = 0.
