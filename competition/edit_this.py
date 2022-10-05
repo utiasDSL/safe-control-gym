@@ -99,9 +99,9 @@ class Controller():
 
         # Kinematic limits
         # TODO determine better estimates from model
-        v_max = 2
-        a_max = .2
-        j_max = .2
+        v_max = 1.5
+        a_max = 2
+        j_max = 2
         # Affect curve radius around waypoints, higher value means larger curve, smaller value means tighter curve
         grad_scale = 1
 
