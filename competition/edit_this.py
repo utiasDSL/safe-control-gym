@@ -114,8 +114,10 @@ class Controller():
         else:
             waypoints = [[self.initial_obs[0], self.initial_obs[2], self.initial_obs[4], self.initial_obs[8]],]
 
+        half_pi = 0.5*pi
         for idx, g in enumerate(self.NOMINAL_GATES):
             [x, y, _, _, _, yaw, typ] = g
+            yaw += half_pi
             z = initial_info["gate_dimensions"]["tall"]["height"] if typ == 0 else initial_info["gate_dimensions"]["low"]["height"]
             waypoints.append([x, y, z, yaw])
         # end goal
@@ -143,8 +145,8 @@ class Controller():
         for idx in range(1,length-1):
             [x_next, y_next, _, yaw_next] = waypoints[idx+1]
             dt_next = ts[idx+1] - ts[idx]
-            dxf = sin(yaw_curr) * grad_scale
-            dyf = cos(yaw_curr) * grad_scale
+            dxf = cos(yaw_curr) * grad_scale
+            dyf = sin(yaw_curr) * grad_scale
             vx1 = np.array((x_curr - x_prev,dt))
             vx21 = np.array((dxf,1))
             vx22 = np.array((-dxf,1))
@@ -184,22 +186,22 @@ class Controller():
                 scale = -scale
             if dyaw * dyaw_next < 0:
                 scale = -scale
-            waypoints[idx][0] += cos(yaw_curr) * shift_dist * scale
-            waypoints[idx][1] -= sin(yaw_curr) * shift_dist * scale
+            waypoints[idx][0] -= sin(yaw_curr) * shift_dist * scale
+            waypoints[idx][1] -= cos(yaw_curr) * shift_dist * scale
             yaw_prev = yaw_curr
             yaw_curr = yaw_next
             dyaw = dyaw_next
 
         [x0, y0, _, yaw0] = waypoints[0]
-        dx0 = sin(yaw0)
-        dy0 = cos(yaw0)
+        dx0 = cos(yaw0)
+        dy0 = sin(yaw0)
         for idx in range(1, length):
             [xf, yf, _, yawf] = waypoints[idx]
             dt = ts[idx] - ts[idx - 1]
             inv_t = 1/dt
             inv_t2 = inv_t*inv_t
-            dxf = sin(yawf) * grad_scale
-            dyf = cos(yawf) * grad_scale
+            dxf = cos(yawf) * grad_scale
+            dyf = sin(yawf) * grad_scale
             dx = xf - x0
             dy = yf - y0
             x_a0 = x0
