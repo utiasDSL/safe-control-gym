@@ -420,14 +420,9 @@ class Controller():
 
             command_type = Command(2)  # Take-off.
             args = [height, duration]
-        elif iteration >= 2*self.CTRL_FREQ and iteration < (self.takeoff_land_duration + self.end_t)*self.CTRL_FREQ:
+        elif iteration >= self.takeoff_land_duration*self.CTRL_FREQ and iteration < (self.takeoff_land_duration + self.end_t)*self.CTRL_FREQ:
             self.scaled_t += self.time_scale / self.CTRL_FREQ / self.scaling_factor
 
-            if self.scaled_t > self.end_t:
-                height = 0.
-                duration = 3
-                command_type = Command(3)  # Land.
-                args = [height, duration]
             [curve_t, curve_v, curve_a, curve_j] = self.s(self.scaled_t)
             curve_t *= self.scaling_factor
             curve_v *= self.scaling_factor
@@ -492,12 +487,12 @@ class Controller():
 
         elif iteration == (self.takeoff_land_duration + self.end_t)*self.CTRL_FREQ + 1:
             height = 0.
-            duration = 2
+            duration = self.takeoff_land_duration
 
             command_type = Command(3)  # Land.
             args = [height, duration]
 
-        elif iteration == (2*self.takeoff_land_duration + self.end_t)*self.CTRL_FREQ + 1:
+        elif iteration == (2*self.takeoff_land_duration + self.end_t)*self.CTRL_FREQ + 2:
             command_type = Command(-1)  # Terminate command to be sent once trajectory is completed.
             args = []
 
