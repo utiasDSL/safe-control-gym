@@ -174,23 +174,23 @@ class Controller():
         #      for right then left > shift gate to right
         #      for left then right > shift gate to left
         # For consecutive turns in same direction, distance shifted is larger
-        shift_dist = .1
-        yaw_prev = waypoints[0][3]
-        yaw_curr = waypoints[1][3]
-        dyaw = yaw_curr - yaw_prev
-        for idx in range(1,length-1):
-            yaw_next = waypoints[idx+1][3]
-            dyaw_next = yaw_next - yaw_curr
-            scale = (((abs(dyaw) + abs(dyaw_next)) / 2. / pi + 1.) % 2.) - 1.
-            if dyaw > 0:
-                scale = -scale
-            if dyaw * dyaw_next < 0:
-                scale = -scale
-            waypoints[idx][0] -= sin(yaw_curr) * shift_dist * scale
-            waypoints[idx][1] -= cos(yaw_curr) * shift_dist * scale
-            yaw_prev = yaw_curr
-            yaw_curr = yaw_next
-            dyaw = dyaw_next
+        # shift_dist = .2
+        # yaw_prev = waypoints[0][3]
+        # yaw_curr = waypoints[1][3]
+        # dyaw = yaw_curr - yaw_prev
+        # for idx in range(1,length-1):
+        #     yaw_next = waypoints[idx+1][3]
+        #     dyaw_next = yaw_next - yaw_curr
+        #     scale = (((dyaw + dyaw_next) / 2. / pi + 1.) % 2.) - 1.
+        #     if dyaw > 0:
+        #         scale = -scale
+        #     if dyaw * dyaw_next < 0:
+        #         scale = -scale
+        #     waypoints[idx][0] -= sin(yaw_curr) * shift_dist * scale
+        #     waypoints[idx][1] -= cos(yaw_curr) * shift_dist * scale
+        #     yaw_prev = yaw_curr
+        #     yaw_curr = yaw_next
+        #     dyaw = dyaw_next
 
         [x0, y0, _, yaw0] = waypoints[0]
         dx0 = cos(yaw0)
