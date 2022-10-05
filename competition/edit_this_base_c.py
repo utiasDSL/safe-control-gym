@@ -346,13 +346,13 @@ class Controller():
                 current_pos= self.current_state[[0,1,2]]
                 next_pos=next_state[[0,1,2]]
 
-                # current2goal_vector= self.current_state[[3,4,5]]
-                # std_current2goal_vector=current2goal_vector/(min(abs(current2goal_vector)))
-                # std_current2goal_vector=np.array([max(min(_,1.),-1.) for _ in std_current2goal_vector])
+                current2goal_vector= self.current_state[[3,4,5]]
+                std_current2goal_vector=current2goal_vector/(min(abs(current2goal_vector)))
+                std_current2goal_vector=np.array([max(min(_,1.),-1.) for _ in std_current2goal_vector])
 
-                # cur2next_vector=next_pos-current_pos
-                # cur2next_vector=cur2next_vector/(min(abs(cur2next_vector)))
-                # cur2next_vector=np.array([max(min(_,1.),-1.) for _ in cur2next_vector])
+                cur2next_vector=next_pos-current_pos
+                cur2next_vector=cur2next_vector/(min(abs(cur2next_vector)))
+                cur2next_vector=np.array([max(min(_,1.),-1.) for _ in cur2next_vector])
                
                 next2goal_dis=sum(next_state[[3,4,5]] * next_state[[3,4,5]])
                 current2goal_dis=sum(self.current_state[[3,4,5]]*self.current_state[[3,4,5]])
@@ -360,11 +360,10 @@ class Controller():
 
                 # 对于跨过门动作 给一个大的奖励
                 if next_state[-1] == self.current_state[-1]:
-                    reward =( current2goal_dis - next2goal_dis ) * 20
+                        reward =( current2goal_dis - next2goal_dis ) * 20
                 else:
                     reward = 10
                 # the direction is right
-                
                 # if int(sum(current2goal_vector * cur2next_vector))==3:
                 #     reward = sum((next_pos-current_pos) * current2goal_vector) * 10
                 # else:
@@ -383,9 +382,9 @@ class Controller():
             # cmdFullState
                 next_args=args
                 if self.episode_iteration % 900 ==0  :
-                    print(f"Step{self.episode_iteration} add buffer:\ncurrent_pos:{self.current_state[0:3]} aim vector: {self.current_state[3:6]} ")
-                    print(f"action_infer: {self.current_action}\t curDis-nextDis:{( current2goal_dis - next2goal_dis ) * 10}")
-                    print(f"next_pos-current_pos: {np.array(next_pos-self.current_state[[0,1,2]]) } \t reward: {reward}")
+                    print(f"Step{self.episode_iteration} add buffer:\ncurrent_pos:{current_pos} aim vector: {current2goal_vector} ")
+                    print(f"action_infer: {self.current_action}\t curDis-nextDis:{( current2goal_dis - next2goal_dis )}")
+                    print(f"cur2next_vector: {cur2next_vector } \t reward: {reward}")
                     print(f"target_gate_id:{info['current_target_gate_id']} ; pos: {info['current_target_gate_pos']}")
                     print("*********************************************")
                 self.replay_buffer.add(self.current_state,self.current_action,next_state,reward,done)
@@ -401,9 +400,13 @@ class Controller():
                 pass
                 # self.one_step_reward+=reward
 
-        # network do one step , train 100 steps.
-        if self.interepisode_counter >= 20 and self.episode_iteration % (15*self.net_work_freq) ==0:
-            self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(30))
+            # network do one step , train 100 steps.
+            if self.interepisode_counter >= 20 and self.episode_iteration % (15*self.net_work_freq) ==0:
+                begin_time=time.time()
+                self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(30))
+                if self.episode_iteration % 900 ==0  :
+                    print(f"episode: {self.interepisode_counter},training using {time.time()-begin_time} s")
+           
         
 
         #########################
