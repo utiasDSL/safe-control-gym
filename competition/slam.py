@@ -7,10 +7,10 @@ import time
 class SLAM():
     def __init__(self,gs=0.05) -> None:
         # slam建图范围
-        self.X_MIN = -3.0
-        self.X_MAX = 3.0
-        self.Y_MIN = -3.0
-        self.Y_MAX = 3.0
+        self.X_MIN = -3.5
+        self.X_MAX = 3.5
+        self.Y_MIN = -3.5
+        self.Y_MAX = 3.5
         self.Z_MIN = 0.0
         self.Z_MAX = 2.0
         # 栅格/元胞大小 grid shape = 5cm * 5cm * 5cm
@@ -161,24 +161,61 @@ class SLAM():
         return self.occ_map[z_idx] if z_idx<=z_max else self.occ_map[z_max]
     
     def generate_3obs_img(self,obs,name='test',save=False):
+        
+        edge=11
+        tall,height,width=[(2*edge+1),(2*edge+1),(2*edge+1)]
+        # tall, height,width.  智能体是在最中间的位置
+        obs_img=np.zeros([(2*edge+1),(2*edge+1),(2*edge+1)])
+        
         x,y,z=obs[0],obs[2],obs[4]
         x_idx = round((x-self.X_MIN)/self.gs)
         y_idx = round((y-self.Y_MIN)/self.gs)
         z_idx = round((z-self.Z_MIN)/self.gs)
+
+        z_low=z_idx-edge
+        z_top=z_idx+edge
+        # fill_z_idx=0
+        if z_low<0: # z_low<0 z_top>0
+            fill_z_idx=0
+            for z_index in range(z_low,0,1):
+                obs_img[fill_z_idx]=np.ones([(2*edge+1),(2*edge+1)])
+                fill_z_idx+=1
+            for z_index in range(0,z_top+1,1):
+                if x_idx>=edge and x_idx + edge  <=len(self.occ_map[1])-1 and y_idx>=edge and y_idx+edge <=len(self.occ_map[1][1])-1:
+                    for x in range(0,(2*edge+1)):
+                        obs_img[fill_z_idx][x]=self.occ_map[z_index][x_idx-edge+x][y_idx-edge:y_idx+(edge+1)]
+                    fill_z_idx+=1
+        elif z_top<=len(self.occ_map)-1:  # z_low>0,z_top <= z_max
+            fill_z_idx=0
+            if x_idx>=edge and x_idx + edge  <=len(self.occ_map[1])-1 and y_idx>=edge and y_idx+edge <=len(self.occ_map[1][1])-1:
+                for z_index in range(z_low,z_top+1,1):
+                    for x in range(0,(2*edge+1)):
+                        obs_img[fill_z_idx][x]=self.occ_map[z_index][x_idx-edge+x][y_idx-edge:y_idx+(edge+1)]
+                    fill_z_idx+=1
+
+        else : # z_low>0,z_top > z_max
+            fill_z_idx=0
+            for z_index in range(z_low,z_max+1,1):
+                if x_idx>=edge and x_idx + edge  <=len(self.occ_map[1])-1 and y_idx>=edge and y_idx+edge <=len(self.occ_map[1][1])-1:
+                    for x in range(0,(2*edge+1)):
+                        obs_img[fill_z_idx][x]=self.occ_map[z_index][x_idx-edge+x][y_idx-edge:y_idx+(edge+1)]
+                    fill_z_idx+=1
+
         if save:
-            occ_map_2d = self.occ_map[z_idx] * 255
-            try:
-                occ_map_2d[x_idx][y_idx] = 125
-            except:
-                print('out of region')
-            cv2.imwrite('obs/'+name+'.png',occ_map_2d)
-        if x <self.X_MIN or x>=self.X_MAX:
+            i=0
+            obs_img = obs_img * 255
             
-            pass
-        if y <self.Y_MIN or y>=self.Y_MAX:
-            pass
-        z_max=len(self.occ_map) - 1 
-        return self.occ_map[z_idx] if z_idx<=z_max else self.occ_map[z_max]
+            for z_index in range(len(obs_img)) :
+                occ_map_2d = self.occ_map[z_idx-edge + z_index if z_idx-edge + z_index>=0 else 0] * 255
+                occ_map_2d [x_idx][y_idx] = 125
+                obs_img[z_index][edge][edge]=125
+                cv2.imwrite('obs2/'+str(i)+'.png',obs_img[z_index])
+                cv2.imwrite('obs2/'+str(i)+'_occ.png',occ_map_2d)
+                i+=1
+
+        # import pdb;pdb.set_trace()
+
+        return obs_img
 
 # if __name__ == '__main__':
 #     m_slam = SLAM()
