@@ -27,7 +27,7 @@ Tips:
 import numpy as np
 import scipy.interpolate
 import scipy.integrate
-from math import sqrt, sin, cos, atan2, pi
+from math import sqrt, sin, cos, atan2, pi, log1p
 
 from collections import deque
 
@@ -434,7 +434,11 @@ class Controller():
             y_c = self.y(curve_t)
             z_c = self.z(curve_t)
             target_pos = np.array([x_c, y_c, z_c])
-            # print(obs[0] - x_c, obs[2] - y_c, obs[4] - z_c)
+            error = np.array((obs[0] - x_c, obs[2] - y_c, obs[4] - z_c)) # positional error (world frame)
+            # print(error)
+            self.time_scale += -log1p(np.linalg.norm(error)-.25)*0.025
+            self.time_scale = min(1.0, self.time_scale)
+            # print(self.time_scale)
 
             dx_c = self.dx(curve_t)
             dy_c = self.dy(curve_t)
