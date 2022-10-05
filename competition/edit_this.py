@@ -353,6 +353,10 @@ class Controller():
         self.s = s_curve
         self.start_t = -1
         self.end_t = t[-1]
+        self.scaled_t = 0
+        self.time_scale = 1
+        self.takeoff_land_duration = 2
+
         def rpy2rot(roll, pitch, yaw):
             sr = sin(roll)
             cr = cos(roll)
@@ -406,20 +410,17 @@ class Controller():
         # REPLACE THIS (START) ##
         #########################
 
-        t = time / self.scaling_factor
-
         # # Handwritten solution for GitHub's getting_stated scenario.
         if iteration == 0:
             height = 1
-            duration = 2
+            duration = self.takeoff_land_duration
 
             command_type = Command(2)  # Take-off.
             args = [height, duration]
-        elif iteration >= 3*self.CTRL_FREQ:
-            if self.start_t < 0:
-                self.start_t = t
-            t -= self.start_t
-            if t > self.end_t:
+        elif iteration >= 2*self.CTRL_FREQ and iteration < (self.takeoff_land_duration + self.end_t)*self.CTRL_FREQ:
+            self.scaled_t += self.time_scale / self.CTRL_FREQ / self.scaling_factor
+
+            if self.scaled_t > self.end_t:
                 height = 0.
                 duration = 3
                 command_type = Command(3)  # Land.
@@ -477,53 +478,21 @@ class Controller():
 
             command_type = Command(1)  # cmdFullState.
             args = [target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
-            
 
-        # elif iteration >= 3*self.CTRL_FREQ and iteration < 20*self.CTRL_FREQ:
-        #     step = min(iteration-3*self.CTRL_FREQ, len(self.ref_x) -1)
-        #     target_pos = np.array([self.ref_x[step], self.ref_y[step], self.ref_z[step]])
-        #     target_vel = np.zeros(3)
-        #     target_acc = np.zeros(3)
-        #     target_yaw = 0.
-        #     target_rpy_rates = np.zeros(3)
+        elif iteration == (self.takeoff_land_duration + self.end_t)*self.CTRL_FREQ:
+            command_type = Command(6)  # notify setpoint stop.
+            args = []
 
-        #     command_type = Command(1)  # cmdFullState.
-        #     args = [target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
+        elif iteration == (self.takeoff_land_duration + self.end_t)*self.CTRL_FREQ + 1:
+            height = 0.
+            duration = 2
 
-        # elif iteration == 20*self.CTRL_FREQ:
-        #     command_type = Command(6)  # notify setpoint stop.
-        #     args = []
+            command_type = Command(3)  # Land.
+            args = [height, duration]
 
-        # elif iteration == 20*self.CTRL_FREQ+1:
-        #     x = self.ref_x[-1]
-        #     y = self.ref_y[-1]
-        #     z = 1.5 
-        #     yaw = 0.
-        #     duration = 2.5
-
-        #     command_type = Command(5)  # goTo.
-        #     args = [[x, y, z], yaw, duration, False]
-
-        # elif iteration == 23*self.CTRL_FREQ:
-        #     x = self.initial_obs[0]
-        #     y = self.initial_obs[2]
-        #     z = 1.5
-        #     yaw = 0.
-        #     duration = 6
-
-        #     command_type = Command(5)  # goTo.
-        #     args = [[x, y, z], yaw, duration, False]
-
-        # elif iteration == 30*self.CTRL_FREQ:
-        #     height = 0.
-        #     duration = 3
-
-        #     command_type = Command(3)  # Land.
-        #     args = [height, duration]
-
-        # elif iteration == 33*self.CTRL_FREQ-1:
-        #     command_type = Command(-1)  # Terminate command to be sent once trajectory is completed.
-        #     args = []
+        elif iteration == (2*self.takeoff_land_duration + self.end_t)*self.CTRL_FREQ + 1:
+            command_type = Command(-1)  # Terminate command to be sent once trajectory is completed.
+            args = []
 
         else:
             command_type = Command(0)  # None.
@@ -636,6 +605,8 @@ class Controller():
         _ = self.reward_buffer
         _ = self.done_buffer
         _ = self.info_buffer
+
+        self.scaled_t = 0
 
         #########################
         # REPLACE THIS (END) ####
