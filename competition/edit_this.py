@@ -202,6 +202,9 @@ class Controller():
             inv_t2 = inv_t*inv_t
             dxf = cos(yawf) * grad_scale
             dyf = sin(yawf) * grad_scale
+            if idx == 0 or idx == length-1: # don't need to care about curving out of first and into last goal
+                dxf *= 0.01
+                dyf *= 0.01
             dx = xf - x0
             dy = yf - y0
             x_a0 = x0
