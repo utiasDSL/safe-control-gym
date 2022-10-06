@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from safetyplusplus_folder.networks import Critic,Actor,Encoder
+from safetyplusplus_folder.networks import Critic,Actor ,Encoder
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -26,12 +26,13 @@ class TD3(object):
         a=np.zeros([1,local_feature_map_in_channels,23,23])
         example_encoder=example_encoder.float()
         self.local_feature_map_out_channels=example_encoder(torch.tensor(a).float()).shape[1]
-        self.encoder=Encoder(in_channels=local_feature_map_in_channels).to(device)
-        self.actor = Actor(state_dim+self.local_feature_map_out_channels, action_dim, max_action).to(device)
+        # self.encoder=Encoder(in_channels=local_feature_map_in_channels).to(device)
+
+        self.actor = Actor(state_dim,local_feature_map_in_channels,self.local_feature_map_out_channels, action_dim, max_action).to(device)
         self.actor_target = copy.deepcopy(self.actor)
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=3e-4)
 
-        self.critic = Critic(state_dim+self.local_feature_map_out_channels, action_dim).to(device)
+        self.critic = Critic(state_dim,local_feature_map_in_channels,self.local_feature_map_out_channels, action_dim).to(device)
         self.critic_target = copy.deepcopy(self.critic)
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=3e-4)
 
@@ -49,13 +50,9 @@ class TD3(object):
 
 
     def select_action(self,all_state,exploration=False):
-        # import pdb;pdb.set_trace()
-        global_state=all_state[0]
-        local_state=all_state[1]
-        local_feature_map=self.encoder(torch.FloatTensor(local_state).unsqueeze(0).to(device))
-        global_state = torch.FloatTensor(global_state.reshape(1, -1)).to(device)
-        state=torch.concat([global_state,local_feature_map],1)
-        action = self.actor(state).cpu().data.numpy().flatten()
+        global_state=torch.FloatTensor(all_state[0]).unsqueeze(0).to(device)
+        local_state=torch.FloatTensor(all_state[1]).unsqueeze(0).to(device)
+        action = self.actor([global_state,local_state]).cpu().data.numpy().flatten()
         if exploration:
             noise = np.random.normal(0, self.max_action * self.expl_noise, size=self.action_dim)
             action = (action + noise).clip(-self.max_action, self.max_action)
@@ -67,11 +64,6 @@ class TD3(object):
             # Sample replay buffer 
             global_state,local_state, action, next_global_state,next_local_state, reward, not_done = replay_buffer.sample(batch_size)
             # import pdb;pdb.set_trace()
-            local_feature_map=self.encoder(local_state)
-            state=torch.concat([global_state,local_feature_map],1)
-            next_local_feature_map=self.encoder(next_local_state)
-            next_state=torch.concat([next_global_state,next_local_feature_map],1)
-
             with torch.no_grad():
                 # Select action according to policy and add clipped noise
                 noise = (
@@ -79,23 +71,23 @@ class TD3(object):
                 ).clamp(-self.noise_clip, self.noise_clip)
                 
                 next_action = (
-                    self.actor_target(next_state) + noise
+                    self.actor_target([next_global_state,next_local_state]) + noise
                 ).clamp(-self.max_action, self.max_action)
 
                 # Compute the target Q value
-                target_Q1, target_Q2 = self.critic_target(next_state, next_action)
+                target_Q1, target_Q2 = self.critic_target([next_global_state,next_local_state], next_action)
                 target_Q = torch.min(target_Q1, target_Q2)
                 target_Q = reward + not_done * self.rew_discount * target_Q
 
             # Get current Q estimates
-            current_Q1, current_Q2 = self.critic(state, action)
+            current_Q1, current_Q2 = self.critic([global_state,local_state], action)
 
             # Compute critic loss
             critic_loss = F.mse_loss(current_Q1, target_Q) + F.mse_loss(current_Q2, target_Q)
             
             # Optimize the critic
             self.critic_optimizer.zero_grad()
-            critic_loss.backward(retain_graph=True)
+            critic_loss.backward()
             self.critic_optimizer.step()
 
 
@@ -103,12 +95,11 @@ class TD3(object):
             if self.total_it % self.policy_freq == 0:
 
                 # Compute actor loss
-                action = self.actor(state)
-                actor_loss = - self.critic.Q1(state, action).mean()
+                action = self.actor([global_state,local_state])
+                actor_loss = - self.critic.Q1([global_state,local_state], action).mean()
                 
                 # Optimize the actor 
                 self.actor_optimizer.zero_grad()
-                # 这里是使用了直接两次都backward， 也可以分成两个Encoder。
                 actor_loss.backward()
                 self.actor_optimizer.step()
 
