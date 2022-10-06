@@ -100,10 +100,10 @@ class Controller():
         # Kinematic limits
         # TODO determine better estimates from model
         v_max = 1.5
-        a_max = 2
-        j_max = 2
+        a_max = .5
+        j_max = .5
         # Affect curve radius around waypoints, higher value means larger curve, smaller value means tighter curve
-        grad_scale = 1
+        grad_scale = .8
 
         ### Spline fitting between waypoints ###
 
@@ -122,9 +122,6 @@ class Controller():
             waypoints.append([x, y, z, yaw])
         # end goal
         waypoints.append([initial_info["x_reference"][0], initial_info["x_reference"][2], initial_info["x_reference"][4], initial_info["x_reference"][8]])
-
-        x_coeffs = np.zeros((4,len(waypoints)-1))
-        y_coeffs = np.zeros((4,len(waypoints)-1))
 
         # "time" for each waypoint
         # time interval determined by eulcidean distance between waypoints along xy plane
@@ -192,14 +189,23 @@ class Controller():
         #     yaw_curr = yaw_next
         #     dyaw = dyaw_next
 
+        x_coeffs = np.zeros((6,len(waypoints)-1))
+        y_coeffs = np.zeros((6,len(waypoints)-1))
         [x0, y0, _, yaw0] = waypoints[0]
         dx0 = cos(yaw0)
         dy0 = sin(yaw0)
+        d2x0 = 0
+        d2y0 = 0
+        d2xf = 0
+        d2yf = 0
         for idx in range(1, length):
             [xf, yf, _, yawf] = waypoints[idx]
             dt = ts[idx] - ts[idx - 1]
             inv_t = 1/dt
             inv_t2 = inv_t*inv_t
+            inv_t3 = inv_t2*inv_t
+            inv_t4 = inv_t2*inv_t2
+            inv_t5 = inv_t2*inv_t3
             dxf = cos(yawf) * grad_scale
             dyf = sin(yawf) * grad_scale
             if idx == 0 or idx == length-1: # don't need to care about curving out of first and into last goal
@@ -209,26 +215,23 @@ class Controller():
             dy = yf - y0
             x_a0 = x0
             x_a1 = dx0
-            x_a2 = (3*dx*inv_t - 2*dx0 - dxf)*inv_t
-            x_a3 = (-2*dx*inv_t + (dxf + dx0))*inv_t2
-            x_coeffs[:,idx-1] = (x_a3, x_a2, x_a1, x_a0)
+            x_a2 = d2x0*0.5
+            x_a3 = 10*dx*inv_t3 - (4*dxf+6*dx0)*inv_t2 - 0.5*(3*d2x0-d2xf)*inv_t
+            x_a4 = -15*dx*inv_t4 + (7*dxf+8*dx0)*inv_t3 + 0.5*(3*d2x0-2*d2xf)*inv_t2
+            x_a5 = 6*dx*inv_t5 - 3*(dxf+dx0)*inv_t4 - 0.5*(d2x0-d2xf)*inv_t3
+            x_coeffs[:,idx-1] = (x_a5, x_a4, x_a3, x_a2, x_a1, x_a0)
             y_a0 = y0
             y_a1 = dy0
-            y_a2 = (3*dy*inv_t - 2*dy0 - dyf)*inv_t
-            y_a3 = (-2*dy*inv_t + (dyf + dy0))*inv_t2
-            y_coeffs[:,idx-1] = (y_a3, y_a2, y_a1, y_a0)
+            y_a2 = d2y0*0.5
+            y_a3 = 10*dy*inv_t3 - (4*dyf+6*dy0)*inv_t2 - 0.5*(3*d2y0-d2yf)*inv_t
+            y_a4 = -15*dy*inv_t4 + (7*dyf+8*dy0)*inv_t3 + 0.5*(3*d2y0-2*d2yf)*inv_t2
+            y_a5 = 6*dy*inv_t5 - 3*(dyf+dy0)*inv_t4 - 0.5*(d2y0-d2yf)*inv_t3
+            y_coeffs[:,idx-1] = (y_a5, y_a4, y_a3, y_a2, y_a1, y_a0)
             [x0, y0] = [xf, yf]
             [dx0, dy0] = [dxf, dyf]
+            # [d2x0, d2y0] = [d2xf, d2yf]
         waypoints = np.array(waypoints)
         z_coeffs = scipy.interpolate.PchipInterpolator(ts, waypoints[:,2], 0).c
-
-        def df_idx(idx):
-            def df(t):
-                dx = (3*x_coeffs[1,idx]*t + 2*x_coeffs[2,idx])*t + x_coeffs[3,idx]
-                dy = (3*y_coeffs[1,idx]*t + 2*y_coeffs[2,idx])*t + y_coeffs[3,idx]
-                dz = (3*z_coeffs[1,idx]*t + 2*z_coeffs[2,idx])*t + z_coeffs[3,idx]
-                return sqrt(dx*dx+dy*dy+dz*dz)
-            return df
 
         def f_(coeffs):
             def f(t):
@@ -236,7 +239,11 @@ class Controller():
                     if (ts[idx+1] > t):
                         break
                 t -= ts[idx]
-                return ((coeffs[0,idx]*t + coeffs[1,idx])*t + coeffs[2,idx])*t + coeffs[3,idx]
+                val = 0
+                for coeff in coeffs[:,idx]:
+                    val *= t
+                    val += coeff
+                return val
             return f
 
         def df_(coeffs):
@@ -245,7 +252,13 @@ class Controller():
                     if (ts[idx+1] > t):
                         break
                 t -= ts[idx]
-                return (3*coeffs[0,idx]*t + 2*coeffs[1,idx])*t + coeffs[2,idx]
+                coeffs_no = len(coeffs[:,idx])
+                val = 0
+                for i, coeff in enumerate(coeffs[:-1,idx]):
+                    val *= t
+                    factor = (coeffs_no - i - 1)
+                    val += coeff * factor
+                return val
             return f
 
         def d2f_(coeffs):
@@ -254,7 +267,13 @@ class Controller():
                     if (ts[idx+1] > t):
                         break
                 t -= ts[idx]
-                return 6*coeffs[0,idx]*t + 2*coeffs[1,idx]
+                coeffs_no = len(coeffs[:,idx])
+                val = 0
+                for i, coeff in enumerate(coeffs[:-2,idx]):
+                    val *= t
+                    factor = (coeffs_no - i - 1)
+                    val += coeff * factor * (factor - 1)
+                return val
             return f
 
         def d3f_(coeffs):
@@ -263,14 +282,22 @@ class Controller():
                     if (ts[idx+1] > t):
                         break
                 t -= ts[idx]
-                return 6*coeffs[0,idx]
+                coeffs_no = len(coeffs[:,idx])
+                val = 0
+                for i, coeff in enumerate(coeffs[:-3,idx]):
+                    val *= t
+                    factor = (coeffs_no - i - 1)
+                    val += coeff * factor * (factor - 1) * (factor - 2)
+                return val
             return f
 
-        # Integrate to get pathlength
-        pathlength = 0
-        for idx in range(length-1):
-            pathlength += scipy.integrate.quad(df_idx(idx), 0, ts[idx+1] - ts[idx])[0]
-        self.scaling_factor = ts[-1] / pathlength
+        def df_idx(idx):
+            def df(t):
+                dx = self.dx(t)
+                dy = self.dy(t)
+                dz = self.dz(t)
+                return sqrt(dx*dx+dy*dy+dz*dz)
+            return df
 
         self.x = f_(x_coeffs)
         self.y = f_(y_coeffs)
@@ -287,6 +314,12 @@ class Controller():
         self.d3x = d3f_(x_coeffs)
         self.d3y = d3f_(y_coeffs)
         self.d3z = d3f_(z_coeffs)
+
+        # Integrate to get pathlength
+        pathlength = 0
+        for idx in range(length-1):
+            pathlength += scipy.integrate.quad(df_idx(idx), 0, ts[idx+1] - ts[idx])[0]
+        self.scaling_factor = ts[-1] / pathlength
 
         duration = ts[-1] - ts[0]
         t_scaled = np.linspace(ts[0], ts[-1], int(duration*self.CTRL_FREQ))
