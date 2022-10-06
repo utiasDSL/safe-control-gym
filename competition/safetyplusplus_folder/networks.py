@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 num=256
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class Encoder(nn.Module):
     def __init__(self, in_channels):
         super(Encoder, self).__init__()
@@ -21,7 +20,6 @@ class Encoder(nn.Module):
         out = F.max_pool2d(out,2,2)
         out = torch.mean(out,dim=1,keepdim=True)
         out = out.view(in_size,-1) # 扁平化flat然后传入全连接层
-        # import pdb;pdb.set_trace()
         return out
 
 

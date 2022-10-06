@@ -117,7 +117,6 @@ class Controller():
         self.mass=initial_info['nominal_physical_parameters']['quadrotor_mass']
         self.global_state_dim = 9
         self.local_state_dim=[5,23,23]
-
         self.current_all_state=[np.zeros(self.global_state_dim),np.zeros(self.local_state_dim)]
         self.last_all_state=[np.zeros(self.global_state_dim),np.zeros(self.local_state_dim)]
         
@@ -146,23 +145,16 @@ class Controller():
         from safetyplusplus_folder import safetyplusplus,replay_buffer,unconstrained
         # td3 policy
         self.policy = unconstrained.TD3(**kwargs)
-        local_state_shape=[5,23,23]
-        self.replay_buffer = replay_buffer.IrosReplayBuffer(self.global_state_dim,local_state_shape,action_dim)
+        self.replay_buffer = replay_buffer.IrosReplayBuffer(self.global_state_dim,self.local_state_dim,action_dim)
 
         # env-based variable
         self.episode_reward = 0
         self.episode_cost = 0
         self.episode_iteration=-1
         self.pass_time = 1e6
-        self.end_add_buffer_iteration=1e6
-        self.next_infer_iteration=1e6
-        self.go_back=False
-        self.pass_bool=False
-        self.agent_type='passing'
-        self.arrival_iteration =1e6
+        self.target_gate_id=0
         self.goal_pos=[initial_info['x_reference'][0],initial_info['x_reference'][2],initial_info['x_reference'][4]]
-        self.one_step_reward = 0 
-        
+         
         
         # Reset counters and buffers.
         self.reset()
@@ -204,7 +196,7 @@ class Controller():
                                current_target_gate_in_range,info['current_target_gate_id'],self.mass])
         return [global_state,local_state]
            
-    def cmdFirmware(self,time,obs,reward=None,done=None,info=None,exploration=True):
+    def cmdFirmware(self,ctime,obs,reward=None,done=None,info=None,exploration=True):
         """Pick command sent to the quadrotor through a Crazyswarm/Crazyradio-like interface.
 
         INSTRUCTIONS:
@@ -305,12 +297,26 @@ class Controller():
             raise RuntimeError("[ERROR] Attempting to use method 'cmdSimOnly' but Controller was created with 'use_firmware' = True.")
 
         self.iteration = int(time*self.CTRL_FREQ)
-
+        # import pdb;pdb.set_trace()
         #########################
-        if self.iteration < len(self.ref_x):
-            target_p = np.array([self.ref_x[self.iteration], self.ref_y[self.iteration], self.ref_z[self.iteration]])
+        self.interstep_counter += 1
+
+        if info !={}:
+            self.m_slam.update_occ_map(info)
+            
+            all_state=self.get_state(obs,info)
+            global_state=all_state[0]
+            if self.interepisode_counter < 10:
+                action= self.action_space.sample() 
+            else:
+                action = self.policy.select_action(all_state, exploration=True)  # array  delta_x , delta_y, delta_z
+            action /= 10
+            self.current_all_state=all_state
+            self.current_action=action
+
+            target_p = global_state[[0,1,2]] + action
         else:
-            target_p = np.array([self.ref_x[-1], self.ref_y[-1], self.ref_z[-1]])
+            target_p = np.zeros(3)
         target_v = np.zeros(3)
         #########################
 
@@ -345,6 +351,7 @@ class Controller():
             # import pdb;pdb.set_trace()
 
         if  self.episode_iteration> 3 * self.CTRL_FREQ   :
+
             if self.episode_iteration % (30*self.net_work_freq) ==0:
                 last_pos= self.last_all_state[0][[0,1,2]]
                 current_pos=self.current_all_state[0][[0,1,2]]
@@ -353,11 +360,11 @@ class Controller():
                 last2cur_vector=current_pos-last_pos
                 cur2goal_vector=self.current_all_state[0][[3,4,5]]
 
-                std_last2goal_vector=last2goal_vector/(min(abs(last2goal_vector)))
-                std_last2goal_vector=np.array([max(min(_,1.),-1.) for _ in std_last2goal_vector])
+                # std_last2goal_vector=last2goal_vector/(min(abs(last2goal_vector)))
+                # std_last2goal_vector=np.array([max(min(_,1.),-1.) for _ in std_last2goal_vector])
 
-                std_last2cur_vector=last2cur_vector/(min(abs(last2cur_vector)))
-                std_last2cur_vector=np.array([max(min(_,1.),-1.) for _ in std_last2cur_vector])
+                # std_last2cur_vector=last2cur_vector/(min(abs(last2cur_vector)))
+                # std_last2cur_vector=np.array([max(min(_,1.),-1.) for _ in std_last2cur_vector])
                
                 cur2goal_dis=sum(cur2goal_vector * cur2goal_vector)
                 last2goal_dis=sum(last2goal_vector * last2goal_vector)
@@ -368,34 +375,27 @@ class Controller():
                         reward =( last2goal_dis - cur2goal_dis ) * 20
                 else:
                     reward = 10
-                # the direction is right
-                # if int(sum(last2goal_vector * last2cur_vector))==3:
-                #     reward = sum((current_pos-last_pos) * last2goal_vector) * 10
-                # else:
-                #     reward_raw=sum((current_pos-last_pos) * last2goal_vector) * 10
-                #     reward = reward_raw if reward_raw<0 else -reward_raw
-
                 # cross the gate
                 if info['current_target_gate_id']!=self.target_gate_id :
                     print(f"STEP{self.episode_iteration} , step gate{self.target_gate_id}")
                     reward += 100
                 if info['at_goal_position']:
                     reward += 100
-                if info['constraint_violation'] :
-                    reward -= 10
+                # if info['constraint_violation'] :
+                    # reward -= 10
                 if info["collision"][1] :
                     reward -= 10
-            # cmdFullState
+                # cmdFullState
+                self.replay_buffer.add(self.last_all_state[0],self.last_all_state[1],self.last_action * 10 ,self.current_all_state[0],self.current_all_state[1],reward,done)
                 if self.episode_iteration % 900 ==0  :
                     print(f"Step{self.episode_iteration} add buffer:\n last_pos:{last_pos} aim vector: {last2goal_vector} ")
                     print(f"action_infer: {self.last_action * 10}\t lastDis-CurDis:{( last2goal_dis - cur2goal_dis )}")
                     print(f"last2cur_pos_vector: {last2cur_vector } \t reward: {reward}")
                     print(f"target_gate_id:{info['current_target_gate_id']} ; pos: {info['current_target_gate_pos']}")
-                    print("*********************************************")
-                self.replay_buffer.add(self.last_all_state[0],self.last_all_state[1],self.last_action * 10 ,self.current_all_state[0],self.current_all_state[1],reward,done)
+                    print("*************************************************************************************")
                 # import pdb;pdb.set_trace()
                 self.episode_reward+=reward
-                # self.one_step_reward=reward
+
                 # ready for next update
                 self.last_all_state=self.current_all_state
                 self.last_action=self.current_action
@@ -406,12 +406,19 @@ class Controller():
                 # self.one_step_reward+=reward
 
             # network do one step , train 100 steps.
-            if self.interepisode_counter > 20 and self.episode_iteration % (15*self.net_work_freq) ==0:
+            # 1006_07_AllState_L2_Spilt_CNN_NoViolation
+            if self.interepisode_counter > 20 and self.episode_iteration % (30*self.net_work_freq) ==0:
                 begin_time=time.time()
-                self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(30))
+                self.policy.train(self.replay_buffer,batch_size=128,train_nums=int(60))
                 if self.episode_iteration % 900 ==0  :
                     print(f"episode: {self.interepisode_counter},training using {time.time()-begin_time} s")
-           
+            
+            # change_Train_Num
+            # if self.interepisode_counter > 20:
+            #     begin_time=time.time()
+            #     self.policy.train(self.replay_buffer,batch_size=128,train_nums=int(5))
+            #     if self.episode_iteration % 900 ==0  :
+            #         print(f"episode: {self.interepisode_counter},training using {time.time()-begin_time} s")
         
 
         #########################
@@ -436,7 +443,7 @@ class Controller():
         # if self.interepisode_counter >= 20 :
         #     self.policy.train(self.replay_buffer,batch_size=256,train_nums=(30 /self.net_work_freq ))
 
-        if self.interepisode_counter >= 15 and self.interepisode_counter % 50 == 0 :
+        if self.interepisode_counter % 100 == 0 :
             self.policy.save(filename=f"{file_name}/{self.interepisode_counter}")
         return self.episode_reward
         #########################
@@ -470,20 +477,11 @@ class Controller():
         self.interstep_learning_time = 0
         self.interstep_learning_occurrences = 0
         self.interepisode_learning_time = 0
-
         self.episode_reward = 0
         self.episode_cost = 0
-
         self.episode_iteration=-1
         self.pass_time = 1e6
         # env-based variable
-        self.go_back=False
-        self.pass_bool=False
-        self.agent_type='passing'
-        self.arrival_iteration =1e6
-        self.one_step_reward = 0 
-        self.next_infer_iteration=1e6
-        self.end_add_buffer_iteration=1e6
         self.target_gate_id=0
         self.m_slam.reset_occ_map()
         self.current_all_state=[np.zeros(self.global_state_dim),np.zeros(self.local_state_dim)]

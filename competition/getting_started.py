@@ -42,7 +42,7 @@ finally:
 from safetyplusplus_folder.plus_logger import SafeLogger
 
 
-file_name='1006_06_AllState_L2_Spilt_CNN'
+file_name='1006_08_AllState_L2_Spilt_CNN_NoViolation_ChangeTrain'
 
 def run(test=False):
     """The main function creating, running, and closing an environment over N episodes.
@@ -202,7 +202,7 @@ def run(test=False):
 
             # Step the environment.
             # TODO reward is exactly?
-           
+
             obs, reward, done, info, action = firmware_wrapper.step(curr_time, action) # 30Hz
             #
         else:

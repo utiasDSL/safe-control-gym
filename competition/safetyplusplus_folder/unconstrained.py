@@ -26,7 +26,7 @@ class TD3(object):
         a=np.zeros([1,local_feature_map_in_channels,23,23])
         example_encoder=example_encoder.float()
         self.local_feature_map_out_channels=example_encoder(torch.tensor(a).float()).shape[1]
-        # self.encoder=Encoder(in_channels=local_feature_map_in_channels).to(device)
+
 
         self.actor = Actor(state_dim,local_feature_map_in_channels,self.local_feature_map_out_channels, action_dim, max_action).to(device)
         self.actor_target = copy.deepcopy(self.actor)
@@ -35,7 +35,7 @@ class TD3(object):
         self.critic = Critic(state_dim,local_feature_map_in_channels,self.local_feature_map_out_channels, action_dim).to(device)
         self.critic_target = copy.deepcopy(self.critic)
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=3e-4)
-
+        torch.set_num_threads(10)
         self.action_dim = action_dim
         self.max_action = max_action
         self.rew_discount = rew_discount
@@ -61,6 +61,7 @@ class TD3(object):
 
     def train(self, replay_buffer, batch_size=256,train_nums=200):
         for _ in range(train_nums):
+            self.total_it+=1
             # Sample replay buffer 
             global_state,local_state, action, next_global_state,next_local_state, reward, not_done = replay_buffer.sample(batch_size)
             # import pdb;pdb.set_trace()
