@@ -203,7 +203,9 @@ class SLAM():
                     for x in range(0,(2*edge+1)):
                         obs_img[fill_z_idx][x]=self.occ_map[z_index][x_idx-edge+x][y_idx-edge:y_idx+(edge+1)]
                     fill_z_idx+=1
-
+            while fill_z_idx <2*z_edge+1:
+                obs_img[fill_z_idx]=np.ones([(2*edge+1),(2*edge+1)])
+                fill_z_idx+=1
         # if save:
         #     i=0
         #     obs_img = obs_img * 255
