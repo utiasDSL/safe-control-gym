@@ -244,7 +244,7 @@ class Controller():
             args = [height, duration]
 
         # using network to choose action
-        elif self.episode_iteration >= 3 * self.CTRL_FREQ :
+        elif self.episode_iteration >= 1.5 * self.CTRL_FREQ :
             
             if self.episode_iteration % (30*self.net_work_freq) ==0:
                 # cmdFullState
@@ -345,12 +345,12 @@ class Controller():
         #########################
 
         # add experience when use network to decide
-        if  self.episode_iteration == 3 * self.CTRL_FREQ:
+        if  self.episode_iteration == 1.5 * self.CTRL_FREQ:
             self.last_all_state=self.current_all_state
             self.last_action = self.current_action
             # import pdb;pdb.set_trace()
 
-        if  self.episode_iteration> 3 * self.CTRL_FREQ   :
+        if  self.episode_iteration> 1.5 * self.CTRL_FREQ   :
             if self.episode_iteration % (30*self.net_work_freq) ==0:
                 last_pos= self.last_all_state[0][[0,1,2]]
                 current_pos=self.current_all_state[0][[0,1,2]]

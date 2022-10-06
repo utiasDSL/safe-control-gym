@@ -85,6 +85,7 @@ class SLAM():
             z += self.gs
     
     # 这个地方不对，并不是只有0度和90度，门的角度yaw也会随机
+    # 目前只是简单的按照绝对值做了处理，
     def _set_gate_occupied(self,gate,type=0):
         # 设置(x,y)处类型为type的门为障碍占据
         x,y,_,_,_,direct = gate
@@ -96,7 +97,7 @@ class SLAM():
             z += self.gs
         # 下门框
         while z <= height - self.edge+0.05:
-            if direct == 0:
+            if abs(direct) <= 0.15:
                 for tmp_x in np.arange(x-self.edge,x+self.edge+self.gs,self.gs/2):
                     self._set_pos_occupied(tmp_x,y,z)
             else:
@@ -105,7 +106,7 @@ class SLAM():
             z += self.gs
         # 左右门框
         while z <= height + self.edge-0.05:
-            if direct == 0:
+            if abs(direct) <= 0.15:
                 self._set_pos_occupied(x-self.edge,y,z)
                 self._set_pos_occupied(x+self.edge,y,z)
             else:
@@ -114,7 +115,7 @@ class SLAM():
             z += self.gs
         # 上门框
         while z <= height + self.edge+0.05:
-            if direct == 0:
+            if abs(direct) <= 0.15:
                 for tmp_x in np.arange(x-self.edge,x+self.edge+self.gs,self.gs/2):
                     self._set_pos_occupied(tmp_x,y,z)
             else:
@@ -202,7 +203,9 @@ class SLAM():
                     for x in range(0,(2*edge+1)):
                         obs_img[fill_z_idx][x]=self.occ_map[z_index][x_idx-edge+x][y_idx-edge:y_idx+(edge+1)]
                     fill_z_idx+=1
-
+            while fill_z_idx <2*z_edge+1:
+                obs_img[fill_z_idx]=np.ones([(2*edge+1),(2*edge+1)])
+                fill_z_idx+=1
         # if save:
         #     i=0
         #     obs_img = obs_img * 255
