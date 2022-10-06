@@ -42,7 +42,7 @@ finally:
 from safetyplusplus_folder.plus_logger import SafeLogger
 
 
-file_name='1005_02_level0'
+file_name='1006_01_AllState_L0'
 
 def run(test=False):
     """The main function creating, running, and closing an environment over N episodes.
@@ -203,7 +203,7 @@ def run(test=False):
             # Step the environment.
             # TODO reward is exactly?
            
-            obs, reward, done, info, _ = firmware_wrapper.step(curr_time, action) # 30Hz
+            obs, reward, done, info, action = firmware_wrapper.step(curr_time, action) # 30Hz
             #
         else:
             if first_ep_iteration:
@@ -216,7 +216,7 @@ def run(test=False):
             obs, reward, done, info = env.step(action)
 
         # Update the controller internal state and models.
-        ctrl.interStepLearn(args, obs, reward, done, info)
+        ctrl.interStepLearn(action, obs, reward, done, info)
 
         # Add up reward, collisions, violations.
         cumulative_reward += reward

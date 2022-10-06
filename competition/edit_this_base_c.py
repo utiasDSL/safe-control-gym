@@ -115,8 +115,12 @@ class Controller():
 
         # state-based 
         self.mass=initial_info['nominal_physical_parameters']['quadrotor_mass']
-        state_dim = 8
-        self.curent_state=np.zeros(state_dim)
+        self.global_state_dim = 9
+        self.local_state_dim=[5,23,23]
+
+        self.current_all_state=[np.zeros(self.global_state_dim),np.zeros(self.local_state_dim)]
+        self.last_all_state=[np.zeros(self.global_state_dim),np.zeros(self.local_state_dim)]
+        
         self.m_slam = SLAM()
         self.m_slam.reset_occ_map()
 
@@ -126,9 +130,11 @@ class Controller():
         min_action=max_action * (-1)
         self.action_space=Box(np.array([min_action,min_action,min_action],dtype=np.float64),np.array([max_action,max_action,max_action],dtype=np.float64))
         self.action_space.seed(1)
+        self.current_action=np.zeros(action_dim)
+        self.last_action=np.zeros(action_dim)
         # network
         kwargs = {
-            "state_dim": state_dim,
+            "state_dim": self.global_state_dim,
             "action_dim": action_dim,
             "max_action": max_action,
             "rew_discount": 0.99,
@@ -140,7 +146,8 @@ class Controller():
         from safetyplusplus_folder import safetyplusplus,replay_buffer,unconstrained
         # td3 policy
         self.policy = unconstrained.TD3(**kwargs)
-        self.replay_buffer = replay_buffer.SimpleReplayBuffer(state_dim, action_dim)
+        local_state_shape=[5,23,23]
+        self.replay_buffer = replay_buffer.IrosReplayBuffer(self.global_state_dim,local_state_shape,action_dim)
 
         # env-based variable
         self.episode_reward = 0
@@ -167,7 +174,8 @@ class Controller():
 
 
     def get_state(self,obs,info):
-        # obs_2d = self.m_slam.generate_obs_img(obs,name=self.episode_iteration,save=False)   
+        local_state = self.m_slam.generate_3obs_img(obs,name=self.episode_iteration,save=False)   
+
         # state info : mass(1) + obs_info(3) + goal_info(3) + pic_info     
         # x,y,z  3 
         current_x=obs[0]
@@ -192,9 +200,9 @@ class Controller():
         else :
             current_target_gate_in_range= 0 
             current_goal_pos=np.zeros(3)
-        state=np.array([current_x,current_y,current_z,current_goal_pos[0]-current_x,current_goal_pos[1]-current_y,current_goal_pos[2]-current_z,current_target_gate_in_range,info['current_target_gate_id']])
-
-        return state
+        global_state=np.array([current_x,current_y,current_z,current_goal_pos[0]-current_x,current_goal_pos[1]-current_y,current_goal_pos[2]-current_z,
+                               current_target_gate_in_range,info['current_target_gate_id'],self.mass])
+        return [global_state,local_state]
            
     def cmdFirmware(self,time,obs,reward=None,done=None,info=None,exploration=True):
         """Pick command sent to the quadrotor through a Crazyswarm/Crazyradio-like interface.
@@ -239,16 +247,19 @@ class Controller():
         elif self.episode_iteration >= 3 * self.CTRL_FREQ :
             
             if self.episode_iteration % (30*self.net_work_freq) ==0:
-
                 # cmdFullState
                 command_type =  Command(1)   # cmdFullState.
-                current_state=self.get_state(obs,info)
+                all_state=self.get_state(obs,info)
+                global_state=all_state[0]
                 if self.interepisode_counter <= 10:
                     action= self.action_space.sample() 
                 else:
-                    action = self.policy.select_action(current_state, exploration=exploration)  # array  delta_x , delta_y, delta_z
+                    action = self.policy.select_action(all_state, exploration=exploration)  # array  delta_x , delta_y, delta_z
                 action /= 10
-                target_pos = current_state[[0,1,2]] + action
+                self.current_all_state=all_state
+                self.current_action=action
+                # import pdb;pdb.set_trace()
+                target_pos = global_state[[0,1,2]] + action
                 target_vel = np.zeros(3)
                 target_acc = np.zeros(3)
                 target_yaw = 0.
@@ -335,40 +346,41 @@ class Controller():
 
         # add experience when use network to decide
         if  self.episode_iteration == 3 * self.CTRL_FREQ:
-            self.current_state= self.get_state(obs,info)
-            self.current_args = args
-            self.current_action=(self.current_args[0]-self.current_state[[0,1,2]]) * 10
+            self.last_all_state=self.current_all_state
+            self.last_action = self.current_action
+            # import pdb;pdb.set_trace()
 
         if  self.episode_iteration> 3 * self.CTRL_FREQ   :
-            
             if self.episode_iteration % (30*self.net_work_freq) ==0:
-                next_state=self.get_state(obs,info)
-                current_pos= self.current_state[[0,1,2]]
-                next_pos=next_state[[0,1,2]]
+                last_pos= self.last_all_state[0][[0,1,2]]
+                current_pos=self.current_all_state[0][[0,1,2]]
 
-                current2goal_vector= self.current_state[[3,4,5]]
-                std_current2goal_vector=current2goal_vector/(min(abs(current2goal_vector)))
-                std_current2goal_vector=np.array([max(min(_,1.),-1.) for _ in std_current2goal_vector])
+                last2goal_vector= self.last_all_state[0][[3,4,5]]
+                last2cur_vector=current_pos-last_pos
+                cur2goal_vector=self.current_all_state[0][[3,4,5]]
 
-                cur2next_vector=next_pos-current_pos
-                cur2next_vector=cur2next_vector/(min(abs(cur2next_vector)))
-                cur2next_vector=np.array([max(min(_,1.),-1.) for _ in cur2next_vector])
+                std_last2goal_vector=last2goal_vector/(min(abs(last2goal_vector)))
+                std_last2goal_vector=np.array([max(min(_,1.),-1.) for _ in std_last2goal_vector])
+
+                std_last2cur_vector=last2cur_vector/(min(abs(last2cur_vector)))
+                std_last2cur_vector=np.array([max(min(_,1.),-1.) for _ in std_last2cur_vector])
                
-                next2goal_dis=sum(next_state[[3,4,5]] * next_state[[3,4,5]])
-                current2goal_dis=sum(self.current_state[[3,4,5]]*self.current_state[[3,4,5]])
+                cur2goal_dis=sum(cur2goal_vector * cur2goal_vector)
+                last2goal_dis=sum(last2goal_vector * last2goal_vector)
                 # import pdb;pdb.set_trace()
 
                 # 对于跨过门动作 给一个大的奖励
-                if next_state[-1] == self.current_state[-1]:
-                        reward =( current2goal_dis - next2goal_dis ) * 20
+                if self.last_all_state[0][-2] == self.current_all_state[0][-2]:
+                        reward =( last2goal_dis - cur2goal_dis ) * 20
                 else:
                     reward = 10
                 # the direction is right
-                # if int(sum(current2goal_vector * cur2next_vector))==3:
-                #     reward = sum((next_pos-current_pos) * current2goal_vector) * 10
+                # if int(sum(last2goal_vector * last2cur_vector))==3:
+                #     reward = sum((current_pos-last_pos) * last2goal_vector) * 10
                 # else:
-                #     reward_raw=sum((next_pos-current_pos) * current2goal_vector) * 10
+                #     reward_raw=sum((current_pos-last_pos) * last2goal_vector) * 10
                 #     reward = reward_raw if reward_raw<0 else -reward_raw
+
                 # cross the gate
                 if info['current_target_gate_id']!=self.target_gate_id :
                     print(f"STEP{self.episode_iteration} , step gate{self.target_gate_id}")
@@ -380,22 +392,21 @@ class Controller():
                 if info["collision"][1] :
                     reward -= 10
             # cmdFullState
-                next_args=args
                 if self.episode_iteration % 900 ==0  :
-                    print(f"Step{self.episode_iteration} add buffer:\ncurrent_pos:{current_pos} aim vector: {current2goal_vector} ")
-                    print(f"action_infer: {self.current_action}\t curDis-nextDis:{( current2goal_dis - next2goal_dis )}")
-                    print(f"cur2next_vector: {cur2next_vector } \t reward: {reward}")
+                    print(f"Step{self.episode_iteration} add buffer:\n last_pos:{last_pos} aim vector: {last2goal_vector} ")
+                    print(f"action_infer: {self.last_action * 10}\t lastDis-CurDis:{( last2goal_dis - cur2goal_dis )}")
+                    print(f"last2cur_pos_vector: {last2cur_vector } \t reward: {reward}")
                     print(f"target_gate_id:{info['current_target_gate_id']} ; pos: {info['current_target_gate_pos']}")
                     print("*********************************************")
-                self.replay_buffer.add(self.current_state,self.current_action,next_state,reward,done)
-
+                self.replay_buffer.add(self.last_all_state[0],self.last_all_state[1],self.last_action * 10 ,self.current_all_state[0],self.current_all_state[1],reward,done)
+                # import pdb;pdb.set_trace()
                 self.episode_reward+=reward
                 # self.one_step_reward=reward
                 # ready for next update
-                self.current_state=next_state
-                self.current_args=next_args
-                self.current_action=(self.current_args[0]-self.current_state[[0,1,2]]) * 10
+                self.last_all_state=self.current_all_state
+                self.last_action=self.current_action
                 self.target_gate_id= info['current_target_gate_id']
+                
             else :
                 pass
                 # self.one_step_reward+=reward
@@ -481,3 +492,5 @@ class Controller():
         self.end_add_buffer_iteration=1e6
         self.target_gate_id=0
         self.m_slam.reset_occ_map()
+        self.current_all_state=[np.zeros(self.global_state_dim),np.zeros(self.local_state_dim)]
+        self.last_all_state=[np.zeros(self.global_state_dim),np.zeros(self.local_state_dim)]

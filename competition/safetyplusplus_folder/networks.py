@@ -3,6 +3,27 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 num=256
+class Encoder(nn.Module):
+    def __init__(self, in_channels):
+        super(Encoder, self).__init__()
+        # (5,23,23)
+        self.conv1=nn.Conv2d(in_channels,16,3) # 
+        self.conv2=nn.Conv2d(16,32,3) # 
+    def forward(self,x):
+        # import pdb;pdb.set_trace()
+        in_size = x.size(0)
+        out = self.conv1(x)
+        out = F.relu(out)
+        out = F.max_pool2d(out, 2, 2) # (16,10,10)
+        out = self.conv2(out)
+        out = F.relu(out)
+        out = F.max_pool2d(out,2,2)
+        out = torch.mean(out,dim=1,keepdim=True)
+        out = out.view(in_size,-1) # 扁平化flat然后传入全连接层
+        # import pdb;pdb.set_trace()
+        return out
+
+
 class Actor(nn.Module):
     def __init__(self, state_dim, action_dim, max_action):
         super(Actor, self).__init__()
@@ -87,3 +108,9 @@ class MultiplerNet(nn.Module):
         a = F.relu(self.l2(a))
         #return F.relu(self.l3(a))
         return F.softplus(self.l3(a)) # lagrangian multipliers can not be negative
+
+# import numpy as np 
+# encoder=Encoder(5)
+# a=np.zeros([1,5,23,23])
+# encoder=encoder.float()
+# out=encoder(torch.tensor(a).float())

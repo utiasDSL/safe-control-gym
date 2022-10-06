@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from safetyplusplus_folder.networks import Critic,Actor
+from safetyplusplus_folder.networks import Critic,Actor,Encoder
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -21,12 +21,17 @@ class TD3(object):
         policy_freq=2,
         expl_noise = 0.1,
     ):
-
-        self.actor = Actor(state_dim, action_dim, max_action).to(device)
+        local_feature_map_in_channels=5
+        example_encoder=Encoder(local_feature_map_in_channels)
+        a=np.zeros([1,local_feature_map_in_channels,23,23])
+        example_encoder=example_encoder.float()
+        self.local_feature_map_out_channels=example_encoder(torch.tensor(a).float()).shape[1]
+        self.encoder=Encoder(in_channels=local_feature_map_in_channels).to(device)
+        self.actor = Actor(state_dim+self.local_feature_map_out_channels, action_dim, max_action).to(device)
         self.actor_target = copy.deepcopy(self.actor)
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=3e-4)
 
-        self.critic = Critic(state_dim, action_dim).to(device)
+        self.critic = Critic(state_dim+self.local_feature_map_out_channels, action_dim).to(device)
         self.critic_target = copy.deepcopy(self.critic)
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=3e-4)
 
@@ -43,8 +48,13 @@ class TD3(object):
         
 
 
-    def select_action(self, state,exploration=False):
-        state = torch.FloatTensor(state.reshape(1, -1)).to(device)
+    def select_action(self,all_state,exploration=False):
+        # import pdb;pdb.set_trace()
+        global_state=all_state[0]
+        local_state=all_state[1]
+        local_feature_map=self.encoder(torch.FloatTensor(local_state).unsqueeze(0).to(device))
+        global_state = torch.FloatTensor(global_state.reshape(1, -1)).to(device)
+        state=torch.concat([global_state,local_feature_map],1)
         action = self.actor(state).cpu().data.numpy().flatten()
         if exploration:
             noise = np.random.normal(0, self.max_action * self.expl_noise, size=self.action_dim)
@@ -55,7 +65,12 @@ class TD3(object):
     def train(self, replay_buffer, batch_size=256,train_nums=200):
         for _ in range(train_nums):
             # Sample replay buffer 
-            state, action, next_state, reward, not_done = replay_buffer.sample(batch_size)
+            global_state,local_state, action, next_global_state,next_local_state, reward, not_done = replay_buffer.sample(batch_size)
+            # import pdb;pdb.set_trace()
+            local_feature_map=self.encoder(local_state)
+            state=torch.concat([global_state,local_feature_map],1)
+            next_local_feature_map=self.encoder(next_local_state)
+            next_state=torch.concat([next_global_state,next_local_feature_map],1)
 
             with torch.no_grad():
                 # Select action according to policy and add clipped noise
@@ -80,7 +95,7 @@ class TD3(object):
             
             # Optimize the critic
             self.critic_optimizer.zero_grad()
-            critic_loss.backward()
+            critic_loss.backward(retain_graph=True)
             self.critic_optimizer.step()
 
 
@@ -93,6 +108,7 @@ class TD3(object):
                 
                 # Optimize the actor 
                 self.actor_optimizer.zero_grad()
+                # 这里是使用了直接两次都backward， 也可以分成两个Encoder。
                 actor_loss.backward()
                 self.actor_optimizer.step()
 
@@ -126,26 +142,26 @@ class TD3(object):
 
 # Runs policy for X episodes and returns average reward
 # A fixed seed is used for the eval environment
-def eval_policy(policy, eval_env, seed, flag, eval_episodes=5):
-    avg_reward = 0.
-    avg_cost = 0.
-    for _ in range(eval_episodes):
-        if flag == 'constraint_violation':
-            reset_info, done = eval_env.reset(), False
-            state = reset_info[0]
-        else:
-            state, done = eval_env.reset(), False
-        while not done:
-            action = policy.select_action(np.array(state))
-            state, reward, done, info = eval_env.step(action)
-            avg_reward += reward
-            if info[flag]!=0:
-                avg_cost += 1
+# def eval_policy(policy, eval_env, seed, flag, eval_episodes=5):
+#     avg_reward = 0.
+#     avg_cost = 0.
+#     for _ in range(eval_episodes):
+#         if flag == 'constraint_violation':
+#             reset_info, done = eval_env.reset(), False
+#             state = reset_info[0]
+#         else:
+#             state, done = eval_env.reset(), False
+#         while not done:
+#             action = policy.select_action(np.array(state))
+#             state, reward, done, info = eval_env.step(action)
+#             avg_reward += reward
+#             if info[flag]!=0:
+#                 avg_cost += 1
 
-    avg_reward /= eval_episodes
-    avg_cost /= eval_episodes
+#     avg_reward /= eval_episodes
+#     avg_cost /= eval_episodes
 
-    print("---------------------------------------")
-    print(f"Evaluation over {eval_episodes} episodes: {avg_reward:.3f} Cost {avg_cost:.3f}.")
-    print("---------------------------------------")
-    return avg_reward,avg_cost
+#     print("---------------------------------------")
+#     print(f"Evaluation over {eval_episodes} episodes: {avg_reward:.3f} Cost {avg_cost:.3f}.")
+#     print("---------------------------------------")
+#     return avg_reward,avg_cost
