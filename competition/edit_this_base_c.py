@@ -251,7 +251,7 @@ class Controller():
                 command_type =  Command(1)   # cmdFullState.
                 all_state=self.get_state(obs,info)
                 global_state=all_state[0]
-                if self.interepisode_counter <= 10:
+                if self.interepisode_counter <= 50:
                     action= self.action_space.sample() 
                 else:
                     action = self.policy.select_action(all_state, exploration=exploration)  # array  delta_x , delta_y, delta_z
@@ -281,13 +281,7 @@ class Controller():
         return command_type, args
 
     # NOT need to re-implement
-    def cmdSimOnly(self,
-                   time,
-                   obs,
-                   reward=None,
-                   done=None,
-                   info=None
-                   ):
+    def cmdSimOnly(self,time,obs,reward=None,done=None,info=None):
         """PID per-propeller thrusts with a simplified, software-only PID quadrotor controller.
 
         INSTRUCTIONS:
@@ -412,7 +406,7 @@ class Controller():
                 # self.one_step_reward+=reward
 
             # network do one step , train 100 steps.
-            if self.interepisode_counter >= 20 and self.episode_iteration % (15*self.net_work_freq) ==0:
+            if self.interepisode_counter >= 80 and self.episode_iteration % (15*self.net_work_freq) ==0:
                 begin_time=time.time()
                 self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(30))
                 if self.episode_iteration % 900 ==0  :

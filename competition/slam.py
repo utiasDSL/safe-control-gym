@@ -86,10 +86,10 @@ class SLAM():
     
     # 这个地方不对，并不是只有0度和90度，门的角度yaw也会随机
     # 目前只是简单的按照绝对值做了处理，
-    def _set_gate_occupied(self,gate,type=0):
+    def _set_gate_occupied(self,gate,gate_type=0):
         # 设置(x,y)处类型为type的门为障碍占据
         x,y,_,_,_,direct = gate
-        height = self.gate_tall if type == 0 else self.gate_low
+        height = self.gate_tall if gate_type == 0 else self.gate_low
         z = 0
         # 基座
         while z <= height - self.edge-0.05:
@@ -162,9 +162,9 @@ class SLAM():
         return self.occ_map[z_idx] if z_idx<=z_max else self.occ_map[z_max]
     
     def generate_3obs_img(self,obs,name='test',save=False):
-        
+        # [5,23,23]
         z_edge=2
-        edge=11
+        edge=11 # center location
         tall,height,width=[(2*z_edge+1),(2*edge+1),(2*edge+1)]
         # tall, height,width.  智能体是在最中间的位置
         obs_img=np.zeros([(2*z_edge+1),(2*edge+1),(2*edge+1)])
@@ -210,7 +210,7 @@ class SLAM():
         #     i=0
         #     obs_img = obs_img * 255
         #     for z_index in range(len(obs_img)) :
-        #         occ_map_2d = self.occ_map[z_idx-edge + z_index if z_idx-edge + z_index>=0 else 0] * 255
+        #         occ_map_2d = self.occ_map[z_idx-z_edge + z_index if z_idx-z_edge + z_index>=0 else 0] * 255
         #         occ_map_2d [x_idx][y_idx] = 125
         #         obs_img[z_index][edge][edge]=125
         #         cv2.imwrite('obs2/'+str(i)+'.png',obs_img[z_index])

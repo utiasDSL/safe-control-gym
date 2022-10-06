@@ -42,7 +42,7 @@ finally:
 from safetyplusplus_folder.plus_logger import SafeLogger
 
 
-file_name='1006_01_AllState_L0'
+file_name='1006_03_AllState_L2'
 
 def run(test=False):
     """The main function creating, running, and closing an environment over N episodes.
