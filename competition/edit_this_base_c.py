@@ -244,14 +244,14 @@ class Controller():
             args = [height, duration]
 
         # using network to choose action
-        elif self.episode_iteration >= 1.5 * self.CTRL_FREQ :
+        elif self.episode_iteration >= 3 * self.CTRL_FREQ :
             
             if self.episode_iteration % (30*self.net_work_freq) ==0:
                 # cmdFullState
                 command_type =  Command(1)   # cmdFullState.
                 all_state=self.get_state(obs,info)
                 global_state=all_state[0]
-                if self.interepisode_counter <= 50:
+                if self.interepisode_counter <= 10:
                     action= self.action_space.sample() 
                 else:
                     action = self.policy.select_action(all_state, exploration=exploration)  # array  delta_x , delta_y, delta_z
@@ -339,12 +339,12 @@ class Controller():
         #########################
 
         # add experience when use network to decide
-        if  self.episode_iteration == 1.5 * self.CTRL_FREQ:
+        if  self.episode_iteration == 3 * self.CTRL_FREQ:
             self.last_all_state=self.current_all_state
             self.last_action = self.current_action
             # import pdb;pdb.set_trace()
 
-        if  self.episode_iteration> 1.5 * self.CTRL_FREQ   :
+        if  self.episode_iteration> 3 * self.CTRL_FREQ   :
             if self.episode_iteration % (30*self.net_work_freq) ==0:
                 last_pos= self.last_all_state[0][[0,1,2]]
                 current_pos=self.current_all_state[0][[0,1,2]]
@@ -406,7 +406,7 @@ class Controller():
                 # self.one_step_reward+=reward
 
             # network do one step , train 100 steps.
-            if self.interepisode_counter >= 80 and self.episode_iteration % (15*self.net_work_freq) ==0:
+            if self.interepisode_counter >= 20 and self.episode_iteration % (15*self.net_work_freq) ==0:
                 begin_time=time.time()
                 self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(30))
                 if self.episode_iteration % 900 ==0  :

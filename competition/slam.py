@@ -162,9 +162,9 @@ class SLAM():
         return self.occ_map[z_idx] if z_idx<=z_max else self.occ_map[z_max]
     
     def generate_3obs_img(self,obs,name='test',save=False):
-        # [5,23,23]
+        
         z_edge=2
-        edge=11 # center location
+        edge=11
         tall,height,width=[(2*z_edge+1),(2*edge+1),(2*edge+1)]
         # tall, height,width.  智能体是在最中间的位置
         obs_img=np.zeros([(2*z_edge+1),(2*edge+1),(2*edge+1)])
@@ -203,9 +203,7 @@ class SLAM():
                     for x in range(0,(2*edge+1)):
                         obs_img[fill_z_idx][x]=self.occ_map[z_index][x_idx-edge+x][y_idx-edge:y_idx+(edge+1)]
                     fill_z_idx+=1
-            while fill_z_idx <2*z_edge+1:
-                obs_img[fill_z_idx]=np.ones([(2*edge+1),(2*edge+1)])
-                fill_z_idx+=1
+
         # if save:
         #     i=0
         #     obs_img = obs_img * 255
