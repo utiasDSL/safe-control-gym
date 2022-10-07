@@ -390,7 +390,7 @@ class Controller():
                         (-sp   ,  cp*sr         ,  cp*cr)))
             return m
         self.rpy2rot = rpy2rot
-
+        self.at_gate = False
         self.gate_no = 0
         self.run_x_coeffs = np.copy(self.x_coeffs)
         self.run_y_coeffs = np.copy(self.y_coeffs)
@@ -444,6 +444,75 @@ class Controller():
             command_type = Command(2)  # Take-off.
             args = [height, duration]
         elif iteration >= self.takeoff_land_duration*self.CTRL_FREQ and self.scaled_t < self.end_t:
+            if info['current_target_gate_in_range']:
+                if not self.at_gate:
+                    # Local replan when near to goal
+                    self.at_gate = True
+                    [x, y, z, _, _, yaw] = info['current_target_gate_pos']
+                    yaw += self.half_pi
+                    dt = self.run_ts[self.gate_no + 1] - self.curve_t
+                    inv_t = 1/dt
+                    dx_gate = cos(yaw) * self.grad_scale
+                    dy_gate = sin(yaw) * self.grad_scale
+                    self.run_x_coeffs = np.insert(self.run_x_coeffs, self.gate_no+1, np.flip(self.quintic_interp(
+                        inv_t,
+                        self.x_c,
+                        x,
+                        self.dx_c,
+                        dx_gate,
+                        self.d2x_c,
+                        0
+                    )), axis=1)
+                    self.run_y_coeffs = np.insert(self.run_y_coeffs, self.gate_no+1, np.flip(self.quintic_interp(
+                        inv_t,
+                        self.y_c,
+                        y,
+                        self.dy_c,
+                        dy_gate,
+                        self.d2y_c,
+                        0
+                    )), axis=1)
+                    self.run_z_coeffs = np.insert(self.run_z_coeffs, self.gate_no+1, np.flip(self.cubic_interp(
+                        inv_t,
+                        self.z_c,
+                        z,
+                        self.dz_c,
+                        self.df(self.run_z_coeffs)(self.gate_no, dt)
+                    )), axis=1)
+                    dt = self.run_ts[self.gate_no + 2] - self.run_ts[self.gate_no + 1]
+                    inv_t = 1/dt
+                    self.run_x_coeffs[::-1,self.gate_no+2] = self.quintic_interp(
+                        inv_t,
+                        x,
+                        self.f(self.run_x_coeffs)(self.gate_no+2, dt),
+                        dx_gate,
+                        self.df(self.run_x_coeffs)(self.gate_no+2, dt),
+                        0,
+                        0
+                    )
+                    self.run_y_coeffs[::-1,self.gate_no+2] = self.quintic_interp(
+                        inv_t,
+                        y,
+                        self.f(self.run_y_coeffs)(self.gate_no+2, dt),
+                        dy_gate,
+                        self.df(self.run_y_coeffs)(self.gate_no+2, dt),
+                        0,
+                        0
+                    )
+                    self.run_z_coeffs[::-1,self.gate_no+2] = self.cubic_interp(
+                        inv_t,
+                        z,
+                        self.f(self.run_z_coeffs)(self.gate_no+2, dt),
+                        self.run_z_coeffs[-2, self.gate_no+2],
+                        self.df(self.run_z_coeffs)(self.gate_no+2, dt)
+                    )
+                    self.run_ts = np.insert(self.run_ts, self.gate_no+1, self.curve_t)
+                    self.length += 1
+                    self.gate_no += 1
+                    # print(np.insert(self.run_ts, self.gate_no+1, self.curve_t))
+            else:
+                self.at_gate = False
+
             self.scaled_t += self.time_scale / self.CTRL_FREQ / self.scaling_factor
 
             [curve_t, curve_v, curve_a, curve_j] = self.s(self.scaled_t)
@@ -639,6 +708,7 @@ class Controller():
         _ = self.info_buffer
 
         self.scaled_t = 0
+        self.at_gate = False
         self.gate_no = 0
         self.run_x_coeffs = np.copy(self.x_coeffs)
         self.run_y_coeffs = np.copy(self.y_coeffs)
