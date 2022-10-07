@@ -39,7 +39,8 @@ from gym.spaces import Box
 from slam import SLAM
 
 from safetyplusplus_folder.plus_logger import SafeLogger
-file_name='test'
+file_name='1007_03_base_slam2'
+sim_only=False
 
 class Controller():
     """Template controller class.
@@ -166,7 +167,7 @@ class Controller():
 
         # logger
         self.logger_plus = SafeLogger(exp_name=file_name, env_name="compitition", seed=0,
-                                fieldnames=['Eptime','EpRet', 'EpCost', 'CostRate','collision_num','vilation_num','target_gate'])   
+                                fieldnames=['Eptime','EpRet', 'EpCost', 'collision_num','vilation_num','target_gate'])   
         #########################
         # REPLACE THIS (END) ####
         #########################
@@ -297,30 +298,29 @@ class Controller():
             List: target velocity (len == 3).
 
         """
+        self.episode_iteration+=1
         if self.ctrl is None:
             raise RuntimeError("[ERROR] Attempting to use method 'cmdSimOnly' but Controller was created with 'use_firmware' = True.")
 
         self.iteration = int(time*self.CTRL_FREQ)
+        self.m_slam.update_occ_map(info)
         # import pdb;pdb.set_trace()
         #########################
         self.interstep_counter += 1
-
-        if info !={}:
-            self.m_slam.update_occ_map(info)
-            
+        if self.episode_iteration <= 40:
+            target_p = np.array([-0.9,-2.9,1])
+        else :
             all_state=self.get_state(obs,info)
             global_state=all_state[0]
-            if self.interepisode_counter < 10:
+            if self.interepisode_counter < 30:
                 action= self.action_space.sample() 
             else:
                 action = self.policy.select_action(all_state, exploration=True)  # array  delta_x , delta_y, delta_z
             action /= 10
             self.current_all_state=all_state
             self.current_action=action
-
             target_p = global_state[[0,1,2]] + action
-        else:
-            target_p = np.zeros(3)
+
         target_v = np.zeros(3)
         #########################
 
@@ -347,16 +347,82 @@ class Controller():
         #########################
         # REPLACE THIS (START) ##
         #########################
+        if sim_only==False:
+            # add experience when use network to decide
+            if  self.episode_iteration == 3 * self.CTRL_FREQ:
+                self.last_all_state=self.current_all_state
+                self.last_action = self.current_action
+                # import pdb;pdb.set_trace()
 
-        # add experience when use network to decide
-        if  self.episode_iteration == 3 * self.CTRL_FREQ:
-            self.last_all_state=self.current_all_state
-            self.last_action = self.current_action
-            # import pdb;pdb.set_trace()
+            if  self.episode_iteration> 3 * self.CTRL_FREQ   :
+                if self.episode_iteration % (30*self.net_work_freq) ==0:
+                    last_pos= self.last_all_state[0][[0,1,2]]
+                    current_pos=self.current_all_state[0][[0,1,2]]
 
-        if  self.episode_iteration> 3 * self.CTRL_FREQ   :
+                    last2goal_vector= self.last_all_state[0][[3,4,5]]
+                    last2cur_vector=current_pos-last_pos
+                    cur2goal_vector=self.current_all_state[0][[3,4,5]]
 
-            if self.episode_iteration % (30*self.net_work_freq) ==0:
+                    # std_last2goal_vector=last2goal_vector/(min(abs(last2goal_vector)))
+                    # std_last2goal_vector=np.array([max(min(_,1.),-1.) for _ in std_last2goal_vector])
+
+                    # std_last2cur_vector=last2cur_vector/(min(abs(last2cur_vector)))
+                    # std_last2cur_vector=np.array([max(min(_,1.),-1.) for _ in std_last2cur_vector])
+                
+                    cur2goal_dis=sum(cur2goal_vector * cur2goal_vector)
+                    last2goal_dis=sum(last2goal_vector * last2goal_vector)
+                    # import pdb;pdb.set_trace()
+
+                    # 对于跨过门动作 给一个大的奖励
+                    if self.last_all_state[0][-2] == self.current_all_state[0][-2]:
+                            reward =( last2goal_dis - cur2goal_dis ) * 20
+                    else:
+                        reward = 10
+                    # cross the gate
+                    if info['current_target_gate_id']!=self.target_gate_id :
+                        print(f"STEP{self.episode_iteration} , step gate{self.target_gate_id}")
+                        reward += 100
+                    if info['at_goal_position']:
+                        reward += 100
+                    if info['constraint_violation'] :
+                        reward -= 10
+                    if info["collision"][1] :
+                        reward -= 10
+                    if info["collision"][1]:
+                        self.collisions_count += 1 
+                        self.episode_cost+=1
+                    if 'constraint_values' in info and info['constraint_violation'] == True:
+                        self.violations_count += 1
+                        self.episode_cost+=1
+                    # cmdFullState
+                    self.replay_buffer.add(self.last_all_state[0],self.last_all_state[1],self.last_action * 10 ,self.current_all_state[0],self.current_all_state[1],reward,done)
+                    if self.episode_iteration % 900 ==0  :
+                        print(f"Step{self.episode_iteration} add buffer:\nlast_pos:{last_pos} aim vector: {last2goal_vector} ")
+                        print(f"action_infer: {self.last_action * 10}\t lastDis-CurDis:{( last2goal_dis - cur2goal_dis )}")
+                        print(f"last2cur_pos_vector: {last2cur_vector } \t reward: {reward}")
+                        print(f"target_gate_id:{info['current_target_gate_id']} ; pos: {info['current_target_gate_pos']}")
+                        print("*************************************************************************************")
+                    # import pdb;pdb.set_trace()
+                    self.episode_reward+=reward
+
+                    # ready for next update
+                    self.last_all_state=self.current_all_state
+                    self.last_action=self.current_action
+                    self.target_gate_id= info['current_target_gate_id']
+                else :
+                    pass
+                
+                # change_Train_Num Better
+                if self.interepisode_counter > 50:
+                    self.policy.train(self.replay_buffer,batch_size=128,train_nums=int(5))
+        
+        else:
+
+
+            if self.episode_iteration== 40:
+                self.last_all_state=self.current_all_state
+                self.last_action = self.current_action
+            if self.episode_iteration >= 40:
                 last_pos= self.last_all_state[0][[0,1,2]]
                 current_pos=self.current_all_state[0][[0,1,2]]
 
@@ -369,14 +435,14 @@ class Controller():
 
                 # std_last2cur_vector=last2cur_vector/(min(abs(last2cur_vector)))
                 # std_last2cur_vector=np.array([max(min(_,1.),-1.) for _ in std_last2cur_vector])
-               
+            
                 cur2goal_dis=sum(cur2goal_vector * cur2goal_vector)
                 last2goal_dis=sum(last2goal_vector * last2goal_vector)
                 # import pdb;pdb.set_trace()
 
                 # 对于跨过门动作 给一个大的奖励
                 if self.last_all_state[0][-2] == self.current_all_state[0][-2]:
-                        reward =( last2goal_dis - cur2goal_dis ) * 20
+                        reward =( last2goal_dis - cur2goal_dis ) * 300
                 else:
                     reward = 10
                 # cross the gate
@@ -410,14 +476,8 @@ class Controller():
                 self.last_all_state=self.current_all_state
                 self.last_action=self.current_action
                 self.target_gate_id= info['current_target_gate_id']
-                
-            else :
-                pass
-            
-            # change_Train_Num Better
-            if self.interepisode_counter > 0:
-                begin_time=time.time()
-                self.policy.train(self.replay_buffer,batch_size=128,train_nums=int(5))
+                if self.interepisode_counter > 50:
+                    self.policy.train(self.replay_buffer,batch_size=128,train_nums=int(1))
         #########################
         # REPLACE THIS (END) ####
         #########################
@@ -441,11 +501,11 @@ class Controller():
         #     self.policy.train(self.replay_buffer,batch_size=256,train_nums=(30 /self.net_work_freq ))
 
         if self.interepisode_counter % 100 == 0 :
-            self.policy.save(filename=f"{file_name}/{self.interepisode_counter}")
+            self.policy.save(filename=f"{self.logger_plus.log_dir}/{self.interepisode_counter}")
 
         print(f"Episode Num: {self.interepisode_counter}  Reward: {self.episode_reward:.3f} Cost: {self.episode_cost:.3f} violation: {self.violations_count:.3f}  collision:{self.collisions_count:.3f} ,")
         print(f"gates_passed:{info['current_target_gate_id']},at_goal_position : {info['at_goal_position']}  task_completed: {info['task_completed']}")
-        self.logger_plus.update([self.episode_reward, self.episode_cost, self.episode_cost,self.collisions_count,self.violations_count,info['current_target_gate_id']], total_steps=self.interepisode_counter+1)
+        self.logger_plus.update([self.episode_reward, self.episode_cost,self.collisions_count,self.violations_count,info['current_target_gate_id']], total_steps=self.interepisode_counter)
 
         #########################
         # REPLACE THIS (END) ####
@@ -468,7 +528,7 @@ class Controller():
         self.interepisode_learning_time = 0
         self.episode_reward = 0
         self.episode_cost = 0
-        self.collisions_count=violations_count=0
+        self.collisions_count=self.violations_count=0
         self.episode_iteration=-1
         # env-based variable
         self.target_gate_id=0
