@@ -39,11 +39,6 @@ else:
 finally:
     print("Module 'cffirmware' available:", FIRMWARE_INSTALLED)
 
-from safetyplusplus_folder.plus_logger import SafeLogger
-
-
-file_name='test'
-# 1007_01_AllState_L2_Spilt_CNN_withViolation_ChangeTrain_AddTopSlam
 
 def run(test=False):
     """The main function creating, running, and closing an environment over N episodes.
@@ -145,8 +140,7 @@ def run(test=False):
             print('\t' + str(inspect.getsource(fun)).strip('\n'))
     
     
-    logger_plus = SafeLogger(exp_name=file_name, env_name="compitition", seed=0,
-                                fieldnames=['Eptime','EpRet', 'EpCost', 'CostRate','collision_num','vilation_num','target_gate'])   
+
     # Run an experiment.
     ep_start = time.time()
     first_ep_iteration = True
@@ -274,7 +268,7 @@ def run(test=False):
             # logger.save_as_csv(comment="get_start-episode-"+str(episodes_count))
 
             # Update the controller internal state and models.
-            episode_reward=ctrl.interEpisodeLearn(logger_plus.log_dir)
+            ctrl.interEpisodeLearn(info)
 
             # Append episode stats.
             # if info['current_target_gate_id'] == -1:
@@ -308,10 +302,7 @@ def run(test=False):
             # Create a new logger.
             # logger = Logger(logging_freq_hz=CTRL_FREQ)
 
-            print(f"Total T: {i + 1} Episode Num: {episodes_count}  Reward: {episode_reward:.3f} Cost: {episode_cost:.3f} violation: {violations_count:.3f}  collision:{collisions_count:.3f} gates_passed:{info['current_target_gate_id']},")
-            print(f"at_goal_position : {info['at_goal_position']}  task_completed: {info['task_completed']}")
-            logger_plus.update([episode_reward, episode_cost, episode_cost,collisions_count,violations_count,info['current_target_gate_id']], total_steps=i + 1)
-
+            
             # Reset/update counters.
             episodes_count += 1
             if episodes_count > config.num_episodes:

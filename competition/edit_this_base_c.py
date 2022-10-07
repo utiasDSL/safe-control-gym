@@ -37,6 +37,10 @@ except ImportError:
     from .competition_utils import Command, PIDController, timing_step, timing_ep, plot_trajectory, draw_trajectory
 from gym.spaces import Box
 from slam import SLAM
+
+from safetyplusplus_folder.plus_logger import SafeLogger
+file_name='test'
+
 class Controller():
     """Template controller class.
 
@@ -150,8 +154,8 @@ class Controller():
         # env-based variable
         self.episode_reward = 0
         self.episode_cost = 0
+        self.collisions_count=self.violations_count=0
         self.episode_iteration=-1
-        self.pass_time = 1e6
         self.target_gate_id=0
         self.goal_pos=[initial_info['x_reference'][0],initial_info['x_reference'][2],initial_info['x_reference'][4]]
          
@@ -160,6 +164,9 @@ class Controller():
         self.reset()
         self.interEpisodeReset()
 
+        # logger
+        self.logger_plus = SafeLogger(exp_name=file_name, env_name="compitition", seed=0,
+                                fieldnames=['Eptime','EpRet', 'EpCost', 'CostRate','collision_num','vilation_num','target_gate'])   
         #########################
         # REPLACE THIS (END) ####
         #########################
@@ -225,8 +232,6 @@ class Controller():
         #########################
         self.m_slam.update_occ_map(info)
         
-
-
         # begin with take off 
         if self.episode_iteration == 0:
             height = 1
@@ -384,10 +389,16 @@ class Controller():
                     reward -= 10
                 if info["collision"][1] :
                     reward -= 10
+                if info["collision"][1]:
+                    self.collisions_count += 1 
+                    self.episode_cost+=1
+                if 'constraint_values' in info and info['constraint_violation'] == True:
+                    self.violations_count += 1
+                    self.episode_cost+=1
                 # cmdFullState
                 self.replay_buffer.add(self.last_all_state[0],self.last_all_state[1],self.last_action * 10 ,self.current_all_state[0],self.current_all_state[1],reward,done)
                 if self.episode_iteration % 900 ==0  :
-                    print(f"Step{self.episode_iteration} add buffer:\n last_pos:{last_pos} aim vector: {last2goal_vector} ")
+                    print(f"Step{self.episode_iteration} add buffer:\nlast_pos:{last_pos} aim vector: {last2goal_vector} ")
                     print(f"action_infer: {self.last_action * 10}\t lastDis-CurDis:{( last2goal_dis - cur2goal_dis )}")
                     print(f"last2cur_pos_vector: {last2cur_vector } \t reward: {reward}")
                     print(f"target_gate_id:{info['current_target_gate_id']} ; pos: {info['current_target_gate_pos']}")
@@ -402,30 +413,17 @@ class Controller():
                 
             else :
                 pass
-                # self.one_step_reward+=reward
-
-            # network do one step , train 100 steps.
-            # 1006_07_AllState_L2_Spilt_CNN_NoViolation
-            # if self.interepisode_counter > 20 and self.episode_iteration % (30*self.net_work_freq) ==0:
-            #     begin_time=time.time()
-            #     self.policy.train(self.replay_buffer,batch_size=128,train_nums=int(60))
-            #     if self.episode_iteration % 900 ==0  :
-            #         print(f"episode: {self.interepisode_counter},training using {time.time()-begin_time} s")
             
             # change_Train_Num Better
             if self.interepisode_counter > 0:
                 begin_time=time.time()
                 self.policy.train(self.replay_buffer,batch_size=128,train_nums=int(5))
-                if self.episode_iteration % 900 ==0  :
-                    print(f"episode: {self.interepisode_counter},training using {time.time()-begin_time} s")
-        
-
         #########################
         # REPLACE THIS (END) ####
         #########################
 
     @timing_ep
-    def interEpisodeLearn(self,file_name):
+    def interEpisodeLearn(self,info):
         """Learning and controller updates called between episodes.
 
         INSTRUCTIONS:
@@ -444,24 +442,16 @@ class Controller():
 
         if self.interepisode_counter % 100 == 0 :
             self.policy.save(filename=f"{file_name}/{self.interepisode_counter}")
-        return self.episode_reward
+
+        print(f"Episode Num: {self.interepisode_counter}  Reward: {self.episode_reward:.3f} Cost: {self.episode_cost:.3f} violation: {self.violations_count:.3f}  collision:{self.collisions_count:.3f} ,")
+        print(f"gates_passed:{info['current_target_gate_id']},at_goal_position : {info['at_goal_position']}  task_completed: {info['task_completed']}")
+        self.logger_plus.update([self.episode_reward, self.episode_cost, self.episode_cost,self.collisions_count,self.violations_count,info['current_target_gate_id']], total_steps=self.interepisode_counter+1)
+
         #########################
         # REPLACE THIS (END) ####
         #########################
 
     def reset(self):
-        """Initialize/reset data buffers and counters.
-
-        Called once in __init__().
-
-        """
-        # Data buffers.
-        # self.action_buffer = deque([], maxlen=self.BUFFER_SIZE)
-        # self.obs_buffer = deque([], maxlen=self.BUFFER_SIZE)
-        # self.reward_buffer = deque([], maxlen=self.BUFFER_SIZE)
-        # self.done_buffer = deque([], maxlen=self.BUFFER_SIZE)
-        # self.info_buffer = deque([], maxlen=self.BUFFER_SIZE)
-
         # Counters.
         self.interstep_counter = 0
         self.interepisode_counter = 0
@@ -478,10 +468,11 @@ class Controller():
         self.interepisode_learning_time = 0
         self.episode_reward = 0
         self.episode_cost = 0
+        self.collisions_count=violations_count=0
         self.episode_iteration=-1
-        self.pass_time = 1e6
         # env-based variable
         self.target_gate_id=0
         self.m_slam.reset_occ_map()
         self.current_all_state=[np.zeros(self.global_state_dim),np.zeros(self.local_state_dim)]
         self.last_all_state=[np.zeros(self.global_state_dim),np.zeros(self.local_state_dim)]
+
