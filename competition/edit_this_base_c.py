@@ -186,12 +186,11 @@ class Controller():
                     current_target_gate_pos[2]=1 if info['current_target_gate_type'] == 0 else 0.525
                 current_target_gate_pos=np.array(current_target_gate_pos)[[0,1,2,5]]
                 current_goal_pos=current_target_gate_pos[:3]
-                  
         else :
             current_target_gate_in_range= 0 
             current_goal_pos=np.zeros(3)
         target_vector=[current_goal_pos[0]- current_pos[0],current_goal_pos[1]- current_pos[1],current_goal_pos[2]- current_pos[2]]
-        global_state=np.array([current_x, current_pos[1], current_pos[2],target_vector[0],target_vector[1],target_vector[2],
+        global_state=np.array([current_pos[0], current_pos[1], current_pos[2],target_vector[0],target_vector[1],target_vector[2],
                                current_target_gate_in_range,info['current_target_gate_id'],self.mass])
         local_state = self.m_slam.generate_3obs_img(obs,target_vector,name=self.episode_iteration,save=False)   
         return [global_state,local_state]
