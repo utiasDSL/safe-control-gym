@@ -102,48 +102,51 @@ class Controller():
         v_max = 1.5
         a_max = .5
         j_max = .5
+        self.mass = initial_info['nominal_physical_parameters']['quadrotor_mass']
         # Affect curve radius around waypoints, higher value means larger curve, smaller value means tighter curve
-        grad_scale = .8
+        self.grad_scale = .8
+
+        self.tall = initial_info["gate_dimensions"]["tall"]["height"]
+        self.low = initial_info["gate_dimensions"]["low"]["height"]
 
         ### Spline fitting between waypoints ###
 
-        length = len(self.NOMINAL_GATES) + 2
+        self.length = len(self.NOMINAL_GATES) + 2
         # end goal
         if use_firmware:
             waypoints = [[self.initial_obs[0], self.initial_obs[2], initial_info["gate_dimensions"]["tall"]["height"], self.initial_obs[8]],]  # Height is hardcoded scenario knowledge.
         else:
             waypoints = [[self.initial_obs[0], self.initial_obs[2], self.initial_obs[4], self.initial_obs[8]],]
 
-        half_pi = 0.5*pi
+        self.half_pi = 0.5*pi
         for idx, g in enumerate(self.NOMINAL_GATES):
             [x, y, _, _, _, yaw, typ] = g
-            yaw += half_pi
-            z = initial_info["gate_dimensions"]["tall"]["height"] if typ == 0 else initial_info["gate_dimensions"]["low"]["height"]
+            yaw += self.half_pi
+            z = self.tall if typ == 0 else self.low
             waypoints.append([x, y, z, yaw])
         # end goal
         waypoints.append([initial_info["x_reference"][0], initial_info["x_reference"][2], initial_info["x_reference"][4], initial_info["x_reference"][8]])
 
         # "time" for each waypoint
         # time interval determined by eulcidean distance between waypoints along xy plane
-        # ts = np.arange(length)
-        ts = np.zeros(length)
+        self.ts = np.zeros(self.length)
         [x_prev, y_prev, _, _] = waypoints[0]
-        for idx in range(1,length):
+        for idx in range(1,self.length):
             [x_curr, y_curr, _, _] = waypoints[idx]
             xy_norm = sqrt((x_curr-x_prev)**2 + (y_curr-y_prev)**2)
-            ts[idx] = ts[idx-1] + xy_norm / v_max
+            self.ts[idx] = self.ts[idx-1] + xy_norm / v_max
 
         # Flip gates
         # Selectively flip gate orientation based on vector from previous and to next waypoint,
         # and current gate's orientation
         [x_prev, y_prev, _, _] = waypoints[0]
         [x_curr, y_curr, _, yaw_curr] = waypoints[1]
-        dt = ts[1] - ts[0]
-        for idx in range(1,length-1):
+        dt = self.ts[1] - self.ts[0]
+        for idx in range(1,self.length-1):
             [x_next, y_next, _, yaw_next] = waypoints[idx+1]
-            dt_next = ts[idx+1] - ts[idx]
-            dxf = cos(yaw_curr) * grad_scale
-            dyf = sin(yaw_curr) * grad_scale
+            dt_next = self.ts[idx+1] - self.ts[idx]
+            dxf = cos(yaw_curr) * self.grad_scale
+            dyf = sin(yaw_curr) * self.grad_scale
             vx1 = np.array((x_curr - x_prev,dt))
             vx21 = np.array((dxf,1))
             vx22 = np.array((-dxf,1))
@@ -175,7 +178,7 @@ class Controller():
         # yaw_prev = waypoints[0][3]
         # yaw_curr = waypoints[1][3]
         # dyaw = yaw_curr - yaw_prev
-        # for idx in range(1,length-1):
+        # for idx in range(1,self.length-1):
         #     yaw_next = waypoints[idx+1][3]
         #     dyaw_next = yaw_next - yaw_curr
         #     scale = (((dyaw + dyaw_next) / 2. / pi + 1.) % 2.) - 1.
@@ -189,8 +192,22 @@ class Controller():
         #     yaw_curr = yaw_next
         #     dyaw = dyaw_next
 
-        x_coeffs = np.zeros((6,len(waypoints)-1))
-        y_coeffs = np.zeros((6,len(waypoints)-1))
+        self.cubic_interp = lambda inv_t, x0, xf, dx0, dxf:(
+            x0,
+            dx0,
+            (3*(xf-x0)*inv_t - 2*dx0 - dxf)*inv_t,
+            (-2*(xf-x0)*inv_t + (dxf + dx0))*inv_t*inv_t)
+
+        self.quintic_interp = lambda inv_t, x0, xf, dx0, dxf, d2x0, d2xf:(
+            x0,
+            dx0,
+            d2x0*0.5,
+            ((10*(xf-x0)*inv_t - (4*dxf+6*dx0))*inv_t - 0.5*(3*d2x0-d2xf))*inv_t,
+            ((-15*(xf-x0)*inv_t + (7*dxf+8*dx0))*inv_t + 0.5*(3*d2x0-2*d2xf))*inv_t*inv_t,
+            ((6*(xf-x0)*inv_t - 3*(dxf+dx0))*inv_t - 0.5*(d2x0-d2xf))*inv_t*inv_t*inv_t)
+
+        self.x_coeffs = np.zeros((6,len(waypoints)-1))
+        self.y_coeffs = np.zeros((6,len(waypoints)-1))
         [x0, y0, _, yaw0] = waypoints[0]
         dx0 = cos(yaw0)
         dy0 = sin(yaw0)
@@ -198,47 +215,25 @@ class Controller():
         d2y0 = 0
         d2xf = 0
         d2yf = 0
-        for idx in range(1, length):
+        for idx in range(1, self.length):
             [xf, yf, _, yawf] = waypoints[idx]
-            dt = ts[idx] - ts[idx - 1]
+            dt = self.ts[idx] - self.ts[idx - 1]
             inv_t = 1/dt
-            inv_t2 = inv_t*inv_t
-            inv_t3 = inv_t2*inv_t
-            inv_t4 = inv_t2*inv_t2
-            inv_t5 = inv_t2*inv_t3
-            dxf = cos(yawf) * grad_scale
-            dyf = sin(yawf) * grad_scale
-            if idx == 0 or idx == length-1: # don't need to care about curving out of first and into last goal
+            dxf = cos(yawf) * self.grad_scale
+            dyf = sin(yawf) * self.grad_scale
+            if idx == 0 or idx == self.length-1: # don't need to care about curving out of first and into last goal
                 dxf *= 0.01
                 dyf *= 0.01
-            dx = xf - x0
-            dy = yf - y0
-            x_a0 = x0
-            x_a1 = dx0
-            x_a2 = d2x0*0.5
-            x_a3 = 10*dx*inv_t3 - (4*dxf+6*dx0)*inv_t2 - 0.5*(3*d2x0-d2xf)*inv_t
-            x_a4 = -15*dx*inv_t4 + (7*dxf+8*dx0)*inv_t3 + 0.5*(3*d2x0-2*d2xf)*inv_t2
-            x_a5 = 6*dx*inv_t5 - 3*(dxf+dx0)*inv_t4 - 0.5*(d2x0-d2xf)*inv_t3
-            x_coeffs[:,idx-1] = (x_a5, x_a4, x_a3, x_a2, x_a1, x_a0)
-            y_a0 = y0
-            y_a1 = dy0
-            y_a2 = d2y0*0.5
-            y_a3 = 10*dy*inv_t3 - (4*dyf+6*dy0)*inv_t2 - 0.5*(3*d2y0-d2yf)*inv_t
-            y_a4 = -15*dy*inv_t4 + (7*dyf+8*dy0)*inv_t3 + 0.5*(3*d2y0-2*d2yf)*inv_t2
-            y_a5 = 6*dy*inv_t5 - 3*(dyf+dy0)*inv_t4 - 0.5*(d2y0-d2yf)*inv_t3
-            y_coeffs[:,idx-1] = (y_a5, y_a4, y_a3, y_a2, y_a1, y_a0)
+            self.x_coeffs[::-1,idx-1] = self.quintic_interp(inv_t, x0, xf, dx0, dxf, d2x0, d2xf)
+            self.y_coeffs[::-1,idx-1] = self.quintic_interp(inv_t, y0, yf, dy0, dyf, d2y0, d2yf)
             [x0, y0] = [xf, yf]
             [dx0, dy0] = [dxf, dyf]
             # [d2x0, d2y0] = [d2xf, d2yf]
         waypoints = np.array(waypoints)
-        z_coeffs = scipy.interpolate.PchipInterpolator(ts, waypoints[:,2], 0).c
+        self.z_coeffs = scipy.interpolate.PchipInterpolator(self.ts, waypoints[:,2], 0).c
 
         def f_(coeffs):
-            def f(t):
-                for idx in range(length-1):
-                    if (ts[idx+1] > t):
-                        break
-                t -= ts[idx]
+            def f(idx, t):
                 val = 0
                 for coeff in coeffs[:,idx]:
                     val *= t
@@ -247,11 +242,7 @@ class Controller():
             return f
 
         def df_(coeffs):
-            def f(t):
-                for idx in range(length-1):
-                    if (ts[idx+1] > t):
-                        break
-                t -= ts[idx]
+            def f(idx, t):
                 coeffs_no = len(coeffs[:,idx])
                 val = 0
                 for i, coeff in enumerate(coeffs[:-1,idx]):
@@ -262,11 +253,7 @@ class Controller():
             return f
 
         def d2f_(coeffs):
-            def f(t):
-                for idx in range(length-1):
-                    if (ts[idx+1] > t):
-                        break
-                t -= ts[idx]
+            def f(idx, t):
                 coeffs_no = len(coeffs[:,idx])
                 val = 0
                 for i, coeff in enumerate(coeffs[:-2,idx]):
@@ -277,11 +264,7 @@ class Controller():
             return f
 
         def d3f_(coeffs):
-            def f(t):
-                for idx in range(length-1):
-                    if (ts[idx+1] > t):
-                        break
-                t -= ts[idx]
+            def f(idx, t):
                 coeffs_no = len(coeffs[:,idx])
                 val = 0
                 for i, coeff in enumerate(coeffs[:-3,idx]):
@@ -291,48 +274,50 @@ class Controller():
                 return val
             return f
 
-        def df_idx(idx):
+        def df_idx():
             def df(t):
-                dx = self.dx(t)
-                dy = self.dy(t)
-                dz = self.dz(t)
+                for idx in range(self.length-1):
+                    if (self.ts[idx+1] > t):
+                        break
+                t -= self.ts[idx]
+                dx = self.df(self.x_coeffs)(idx, t)
+                dy = self.df(self.y_coeffs)(idx, t)
+                dz = self.df(self.z_coeffs)(idx, t)
                 return sqrt(dx*dx+dy*dy+dz*dz)
             return df
 
-        self.x = f_(x_coeffs)
-        self.y = f_(y_coeffs)
-        self.z = f_(z_coeffs)
-
-        self.dx = df_(x_coeffs)
-        self.dy = df_(y_coeffs)
-        self.dz = df_(z_coeffs)
-
-        self.d2x = d2f_(x_coeffs)
-        self.d2y = d2f_(y_coeffs)
-        self.d2z = d2f_(z_coeffs)
-
-        self.d3x = d3f_(x_coeffs)
-        self.d3y = d3f_(y_coeffs)
-        self.d3z = d3f_(z_coeffs)
+        self.f = f_
+        self.df = df_
+        self.d2f = d2f_
+        self.d3f = d3f_
 
         # Integrate to get pathlength
         pathlength = 0
-        for idx in range(length-1):
-            pathlength += scipy.integrate.quad(df_idx(idx), 0, ts[idx+1] - ts[idx])[0]
-        self.scaling_factor = ts[-1] / pathlength
-
-        duration = ts[-1] - ts[0]
-        t_scaled = np.linspace(ts[0], ts[-1], int(duration*self.CTRL_FREQ))
-        x_scaled = np.array(tuple(map(self.x, t_scaled)))
-        y_scaled = np.array(tuple(map(self.y, t_scaled)))
-        z_scaled = np.array(tuple(map(self.z, t_scaled)))
+        for idx in range(self.length-1):
+            pathlength += scipy.integrate.quad(df_idx(), 0, self.ts[idx+1] - self.ts[idx])[0]
+        self.scaling_factor = self.ts[-1] / pathlength
 
         if self.VERBOSE:
-            print(x_coeffs)
-            print(y_coeffs)
-            print(z_coeffs)
+            duration = self.ts[-1] - self.ts[0]
+            t_scaled = np.linspace(self.ts[0], self.ts[-1], int(duration*self.CTRL_FREQ))
+            t_diff_scaled = np.zeros(t_scaled.shape)
+            gate_scaled = np.zeros(t_scaled.shape, dtype=np.ushort)
+            gate = 0
+            for i, t in enumerate(t_scaled):
+                if gate < self.length and t > self.ts[gate+1]:
+                    gate += 1
+                t_diff_scaled[i] = t_scaled[i] - self.ts[gate]
+                gate_scaled[i] = gate
+            x_scaled = np.array(tuple(map(self.f(self.x_coeffs), gate_scaled, t_diff_scaled)))
+            y_scaled = np.array(tuple(map(self.f(self.y_coeffs), gate_scaled, t_diff_scaled)))
+            z_scaled = np.array(tuple(map(self.f(self.z_coeffs), gate_scaled, t_diff_scaled)))
+            print(self.x_coeffs)
+            print(self.y_coeffs)
+            print(self.z_coeffs)
             print(waypoints)
             print(t_scaled)
+            print(t_diff_scaled)
+            print(gate_scaled)
             print(x_scaled)
             print(y_scaled)
             print(z_scaled)
@@ -406,6 +391,11 @@ class Controller():
             return m
         self.rpy2rot = rpy2rot
 
+        self.gate_no = 0
+        self.run_x_coeffs = np.copy(self.x_coeffs)
+        self.run_y_coeffs = np.copy(self.y_coeffs)
+        self.run_z_coeffs = np.copy(self.z_coeffs)
+        self.run_ts = np.copy(self.ts)
 
         #########################
         # REPLACE THIS (END) ####
@@ -453,7 +443,7 @@ class Controller():
 
             command_type = Command(2)  # Take-off.
             args = [height, duration]
-        elif iteration >= self.takeoff_land_duration*self.CTRL_FREQ and iteration < (self.takeoff_land_duration + self.end_t)*self.CTRL_FREQ:
+        elif iteration >= self.takeoff_land_duration*self.CTRL_FREQ and self.scaled_t < self.end_t:
             self.scaled_t += self.time_scale / self.CTRL_FREQ / self.scaling_factor
 
             [curve_t, curve_v, curve_a, curve_j] = self.s(self.scaled_t)
@@ -461,30 +451,37 @@ class Controller():
             curve_v *= self.scaling_factor
             curve_a *= self.scaling_factor
             curve_j *= self.scaling_factor
-            x_c = self.x(curve_t)
-            y_c = self.y(curve_t)
-            z_c = self.z(curve_t)
-            target_pos = np.array([x_c, y_c, z_c])
-            error = np.array((obs[0] - x_c, obs[2] - y_c, obs[4] - z_c)) # positional error (world frame)
+            self.curve_t = curve_t
+
+            if (self.gate_no < self.length-2 and self.run_ts[self.gate_no+1] <= curve_t):
+                self.gate_no += 1
+
+            t = curve_t - self.run_ts[self.gate_no]
+
+            self.x_c = self.f(self.run_x_coeffs)(self.gate_no, t)
+            self.y_c = self.f(self.run_y_coeffs)(self.gate_no, t)
+            self.z_c = self.f(self.run_z_coeffs)(self.gate_no, t)
+            target_pos = np.array([self.x_c, self.y_c, self.z_c])
+            error = np.array((obs[0] - self.x_c, obs[2] - self.y_c, obs[4] - self.z_c)) # positional error (world frame)
             # print(error)
             self.time_scale += -log1p(np.linalg.norm(error)-.25)*0.025
             self.time_scale = min(1.0, self.time_scale)
             # print(self.time_scale)
 
-            dx_c = self.dx(curve_t)
-            dy_c = self.dy(curve_t)
-            dz_c = self.dz(curve_t)
-            d2x_c = self.d2x(curve_t)
-            d2y_c = self.d2y(curve_t)
-            d2z_c = self.d2z(curve_t)
-            d3x_c = self.d3x(curve_t)
-            d3y_c = self.d3y(curve_t)
-            d3z_c = self.d3z(curve_t)
-            tangent = np.array((dx_c,dy_c,dz_c))
-            dtangent = np.array((d2x_c,d2y_c,d2z_c))
-            d2tangent = np.array((d3x_c,d3y_c,d3z_c))
+            self.dx_c = self.df(self.run_x_coeffs)(self.gate_no, t)
+            self.dy_c = self.df(self.run_y_coeffs)(self.gate_no, t)
+            self.dz_c = self.df(self.run_z_coeffs)(self.gate_no, t)
+            self.d2x_c = self.d2f(self.run_x_coeffs)(self.gate_no, t)
+            self.d2y_c = self.d2f(self.run_y_coeffs)(self.gate_no, t)
+            self.d2z_c = self.d2f(self.run_z_coeffs)(self.gate_no, t)
+            self.d3x_c = self.d3f(self.run_x_coeffs)(self.gate_no, t)
+            self.d3y_c = self.d3f(self.run_y_coeffs)(self.gate_no, t)
+            self.d3z_c = self.d3f(self.run_z_coeffs)(self.gate_no, t)
+            tangent = np.array((self.dx_c,self.dy_c,self.dz_c))
+            dtangent = np.array((self.d2x_c,self.d2y_c,self.d2z_c))
+            d2tangent = np.array((self.d3x_c,self.d3y_c,self.d3z_c))
 
-            target_yaw = atan2(dy_c, dx_c)
+            target_yaw = atan2(self.dy_c, self.dx_c)
             target_vel = tangent * curve_v
             target_acc = tangent * curve_a + dtangent * curve_v**2
             
@@ -493,15 +490,15 @@ class Controller():
             target_jerk = tangent * curve_j + d2tangent * curve_v**3 + 3 * dtangent * curve_v * curve_a
             Jinv = self.rpy2rot(obs[6], obs[7], obs[8]).transpose()
             body_jerk = np.matmul(Jinv, target_jerk.transpose())
-            p = 0.027/9.8*body_jerk[0,1]  #  roll rate = mass / g * y_jerk
-            q = 0.027/9.8*body_jerk[0,0]  # pitch rate = mass / g * x_jerk
+            p = self.mass/9.8*body_jerk[0,1]  #  roll rate = mass / g * y_jerk
+            q = self.mass/9.8*body_jerk[0,0]  # pitch rate = mass / g * x_jerk
 
             # Yaw rate
             den = np.linalg.norm(tangent[:2])
             if den < 1e-9:
                 r = 0
             else:
-                num = dx_c * d2y_c - dy_c * d2x_c
+                num = self.dx_c * self.d2y_c - self.dy_c * self.d2x_c
                 r = num/den
                 r *= curve_v
 
@@ -642,6 +639,12 @@ class Controller():
         _ = self.info_buffer
 
         self.scaled_t = 0
+        self.gate_no = 0
+        self.run_x_coeffs = np.copy(self.x_coeffs)
+        self.run_y_coeffs = np.copy(self.y_coeffs)
+        self.run_z_coeffs = np.copy(self.z_coeffs)
+        self.run_ts = np.copy(self.ts)
+        self.length = len(self.NOMINAL_GATES) + 2
 
         #########################
         # REPLACE THIS (END) ####
