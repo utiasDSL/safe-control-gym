@@ -166,13 +166,11 @@ class Controller():
 
 
     def get_state(self,obs,info):
-        local_state = self.m_slam.generate_3obs_img(obs,name=self.episode_iteration,save=False)   
+        
 
         # state info : mass(1) + obs_info(3) + goal_info(3) + pic_info     
         # x,y,z  3 
-        current_x=obs[0]
-        current_y=obs[2]
-        current_z=obs[4]
+        current_pos=[obs[0],obs[2],obs[4]]
 
         if info !={}:
             # goal [x,y,z]
@@ -192,8 +190,10 @@ class Controller():
         else :
             current_target_gate_in_range= 0 
             current_goal_pos=np.zeros(3)
-        global_state=np.array([current_x,current_y,current_z,current_goal_pos[0]-current_x,current_goal_pos[1]-current_y,current_goal_pos[2]-current_z,
+        target_vector=[current_goal_pos[0]- current_pos[0],current_goal_pos[1]- current_pos[1],current_goal_pos[2]- current_pos[2]]
+        global_state=np.array([current_x, current_pos[1], current_pos[2],target_vector[0],target_vector[1],target_vector[2],
                                current_target_gate_in_range,info['current_target_gate_id'],self.mass])
+        local_state = self.m_slam.generate_3obs_img(obs,target_vector,name=self.episode_iteration,save=False)   
         return [global_state,local_state]
            
     def cmdFirmware(self,ctime,obs,reward=None,done=None,info=None,exploration=True):
@@ -381,8 +381,8 @@ class Controller():
                     reward += 100
                 if info['at_goal_position']:
                     reward += 100
-                # if info['constraint_violation'] :
-                    # reward -= 10
+                if info['constraint_violation'] :
+                    reward -= 10
                 if info["collision"][1] :
                     reward -= 10
                 # cmdFullState
@@ -407,18 +407,18 @@ class Controller():
 
             # network do one step , train 100 steps.
             # 1006_07_AllState_L2_Spilt_CNN_NoViolation
-            if self.interepisode_counter > 20 and self.episode_iteration % (30*self.net_work_freq) ==0:
-                begin_time=time.time()
-                self.policy.train(self.replay_buffer,batch_size=128,train_nums=int(60))
-                if self.episode_iteration % 900 ==0  :
-                    print(f"episode: {self.interepisode_counter},training using {time.time()-begin_time} s")
-            
-            # change_Train_Num
-            # if self.interepisode_counter > 20:
+            # if self.interepisode_counter > 20 and self.episode_iteration % (30*self.net_work_freq) ==0:
             #     begin_time=time.time()
-            #     self.policy.train(self.replay_buffer,batch_size=128,train_nums=int(5))
+            #     self.policy.train(self.replay_buffer,batch_size=128,train_nums=int(60))
             #     if self.episode_iteration % 900 ==0  :
             #         print(f"episode: {self.interepisode_counter},training using {time.time()-begin_time} s")
+            
+            # change_Train_Num Better
+            if self.interepisode_counter > 0:
+                begin_time=time.time()
+                self.policy.train(self.replay_buffer,batch_size=128,train_nums=int(5))
+                if self.episode_iteration % 900 ==0  :
+                    print(f"episode: {self.interepisode_counter},training using {time.time()-begin_time} s")
         
 
         #########################

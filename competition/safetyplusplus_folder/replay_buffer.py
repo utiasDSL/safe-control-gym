@@ -17,7 +17,7 @@ class SimpleReplayBufferIros(object):
         self.reward = np.zeros(( self.phrase,self.one_phrase_max_size, 1))
         self.not_done = np.zeros(( self.phrase,self.one_phrase_max_size, 1))
 
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 
     def add(self,phrase, state, action, next_state, reward, done):
@@ -88,7 +88,7 @@ class SimpleReplayBuffer(object):
         self.reward = np.zeros((max_size, 1))
         self.not_done = np.zeros((max_size, 1))
 
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 
     def add(self, state, action, next_state, reward, done):
@@ -113,33 +113,32 @@ class SimpleReplayBuffer(object):
         )
 
 class IrosReplayBuffer(object):
-    def __init__(self, global_state_dim,local_state_shape ,action_dim, max_size=int(1e6)):
+    def __init__(self, global_state_dim,local_state_shape ,action_dim, max_size=int(1e5)):
         self.max_size = max_size
         self.ptr = 0
         self.size = 0
         z=local_state_shape[0]
         x=local_state_shape[1]
         y=local_state_shape[2]
-        
-        self.global_state = np.zeros((max_size, global_state_dim))
-        self.local_state = np.zeros((max_size, z,x,y))
-        self.action = np.zeros((max_size, action_dim))
-        self.next_global_state = np.zeros((max_size, global_state_dim))
-        self.next_local_state = np.zeros((max_size, z,x,y))
-        self.reward = np.zeros((max_size, 1))
-        self.not_done = np.zeros((max_size, 1))
-
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+        self.global_state = torch.zeros((max_size, global_state_dim)).to(self.device)
+        self.local_state = torch.zeros((max_size, z,x,y)).to(self.device)
+        self.action = torch.zeros((max_size, action_dim)).to(self.device)
+        self.next_global_state = torch.zeros((max_size, global_state_dim)).to(self.device)
+        self.next_local_state = torch.zeros((max_size, z,x,y)).to(self.device)
+        self.reward = torch.zeros((max_size, 1)).to(self.device)
+        self.not_done = torch.zeros((max_size, 1)).to(self.device)
+       
 
 
     def add(self, global_state,local_state, action, next_global_state,next_local_state, reward, done):
-        self.global_state[self.ptr] = global_state
-        self.local_state[self.ptr] = local_state
-        self.action[self.ptr] = action
-        self.next_global_state[self.ptr] = next_global_state
-        self.next_local_state[self.ptr] = next_local_state
-        self.reward[self.ptr] = reward
-        self.not_done[self.ptr] = 1. - done
+        self.global_state[self.ptr] = torch.FloatTensor(global_state)
+        self.local_state[self.ptr] = torch.FloatTensor(local_state)
+        self.action[self.ptr] = torch.FloatTensor(action) 
+        self.next_global_state[self.ptr] = torch.FloatTensor(next_global_state)
+        self.next_local_state[self.ptr] = torch.FloatTensor(next_local_state)
+        self.reward[self.ptr] = torch.FloatTensor(np.array(reward))
+        self.not_done[self.ptr] = torch.FloatTensor(np.array(1. - done))
 
         self.ptr = (self.ptr + 1) % self.max_size
         self.size = min(self.size + 1, self.max_size)
@@ -147,15 +146,7 @@ class IrosReplayBuffer(object):
 
     def sample(self, batch_size):
         ind = np.random.randint(0, self.size, size=batch_size)
-        return (
-            torch.FloatTensor(self.global_state[ind]).to(self.device),
-            torch.FloatTensor(self.local_state[ind]).to(self.device),
-            torch.FloatTensor(self.action[ind]).to(self.device),
-            torch.FloatTensor(self.next_global_state[ind]).to(self.device),
-            torch.FloatTensor(self.next_local_state[ind]).to(self.device),
-            torch.FloatTensor(self.reward[ind]).to(self.device),
-            torch.FloatTensor(self.not_done[ind]).to(self.device),
-        )
+        return (self.global_state[ind],self.local_state[ind],self.action[ind],self.next_global_state[ind],self.next_local_state[ind],self.reward[ind],self.not_done[ind])
         
 class CostReplayBuffer(object):
     def __init__(self, state_dim, action_dim, max_size=int(1e6)):

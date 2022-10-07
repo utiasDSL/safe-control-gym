@@ -42,7 +42,8 @@ finally:
 from safetyplusplus_folder.plus_logger import SafeLogger
 
 
-file_name='1006_08_AllState_L2_Spilt_CNN_NoViolation_ChangeTrain'
+file_name='test'
+# 1007_01_AllState_L2_Spilt_CNN_withViolation_ChangeTrain_AddTopSlam
 
 def run(test=False):
     """The main function creating, running, and closing an environment over N episodes.
