@@ -517,9 +517,9 @@ class Controller():
 
             [curve_t, curve_v, curve_a, curve_j] = self.s(self.scaled_t)
             curve_t *= self.scaling_factor
-            curve_v *= self.scaling_factor
-            curve_a *= self.scaling_factor
-            curve_j *= self.scaling_factor
+            curve_v *= self.scaling_factor * self.time_scale
+            curve_a *= self.scaling_factor * self.time_scale
+            curve_j *= self.scaling_factor * self.time_scale
             self.curve_t = curve_t
 
             if (self.gate_no < self.length-2 and self.run_ts[self.gate_no+1] <= curve_t):
