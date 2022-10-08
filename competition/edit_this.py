@@ -100,11 +100,11 @@ class Controller():
         # Kinematic limits
         # TODO determine better estimates from model
         v_max = 1.5
-        a_max = .5
-        j_max = .5
+        a_max = .2
+        j_max = 1
         self.mass = initial_info['nominal_physical_parameters']['quadrotor_mass']
         # Affect curve radius around waypoints, higher value means larger curve, smaller value means tighter curve
-        self.grad_scale = .8
+        self.grad_scale = .6
 
         self.tall = initial_info["gate_dimensions"]["tall"]["height"]
         self.low = initial_info["gate_dimensions"]["low"]["height"]
@@ -113,10 +113,7 @@ class Controller():
 
         self.length = len(self.NOMINAL_GATES) + 2
         # end goal
-        if use_firmware:
-            waypoints = [[self.initial_obs[0], self.initial_obs[2], initial_info["gate_dimensions"]["tall"]["height"], self.initial_obs[8]],]  # Height is hardcoded scenario knowledge.
-        else:
-            waypoints = [[self.initial_obs[0], self.initial_obs[2], self.initial_obs[4], self.initial_obs[8]],]
+        waypoints = [[self.initial_obs[0], self.initial_obs[2], self.initial_obs[4], self.initial_obs[8]],]
 
         self.half_pi = 0.5*pi
         for idx, g in enumerate(self.NOMINAL_GATES):
@@ -221,9 +218,12 @@ class Controller():
             inv_t = 1/dt
             dxf = cos(yawf) * self.grad_scale
             dyf = sin(yawf) * self.grad_scale
-            if idx == 0 or idx == self.length-1: # don't need to care about curving out of first and into last goal
+            if idx == 0: # don't need to care about curving out of first goal
                 dxf *= 0.01
                 dyf *= 0.01
+            if idx == self.length-1: # yaw of last goal not important
+                dxf = dx0 * 0.01
+                dyf = dy0 * 0.01
             self.x_coeffs[::-1,idx-1] = self.quintic_interp(inv_t, x0, xf, dx0, dxf, d2x0, d2xf)
             self.y_coeffs[::-1,idx-1] = self.quintic_interp(inv_t, y0, yf, dy0, dyf, d2y0, d2yf)
             [x0, y0] = [xf, yf]
@@ -231,6 +231,14 @@ class Controller():
             # [d2x0, d2y0] = [d2xf, d2yf]
         waypoints = np.array(waypoints)
         self.z_coeffs = scipy.interpolate.PchipInterpolator(self.ts, waypoints[:,2], 0).c
+
+        # modify endpoint gradient for smooth z ending
+        self.z_coeffs[::-1,-1] = self.cubic_interp(1/(self.ts[-1]-self.ts[-2]),
+            waypoints[-2,2],
+            waypoints[-1,2],
+            self.z_coeffs[-2,-1],
+            0
+        )
 
         def f_(coeffs):
             def f(idx, t):
@@ -437,14 +445,8 @@ class Controller():
         #########################
 
         # # Handwritten solution for GitHub's getting_stated scenario.
-        if iteration == 0:
-            height = 1
-            duration = self.takeoff_land_duration
-
-            command_type = Command(2)  # Take-off.
-            args = [height, duration]
-        elif iteration >= self.takeoff_land_duration*self.CTRL_FREQ and self.scaled_t < self.end_t:
-            if info['current_target_gate_in_range']:
+        if self.scaled_t < self.end_t:
+            if iteration > 0 and info['current_target_gate_in_range']:
                 if not self.at_gate:
                     # Local replan when near to goal
                     self.at_gate = True
@@ -533,7 +535,7 @@ class Controller():
             target_pos = np.array([self.x_c, self.y_c, self.z_c])
             error = np.array((obs[0] - self.x_c, obs[2] - self.y_c, obs[4] - self.z_c)) # positional error (world frame)
             # print(error)
-            self.time_scale += -log1p(np.linalg.norm(error)-.25)*0.025
+            self.time_scale += -log1p(np.linalg.norm(error)-.25)*0.05
             self.time_scale = min(1.0, self.time_scale)
             # print(self.time_scale)
 
@@ -576,28 +578,13 @@ class Controller():
             # target_acc = np.zeros(3)
             # target_yaw = 0.
             # target_rpy_rates = np.zeros(3)
-
-            command_type = Command(1)  # cmdFullState.
-            args = [target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
-
-        elif iteration == (self.takeoff_land_duration + self.end_t)*self.CTRL_FREQ:
-            command_type = Command(6)  # notify setpoint stop.
-            args = []
-
-        elif iteration == (self.takeoff_land_duration + self.end_t)*self.CTRL_FREQ + 1:
-            height = 0.
-            duration = self.takeoff_land_duration
-
-            command_type = Command(3)  # Land.
-            args = [height, duration]
-
-        elif iteration == (2*self.takeoff_land_duration + self.end_t)*self.CTRL_FREQ + 2:
-            command_type = Command(-1)  # Terminate command to be sent once trajectory is completed.
-            args = []
-
+            self.args = [target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
         else:
-            command_type = Command(0)  # None.
-            args = []
+            self.args[1] = np.zeros(3)
+            self.args[2] = np.zeros(3)
+            self.args[4] = np.zeros(3)
+        command_type = Command(1)  # cmdFullState.
+        args = self.args
 
         #########################
         # REPLACE THIS (END) ####
