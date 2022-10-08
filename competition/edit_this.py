@@ -7,7 +7,7 @@ Then run:
 Tips:
     Search for strings `INSTRUCTIONS:` and `REPLACE THIS (START)` in this file.
 
-    Change the code between the 4 blocks starting with
+    Change the code between the 5 blocks starting with
         #########################
         # REPLACE THIS (START) ##
         #########################
@@ -34,9 +34,24 @@ from collections import deque
 try:
     from competition_utils import Command, PIDController, timing_step, timing_ep, plot_trajectory, draw_trajectory
 except ImportError:
-    # Test import.
+    # PyTest import.
     from .competition_utils import Command, PIDController, timing_step, timing_ep, plot_trajectory, draw_trajectory
 
+#########################
+# REPLACE THIS (START) ##
+#########################
+
+# Optionally, create and import modules you wrote.
+# Please refrain from importing large or unstable 3rd party packages.
+try:
+    import example_custom_utils as ecu
+except ImportError:
+    # PyTest import.
+    from . import example_custom_utils as ecu
+
+#########################
+# REPLACE THIS (END) ####
+#########################
 
 class Controller():
     """Template controller class.
@@ -68,7 +83,7 @@ class Controller():
             verbose (bool, optional): Turn on and off additional printouts and plots.
 
         """
-        # Save environment and conrol parameters.
+        # Save environment and control parameters.
         self.CTRL_TIMESTEP = initial_info["ctrl_timestep"]
         self.CTRL_FREQ = initial_info["ctrl_freq"]
         self.initial_obs = initial_obs
@@ -83,7 +98,7 @@ class Controller():
         if use_firmware:
             self.ctrl = None
         else:
-            # Initialize a simple PID Controller ror debugging and test
+            # Initialize a simple PID Controller for debugging and test.
             # Do NOT use for the IROS 2022 competition. 
             self.ctrl = PIDController()
             # Save additonal environment parameters.

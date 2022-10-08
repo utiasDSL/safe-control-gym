@@ -118,6 +118,8 @@ Proposed solutions will be evaluated in 5 scenarios with different challenges:
 
 Methods to Re-implement in [`edit_this.py`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py)
 
+You can also use/create additional custom modules such as [`example_custom_utils.py`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/example_custom_utils.py)
+
 ### Required (1 of 2)
 
 ```docstring
@@ -136,7 +138,7 @@ edit_this.py : Controller.__init__(initial_obs, initial_info)           # Initia
 
             - 'gate_dimensions'                 Shape and measurements of the gates
             - 'obstacle_dimensions'             Shape and measurements of the obstacles
-            - 'nominal_gates_pos_and_type'      *Nominal* pose and type (tall, low, etc.) of the gates
+            - 'nominal_gates_pos_and_type'      *Nominal* pose and type (tall, low, etc.) of the gates (NOTE: this is the ordering in which the gates must be traversed)
             - 'nominal_obstacles_pos'           *Nominal* pose of the obstacles (NOTE: these are provided once, through the controller's constructor, and might differ from the exact positions, if `randomized_gates_and_obstacles` is True, exact positions will also change across episodes if `reseed_on_reset` is False)
             - 'x_reference'                     Final position to reach/hover at
 
@@ -253,9 +255,13 @@ C) For ALL levels (0-3, sim2real), the top 3 solutions ranked by the criteria in
 
 ## Prizes
 
-- 1st: TBA
-- 2nd: TBA
-- 3rd: TBA
+Kindly supported by [Bitcraze](https://www.bitcraze.io):
+
+- 1st: [Bitcraze Crazyflie AI Bundle](https://store.bitcraze.io/collections/bundles/products/the-ai-bundle)
+- 2nd: [Bitcraze Crazyflie STEM Ranging Bundle](https://store.bitcraze.io/collections/bundles/products/stem-ranging-bundle)
+- 3rd: [Bitcraze Crazyflie STEM Bundle](https://store.bitcraze.io/collections/bundles/products/stem-drone-bundle)
+
+The authors of the best solutions will be invited to co-author a "lessons learned" paper with the organizers.
 
 ## Organizers
 
