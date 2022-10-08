@@ -211,23 +211,23 @@ class SLAM():
         # if target_vector[2]>=0:
         #     for _ in range(z_center,2*z_center+1):
         #         if target_vector[0]>0:
-        #             obs_img[_][center:center*2+1,center]=0.2
+        #             obs_img[_][center:center*2+1,center]=0.5
         #         else:
-        #             obs_img[_][0:center+1,center]=0.2
+        #             obs_img[_][0:center+1,center]=0.5
         #         if target_vector[1]>0:
-        #             obs_img[_][center][center:center*2+1]=0.2
+        #             obs_img[_][center][center:center*2+1]=0.5
         #         else:
-        #             obs_img[_][center][0:center+1]=0.2
+        #             obs_img[_][center][0:center+1]=0.5
         # else:
         #     for _ in range(0,z_center+1):
         #         if target_vector[0]>0:
-        #             obs_img[_][center:center*2+1,center]=0.2
+        #             obs_img[_][center:center*2+1,center]=0.5
         #         else:
-        #             obs_img[_][0:center+1,center]=0.2
+        #             obs_img[_][0:center+1,center]=0.5
         #         if target_vector[1]>0:
-        #             obs_img[_][center][center:center*2+1]=0.2
+        #             obs_img[_][center][center:center*2+1]=0.5
         #         else:
-        #             obs_img[_][center][0:center+1]=0.2
+        #             obs_img[_][center][0:center+1]=0.5
 
         # fill target_vector way 2
         if target_vector[2]>=0:

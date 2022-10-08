@@ -137,8 +137,8 @@ class IrosReplayBuffer(object):
         self.action[self.ptr] = torch.FloatTensor(action) 
         self.next_global_state[self.ptr] = torch.FloatTensor(next_global_state)
         self.next_local_state[self.ptr] = torch.FloatTensor(next_local_state)
-        self.reward[self.ptr] = torch.FloatTensor(np.array(reward))
-        self.not_done[self.ptr] = torch.FloatTensor(np.array(1. - done))
+        self.reward[self.ptr] = torch.FloatTensor(np.array([reward]))
+        self.not_done[self.ptr] = torch.FloatTensor(np.array([1. - done]))
 
         self.ptr = (self.ptr + 1) % self.max_size
         self.size = min(self.size + 1, self.max_size)
