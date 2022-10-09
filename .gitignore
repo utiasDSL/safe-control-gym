@@ -153,3 +153,5 @@ dmypy.json
 competition/logs/
 competition/results/
 *.png
+competition/pretrain_models/
+*.npy

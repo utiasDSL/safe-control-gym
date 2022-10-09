@@ -39,7 +39,8 @@ from gym.spaces import Box
 from slam import SLAM
 
 from safetyplusplus_folder.plus_logger import SafeLogger
-file_name='1007_03_base_slam2'
+import random
+file_name='1009_02_slam-1'
 sim_only=False
 
 class Controller():
@@ -150,7 +151,8 @@ class Controller():
         from safetyplusplus_folder import safetyplusplus,replay_buffer,unconstrained
         # td3 policy
         self.policy = unconstrained.TD3(**kwargs)
-        self.replay_buffer = replay_buffer.IrosReplayBuffer(self.global_state_dim,self.local_state_dim,action_dim)
+        self.replay_buffer = replay_buffer.IrosReplayBuffer(self.global_state_dim,self.local_state_dim,action_dim,load=False)
+        # self.policy.load("pretrain_models/1400")
 
         # env-based variable
         self.episode_reward = 0
@@ -159,7 +161,8 @@ class Controller():
         self.episode_iteration=-1
         self.target_gate_id=0
         self.goal_pos=[initial_info['x_reference'][0],initial_info['x_reference'][2],initial_info['x_reference'][4]]
-         
+        self.target_offset=np.array([0,0,0])
+        self.get_offset(info=None)
         
         # Reset counters and buffers.
         self.reset()
@@ -172,10 +175,19 @@ class Controller():
         # REPLACE THIS (END) ####
         #########################
 
+    def get_offset(self,info):
+        # init
+        if info is None:
+             self.target_offset=np.array([random.uniform(0,0.1),random.uniform(-0.05,0.05),random.uniform(-0.05,0.05)])
+        # step cross gate
+        elif info['current_target_gate_id'] == 1 or info['current_target_gate_id'] == 3:
+            self.target_offset=np.array([random.uniform(-0.05,0.05),random.uniform(0,0.1),random.uniform(-0.05,0.05)])
+        elif info['current_target_gate_id'] == 2:
+            self.target_offset=np.array([random.uniform(-0.1,0),random.uniform(-0.05,0.05),random.uniform(-0.05,0.05)])
+        else:
+            self.target_offset=np.array([0,0,0])
 
     def get_state(self,obs,info):
-        
-
         # state info : mass(1) + obs_info(3) + goal_info(3) + pic_info     
         # x,y,z  3 
         current_pos=[obs[0],obs[2],obs[4]]
@@ -194,13 +206,17 @@ class Controller():
                     current_target_gate_pos[2]=1 if info['current_target_gate_type'] == 0 else 0.525
                 current_target_gate_pos=np.array(current_target_gate_pos)[[0,1,2,5]]
                 current_goal_pos=current_target_gate_pos[:3]
+            current_goal_pos += self.target_offset
         else :
             current_target_gate_in_range= 0 
             current_goal_pos=np.zeros(3)
         target_vector=[current_goal_pos[0]- current_pos[0],current_goal_pos[1]- current_pos[1],current_goal_pos[2]- current_pos[2]]
+        # global state有必要编码后三个吗(是否在视野，质量，目标门的id)
+        # 10.09 V0.1
         global_state=np.array([current_pos[0], current_pos[1], current_pos[2],target_vector[0],target_vector[1],target_vector[2],
                                current_target_gate_in_range,info['current_target_gate_id'],self.mass])
-        local_state = self.m_slam.generate_3obs_img(obs,target_vector,name=self.episode_iteration,save=False)   
+        # global_state=np.array([current_pos[0], current_pos[1], current_pos[2],target_vector[0],target_vector[1],target_vector[2]])    
+        # local_state = self.m_slam.generate_3obs_img(obs,target_vector,name=self.episode_iteration,save=False)   
         return [global_state,local_state]
            
     def cmdFirmware(self,ctime,obs,reward=None,done=None,info=None,exploration=True):
@@ -374,14 +390,15 @@ class Controller():
                     # import pdb;pdb.set_trace()
 
                     # 对于跨过门动作 给一个大的奖励
-                    if self.last_all_state[0][-2] == self.current_all_state[0][-2]:
+                    if self.target_gate_id == info['current_target_gate_id']:
                             reward =( last2goal_dis - cur2goal_dis ) * 20
                     else:
                         reward = 10
                     # cross the gate
                     if info['current_target_gate_id']!=self.target_gate_id :
-                        print(f"STEP{self.episode_iteration} , step gate{self.target_gate_id}")
                         reward += 100
+                        print(f"STEP{self.episode_iteration} , step gate{self.target_gate_id}")
+                        self.get_offset(info)
                     if info['at_goal_position']:
                         reward += 100
                     if info['constraint_violation'] :
@@ -441,7 +458,7 @@ class Controller():
                 # import pdb;pdb.set_trace()
 
                 # 对于跨过门动作 给一个大的奖励
-                if self.last_all_state[0][-2] == self.current_all_state[0][-2]:
+                if self.target_gate_id== info['current_target_gate_id']:
                         reward =( last2goal_dis - cur2goal_dis ) * 300
                 else:
                     reward = 10
@@ -535,4 +552,5 @@ class Controller():
         self.m_slam.reset_occ_map()
         self.current_all_state=[np.zeros(self.global_state_dim),np.zeros(self.local_state_dim)]
         self.last_all_state=[np.zeros(self.global_state_dim),np.zeros(self.local_state_dim)]
+        self.target_offset=np.array([0,0,0])
 

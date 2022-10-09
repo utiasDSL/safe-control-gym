@@ -113,10 +113,9 @@ class SimpleReplayBuffer(object):
         )
 
 class IrosReplayBuffer(object):
-    def __init__(self, global_state_dim,local_state_shape ,action_dim, max_size=int(1e5)):
+    def __init__(self, global_state_dim,local_state_shape ,action_dim, max_size=int(1e5),load=True):
         self.max_size = max_size
-        self.ptr = 0
-        self.size = 0
+        
         z=local_state_shape[0]
         x=local_state_shape[1]
         y=local_state_shape[2]
@@ -128,10 +127,18 @@ class IrosReplayBuffer(object):
         self.next_local_state = torch.zeros((max_size, z,x,y)).to(self.device)
         self.reward = torch.zeros((max_size, 1)).to(self.device)
         self.not_done = torch.zeros((max_size, 1)).to(self.device)
-       
-
+        self.load=load
+        self.pretrain_size=int(1e4)
+        if self.load :
+            self.load_buffer()
+            self.ptr = self.pretrain_size
+            self.size = self.pretrain_size
+        else:
+            self.ptr = 0
+            self.size = 0
 
     def add(self, global_state,local_state, action, next_global_state,next_local_state, reward, done):
+        
         self.global_state[self.ptr] = torch.FloatTensor(global_state)
         self.local_state[self.ptr] = torch.FloatTensor(local_state)
         self.action[self.ptr] = torch.FloatTensor(action) 
@@ -139,15 +146,44 @@ class IrosReplayBuffer(object):
         self.next_local_state[self.ptr] = torch.FloatTensor(next_local_state)
         self.reward[self.ptr] = torch.FloatTensor(np.array([reward]))
         self.not_done[self.ptr] = torch.FloatTensor(np.array([1. - done]))
-
-        self.ptr = (self.ptr + 1) % self.max_size
+        if  self.load:
+            self.ptr = (self.ptr + 1) if self.ptr + 1 !=self.max_size else self.pretrain_size
+        else:
+            self.ptr = (self.ptr + 1) % self.max_size
         self.size = min(self.size + 1, self.max_size)
 
 
     def sample(self, batch_size):
         ind = np.random.randint(0, self.size, size=batch_size)
         return (self.global_state[ind],self.local_state[ind],self.action[ind],self.next_global_state[ind],self.next_local_state[ind],self.reward[ind],self.not_done[ind])
-        
+    
+    def write(self):
+        np.save("buffer_npy/global_state.npy",np.array(self.global_state[0:self.pretrain_size].cpu()))
+        np.save("buffer_npy/local_state.npy",np.array(self.local_state[0:self.pretrain_size].cpu()))
+        np.save("buffer_npy/action.npy",np.array(self.action[0:self.pretrain_size].cpu()))
+        np.save("buffer_npy/next_global_state.npy",np.array(self.next_global_state[0:self.pretrain_size].cpu()))
+        np.save("buffer_npy/next_local_state.npy",np.array(self.next_local_state[0:self.pretrain_size].cpu()))
+        np.save("buffer_npy/reward.npy",np.array(self.reward[0:self.pretrain_size].cpu()))
+        np.save("buffer_npy/not_done.npy",np.array(self.not_done[0:self.pretrain_size].cpu()))
+
+    def load_buffer(self):
+        expert_global_state=torch.FloatTensor(np.load("buffer_npy/global_state.npy"))
+        expert_local_state=torch.FloatTensor(np.load("buffer_npy/local_state.npy"))
+        expert_action=torch.FloatTensor(np.load("buffer_npy/action.npy"))
+        expert_next_global_state=torch.FloatTensor(np.load("buffer_npy/next_global_state.npy"))
+        expert_next_local_state=torch.FloatTensor(np.load("buffer_npy/next_local_state.npy"))
+        expert_reward=torch.FloatTensor(np.load("buffer_npy/reward.npy"))
+        expert_not_done=torch.FloatTensor(np.load("buffer_npy/not_done.npy"))
+        self.global_state[0:self.pretrain_size] = expert_global_state
+        self.local_state[0:self.pretrain_size] = expert_local_state
+        self.action[0:self.pretrain_size] = expert_action
+        self.next_global_state[0:self.pretrain_size] = expert_next_global_state
+        self.next_local_state[0:self.pretrain_size] = expert_next_local_state
+        self.reward[0:self.pretrain_size] = expert_reward
+        self.not_done[0:self.pretrain_size] = expert_not_done
+        print("load ok")
+    
+
 class CostReplayBuffer(object):
     def __init__(self, state_dim, action_dim, max_size=int(1e6)):
         self.max_size = max_size

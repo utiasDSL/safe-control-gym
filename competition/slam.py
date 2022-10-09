@@ -181,7 +181,7 @@ class SLAM():
         if z_low<0: # z_low<0 z_top>0
             fill_z_idx=0
             for z_index in range(z_low,0,1):
-                obs_img[fill_z_idx]=np.ones([(2*center+1),(2*center+1)])
+                obs_img[fill_z_idx]=- np.ones([(2*center+1),(2*center+1)])
                 fill_z_idx+=1
             for z_index in range(0,z_top+1,1):
                 if x_idx>=center and x_idx + center  <=len(self.occ_map[1])-1 and y_idx>=center and y_idx+center <=len(self.occ_map[1][1])-1:
@@ -204,7 +204,7 @@ class SLAM():
                         obs_img[fill_z_idx][x]=self.occ_map[z_index][x_idx-center+x][y_idx-center:y_idx+(center+1)]
                     fill_z_idx+=1
             while fill_z_idx <2*z_center+1:
-                obs_img[fill_z_idx]=np.ones([(2*center+1),(2*center+1)])
+                obs_img[fill_z_idx]=- np.ones([(2*center+1),(2*center+1)])
                 fill_z_idx+=1
         
         # fill target_vector way 1
