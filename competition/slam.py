@@ -74,7 +74,7 @@ class SLAM():
         x_idx = round((x-self.X_MIN)/self.gs)
         y_idx = round((y-self.Y_MIN)/self.gs)
         z_idx = round((z-self.Z_MIN)/self.gs)
-        self.occ_map[z_idx][x_idx][y_idx] = 1
+        self.occ_map[z_idx][x_idx][y_idx] = -1
     
     def _set_obstacle_occupied(self,obstacle):
         # 设置(x,y)处的柱子为障碍占据
@@ -232,28 +232,28 @@ class SLAM():
         # fill target_vector way 2
         if target_vector[2]>=0:
             for _ in range(z_center,2*z_center+1):
-                if target_vector[0]>0 :
-                    if  target_vector[1]>0:
-                        obs_img[_][center:center*2+1,center:center*2+1]=np.where(obs_img[_][center:center*2+1,center:center*2+1]==1 , 1 ,0.5)
+                if target_vector[0]>=0 :
+                    if  target_vector[1]>=0:
+                        obs_img[_][center:center*2+1,center:center*2+1]=np.where(obs_img[_][center:center*2+1,center:center*2+1]==-1,-1 ,0.5)
                     else:
-                        obs_img[_][center:center*2+1,0:center+1]=np.where(obs_img[_][center:center*2+1,0:center+1]==1,1,0.5)
+                        obs_img[_][center:center*2+1,0:center+1]=np.where(obs_img[_][center:center*2+1,0:center+1]==-1,-1,0.5)
                 else:
-                    if target_vector[1]>0:
-                        obs_img[_][0:center+1,center:center*2+1]=np.where(obs_img[_][0:center+1,center:center*2+1]==1,1,0.5)
+                    if target_vector[1]>=0:
+                        obs_img[_][0:center+1,center:center*2+1]=np.where(obs_img[_][0:center+1,center:center*2+1]==-1,-1,0.5)
                     else:
-                        obs_img[_][0:center+1,0:center+1]=np.where(obs_img[_][0:center+1,0:center+1]==1,1,0.5)
+                        obs_img[_][0:center+1,0:center+1]=np.where(obs_img[_][0:center+1,0:center+1]==-1,-1,0.5)
         else:
             for _ in range(0,z_center+1):
-                if target_vector[0]>0 :
-                    if  target_vector[1]>0:
-                        obs_img[_][center:center*2+1,center:center*2+1]=np.where(obs_img[_][center:center*2+1,center:center*2+1]==1 , 1 ,0.5)
+                if target_vector[0]>=0 :
+                    if  target_vector[1]>=0:
+                        obs_img[_][center:center*2+1,center:center*2+1]=np.where(obs_img[_][center:center*2+1,center:center*2+1]==-1,-1 ,0.5)
                     else:
-                        obs_img[_][center:center*2+1,0:center+1]=np.where(obs_img[_][center:center*2+1,0:center+1]==1,1,0.5)
+                        obs_img[_][center:center*2+1,0:center+1]=np.where(obs_img[_][center:center*2+1,0:center+1]==-1,-1,0.5)
                 else:
-                    if target_vector[1]>0:
-                        obs_img[_][0:center+1,center:center*2+1]=np.where(obs_img[_][0:center+1,center:center*2+1]==1,1,0.5)
+                    if target_vector[1]>=0:
+                        obs_img[_][0:center+1,center:center*2+1]=np.where(obs_img[_][0:center+1,center:center*2+1]==-1,-1,0.5)
                     else:
-                        obs_img[_][0:center+1,0:center+1]=np.where(obs_img[_][0:center+1,0:center+1]==1,1,0.5)
+                        obs_img[_][0:center+1,0:center+1]=np.where(obs_img[_][0:center+1,0:center+1]==-1,-1,0.5)
         # if save:
         #     i=0
         #     obs_img = obs_img * 255
