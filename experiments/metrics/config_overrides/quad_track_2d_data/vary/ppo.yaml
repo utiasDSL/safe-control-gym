@@ -1,0 +1,11 @@
+algo_config:
+    hidden_dim: 256
+
+task_config:
+    cost: rl_reward
+    normalized_rl_action_space: True
+    obs_goal_horizon: 1
+    rew_state_weight: [1, 0, 1, 0, 0, 0]
+    rew_act_weight: 0.0
+    rew_exponential: True
+    done_on_out_of_bound: False 
