@@ -40,7 +40,7 @@ from slam import SLAM
 
 from safetyplusplus_folder.plus_logger import SafeLogger
 import random
-file_name='1010_10_slamNeg1_offset0.05_Max1step02_train1_long'
+file_name='1010_15_slamNeg1_offset0.05_Max3step05_train1_long'
 sim_only=False
 
 class Controller():
@@ -117,9 +117,10 @@ class Controller():
         import torch
         torch.manual_seed(101)
         np.random.seed(101)
-        self.net_work_freq=0.2     #  time gap  1  1s/次  0.5s/次   0.2m  400episode 
-        max_action=1
+        self.net_work_freq=0.5     #  time gap  1  1s/次  0.5s/次   0.2m  400episode 
+        max_action=2
         self.global_state_dim = 9
+        self.set_offset=False
         
         # state-based 
         self.mass=initial_info['nominal_physical_parameters']['quadrotor_mass']
@@ -155,6 +156,7 @@ class Controller():
         # self.policy.load("pretrain_models/1400")
 
         # env-based variable
+        self.cur2goal_dis=0
         self.episode_reward = 0
         self.episode_cost = 0
         self.collisions_count=self.violations_count=0
@@ -170,7 +172,7 @@ class Controller():
 
         # logger
         self.logger_plus = SafeLogger(exp_name=file_name, env_name="compitition", seed=0,
-                                fieldnames=['Eptime','EpRet', 'EpCost', 'collision_num','vilation_num','target_gate'])   
+                                fieldnames=['Eptime','EpRet', 'EpCost', 'collision_num','vilation_num','target_gate','dis'])   
         #########################
         # REPLACE THIS (END) ####
         #########################
@@ -206,7 +208,8 @@ class Controller():
                     current_target_gate_pos[2]=1 if info['current_target_gate_type'] == 0 else 0.525
                 current_target_gate_pos=np.array(current_target_gate_pos)[[0,1,2,5]]
                 current_goal_pos=current_target_gate_pos[:3]
-            current_goal_pos += self.target_offset
+            if self.set_offset:
+                current_goal_pos += self.target_offset
         else :
             current_target_gate_in_range= 0 
             current_goal_pos=np.zeros(3)
@@ -424,6 +427,7 @@ class Controller():
                     self.last_all_state=self.current_all_state
                     self.last_action=self.current_action
                     self.target_gate_id= info['current_target_gate_id']
+                    self.cur2goal_dis=cur2goal_dis
                 else :
                     pass
                 
@@ -432,7 +436,6 @@ class Controller():
                     self.policy.train(self.replay_buffer,batch_size=256,train_nums=int(1))
         
         else:
-
 
             if self.episode_iteration== 40:
                 self.last_all_state=self.current_all_state
@@ -520,7 +523,7 @@ class Controller():
 
         print(f"Episode Num: {self.interepisode_counter}  Reward: {self.episode_reward:.3f} Cost: {self.episode_cost:.3f} violation: {self.violations_count:.3f}  collision:{self.collisions_count:.3f} ,")
         print(f"gates_passed:{info['current_target_gate_id']},at_goal_position : {info['at_goal_position']}  task_completed: {info['task_completed']}")
-        self.logger_plus.update([self.episode_reward, self.episode_cost,self.collisions_count,self.violations_count,info['current_target_gate_id']], total_steps=self.interepisode_counter)
+        self.logger_plus.update([self.episode_reward, self.episode_cost,self.collisions_count,self.violations_count,info['current_target_gate_id'],self.cur2goal_dis], total_steps=self.interepisode_counter)
 
         #########################
         # REPLACE THIS (END) ####
@@ -551,4 +554,5 @@ class Controller():
         self.current_all_state=[np.zeros(self.global_state_dim),np.zeros(self.local_state_dim)]
         self.last_all_state=[np.zeros(self.global_state_dim),np.zeros(self.local_state_dim)]
         self.target_offset=np.array([0,0,0])
+        self.cur2goal_dis=0
 
