@@ -83,3 +83,6 @@ python test_metric.py --func plot_metric --eval_output_dir temp_data/quad_track_
 
 ## plot correlations as a table
 python test_metric.py --func plot_correlation --eval_output_dir temp_data/quad_track_2d --file_name temp.yaml --csv_file_name temp.csv
+
+
+
