@@ -42,7 +42,7 @@ from safetyplusplus_folder.plus_logger import SafeLogger
 import random
 
 file_name='1013_Version1.0'
-test=False
+test=True
 sim_only=False
 model_name='models/1013_1200'
 #########################
