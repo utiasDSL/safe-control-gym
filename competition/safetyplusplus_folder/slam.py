@@ -143,9 +143,9 @@ class SLAM():
         ax = plt.subplot(111, projection='3d')  # 创建一个三维的绘图工程
         #  将数据点分成三部分画，在颜色上有区分度
         ax.scatter(xs, ys, zs, c='black')  # 绘制数据点
-        plt.xlim((self.X_MIN, self.X_MAX))
-        plt.ylim((self.Y_MIN, self.Y_MAX))
-        plt.savefig(name+'.png')
+        # plt.xlim((self.X_MIN, self.X_MAX))
+        # plt.ylim((self.Y_MIN, self.Y_MAX))
+        # plt.savefig(name+'.png')
 
     # 根据所在高度，生成2d 障碍物图像
     # TODO 出现问题，在刚开始训练的时候会超过约定的边界，

@@ -396,10 +396,10 @@ class Controller():
                     if info['at_goal_position']:
                         reward += 100
                     if info['constraint_violation'] :
-                        print("constraint_violation")
+                        # print("constraint_violation")
                         reward -= 10
                     if info["collision"][1] :
-                        print("collision")
+                        print(info["collision"])
                         reward -= 10
                     if info["collision"][1]:
                         self.collisions_count += 1 
