@@ -17,7 +17,7 @@ class SimpleReplayBufferIros(object):
         self.reward = np.zeros(( self.phrase,self.one_phrase_max_size, 1))
         self.not_done = np.zeros(( self.phrase,self.one_phrase_max_size, 1))
 
-        self.device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
     def add(self,phrase, state, action, next_state, reward, done):
@@ -88,7 +88,7 @@ class SimpleReplayBuffer(object):
         self.reward = np.zeros((max_size, 1))
         self.not_done = np.zeros((max_size, 1))
 
-        self.device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
     def add(self, state, action, next_state, reward, done):
@@ -119,7 +119,7 @@ class IrosReplayBuffer(object):
         z=local_state_shape[0]
         x=local_state_shape[1]
         y=local_state_shape[2]
-        self.device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.global_state = torch.zeros((max_size, global_state_dim)).to(self.device)
         self.local_state = torch.zeros((max_size, z,x,y)).to(self.device)
         self.action = torch.zeros((max_size, action_dim)).to(self.device)
@@ -155,6 +155,8 @@ class IrosReplayBuffer(object):
 
     def sample(self, batch_size):
         ind = np.random.randint(0, self.size, size=batch_size)
+        # import pdb;pdb.set_trace()
+        # print(ind)
         return (self.global_state[ind],self.local_state[ind],self.action[ind],self.next_global_state[ind],self.next_local_state[ind],self.reward[ind],self.not_done[ind])
     
     def write(self):

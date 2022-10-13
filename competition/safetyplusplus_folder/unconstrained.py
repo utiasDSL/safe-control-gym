@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from safetyplusplus_folder.networks import Critic,Actor ,Encoder
 
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 class TD3(object):
@@ -110,7 +110,7 @@ class TD3(object):
 
                 for param, target_param in zip(self.actor.parameters(), self.actor_target.parameters()):
                     target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
-            
+            # import pdb;pdb.set_trace()
             
             
             

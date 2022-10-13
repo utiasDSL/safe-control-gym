@@ -87,8 +87,6 @@ def run(test=False):
         # Reset the environment, obtain the initial observations and info dictionary.
         obs, info = env.reset()
     
-    
-
     # Create controller.
     vicon_obs = [obs[0], 0, obs[2], 0, obs[4], 0, obs[6], obs[7], obs[8], 0, 0, 0]
         # obs = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
@@ -138,13 +136,10 @@ def run(test=False):
         print('\tSymbolic constraints: ')
         for fun in info['symbolic_constraints']:
             print('\t' + str(inspect.getsource(fun)).strip('\n'))
-    
-    
 
     # Run an experiment.
     ep_start = time.time()
     first_ep_iteration = True
-    episode_cost=0
     for i in range(config.num_episodes*CTRL_FREQ*env.EPISODE_LEN_SEC):
 
         # Step by keyboard input.
@@ -175,9 +170,9 @@ def run(test=False):
                 done = False
                 info = {}
                 first_ep_iteration = False
-            command_type, args = ctrl.cmdFirmware(curr_time, vicon_obs, reward, done, info,True)
+            command_type, args = ctrl.cmdFirmware(curr_time, vicon_obs, reward, done, info)
 
-            # Select interface. 
+            # Select interface.
             if command_type == Command.FULLSTATE:
                 firmware_wrapper.sendFullStateCmd(*args, curr_time)
             elif command_type == Command.TAKEOFF:
@@ -196,10 +191,7 @@ def run(test=False):
                 raise ValueError("[ERROR] Invalid command_type.")
 
             # Step the environment.
-            # TODO reward is exactly?
-
-            obs, reward, done, info, action = firmware_wrapper.step(curr_time, action) # 30Hz
-            #
+            obs, reward, done, info, action = firmware_wrapper.step(curr_time, action)
         else:
             if first_ep_iteration:
                 reward = 0
@@ -218,10 +210,8 @@ def run(test=False):
         if info["collision"][1]:
             collisions_count += 1
             collided_objects.add(info["collision"][0])
-            episode_cost+=1
         if 'constraint_values' in info and info['constraint_violation'] == True:
             violations_count += 1
-            episode_cost+=1
 
         # Printouts.
         if config.verbose and i%int(CTRL_FREQ/2) == 0:
@@ -268,7 +258,7 @@ def run(test=False):
             # logger.save_as_csv(comment="get_start-episode-"+str(episodes_count))
 
             # Update the controller internal state and models.
-            ctrl.interEpisodeLearn(info)
+            ctrl.interEpisodeLearn()
 
             # Append episode stats.
             # if info['current_target_gate_id'] == -1:
@@ -307,7 +297,6 @@ def run(test=False):
             episodes_count += 1
             if episodes_count > config.num_episodes:
                 break
-            episode_cost = 0
             cumulative_reward = 0
             collisions_count = 0
             collided_objects = set()
