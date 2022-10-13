@@ -5,7 +5,7 @@
 # | `level3.yaml`       | **Yes**      | **Yes**                   | **Yes**                     | **Yes**                | Robustness        |
 
 # Configuration
-num_episodes: 5 # Customizable number of episodes (NOTE: solutions that require fewer episode will receive higher scores)
+num_episodes: 10 # Customizable number of episodes (NOTE: solutions that require fewer episode will receive higher scores)
 use_firmware: True # Whether to use pycffirmware or not (NOTE: only set to False for debugging purposes)
 verbose: True # Boolean passed to the Controller class, can be used to turn on and off additional printouts
 

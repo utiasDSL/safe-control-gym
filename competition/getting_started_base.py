@@ -15,7 +15,8 @@ import pybullet as p
 from functools import partial
 from rich.tree import Tree
 from rich import print
-
+import sys
+sys.path.append("..")
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.utils import sync

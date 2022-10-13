@@ -40,13 +40,14 @@ from gym.spaces import Box
 from safetyplusplus_folder.slam import SLAM
 from safetyplusplus_folder.plus_logger import SafeLogger
 import random
-file_name='1013_B128_R-15_Step0.3Max1.5R30'
+file_name='1013_Final_test_2'
 sim_only=False
 
 class Controller():
     """Template controller class.
 
     """
+
 
     def __init__(self,
                  initial_obs,
@@ -103,8 +104,10 @@ class Controller():
         torch.cuda.manual_seed_all(101)
         np.random.seed(101)
         random.seed(101)
-        self.net_work_freq=0.3     #  time gap  1  1s/次  0.5s/次   0.2m  400episode 
-        max_action=1.5
+        self.begin_train_time=3
+        self.begin_train_epo=50
+        self.net_work_freq=0.5     #  time gap  1  1s/次  0.5s/次   0.2m  400episode 
+        max_action=2
         self.global_state_dim = 9
         self.set_offset=False
         
@@ -139,7 +142,7 @@ class Controller():
         # td3 policy
         self.policy = unconstrained.TD3(**kwargs)
         self.replay_buffer = replay_buffer.IrosReplayBuffer(self.global_state_dim,self.local_state_dim,action_dim,load=False)
-        # self.policy.load("pretrain_models/1400")
+        # self.policy.load("pretrain_models/1013_1200")
 
         # env-based variable
         self.info=None
@@ -151,6 +154,7 @@ class Controller():
         self.target_gate_id=0
         self.goal_pos=[initial_info['x_reference'][0],initial_info['x_reference'][2],initial_info['x_reference'][4]]
         self.target_offset=np.array([0,0,0])
+        self.trigger=False
         self.get_offset(info=None)
         
         # Reset counters and buffers.
@@ -239,18 +243,26 @@ class Controller():
         #########################
         self.m_slam.update_occ_map(info)
         
-        if info['current_target_gate_id'] == -1 :
+        if info!={} and info['current_target_gate_id'] == -1 and self.trigger:
+            print("step all the gate , trigger begin")
+            command_type =  Command(1) 
             # navigate to the goal_pos.and stop
-            pass
+            target_pos = np.array(self.goal_pos)
+            target_vel = np.zeros(3)
+            target_acc = np.zeros(3)
+            target_yaw = 0.
+            target_rpy_rates = np.zeros(3)
+            args=[target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
+            self.trigger=False
         # begin with take off 
-        if self.episode_iteration == 0:
+        elif self.episode_iteration == 0:
             height = 1
             duration = 1.5
             command_type = Command(2)  # Take-off.
             args = [height, duration]
 
         # using network to choose action
-        elif self.episode_iteration >= 3 * self.CTRL_FREQ :
+        elif self.episode_iteration >= self.begin_train_time * self.CTRL_FREQ :
             
             if self.episode_iteration % (30*self.net_work_freq) ==0:
                 # cmdFullState
@@ -357,11 +369,11 @@ class Controller():
         #########################
         if not sim_only:
             # add experience when use network to decide
-            if  self.episode_iteration == 3 * self.CTRL_FREQ:
+            if  self.episode_iteration == self.begin_train_time * self.CTRL_FREQ:
                 self.last_all_state=self.current_all_state
                 self.last_action = self.current_action
 
-            if  self.episode_iteration> 3 * self.CTRL_FREQ   :
+            if  self.episode_iteration> self.begin_train_time * self.CTRL_FREQ   :
                 if self.episode_iteration % (30*self.net_work_freq) ==0:
                     last_pos= self.last_all_state[0][[0,1,2]]
                     current_pos=self.current_all_state[0][[0,1,2]]
@@ -373,17 +385,21 @@ class Controller():
                     last2goal_dis=sum(last2goal_vector * last2goal_vector)
 
                     if self.target_gate_id == info['current_target_gate_id']:
-                        reward +=( last2goal_dis - cur2goal_dis ) * 30
+                        reward +=( last2goal_dis - cur2goal_dis ) * 20
                     # cross the gate ,get the big reward
                     else:
                         reward += 100
                         print(f"STEP{self.episode_iteration} , step gate{self.target_gate_id}")
+                        if info['current_target_gate_id']==-1:
+                            self.trigger=True
                         self.get_offset(info)
                     if info['at_goal_position']:
                         reward += 100
                     if info['constraint_violation'] :
+                        print("constraint_violation")
                         reward -= 10
                     if info["collision"][1] :
+                        print("collision")
                         reward -= 10
                     if info["collision"][1]:
                         self.collisions_count += 1 
@@ -411,7 +427,7 @@ class Controller():
                     pass
 
                 # change_Train_Num Better
-                if self.interepisode_counter > 50  :
+                if self.interepisode_counter > self.begin_train_epo  :
                     self.policy.train(self.replay_buffer,batch_size=128,train_nums=int(1))   
         #########################
         # REPLACE THIS (END) ####
@@ -470,5 +486,5 @@ class Controller():
         self.target_offset=np.array([0,0,0])
         self.cur2goal_dis=0
         self.info=None
-
+        self.trigger=False
 
