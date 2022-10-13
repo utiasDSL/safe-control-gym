@@ -132,7 +132,7 @@ class SLAM():
         for z in range(C):
             for x in range(W):
                 for y in range(H):
-                    if self.occ_map[z][x][y] == 1:
+                    if self.occ_map[z][x][y] == -1:
                         xs.append(x*self.gs+self.X_MIN)
                         ys.append(y*self.gs+self.Y_MIN)
                         zs.append(z*self.gs+self.Z_MIN)

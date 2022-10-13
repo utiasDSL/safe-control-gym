@@ -40,7 +40,7 @@ from gym.spaces import Box
 from safetyplusplus_folder.slam import SLAM
 from safetyplusplus_folder.plus_logger import SafeLogger
 import random
-file_name='1013_B128_R-50'
+file_name='1013_B128_R-15_Step0.3Max1.5R30'
 sim_only=False
 
 class Controller():
@@ -103,9 +103,8 @@ class Controller():
         torch.cuda.manual_seed_all(101)
         np.random.seed(101)
         random.seed(101)
-        
-        self.net_work_freq=0.5     #  time gap  1  1s/次  0.5s/次   0.2m  400episode 
-        max_action=2
+        self.net_work_freq=0.3     #  time gap  1  1s/次  0.5s/次   0.2m  400episode 
+        max_action=1.5
         self.global_state_dim = 9
         self.set_offset=False
         
@@ -240,6 +239,9 @@ class Controller():
         #########################
         self.m_slam.update_occ_map(info)
         
+        if info['current_target_gate_id'] == -1 :
+            # navigate to the goal_pos.and stop
+            pass
         # begin with take off 
         if self.episode_iteration == 0:
             height = 1
@@ -371,7 +373,7 @@ class Controller():
                     last2goal_dis=sum(last2goal_vector * last2goal_vector)
 
                     if self.target_gate_id == info['current_target_gate_id']:
-                        reward +=( last2goal_dis - cur2goal_dis ) * 20
+                        reward +=( last2goal_dis - cur2goal_dis ) * 30
                     # cross the gate ,get the big reward
                     else:
                         reward += 100
@@ -380,9 +382,9 @@ class Controller():
                     if info['at_goal_position']:
                         reward += 100
                     if info['constraint_violation'] :
-                        reward -= 50
+                        reward -= 10
                     if info["collision"][1] :
-                        reward -= 50
+                        reward -= 10
                     if info["collision"][1]:
                         self.collisions_count += 1 
                         self.episode_cost+=1
@@ -391,7 +393,7 @@ class Controller():
                         self.episode_cost+=1
                     # cmdFullState
                     self.replay_buffer.add(self.last_all_state[0],self.last_all_state[1],self.last_action * 10 ,self.current_all_state[0],self.current_all_state[1],reward,done)
-                    if self.episode_iteration % 960 ==0  :
+                    if self.episode_iteration % 900 ==0  :
                         print(f"Step{self.episode_iteration} add buffer:\nlast_pos:{last_pos} aim vector: {last2goal_vector} ")
                         print(f"action_infer: {self.last_action * 10}\t lastDis-CurDis:{( last2goal_dis - cur2goal_dis )}")
                         print(f"last2cur_pos_vector: {last2cur_vector } \t reward: {reward}")
