@@ -244,7 +244,7 @@ class SLAM():
                     if target_vector[1]>=0:
                         obs_img[_][0:center+1,center:center*2+1]=np.where(obs_img[_][0:center+1,center:center*2+1]<0,obs_img[_][0:center+1,center:center*2+1],1)
                     else:
-                        obs_img[_][0:center+1,0:center+1]=np.where(obs_img[_][0:center+1,0:center+1]<0,obs_img[_][0:center+1,0:center+1]<0,1)
+                        obs_img[_][0:center+1,0:center+1]=np.where(obs_img[_][0:center+1,0:center+1]<0,obs_img[_][0:center+1,0:center+1],1)
         else:
             for _ in range(0,z_center+1):
                 if target_vector[0]>=0 :
@@ -256,7 +256,7 @@ class SLAM():
                     if target_vector[1]>=0:
                         obs_img[_][0:center+1,center:center*2+1]=np.where(obs_img[_][0:center+1,center:center*2+1]<0,obs_img[_][0:center+1,center:center*2+1],1)
                     else:
-                        obs_img[_][0:center+1,0:center+1]=np.where(obs_img[_][0:center+1,0:center+1]<0,obs_img[_][0:center+1,0:center+1]<0,1)
+                        obs_img[_][0:center+1,0:center+1]=np.where(obs_img[_][0:center+1,0:center+1]<0,obs_img[_][0:center+1,0:center+1],1)
         # if save:
         #     i=0
         #     obs_img = obs_img * 255
