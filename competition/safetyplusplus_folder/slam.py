@@ -76,8 +76,8 @@ class SLAM():
         z_idx = round((z-self.Z_MIN)/self.gs)
         x_len=len(self.occ_map[0])
         y_len=len(self.occ_map[0][0])
-        self.occ_map[z_idx][max(0,x_idx-1):min(x_idx+2,x_len)][max(0,y_idx-1):min(y_idx+2,y_len)] = -1
-        self.occ_map[z_idx][x_idx][y_idx] = -2
+        # self.occ_map[z_idx][max(0,x_idx-1):min(x_idx+2,x_len)][max(0,y_idx-1):min(y_idx+2,y_len)] = -1
+        self.occ_map[z_idx][x_idx][y_idx] = -1
     
     def _set_obstacle_occupied(self,obstacle):
         # 设置(x,y)处的柱子为障碍占据

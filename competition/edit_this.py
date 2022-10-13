@@ -40,8 +40,11 @@ from gym.spaces import Box
 from safetyplusplus_folder.slam import SLAM
 from safetyplusplus_folder.plus_logger import SafeLogger
 import random
-file_name='1013_Final_test_2'
+
+file_name='1013_Version1.0'
+test=False
 sim_only=False
+model_name='models/1013_1200'
 #########################
 # REPLACE THIS (START) ##
 #########################
@@ -157,7 +160,9 @@ class Controller():
         # td3 policy
         self.policy = unconstrained.TD3(**kwargs)
         self.replay_buffer = replay_buffer.IrosReplayBuffer(self.global_state_dim,self.local_state_dim,action_dim,load=False)
-        # self.policy.load("pretrain_models/1013_1200")
+        if test:
+            self.policy.load(model_name)
+            print("load ok ")
 
         # env-based variable
         self.info=None
@@ -284,10 +289,10 @@ class Controller():
                 command_type =  Command(1)  
                 all_state=self.get_state(obs,info)
                 global_state=all_state[0]
-                if self.interepisode_counter < 10:
+                if not test and self.interepisode_counter < 10:
                     action= self.action_space.sample() 
                 else:
-                    action = self.policy.select_action(all_state, exploration=exploration)  # array  delta_x , delta_y, delta_z
+                    action = self.policy.select_action(all_state, exploration=False if not test else True)  # array  delta_x , delta_y, delta_z
                 action /= 10
                 self.current_all_state=all_state
                 self.current_action=action
@@ -411,12 +416,12 @@ class Controller():
                     if info['at_goal_position']:
                         reward += 100
                     if info['constraint_violation'] :
-                        # print("constraint_violation")
-                        reward -= 10
-                    if info["collision"][1] :
+                        reward -= 20
+                    if info["collision"][1] and not test and self.interepisode_counter > 100:
                         print(info["collision"])
-                        reward -= 10
+                        
                     if info["collision"][1]:
+                        reward -= 20
                         self.collisions_count += 1 
                         self.episode_cost+=1
                     if 'constraint_values' in info and info['constraint_violation'] == True:
@@ -424,7 +429,7 @@ class Controller():
                         self.episode_cost+=1
                     # cmdFullState
                     self.replay_buffer.add(self.last_all_state[0],self.last_all_state[1],self.last_action * 10 ,self.current_all_state[0],self.current_all_state[1],reward,done)
-                    if self.episode_iteration % 900 ==0  :
+                    if self.episode_iteration % 900 ==0  and not test:
                         print(f"Step{self.episode_iteration} add buffer:\nlast_pos:{last_pos} aim vector: {last2goal_vector} ")
                         print(f"action_infer: {self.last_action * 10}\t lastDis-CurDis:{( last2goal_dis - cur2goal_dis )}")
                         print(f"last2cur_pos_vector: {last2cur_vector } \t reward: {reward}")
@@ -442,7 +447,7 @@ class Controller():
                     pass
 
                 # change_Train_Num Better
-                if self.interepisode_counter > self.begin_train_epo  :
+                if self.interepisode_counter > self.begin_train_epo  and not test :
                     self.policy.train(self.replay_buffer,batch_size=128,train_nums=int(1))   
         #########################
         # REPLACE THIS (END) ####
@@ -465,10 +470,10 @@ class Controller():
 
         if self.interepisode_counter % 200 == 0 :
             self.policy.save(filename=f"{self.logger_plus.log_dir}/{self.interepisode_counter}")
-
-        print(f"Episode Num: {self.interepisode_counter}  Reward: {self.episode_reward:.3f} Cost: {self.episode_cost:.3f} violation: {self.violations_count:.3f}  collision:{self.collisions_count:.3f} ,")
-        print(f"gates_passed:{self.info['current_target_gate_id']},at_goal_position : {self.info['at_goal_position']}  task_completed: {self.info['task_completed']}")
-        self.logger_plus.update([self.episode_reward, self.episode_cost,self.collisions_count,self.violations_count,self.info['current_target_gate_id'],self.cur2goal_dis], total_steps=self.interepisode_counter)
+        if not test:
+            print(f"Episode Num: {self.interepisode_counter}  Reward: {self.episode_reward:.3f} Cost: {self.episode_cost:.3f} violation: {self.violations_count:.3f}  collision:{self.collisions_count:.3f} ,")
+            print(f"gates_passed:{self.info['current_target_gate_id']},at_goal_position : {self.info['at_goal_position']}  task_completed: {self.info['task_completed']}")
+            self.logger_plus.update([self.episode_reward, self.episode_cost,self.collisions_count,self.violations_count,self.info['current_target_gate_id'],self.cur2goal_dis], total_steps=self.interepisode_counter)
 
         #########################
         # REPLACE THIS (END) ####
