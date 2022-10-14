@@ -41,8 +41,8 @@ from safetyplusplus_folder.slam import SLAM
 from safetyplusplus_folder.plus_logger import SafeLogger
 import random
 
-file_name='1013_Version1.0'
-test=True
+file_name='1014_Version2.0'
+test=False
 sim_only=False
 model_name='models/1013_1200'
 #########################
@@ -122,8 +122,8 @@ class Controller():
         torch.cuda.manual_seed_all(101)
         np.random.seed(101)
         random.seed(101)
-        self.begin_train_time=3
-        self.begin_train_epo=50
+        self.begin_train_seconds=3
+        self.begin_train_epo=30
         self.net_work_freq=0.5     #  time gap  1  1s/次  0.5s/次   0.2m  400episode 
         max_action=2
         self.global_state_dim = 9
@@ -152,7 +152,7 @@ class Controller():
             "max_action": max_action,
             "rew_discount": 0.99,
             "tau":0.005,
-            "policy_noise": 0.2 * max_action,
+            "policy_noise": 0.25 * max_action,
             "noise_clip": 0.5 * max_action,
             "policy_freq": 2,
         }
@@ -282,7 +282,7 @@ class Controller():
             args = [height, duration]
 
         # using network to choose action
-        elif self.episode_iteration >= self.begin_train_time * self.CTRL_FREQ :
+        elif self.episode_iteration >= self.begin_train_seconds * self.CTRL_FREQ :
             
             if self.episode_iteration % (30*self.net_work_freq) ==0:
                 # cmdFullState
@@ -292,7 +292,7 @@ class Controller():
                 if not test and self.interepisode_counter < 10:
                     action= self.action_space.sample() 
                 else:
-                    action = self.policy.select_action(all_state, exploration=False if not test else True)  # array  delta_x , delta_y, delta_z
+                    action = self.policy.select_action(all_state, exploration=False if test else True)  # array  delta_x , delta_y, delta_z
                 action /= 10
                 self.current_all_state=all_state
                 self.current_action=action
@@ -389,11 +389,11 @@ class Controller():
         #########################
         if not sim_only:
             # add experience when use network to decide
-            if  self.episode_iteration == self.begin_train_time * self.CTRL_FREQ:
+            if  self.episode_iteration == self.begin_train_seconds * self.CTRL_FREQ:
                 self.last_all_state=self.current_all_state
                 self.last_action = self.current_action
 
-            if  self.episode_iteration> self.begin_train_time * self.CTRL_FREQ   :
+            if  self.episode_iteration> self.begin_train_seconds * self.CTRL_FREQ   :
                 if self.episode_iteration % (30*self.net_work_freq) ==0:
                     last_pos= self.last_all_state[0][[0,1,2]]
                     current_pos=self.current_all_state[0][[0,1,2]]
@@ -416,12 +416,12 @@ class Controller():
                     if info['at_goal_position']:
                         reward += 100
                     if info['constraint_violation'] :
-                        reward -= 20
+                        reward -= 10
                     if info["collision"][1] and not test and self.interepisode_counter > 100:
                         print(info["collision"])
                         
                     if info["collision"][1]:
-                        reward -= 20
+                        reward -= 10
                         self.collisions_count += 1 
                         self.episode_cost+=1
                     if 'constraint_values' in info and info['constraint_violation'] == True:

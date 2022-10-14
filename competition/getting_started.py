@@ -330,14 +330,14 @@ def run(test=False):
           ))
 
     # Print episodes summary.
-    tree = Tree("Summary")
-    for idx, ep in enumerate(stats):
-        ep_tree = tree.add('Episode ' + str(idx+1))
-        for val in ep:
-            ep_tree.add(val)
-    print('\n\n')
-    print(tree)
-    print('\n\n')
+    # tree = Tree("Summary")
+    # for idx, ep in enumerate(stats):
+    #     ep_tree = tree.add('Episode ' + str(idx+1))
+    #     for val in ep:
+    #         ep_tree.add(val)
+    # print('\n\n')
+    # print(tree)
+    # print('\n\n')
 
 if __name__ == "__main__":
     run()
