@@ -41,7 +41,7 @@ from safetyplusplus_folder.slam import SLAM
 from safetyplusplus_folder.plus_logger import SafeLogger
 import random
 
-file_name='1015_04_State7_PassRGrowColi5Neg-50_Random80_B256'
+file_name='1015_02_3_State7_PassRGrowColi5Neg_20_Random80'
 test=False
 sim_only=False
 model_name='models/1013_1200'
@@ -265,19 +265,9 @@ class Controller():
         #########################
         self.m_slam.update_occ_map(info)
         
-        if info!={} and info['current_target_gate_id'] == -1 and self.trigger:
-            print("step all the gate , trigger begin")
-            command_type =  Command(1) 
-            # navigate to the goal_pos.and stop
-            target_pos = np.array(self.goal_pos)
-            target_vel = np.zeros(3)
-            target_acc = np.zeros(3)
-            target_yaw = 0.
-            target_rpy_rates = np.zeros(3)
-            args=[target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
-            self.trigger=False
+        
         # begin with take off 
-        elif self.episode_iteration == 0:
+        if self.episode_iteration == 0:
             height = 1
             duration = 1.5
             command_type = Command(2)  # Take-off.
@@ -289,14 +279,22 @@ class Controller():
             command_type =  Command(1)  
             all_state=self.get_state(obs,info)
             global_state=all_state[0]
-            if not test and self.interepisode_counter < self.begin_net_infer_epo:
-                action= self.action_space.sample() 
+
+            if info!={} and info['current_target_gate_id'] == -1 :
+                # print("step all the gate , rule control")
+                # navigate to the goal_pos.and stop
+                target_pos = np.array(self.goal_pos)
+                action=target_pos-global_state[[0,1,2]]
+                action /= 10
             else:
-                action = self.policy.select_action(all_state, exploration=False if test else True)  # array  delta_x , delta_y, delta_z
-            action /= 10
+                if not test and self.interepisode_counter < self.begin_net_infer_epo:
+                    action= self.action_space.sample() 
+                else:
+                    action = self.policy.select_action(all_state, exploration=False if test else True)  # array  delta_x , delta_y, delta_z
+                action /= 10
+                target_pos = global_state[[0,1,2]] + action
             self.current_all_state=all_state
             self.current_action=action
-            target_pos = global_state[[0,1,2]] + action
             target_vel = np.zeros(3)
             target_acc = np.zeros(3)
             target_yaw = 0.
@@ -405,19 +403,18 @@ class Controller():
                         reward +=( last2goal_dis - cur2goal_dis ) * 20
                     # cross the gate ,get the big reward
                     else:
-                        reward += 100 * (info['current_target_gate_id'] + 1)
+                        reward = reward + 100 * ( (info['current_target_gate_id'] if info['current_target_gate_id']!=-1 else 4) +1)
                         print(f"STEP{self.episode_iteration} , step gate{self.target_gate_id}")
                         if info['current_target_gate_id']==-1:
+                            print("step all gates")
                             self.trigger=True
                         self.get_offset(info)
                     if info['at_goal_position']:
                         reward += 100
                     if (current_local_space==-1).any():
-                        reward -= 50
-                    if info['constraint_violation'] :
+                        reward -= 20    
+                    if info['constraint_violation']:
                         reward -= 15
-                    if info["collision"][1] and (  test or self.interepisode_counter> 100 ):
-                        print(info["collision"])                    
                     if info["collision"][1]:
                         reward -= 5
                         self.collisions_count += 1 
@@ -425,6 +422,10 @@ class Controller():
                     if 'constraint_values' in info and info['constraint_violation'] == True:
                         self.violations_count += 1
                         self.episode_cost+=1
+                    if info['constraint_violation'] and (  test or self.interepisode_counter> 100 ) :
+                        print(f"step{self.interstep_counter} , constraint_violation ")
+                    if info["collision"][1] and (  test or self.interepisode_counter> 100 ):
+                        print(info["collision"])   
                     # cmdFullState
                     self.replay_buffer.add(self.last_all_state[0],self.last_all_state[1],self.last_action * 10 ,self.current_all_state[0],self.current_all_state[1],reward,done)
                     if self.episode_iteration % 900 ==0  and not test:
@@ -441,13 +442,14 @@ class Controller():
                     self.target_gate_id= info['current_target_gate_id']
                     self.cur2goal_dis=cur2goal_dis
                     self.info=info
+                    
+                    
                 else :
                     pass
-
-                # change_Train_Num Better
-                if self.interepisode_counter > self.begin_train_epo  and not test :
-                    # self.policy.train(self.replay_buffer,batch_size=min(128,64*int(self.interepisode_counter/100+1)),train_nums=int(1))   
-                    self.policy.train(self.replay_buffer,batch_size=self.batch_size,train_nums=int(1)) 
+            # change_Train_Num Better
+            if self.interepisode_counter > self.begin_train_epo  and not test :
+                # self.policy.train(self.replay_buffer,batch_size=min(128,64*int(self.interepisode_counter/100+1)),train_nums=int(1))   
+                self.policy.train(self.replay_buffer,batch_size=self.batch_size,train_nums=int(1)) 
         #########################
         # REPLACE THIS (END) ####
         #########################
