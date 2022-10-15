@@ -41,7 +41,7 @@ from safetyplusplus_folder.slam import SLAM
 from safetyplusplus_folder.plus_logger import SafeLogger
 import random
 
-file_name='1014_Version2.0'
+file_name='1015_04_State7_PassRGrowColi5Neg-50_Random80_B256'
 test=False
 sim_only=False
 model_name='models/1013_1200'
@@ -122,12 +122,14 @@ class Controller():
         torch.cuda.manual_seed_all(101)
         np.random.seed(101)
         random.seed(101)
-        self.begin_train_seconds=3
-        self.begin_train_epo=30
+        self.begin_train_seconds=1.5
+        self.begin_net_infer_epo=80
+        self.begin_train_epo=100
         self.net_work_freq=0.5     #  time gap  1  1s/次  0.5s/次   0.2m  400episode 
         max_action=2
-        self.global_state_dim = 9
+        self.global_state_dim = 7
         self.set_offset=False
+        self.batch_size=128
         
         # state-based 
         self.mass=initial_info['nominal_physical_parameters']['quadrotor_mass']
@@ -152,7 +154,7 @@ class Controller():
             "max_action": max_action,
             "rew_discount": 0.99,
             "tau":0.005,
-            "policy_noise": 0.25 * max_action,
+            "policy_noise": 0.2 * max_action,
             "noise_clip": 0.5 * max_action,
             "policy_freq": 2,
         }
@@ -227,10 +229,10 @@ class Controller():
             current_goal_pos=np.zeros(3)
         target_vector=[current_goal_pos[0]- current_pos[0],current_goal_pos[1]- current_pos[1],current_goal_pos[2]- current_pos[2]]
         # 10.09 V0.1
-        global_state=np.array([current_pos[0], current_pos[1], current_pos[2],target_vector[0],target_vector[1],target_vector[2],
-                               current_target_gate_in_range,info['current_target_gate_id'],self.mass])
-        # global_state=np.array([current_pos[0], current_pos[1], current_pos[2],target_vector[0],target_vector[1],target_vector[2]])    
-        local_state = self.m_slam.generate_3obs_img(obs,target_vector,name=self.episode_iteration,save=False)   
+        # global_state=np.array([current_pos[0], current_pos[1], current_pos[2],target_vector[0],target_vector[1],target_vector[2],
+                            #    current_target_gate_in_range,info['current_target_gate_id'],self.mass])
+        global_state=np.array([current_pos[0], current_pos[1], current_pos[2],target_vector[0],target_vector[1],target_vector[2],self.mass])    
+        local_state = self.m_slam.generate_3obs_img(obs,target_vector,name=self.episode_iteration,save=False if self.episode_iteration % 20!=0 else True)   
         return [global_state,local_state]
            
     def cmdFirmware(self,ctime,obs,reward=None,done=None,info=None,exploration=True):
@@ -282,31 +284,25 @@ class Controller():
             args = [height, duration]
 
         # using network to choose action
-        elif self.episode_iteration >= self.begin_train_seconds * self.CTRL_FREQ :
-            
-            if self.episode_iteration % (30*self.net_work_freq) ==0:
-                # cmdFullState
-                command_type =  Command(1)  
-                all_state=self.get_state(obs,info)
-                global_state=all_state[0]
-                if not test and self.interepisode_counter < 10:
-                    action= self.action_space.sample() 
-                else:
-                    action = self.policy.select_action(all_state, exploration=False if test else True)  # array  delta_x , delta_y, delta_z
-                action /= 10
-                self.current_all_state=all_state
-                self.current_action=action
-                target_pos = global_state[[0,1,2]] + action
-                target_vel = np.zeros(3)
-                target_acc = np.zeros(3)
-                target_yaw = 0.
-                target_rpy_rates = np.zeros(3)
-                args=[target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
-                # other time do nothing
-            else :
-                command_type = Command(0)  # None.
-                args = []
-       
+        elif self.episode_iteration >= self.begin_train_seconds * self.CTRL_FREQ and self.episode_iteration % (30*self.net_work_freq) ==0 :
+            # cmdFullState
+            command_type =  Command(1)  
+            all_state=self.get_state(obs,info)
+            global_state=all_state[0]
+            if not test and self.interepisode_counter < self.begin_net_infer_epo:
+                action= self.action_space.sample() 
+            else:
+                action = self.policy.select_action(all_state, exploration=False if test else True)  # array  delta_x , delta_y, delta_z
+            action /= 10
+            self.current_all_state=all_state
+            self.current_action=action
+            target_pos = global_state[[0,1,2]] + action
+            target_vel = np.zeros(3)
+            target_acc = np.zeros(3)
+            target_yaw = 0.
+            target_rpy_rates = np.zeros(3)
+            args=[target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
+            # other time do nothing
         else :
             command_type = Command(0)  # None.
             args = []
@@ -397,6 +393,7 @@ class Controller():
                 if self.episode_iteration % (30*self.net_work_freq) ==0:
                     last_pos= self.last_all_state[0][[0,1,2]]
                     current_pos=self.current_all_state[0][[0,1,2]]
+                    current_local_space=self.current_all_state[1][2-1:2+2,11-1:11+2,11-1:11+2]
 
                     last2goal_vector= self.last_all_state[0][[3,4,5]]
                     last2cur_vector=current_pos-last_pos
@@ -408,20 +405,21 @@ class Controller():
                         reward +=( last2goal_dis - cur2goal_dis ) * 20
                     # cross the gate ,get the big reward
                     else:
-                        reward += 100
+                        reward += 100 * (info['current_target_gate_id'] + 1)
                         print(f"STEP{self.episode_iteration} , step gate{self.target_gate_id}")
                         if info['current_target_gate_id']==-1:
                             self.trigger=True
                         self.get_offset(info)
                     if info['at_goal_position']:
                         reward += 100
+                    if (current_local_space==-1).any():
+                        reward -= 50
                     if info['constraint_violation'] :
-                        reward -= 10
-                    if info["collision"][1] and not test and self.interepisode_counter > 100:
-                        print(info["collision"])
-                        
+                        reward -= 15
+                    if info["collision"][1] and (  test or self.interepisode_counter> 100 ):
+                        print(info["collision"])                    
                     if info["collision"][1]:
-                        reward -= 10
+                        reward -= 5
                         self.collisions_count += 1 
                         self.episode_cost+=1
                     if 'constraint_values' in info and info['constraint_violation'] == True:
@@ -448,7 +446,8 @@ class Controller():
 
                 # change_Train_Num Better
                 if self.interepisode_counter > self.begin_train_epo  and not test :
-                    self.policy.train(self.replay_buffer,batch_size=128,train_nums=int(1))   
+                    # self.policy.train(self.replay_buffer,batch_size=min(128,64*int(self.interepisode_counter/100+1)),train_nums=int(1))   
+                    self.policy.train(self.replay_buffer,batch_size=self.batch_size,train_nums=int(1)) 
         #########################
         # REPLACE THIS (END) ####
         #########################
@@ -470,10 +469,10 @@ class Controller():
 
         if self.interepisode_counter % 200 == 0 :
             self.policy.save(filename=f"{self.logger_plus.log_dir}/{self.interepisode_counter}")
-        if not test:
-            print(f"Episode Num: {self.interepisode_counter}  Reward: {self.episode_reward:.3f} Cost: {self.episode_cost:.3f} violation: {self.violations_count:.3f}  collision:{self.collisions_count:.3f} ,")
-            print(f"gates_passed:{self.info['current_target_gate_id']},at_goal_position : {self.info['at_goal_position']}  task_completed: {self.info['task_completed']}")
-            self.logger_plus.update([self.episode_reward, self.episode_cost,self.collisions_count,self.violations_count,self.info['current_target_gate_id'],self.cur2goal_dis], total_steps=self.interepisode_counter)
+
+        print(f"Episode Num: {self.interepisode_counter}  Reward: {self.episode_reward:.3f} Cost: {self.episode_cost:.3f} violation: {self.violations_count:.3f}  collision:{self.collisions_count:.3f} ,")
+        print(f"gates_passed:{self.info['current_target_gate_id']},at_goal_position : {self.info['at_goal_position']}  task_completed: {self.info['task_completed']}")
+        self.logger_plus.update([self.episode_reward, self.episode_cost,self.collisions_count,self.violations_count,self.info['current_target_gate_id'],self.cur2goal_dis], total_steps=self.interepisode_counter)
 
         #########################
         # REPLACE THIS (END) ####

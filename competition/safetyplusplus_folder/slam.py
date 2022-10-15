@@ -74,18 +74,17 @@ class SLAM():
         x_idx = round((x-self.X_MIN)/self.gs)
         y_idx = round((y-self.Y_MIN)/self.gs)
         z_idx = round((z-self.Z_MIN)/self.gs)
-        x_len=len(self.occ_map[0])
-        y_len=len(self.occ_map[0][0])
-        # self.occ_map[z_idx][max(0,x_idx-1):min(x_idx+2,x_len)][max(0,y_idx-1):min(y_idx+2,y_len)] = -0.5
         self.occ_map[z_idx][x_idx][y_idx] = -1
     
     def _set_obstacle_occupied(self,obstacle):
         # 设置(x,y)处的柱子为障碍占据
         x,y,_,_,_,_, = obstacle
-        z = 0
-        while z <= self.obstacle_height:
-            self._set_pos_occupied(x,y,z)
-            z += self.gs
+        for x_ in np.arange(x-0.05,x+0.1,0.05):
+            for y_ in np.arange(y-0.05,y+0.1,0.05):
+                z = 0
+                while z <= self.obstacle_height:
+                    self._set_pos_occupied(x_,y_,z)
+                    z += self.gs
     
     # 这个地方不对，并不是只有0度和90度，门的角度yaw也会随机
     # 目前只是简单的按照绝对值做了处理，
@@ -135,7 +134,7 @@ class SLAM():
         for z in range(C):
             for x in range(W):
                 for y in range(H):
-                    if self.occ_map[z][x][y] == -1 or self.occ_map[z][x][y] == -1:
+                    if self.occ_map[z][x][y] == -1 :
                         xs.append(x*self.gs+self.X_MIN)
                         ys.append(y*self.gs+self.Y_MIN)
                         zs.append(z*self.gs+self.Z_MIN)
@@ -233,42 +232,41 @@ class SLAM():
         #             obs_img[_][center][0:center+1]=0.5
 
         # fill target_vector way 2
-        if target_vector[2]>0:
+        if target_vector[2]>=0:
             for _ in range(z_center,2*z_center+1):
                 if target_vector[0]>=0 :
                     if  target_vector[1]>=0:
-                        obs_img[_][center:center*2+1,center:center*2+1]=np.where(obs_img[_][center:center*2+1,center:center*2+1]<0,obs_img[_][center:center*2+1,center:center*2+1],1)
+                        obs_img[_][center:center*2+1,center:center*2+1]=np.where(obs_img[_][center:center*2+1,center:center*2+1]==-1,-1,0.5)
                     else:
-                        obs_img[_][center:center*2+1,0:center+1]=np.where(obs_img[_][center:center*2+1,0:center+1]<0,obs_img[_][center:center*2+1,0:center+1],1)
+                        obs_img[_][center:center*2+1,0:center+1]=np.where(obs_img[_][center:center*2+1,0:center+1]==-1,-1,0.5)
                 else:
                     if target_vector[1]>=0:
-                        obs_img[_][0:center+1,center:center*2+1]=np.where(obs_img[_][0:center+1,center:center*2+1]<0,obs_img[_][0:center+1,center:center*2+1],1)
+                        obs_img[_][0:center+1,center:center*2+1]=np.where(obs_img[_][0:center+1,center:center*2+1]==-1,-1,0.5)
                     else:
-                        obs_img[_][0:center+1,0:center+1]=np.where(obs_img[_][0:center+1,0:center+1]<0,obs_img[_][0:center+1,0:center+1],1)
+                        obs_img[_][0:center+1,0:center+1]=np.where(obs_img[_][0:center+1,0:center+1]==-1,-1,0.5)
         else:
             for _ in range(0,z_center+1):
                 if target_vector[0]>=0 :
                     if  target_vector[1]>=0:
-                        obs_img[_][center:center*2+1,center:center*2+1]=np.where(obs_img[_][center:center*2+1,center:center*2+1]<0,obs_img[_][center:center*2+1,center:center*2+1],1)
+                        obs_img[_][center:center*2+1,center:center*2+1]=np.where(obs_img[_][center:center*2+1,center:center*2+1]==-1,-1,0.5)
                     else:
-                        obs_img[_][center:center*2+1,0:center+1]=np.where(obs_img[_][center:center*2+1,0:center+1]<0,obs_img[_][center:center*2+1,0:center+1],1)
+                        obs_img[_][center:center*2+1,0:center+1]=np.where(obs_img[_][center:center*2+1,0:center+1]==-1,-1,0.5)
                 else:
                     if target_vector[1]>=0:
-                        obs_img[_][0:center+1,center:center*2+1]=np.where(obs_img[_][0:center+1,center:center*2+1]<0,obs_img[_][0:center+1,center:center*2+1],1)
+                        obs_img[_][0:center+1,center:center*2+1]=np.where(obs_img[_][0:center+1,center:center*2+1]==-1,-1,0.5)
                     else:
-                        obs_img[_][0:center+1,0:center+1]=np.where(obs_img[_][0:center+1,0:center+1]<0,obs_img[_][0:center+1,0:center+1],1)
+                        obs_img[_][0:center+1,0:center+1]=np.where(obs_img[_][0:center+1,0:center+1]==-1,-1,0.5)
         # if save:
         #     i=0
-        #     obs_img = obs_img * 255
+        #     obs_img = (obs_img * 255 + 255)/2
         #     for z_index in range(len(obs_img)) :
-        #         occ_map_2d = self.occ_map[z_idx-z_center + z_index if z_idx-z_center + z_index>=0 else 0] * 255
+        #         occ_map_2d = self.occ_map[z_idx-z_center + z_index if z_idx-z_center + z_index>=0 else 0] * 255 + 255
         #         occ_map_2d [x_idx][y_idx] = 125
         #         obs_img[z_index][center][center]=125
         #         cv2.imwrite('obs2/'+str(i)+'.png',obs_img[z_index])
         #         cv2.imwrite('obs2/'+str(i)+'_occ.png',occ_map_2d)
         #         i+=1
-
-        # import pdb;pdb.set_trace()
+        #     import pdb;pdb.set_trace()
 
         return obs_img
 
