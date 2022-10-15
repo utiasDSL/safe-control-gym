@@ -41,7 +41,7 @@ from safetyplusplus_folder.slam import SLAM
 from safetyplusplus_folder.plus_logger import SafeLogger
 import random
 
-file_name='1015_02_3_State7_PassRGrowColi5Neg_20_Random80'
+file_name='1015_07_L3_S9'
 test=False
 sim_only=False
 model_name='models/1013_1200'
@@ -127,7 +127,7 @@ class Controller():
         self.begin_train_epo=100
         self.net_work_freq=0.5     #  time gap  1  1s/次  0.5s/次   0.2m  400episode 
         max_action=2
-        self.global_state_dim = 7
+        self.global_state_dim = 9
         self.set_offset=False
         self.batch_size=128
         
@@ -229,9 +229,9 @@ class Controller():
             current_goal_pos=np.zeros(3)
         target_vector=[current_goal_pos[0]- current_pos[0],current_goal_pos[1]- current_pos[1],current_goal_pos[2]- current_pos[2]]
         # 10.09 V0.1
-        # global_state=np.array([current_pos[0], current_pos[1], current_pos[2],target_vector[0],target_vector[1],target_vector[2],
-                            #    current_target_gate_in_range,info['current_target_gate_id'],self.mass])
-        global_state=np.array([current_pos[0], current_pos[1], current_pos[2],target_vector[0],target_vector[1],target_vector[2],self.mass])    
+        global_state=np.array([current_pos[0], current_pos[1], current_pos[2],target_vector[0],target_vector[1],target_vector[2],
+                               current_target_gate_in_range,info['current_target_gate_id'],self.mass])
+        # global_state=np.array([current_pos[0], current_pos[1], current_pos[2],target_vector[0],target_vector[1],target_vector[2],self.mass])    
         local_state = self.m_slam.generate_3obs_img(obs,target_vector,name=self.episode_iteration,save=False if self.episode_iteration % 20!=0 else True)   
         return [global_state,local_state]
            
@@ -272,27 +272,37 @@ class Controller():
             duration = 1.5
             command_type = Command(2)  # Take-off.
             args = [height, duration]
+        elif info!={} and info['current_target_gate_id'] == -1 and self.episode_iteration % 5 ==0:
+            # print("step all the gate , rule control")
+            # navigate to the goal_pos.and stop
+            command_type =  Command(1)  
+            target_pos = np.array(self.goal_pos)
+            target_vel = np.zeros(3)
+            target_acc = np.zeros(3)
+            target_yaw = 0.
+            target_rpy_rates = np.zeros(3)
+            args=[target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
 
+            if  self.episode_iteration % (30*self.net_work_freq) ==0:
+                all_state=self.get_state(obs,info)
+                global_state=all_state[0]
+                action=target_pos-global_state[[0,1,2]]
+                action /= 10
+                
+                self.current_all_state=all_state
+                self.current_action=action
         # using network to choose action
         elif self.episode_iteration >= self.begin_train_seconds * self.CTRL_FREQ and self.episode_iteration % (30*self.net_work_freq) ==0 :
             # cmdFullState
             command_type =  Command(1)  
             all_state=self.get_state(obs,info)
             global_state=all_state[0]
-
-            if info!={} and info['current_target_gate_id'] == -1 :
-                # print("step all the gate , rule control")
-                # navigate to the goal_pos.and stop
-                target_pos = np.array(self.goal_pos)
-                action=target_pos-global_state[[0,1,2]]
-                action /= 10
+            if not test and self.interepisode_counter < self.begin_net_infer_epo:
+                action= self.action_space.sample() 
             else:
-                if not test and self.interepisode_counter < self.begin_net_infer_epo:
-                    action= self.action_space.sample() 
-                else:
-                    action = self.policy.select_action(all_state, exploration=False if test else True)  # array  delta_x , delta_y, delta_z
-                action /= 10
-                target_pos = global_state[[0,1,2]] + action
+                action = self.policy.select_action(all_state, exploration=False if test else True)  # array  delta_x , delta_y, delta_z
+            action /= 10
+            target_pos = global_state[[0,1,2]] + action
             self.current_all_state=all_state
             self.current_action=action
             target_vel = np.zeros(3)
@@ -300,7 +310,7 @@ class Controller():
             target_yaw = 0.
             target_rpy_rates = np.zeros(3)
             args=[target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
-            # other time do nothing
+        # other time do nothing
         else :
             command_type = Command(0)  # None.
             args = []
@@ -423,7 +433,7 @@ class Controller():
                         self.violations_count += 1
                         self.episode_cost+=1
                     if info['constraint_violation'] and (  test or self.interepisode_counter> 100 ) :
-                        print(f"step{self.interstep_counter} , constraint_violation ")
+                        print(f"step{self.episode_iteration} , constraint_violation : current pos : {current_pos}")
                     if info["collision"][1] and (  test or self.interepisode_counter> 100 ):
                         print(info["collision"])   
                     # cmdFullState
@@ -472,7 +482,7 @@ class Controller():
         if self.interepisode_counter % 200 == 0 :
             self.policy.save(filename=f"{self.logger_plus.log_dir}/{self.interepisode_counter}")
 
-        print(f"Episode Num: {self.interepisode_counter}  Reward: {self.episode_reward:.3f} Cost: {self.episode_cost:.3f} violation: {self.violations_count:.3f}  collision:{self.collisions_count:.3f} ,")
+        print(f"Episode Num: {self.interepisode_counter}  step Num : {self.episode_iteration} ,Reward: {self.episode_reward:.3f} Cost: {self.episode_cost:.3f} violation: {self.violations_count:.3f}  collision:{self.collisions_count:.3f} ,")
         print(f"gates_passed:{self.info['current_target_gate_id']},at_goal_position : {self.info['at_goal_position']}  task_completed: {self.info['task_completed']}")
         self.logger_plus.update([self.episode_reward, self.episode_cost,self.collisions_count,self.violations_count,self.info['current_target_gate_id'],self.cur2goal_dis], total_steps=self.interepisode_counter)
 
