@@ -226,8 +226,11 @@ class Controller():
         d2yf = 0
         d2zf = 0
         self.ts = [0,]
+        waypoints_added = []
         for idx in range(1, self.length):
-            [xf, yf, zf, yawf] = waypoints[idx]
+            waypoint = waypoints[idx]
+            [xf, yf, zf, yawf] = waypoint
+            waypoints_added.append(waypoint)
             dt = ts[idx] - ts[idx - 1]
             inv_t = 1/dt
             dxf = cos(yawf) * self.grad_scale
@@ -264,6 +267,7 @@ class Controller():
                     y_coeffs.append(y_coeff)
                     z_coeffs.append(z_coeff)
                     self.ts.append(ts[idx - 1] + t)
+                    waypoints_added.append((x, y, z, 0))
 
                     [x0, y0, z0] = [x, y, z]
                     [dx0, dy0, dz0] = [dx, dy, dz]
@@ -284,7 +288,7 @@ class Controller():
         x_coeffs = np.array(x_coeffs).transpose()
         y_coeffs = np.array(y_coeffs).transpose()
         z_coeffs = np.array(z_coeffs).transpose()
-        waypoints = np.array(waypoints)
+        waypoints = np.array(waypoints_added)
         self.length = len(self.ts)
         # z_coeffs = scipy.interpolate.PchipInterpolator(self.ts, waypoints[:,2], 0).c
 
