@@ -175,7 +175,7 @@ class Controller():
             choice_2 += vy1.dot(vy22)/np.linalg.norm(vy1)/np.linalg.norm(vy22)+vy22.dot(vy3)/np.linalg.norm(vy22)/np.linalg.norm(vy3)
             if choice_2 > choice_1:
                 waypoints[idx][3] += pi
-                print("flipping", idx)
+                # print("flipping", idx)
             x_prev, y_prev = x_curr, y_curr
             x_curr, y_curr = x_next, y_next
             yaw_curr = yaw_next
@@ -239,14 +239,15 @@ class Controller():
             y_coeff = utils.quintic_interp(inv_t, y0, yf, dy0, dyf, d2y0, d2yf)
             z_coeff = utils.quintic_interp(inv_t, z0, zf, dz0, dzf, d2z0, d2zf)
             
-            # Obstacle avoidance
+            # Obstacle avoidance by finding closest points on spline to obstacle
+            # Adds another waypoint that projects the spline outward from centre of obstacle
             projected_points = []
             for obstacle in self.NOMINAL_OBSTACLES:
                 x = obstacle[0]
                 y = obstacle[1]
                 projected_point = utils.check_intersect_poly(x_coeff, y_coeff, dt, x, y, r)
                 if projected_point:
-                    print("projected points", projected_point)
+                    # print("projected points", projected_point)
                     projected_points += projected_point
             if projected_points:
                 projected_points.sort(key = lambda x: x[0])
@@ -429,12 +430,15 @@ class Controller():
                     # Local replan when near to goal
                     self.at_gate = True
                     [x, y, z, _, _, yaw] = info['current_target_gate_pos']
+
+                    # slow down based on distance jumped by gate
                     prev_x = self.run_coeffs[0][-1,self.gate_no+1]
                     prev_y = self.run_coeffs[1][-1,self.gate_no+1]
                     prev_z = self.run_coeffs[2][-1,self.gate_no+1]
                     error = sqrt((x-prev_x)**2 + (y-prev_y)**2 + (z-prev_z)**2)
                     self.time_scale += -log1p(np.linalg.norm(error)-.25)*0.05
                     self.time_scale = max(0.0, min(1.0, self.time_scale))
+
                     yaw += self.half_pi
                     dt = self.run_ts[self.gate_no + 1] - self.curve_t
                     inv_t = 1/dt
