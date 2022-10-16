@@ -230,9 +230,9 @@ class Controller():
                 if idx == self.length-1: # yaw of last goal not important
                     dxf = dx0 * 0.01
                     dyf = dy0 * 0.01
-                x_coeffs[::-1,idx-1] = utils.quintic_interp(inv_t, x0, xf, dx0, dxf, d2x0, d2xf)
-                y_coeffs[::-1,idx-1] = utils.quintic_interp(inv_t, y0, yf, dy0, dyf, d2y0, d2yf)
-                z_coeffs[::-1,idx-1] = utils.quintic_interp(inv_t, z0, zf, dz0, dzf, d2z0, d2zf)
+                x_coeffs[:,idx-1] = utils.quintic_interp(inv_t, x0, xf, dx0, dxf, d2x0, d2xf)
+                y_coeffs[:,idx-1] = utils.quintic_interp(inv_t, y0, yf, dy0, dyf, d2y0, d2yf)
+                z_coeffs[:,idx-1] = utils.quintic_interp(inv_t, z0, zf, dz0, dzf, d2z0, d2zf)
                 [x0, y0, z0] = [xf, yf, zf]
                 [dx0, dy0, dz0] = [dxf, dyf, dzf]
                 [d2x0, d2y0, d2z0] = [d2xf, d2yf, d2zf]
@@ -240,7 +240,7 @@ class Controller():
             # z_coeffs = scipy.interpolate.PchipInterpolator(self.ts, waypoints[:,2], 0).c
 
             # modify endpoint gradient for smooth z ending (pchip iterpolator)
-            # z_coeffs[::-1,-1] = utils.cubic_interp(1/(self.ts[-1]-self.ts[-2]),
+            # z_coeffs[:,-1] = utils.cubic_interp(1/(self.ts[-1]-self.ts[-2]),
             #     waypoints[-2,2],
             #     waypoints[-1,2],
             #     z_coeffs[-2,-1],
@@ -267,13 +267,13 @@ class Controller():
                 t_diff_scaled[i] = t_scaled[i] - self.ts[gate]
                 gate_scaled[i] = gate
             x_scaled = np.array(tuple(map(
-                lambda idx, t: utils.f(x_coeffs, idx, t),
+                lambda idx, t: utils.f(x_coeffs[:, idx], t),
                 gate_scaled, t_diff_scaled)))
             y_scaled = np.array(tuple(map(
-                lambda idx, t: utils.f(y_coeffs, idx, t),
+                lambda idx, t: utils.f(y_coeffs[:, idx], t),
                 gate_scaled, t_diff_scaled)))
             z_scaled = np.array(tuple(map(
-                lambda idx, t: utils.f(z_coeffs, idx, t),
+                lambda idx, t: utils.f(z_coeffs[:, idx], t),
                 gate_scaled, t_diff_scaled)))
             spline_waypoints = np.dstack((x_scaled, y_scaled, z_scaled))[0]
             is_collision, waypoints = update_waypoints_avoid_obstacles(spline_waypoints, waypoints, self.NOMINAL_OBSTACLES, 
@@ -388,7 +388,7 @@ class Controller():
                     dy_gate = sin(yaw) * self.grad_scale
                     dz_gate = 0
                     for i, (val, dval) in enumerate(zip([x,y,z], [dx_gate, dy_gate, dz_gate])):
-                        self.run_coeffs[i] = np.insert(self.run_coeffs[i], self.gate_no+1, np.flip(utils.quintic_interp(
+                        self.run_coeffs[i] = np.insert(self.run_coeffs[i], self.gate_no+1, utils.quintic_interp(
                             inv_t,
                             self.target_pose[i],
                             val,
@@ -396,16 +396,16 @@ class Controller():
                             dval,
                             self.dtangent[i],
                             0
-                        )), axis=1)
+                        ), axis=1)
                     dt = self.run_ts[self.gate_no + 2] - self.run_ts[self.gate_no + 1]
                     inv_t = 1/dt
                     for i, (val, dval) in enumerate(zip([x,y,z], [dx_gate, dy_gate, dz_gate])):
-                        self.run_coeffs[i][::-1,self.gate_no+2] = utils.quintic_interp(
+                        self.run_coeffs[i][:,self.gate_no+2] = utils.quintic_interp(
                             inv_t,
                             val,
-                            utils.f(self.run_coeffs[i], self.gate_no+2, dt),
+                            utils.f(self.run_coeffs[i][:, self.gate_no+2], dt),
                             dval,
-                            utils.df(self.run_coeffs[i], self.gate_no+2, dt),
+                            utils.df(self.run_coeffs[i][:, self.gate_no+2], dt),
                             0,
                             0
                         )
@@ -429,10 +429,10 @@ class Controller():
 
             t = curve_t - self.run_ts[self.gate_no]
 
-            self.target_pose = np.array([utils.f(coeffs, self.gate_no, t) for coeffs in self.run_coeffs])
-            self.tangent = np.array([utils.df(coeffs, self.gate_no, t) for coeffs in self.run_coeffs])
-            self.dtangent = np.array([utils.d2f(coeffs, self.gate_no, t) for coeffs in self.run_coeffs])
-            self.d2tangent = np.array([utils.d3f(coeffs, self.gate_no, t) for coeffs in self.run_coeffs])
+            self.target_pose = np.array([utils.f(coeffs[:, self.gate_no], t) for coeffs in self.run_coeffs])
+            self.tangent = np.array([utils.df(coeffs[:, self.gate_no], t) for coeffs in self.run_coeffs])
+            self.dtangent = np.array([utils.d2f(coeffs[:, self.gate_no], t) for coeffs in self.run_coeffs])
+            self.d2tangent = np.array([utils.d3f(coeffs[:, self.gate_no], t) for coeffs in self.run_coeffs])
             
             error = np.array((obs[0] - self.target_pose[0], obs[2] - self.target_pose[1], obs[4] - self.target_pose[2])) # positional error (world frame)
             # print(error)

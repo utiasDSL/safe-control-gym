@@ -9,52 +9,52 @@ import numpy as np
 
 def cubic_interp(inv_t, x0, xf, dx0, dxf):
     dx = xf - x0
-    return (
+    return np.flip((
         x0,
         dx0,
         (3*dx*inv_t - 2*dx0 - dxf)*inv_t,
-        (-2*dx*inv_t + (dxf + dx0))*inv_t*inv_t)
+        (-2*dx*inv_t + (dxf + dx0))*inv_t*inv_t))
 
 def quintic_interp(inv_t, x0, xf, dx0, dxf, d2x0, d2xf):
     dx = xf - x0
-    return (
+    return np.flip((
         x0,
         dx0,
         d2x0*0.5,
         ((10*dx*inv_t - (4*dxf+6*dx0))*inv_t - 0.5*(3*d2x0-d2xf))*inv_t,
         ((-15*dx*inv_t + (7*dxf+8*dx0))*inv_t + 0.5*(3*d2x0-2*d2xf))*inv_t*inv_t,
-        ((6*dx*inv_t - 3*(dxf+dx0))*inv_t - 0.5*(d2x0-d2xf))*inv_t*inv_t*inv_t)
+        ((6*dx*inv_t - 3*(dxf+dx0))*inv_t - 0.5*(d2x0-d2xf))*inv_t*inv_t*inv_t))
 
 
-def f(coeffs, idx, t):
+def f(coeffs, t):
     val = 0
-    for coeff in coeffs[:,idx]:
+    for coeff in coeffs:
         val *= t
         val += coeff
     return val
 
-def df(coeffs, idx, t):
-    coeffs_no = len(coeffs[:,idx])
+def df(coeffs, t):
+    coeffs_no = len(coeffs)
     val = 0
-    for i, coeff in enumerate(coeffs[:-1,idx]):
+    for i, coeff in enumerate(coeffs[:-1]):
         val *= t
         factor = (coeffs_no - i - 1)
         val += coeff * factor
     return val
 
-def d2f(coeffs, idx, t):
-    coeffs_no = len(coeffs[:,idx])
+def d2f(coeffs, t):
+    coeffs_no = len(coeffs)
     val = 0
-    for i, coeff in enumerate(coeffs[:-2,idx]):
+    for i, coeff in enumerate(coeffs[:-2]):
         val *= t
         factor = (coeffs_no - i - 1)
         val += coeff * factor * (factor - 1)
     return val
 
-def d3f(coeffs, idx, t):
-    coeffs_no = len(coeffs[:,idx])
+def d3f(coeffs, t):
+    coeffs_no = len(coeffs)
     val = 0
-    for i, coeff in enumerate(coeffs[:-3,idx]):
+    for i, coeff in enumerate(coeffs[:-3]):
         val *= t
         factor = (coeffs_no - i - 1)
         val += coeff * factor * (factor - 1) * (factor - 2)
@@ -66,9 +66,9 @@ def df_idx(length, ts, x_coeffs, y_coeffs, z_coeffs):
             if (ts[idx+1] > t):
                 break
         t -= ts[idx]
-        dx = df(x_coeffs, idx, t)
-        dy = df(y_coeffs, idx, t)
-        dz = df(z_coeffs, idx, t)
+        dx = df(x_coeffs[:, idx], t)
+        dy = df(y_coeffs[:, idx], t)
+        dz = df(z_coeffs[:, idx], t)
         return sqrt(dx*dx+dy*dy+dz*dz)
     return df_
 
