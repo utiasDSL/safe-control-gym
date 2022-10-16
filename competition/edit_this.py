@@ -142,22 +142,22 @@ class Controller():
 
         # "time" for each waypoint
         # time interval determined by eulcidean distance between waypoints along xyz plane
-        self.ts = np.zeros(self.length)
+        ts = np.zeros(self.length)
         [x_prev, y_prev, z_prev, _] = waypoints[0]
         for idx in range(1,self.length):
             [x_curr, y_curr, z_curr, _] = waypoints[idx]
             norm = sqrt((x_curr-x_prev)**2 + (y_curr-y_prev)**2 + (z_curr-z_prev)**2)
-            self.ts[idx] = self.ts[idx-1] + norm / v_max
+            ts[idx] = ts[idx-1] + norm / v_max
 
         # Flip gates
         # Selectively flip gate orientation based on vector from previous and to next waypoint,
         # and current gate's orientation
         [x_prev, y_prev, _, _] = waypoints[0]
         [x_curr, y_curr, _, yaw_curr] = waypoints[1]
-        dt = self.ts[1] - self.ts[0]
+        dt = ts[1] - ts[0]
         for idx in range(1,self.length-1):
             [x_next, y_next, _, yaw_next] = waypoints[idx+1]
-            dt_next = self.ts[idx+1] - self.ts[idx]
+            dt_next = ts[idx+1] - ts[idx]
             dxf = cos(yaw_curr) * self.grad_scale
             dyf = sin(yaw_curr) * self.grad_scale
             vx1 = np.array((x_curr - x_prev,dt))
@@ -205,88 +205,138 @@ class Controller():
         #     yaw_curr = yaw_next
         #     dyaw = dyaw_next
 
-        is_collision = True
-        if is_collision:
-            x_coeffs = np.zeros((6,len(waypoints)-1))
-            y_coeffs = np.zeros((6,len(waypoints)-1))
-            z_coeffs = np.zeros((6,len(waypoints)-1))
-            [x0, y0, z0, yaw0] = waypoints[0]
-            dx0 = cos(yaw0)*0.01
-            dy0 = sin(yaw0)*0.01
-            dz0 = v_max
-            dzf = 0
-            d2x0 = 0
-            d2y0 = 0
-            d2z0 = a_max
-            d2xf = 0
-            d2yf = 0
-            d2zf = 0
-            for idx in range(1, self.length):
-                [xf, yf, zf, yawf] = waypoints[idx]
-                dt = self.ts[idx] - self.ts[idx - 1]
-                inv_t = 1/dt
-                dxf = cos(yawf) * self.grad_scale
-                dyf = sin(yawf) * self.grad_scale
-                if idx == self.length-1: # yaw of last goal not important
-                    dxf = dx0 * 0.01
-                    dyf = dy0 * 0.01
-                x_coeffs[:,idx-1] = utils.quintic_interp(inv_t, x0, xf, dx0, dxf, d2x0, d2xf)
-                y_coeffs[:,idx-1] = utils.quintic_interp(inv_t, y0, yf, dy0, dyf, d2y0, d2yf)
-                z_coeffs[:,idx-1] = utils.quintic_interp(inv_t, z0, zf, dz0, dzf, d2z0, d2zf)
-                [x0, y0, z0] = [xf, yf, zf]
-                [dx0, dy0, dz0] = [dxf, dyf, dzf]
-                [d2x0, d2y0, d2z0] = [d2xf, d2yf, d2zf]
-            waypoints = np.array(waypoints)
-            # z_coeffs = scipy.interpolate.PchipInterpolator(self.ts, waypoints[:,2], 0).c
+        # Obstacle radius (including randomness)
+        r = initial_info['obstacle_dimensions']['radius']
+        obstacle_distrib_dict = initial_info['gates_and_obs_randomization']
+        if 'obstacles' in obstacle_distrib_dict:
+            r += max(abs(obstacle_distrib_dict['obstacles']['low']), abs(obstacle_distrib_dict['obstacles']['high']))
 
-            # modify endpoint gradient for smooth z ending (pchip iterpolator)
-            # z_coeffs[:,-1] = utils.cubic_interp(1/(self.ts[-1]-self.ts[-2]),
-            #     waypoints[-2,2],
-            #     waypoints[-1,2],
-            #     z_coeffs[-2,-1],
-            #     0
-            # )
-            self.coeffs = [x_coeffs, y_coeffs, z_coeffs]
+        x_coeffs = []
+        y_coeffs = []
+        z_coeffs = []
+        [x0, y0, z0, yaw0] = waypoints[0]
+        dx0 = cos(yaw0)*0.01
+        dy0 = sin(yaw0)*0.01
+        dz0 = v_max
+        dzf = 0
+        d2x0 = 0
+        d2y0 = 0
+        d2z0 = a_max
+        d2xf = 0
+        d2yf = 0
+        d2zf = 0
+        self.ts = [0,]
+        for idx in range(1, self.length):
+            [xf, yf, zf, yawf] = waypoints[idx]
+            dt = ts[idx] - ts[idx - 1]
+            inv_t = 1/dt
+            dxf = cos(yawf) * self.grad_scale
+            dyf = sin(yawf) * self.grad_scale
+            if idx == self.length-1: # yaw of last goal not important
+                dxf = dx0 * 0.01
+                dyf = dy0 * 0.01
+            x_coeff = utils.quintic_interp(inv_t, x0, xf, dx0, dxf, d2x0, d2xf)
+            y_coeff = utils.quintic_interp(inv_t, y0, yf, dy0, dyf, d2y0, d2yf)
+            z_coeff = utils.quintic_interp(inv_t, z0, zf, dz0, dzf, d2z0, d2zf)
+            
+            # Obstacle avoidance
+            projected_points = []
+            for obstacle in self.NOMINAL_OBSTACLES:
+                x = obstacle[0]
+                y = obstacle[1]
+                projected_point = utils.check_intersect_poly(x_coeff, y_coeff, dt, x, y, r)
+                if projected_point:
+                    print("projected points", projected_point)
+                    projected_points += projected_point
+            if projected_points:
+                projected_points.sort(key = lambda x: x[0])
+                prev_t = 0
+                for t, (x, dx, d2x), (y, dy, d2y) in projected_points:
+                    z = utils.f(z_coeff, t)
+                    dz = utils.df(z_coeff, t)
+                    d2z = utils.d2f(z_coeff, t)
+                    inv_t = 1/(t - prev_t)
+                    x_coeff = utils.quintic_interp(inv_t, x0, x, dx0, dx, d2x0, d2x)
+                    y_coeff = utils.quintic_interp(inv_t, y0, y, dy0, dy, d2y0, d2y)
+                    z_coeff = utils.quintic_interp(inv_t, z0, z, dz0, dz, d2z0, d2z)
+                    x_coeffs.append(x_coeff)
+                    y_coeffs.append(y_coeff)
+                    z_coeffs.append(z_coeff)
+                    self.ts.append(ts[idx - 1] + t)
 
-            # Integrate to get pathlength
-            pathlength = 0
-            for idx in range(self.length-1):
-                pathlength += scipy.integrate.quad(
-                    utils.df_idx(self.length, self.ts, x_coeffs, y_coeffs, z_coeffs),
-                    0, self.ts[idx+1] - self.ts[idx])[0]
-            self.scaling_factor = self.ts[-1] / pathlength
+                    [x0, y0, z0] = [x, y, z]
+                    [dx0, dy0, dz0] = [dx, dy, dz]
+                    [d2x0, d2y0, d2z0] = [d2x, d2y, d2z]
+                    prev_t = t
+                inv_t = 1/(ts[idx] - ts[idx - 1] - prev_t)
+                x_coeff = utils.quintic_interp(inv_t, x0, xf, dx0, dxf, d2x0, d2xf)
+                y_coeff = utils.quintic_interp(inv_t, y0, yf, dy0, dyf, d2y0, d2yf)
+                z_coeff = utils.quintic_interp(inv_t, z0, zf, dz0, dzf, d2z0, d2zf)
+            x_coeffs.append(x_coeff)
+            y_coeffs.append(y_coeff)
+            z_coeffs.append(z_coeff)
+            self.ts.append(ts[idx])
 
+            [x0, y0, z0] = [xf, yf, zf]
+            [dx0, dy0, dz0] = [dxf, dyf, dzf]
+            [d2x0, d2y0, d2z0] = [d2xf, d2yf, d2zf]
+        x_coeffs = np.array(x_coeffs).transpose()
+        y_coeffs = np.array(y_coeffs).transpose()
+        z_coeffs = np.array(z_coeffs).transpose()
+        waypoints = np.array(waypoints)
+        self.length = len(self.ts)
+        # z_coeffs = scipy.interpolate.PchipInterpolator(self.ts, waypoints[:,2], 0).c
+
+        # modify endpoint gradient for smooth z ending (pchip iterpolator)
+        # z_coeffs[:,-1] = utils.cubic_interp(1/(self.ts[-1]-self.ts[-2]),
+        #     waypoints[-2,2],
+        #     waypoints[-1,2],
+        #     z_coeffs[-2,-1],
+        #     0
+        # )
+        self.coeffs = [x_coeffs, y_coeffs, z_coeffs]
+
+        # Integrate to get pathlength
+        pathlength = 0
+        for idx in range(self.length-1):
+            pathlength += scipy.integrate.quad(
+                utils.df_idx(self.length, self.ts, x_coeffs, y_coeffs, z_coeffs),
+                0, self.ts[idx+1] - self.ts[idx])[0]
+        self.scaling_factor = self.ts[-1] / pathlength
+
+        if self.VERBOSE:
             duration = self.ts[-1] - self.ts[0]
             t_scaled = np.linspace(self.ts[0], self.ts[-1], int(duration*self.CTRL_FREQ))
             t_diff_scaled = np.zeros(t_scaled.shape)
-            gate_scaled = np.zeros(t_scaled.shape, dtype=np.ushort)
-            gate = 0
+            waypoint_scaled = np.zeros(t_scaled.shape, dtype=np.ushort)
+            waypoint = 0
+            print(self.ts)
+            print(x_coeffs)
+            print(y_coeffs)
+            print(z_coeffs)
+            print(waypoints)
             for i, t in enumerate(t_scaled):
-                if gate < self.length and t > self.ts[gate+1]:
-                    gate += 1
-                t_diff_scaled[i] = t_scaled[i] - self.ts[gate]
-                gate_scaled[i] = gate
+                if waypoint < self.length and t > self.ts[waypoint+1]:
+                    waypoint += 1
+                t_diff_scaled[i] = t_scaled[i] - self.ts[waypoint]
+                waypoint_scaled[i] = waypoint
             x_scaled = np.array(tuple(map(
                 lambda idx, t: utils.f(x_coeffs[:, idx], t),
-                gate_scaled, t_diff_scaled)))
+                waypoint_scaled, t_diff_scaled)))
             y_scaled = np.array(tuple(map(
                 lambda idx, t: utils.f(y_coeffs[:, idx], t),
-                gate_scaled, t_diff_scaled)))
+                waypoint_scaled, t_diff_scaled)))
             z_scaled = np.array(tuple(map(
                 lambda idx, t: utils.f(z_coeffs[:, idx], t),
-                gate_scaled, t_diff_scaled)))
-            spline_waypoints = np.dstack((x_scaled, y_scaled, z_scaled))[0]
-            is_collision, waypoints = update_waypoints_avoid_obstacles(spline_waypoints, waypoints, self.NOMINAL_OBSTACLES, 
-                                                        initial_info)
-            if self.VERBOSE:
-                print(x_coeffs)
-                print(y_coeffs)
-                print(z_coeffs)
-                print(waypoints)
-                # Plot trajectory in each dimension and 3D.
-                plot_trajectory(t_scaled, waypoints, x_scaled, y_scaled, z_scaled)
-                # Draw the trajectory on PyBullet's GUI
-                draw_trajectory(initial_info, waypoints, x_scaled, y_scaled, z_scaled)
+                waypoint_scaled, t_diff_scaled)))
+            # Plot trajectory in each dimension and 3D.
+            plot_trajectory(t_scaled, waypoints, x_scaled, y_scaled, z_scaled)
+            # Draw the trajectory on PyBullet's GUI
+            draw_trajectory(initial_info, waypoints, x_scaled, y_scaled, z_scaled)
+
+            # spline_waypoints = np.dstack((x_scaled, y_scaled, z_scaled))[0]
+            # is_collision, waypoints = update_waypoints_avoid_obstacles(spline_waypoints, waypoints, self.NOMINAL_OBSTACLES, 
+            #                                             initial_info)
 
         ### S-curve ###
         sf = pathlength
@@ -326,11 +376,9 @@ class Controller():
             j_ =   j[i]
             return [s_, v_, a_, j_]
         self.s = s_curve
-        self.start_t = -1
         self.end_t = t[-1]
         self.scaled_t = 0
         self.time_scale = 1
-        self.takeoff_land_duration = 2
         self.at_gate = False
         self.gate_no = 0
         self.run_coeffs = deepcopy(self.coeffs)
@@ -583,12 +631,14 @@ class Controller():
         _ = self.info_buffer
 
         # Reset run variables
+
         self.scaled_t = 0
+        self.time_scale = 1
         self.at_gate = False
         self.gate_no = 0
         self.run_coeffs = deepcopy(self.coeffs)
         self.run_ts = np.copy(self.ts)
-        self.length = len(self.NOMINAL_GATES) + 2
+        self.length = len(self.ts)
 
         #########################
         # REPLACE THIS (END) ####

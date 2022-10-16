@@ -161,3 +161,51 @@ def update_waypoints_avoid_obstacles(spline_waypoints, waypoints, obstacles, ini
             waypoints = np.insert(waypoints, insertion_idx, new_waypoint, axis=0)
 
     return is_collision, waypoints
+
+def check_intersect_poly(x_coeff, y_coeff, dt, x, y, r):
+    x_poly = np.copy(x_coeff)
+    x_poly[-1] -= x
+    y_poly = np.copy(y_coeff)
+    y_poly[-1] -= y
+    LHS = np.polyadd(np.polymul(x_poly, x_poly), np.polymul(y_poly, y_poly))
+    dLHS = np.polyder(LHS)
+    dLHS_roots = np.real_if_close(np.roots(dLHS))
+    tolerance = 0.1 # magic number to say how near we can be to the obs. includes drone size as well
+    r += tolerance
+    r_2 = r*r
+
+    selected = []
+    for root in dLHS_roots:
+        if root.imag:
+            continue
+        root = root.real
+        if root < 0 or root > dt:
+            continue
+        LHS_curr = np.polyval(LHS, root)
+        if LHS_curr > r_2:
+            continue
+        dist = sqrt(LHS_curr)
+        selected.append((root, dist))
+
+    if not selected:
+        # no collision
+        return
+
+    projected_points = []
+    dx_coeff = np.polyder(x_coeff)
+    dy_coeff = np.polyder(y_coeff)
+    d2x_coeff = np.polyder(dx_coeff)
+    d2y_coeff = np.polyder(dy_coeff)
+    for t, dist in selected:
+        spline_x = np.polyval(x_coeff, t)
+        spline_y = np.polyval(y_coeff, t)
+        spline_dx = np.polyval(dx_coeff, t)
+        spline_dy = np.polyval(dy_coeff, t)
+        spline_d2x = np.polyval(d2x_coeff, t)
+        spline_d2y = np.polyval(d2y_coeff, t)
+        scale = (r + 0.0) / dist
+        # print("scale", scale)
+        projected_x = x + (spline_x - x) * scale
+        projected_y = y + (spline_y - y) * scale
+        projected_points.append((t, (projected_x, spline_dx, spline_d2x),(projected_y, spline_dy, spline_d2y)))
+    return projected_points
