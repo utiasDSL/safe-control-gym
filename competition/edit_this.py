@@ -41,11 +41,11 @@ from safetyplusplus_folder.slam import SLAM
 from safetyplusplus_folder.plus_logger import SafeLogger
 import random
 
-file_name='1016_02_L1_S9_KnowSelf_PongPenality5Co20'
-# file_name='L0_test'
+file_name='1016_04_L1_S9_KnowSelf_NoPongPenality_Offset_seed1337'
+# file_name='L2_test'
 test=False
 sim_only=False
-model_name='models/1200'
+model_name='models/l2_1800'
 #########################
 # REPLACE THIS (START) ##
 #########################
@@ -129,7 +129,7 @@ class Controller():
         self.net_work_freq=0.5     #  time gap  1  1s/次  0.5s/次   0.2m  400episode 
         max_action=2
         self.global_state_dim = 9
-        self.set_offset=False
+        self.set_offset=True
         self.batch_size=128
         
         # state-based 
@@ -277,9 +277,9 @@ class Controller():
             self.rule_control_time+=1
             # navigate to the goal_pos.and stop
             command_type =  Command(1) 
-            if self.rule_control_time <=6: 
+            if self.rule_control_time <=25: 
                 target_pos = np.array(self.goal_pos)
-                target_pos[1] -=0.3
+                target_pos[1] -=0.2
             else:
                 target_pos = np.array(self.goal_pos)
             target_vel = np.zeros(3)
@@ -296,7 +296,7 @@ class Controller():
                 
                 self.current_all_state=all_state
                 self.current_action=action
-        # using network to choose action
+        # using network to choose action   
         elif self.episode_iteration >= self.begin_train_seconds * self.CTRL_FREQ and self.episode_iteration % (30*self.net_work_freq) ==0 :
             # cmdFullState
             command_type =  Command(1)  
@@ -305,7 +305,7 @@ class Controller():
             if not test and self.interepisode_counter < self.begin_net_infer_epo:
                 action= self.action_space.sample() 
             else:
-                action = self.policy.select_action(all_state, exploration=False if test else True)  # array  delta_x , delta_y, delta_z
+                action = self.policy.select_action(all_state, exploration= True)  # array  delta_x , delta_y, delta_z
             action /= 10
             target_pos = global_state[[0,1,2]] + action
             self.current_all_state=all_state
@@ -426,12 +426,12 @@ class Controller():
                         self.get_offset(info)
                     if info['at_goal_position']:
                         reward += 100
-                    if (current_local_space<0).any():
-                        reward -= 5    
+                    # if (current_local_space<0).any():
+                    #     reward -= 5    
                     if info['constraint_violation']:
                         reward -= 15
                     if info["collision"][1]:
-                        reward -= 20
+                        reward -= 25
                         self.collisions_count += 1 
                         self.episode_cost+=1
                     if 'constraint_values' in info and info['constraint_violation'] == True:

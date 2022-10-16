@@ -14,7 +14,7 @@ verbose: False # Boolean passed to the Controller class, can be used to turn on 
 
 # Environment
 quadrotor_config:
-  seed: 1339 # Random seed
+  seed: 1337 # Random seed
   reseed_on_reset: False # Whether to re-seed the random number generator between episodes
   gui: False # Whether to spawn PyBullet's GUI
   camera_view: [5, -40, -40, 0.5, -1, 0.5] # Distance, yaw, pitch, x, y, z target position
