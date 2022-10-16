@@ -102,7 +102,6 @@ def is_intersect(waypoints, obstacle, low, high):
         [x, y] = waypoint[0:2]
         # print((x,y), obstacle, (x_min, y_min), (x_max, y_max))
         if x_min <= x and x <= x_max and y_min <= y and y <= y_max:
-            print(idx)
             return True, idx
     return False, None
 
