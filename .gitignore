@@ -155,3 +155,4 @@ competition/results/
 *.png
 competition/pretrain_models/
 *.npy
+competition/models/

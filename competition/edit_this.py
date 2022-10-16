@@ -41,10 +41,11 @@ from safetyplusplus_folder.slam import SLAM
 from safetyplusplus_folder.plus_logger import SafeLogger
 import random
 
-file_name='1015_07_L3_S9'
+file_name='1016_02_L1_S9_KnowSelf_PongPenality5Co20'
+# file_name='L0_test'
 test=False
 sim_only=False
-model_name='models/1013_1200'
+model_name='models/1200'
 #########################
 # REPLACE THIS (START) ##
 #########################
@@ -178,7 +179,7 @@ class Controller():
         self.target_offset=np.array([0,0,0])
         self.trigger=False
         self.get_offset(info=None)
-        
+        self.rule_control_time=0
         # Reset counters and buffers.
         self.reset()
         self.interEpisodeReset()
@@ -273,10 +274,14 @@ class Controller():
             command_type = Command(2)  # Take-off.
             args = [height, duration]
         elif info!={} and info['current_target_gate_id'] == -1 and self.episode_iteration % 5 ==0:
-            # print("step all the gate , rule control")
+            self.rule_control_time+=1
             # navigate to the goal_pos.and stop
-            command_type =  Command(1)  
-            target_pos = np.array(self.goal_pos)
+            command_type =  Command(1) 
+            if self.rule_control_time <=6: 
+                target_pos = np.array(self.goal_pos)
+                target_pos[1] -=0.3
+            else:
+                target_pos = np.array(self.goal_pos)
             target_vel = np.zeros(3)
             target_acc = np.zeros(3)
             target_yaw = 0.
@@ -421,12 +426,12 @@ class Controller():
                         self.get_offset(info)
                     if info['at_goal_position']:
                         reward += 100
-                    if (current_local_space==-1).any():
-                        reward -= 20    
+                    if (current_local_space<0).any():
+                        reward -= 5    
                     if info['constraint_violation']:
                         reward -= 15
                     if info["collision"][1]:
-                        reward -= 5
+                        reward -= 20
                         self.collisions_count += 1 
                         self.episode_cost+=1
                     if 'constraint_values' in info and info['constraint_violation'] == True:
@@ -479,7 +484,7 @@ class Controller():
         # REPLACE THIS (START) ##
         #########################
 
-        if self.interepisode_counter % 200 == 0 :
+        if self.interepisode_counter % 300 == 0 or self.interepisode_counter==1000:
             self.policy.save(filename=f"{self.logger_plus.log_dir}/{self.interepisode_counter}")
 
         print(f"Episode Num: {self.interepisode_counter}  step Num : {self.episode_iteration} ,Reward: {self.episode_reward:.3f} Cost: {self.episode_cost:.3f} violation: {self.violations_count:.3f}  collision:{self.collisions_count:.3f} ,")
@@ -518,4 +523,5 @@ class Controller():
         self.cur2goal_dis=0
         self.info=None
         self.trigger=False
+        self.rule_control_time=0
 

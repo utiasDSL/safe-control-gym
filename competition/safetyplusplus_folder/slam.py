@@ -234,6 +234,8 @@ class SLAM():
                         obs_img[_][0:center+1,center:center*2+1]=np.where(obs_img[_][0:center+1,center:center*2+1]==-1,-1,0.5)
                     else:
                         obs_img[_][0:center+1,0:center+1]=np.where(obs_img[_][0:center+1,0:center+1]==-1,-1,0.5)
+        obs_img[z_center-1:z_center+2,center-1:center+2,center-1:center+2]+=0.2
+        obs_img[z_center][center][center]+=0.2
         # if save:
         #     i=0
         #     obs_img = (obs_img * 255 + 255)/2
