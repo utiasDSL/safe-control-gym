@@ -98,7 +98,6 @@ def is_intersect(waypoints, obstacle, low, high):
     [x,y] = obstacle[0:2]
     x_min, x_max = x + low, x + high
     y_min, y_max = y + low, y + high
-    print(waypoints.shape)
     for idx, waypoint in enumerate(waypoints):
         [x, y] = waypoint[0:2]
         # print((x,y), obstacle, (x_min, y_min), (x_max, y_max))
@@ -135,6 +134,7 @@ def get_nearest_path_segment(new_waypoint, waypoints):
         if(dist_to_path < min_dist_to_path):
             min_dist_to_path = dist_to_path
             min_idx = idx
+    print(idx)
     return min_idx+1
 
 def update_waypoints_avoid_obstacles(spline_waypoints, waypoints, obstacles, initial_info):

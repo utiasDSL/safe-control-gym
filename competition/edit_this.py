@@ -115,8 +115,8 @@ class Controller():
 
         # Kinematic limits
         # TODO determine better estimates from model
-        v_max = 1.5
-        a_max = .5
+        v_max = 2.0
+        a_max = 0.75
         j_max = 2
         # Affect curve radius around waypoints, higher value means larger curve, smaller value means tighter curve
         self.grad_scale = .4 * v_max
@@ -256,26 +256,29 @@ class Controller():
                     0, self.ts[idx+1] - self.ts[idx])[0]
             self.scaling_factor = self.ts[-1] / pathlength
 
+            duration = self.ts[-1] - self.ts[0]
+            t_scaled = np.linspace(self.ts[0], self.ts[-1], int(duration*self.CTRL_FREQ))
+            t_diff_scaled = np.zeros(t_scaled.shape)
+            gate_scaled = np.zeros(t_scaled.shape, dtype=np.ushort)
+            gate = 0
+            for i, t in enumerate(t_scaled):
+                if gate < self.length and t > self.ts[gate+1]:
+                    gate += 1
+                t_diff_scaled[i] = t_scaled[i] - self.ts[gate]
+                gate_scaled[i] = gate
+            x_scaled = np.array(tuple(map(
+                lambda idx, t: utils.f(x_coeffs, idx, t),
+                gate_scaled, t_diff_scaled)))
+            y_scaled = np.array(tuple(map(
+                lambda idx, t: utils.f(y_coeffs, idx, t),
+                gate_scaled, t_diff_scaled)))
+            z_scaled = np.array(tuple(map(
+                lambda idx, t: utils.f(z_coeffs, idx, t),
+                gate_scaled, t_diff_scaled)))
+            spline_waypoints = np.dstack((x_scaled, y_scaled, z_scaled))[0]
+            is_collision, waypoints = update_waypoints_avoid_obstacles(spline_waypoints, waypoints, self.NOMINAL_OBSTACLES, 
+                                                        initial_info)
             if self.VERBOSE:
-                duration = self.ts[-1] - self.ts[0]
-                t_scaled = np.linspace(self.ts[0], self.ts[-1], int(duration*self.CTRL_FREQ))
-                t_diff_scaled = np.zeros(t_scaled.shape)
-                gate_scaled = np.zeros(t_scaled.shape, dtype=np.ushort)
-                gate = 0
-                for i, t in enumerate(t_scaled):
-                    if gate < self.length and t > self.ts[gate+1]:
-                        gate += 1
-                    t_diff_scaled[i] = t_scaled[i] - self.ts[gate]
-                    gate_scaled[i] = gate
-                x_scaled = np.array(tuple(map(
-                    lambda idx, t: utils.f(x_coeffs, idx, t),
-                    gate_scaled, t_diff_scaled)))
-                y_scaled = np.array(tuple(map(
-                    lambda idx, t: utils.f(y_coeffs, idx, t),
-                    gate_scaled, t_diff_scaled)))
-                z_scaled = np.array(tuple(map(
-                    lambda idx, t: utils.f(z_coeffs, idx, t),
-                    gate_scaled, t_diff_scaled)))
                 print(x_coeffs)
                 print(y_coeffs)
                 print(z_coeffs)
@@ -284,10 +287,6 @@ class Controller():
                 plot_trajectory(t_scaled, waypoints, x_scaled, y_scaled, z_scaled)
                 # Draw the trajectory on PyBullet's GUI
                 draw_trajectory(initial_info, waypoints, x_scaled, y_scaled, z_scaled)
-
-                spline_waypoints = np.dstack((x_scaled, y_scaled, z_scaled))[0]
-                is_collision, waypoints = update_waypoints_avoid_obstacles(spline_waypoints, waypoints, self.NOMINAL_OBSTACLES, 
-                                                            initial_info)
 
         ### S-curve ###
         sf = pathlength
