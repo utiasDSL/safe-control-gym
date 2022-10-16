@@ -4,7 +4,7 @@ For the IROS competition
 
 """
 
-from math import sqrt, sin, cos
+from math import sqrt, sin, cos, atan2, pi
 import numpy as np
 
 def cubic_interp(inv_t, x0, xf, dx0, dxf):
@@ -93,3 +93,54 @@ def rpy2rot(roll, pitch, yaw):
                 (sy*cp,  cy*cr+sy*sp*sr, -cy*sr+sp*sy*cr),
                 (-sp   ,  cp*sr         ,  cp*cr)))
     return m
+
+def is_intersect(waypoints, obstacle, low, high):
+    [x,y] = obstacle[0:2]
+    x_min, x_max = x + low, x + high
+    y_min, y_max = y + low, y + high
+    for idx, waypoint in enumerate(waypoints):
+        [x, y] = waypoint[0:2]
+        # print((x,y), obstacle, (x_min, y_min), (x_max, y_max))
+        if x_min <= x and x <= x_max and y_min <= y and y <= y_max:
+            return True, idx
+    return False, None
+
+# Distance is distance away from obstacle that vector between spline_waypoint and obstacle is projected
+# returns new waypoint [x,y,z,yaw]
+def project_point(spline_waypoint, obstacle, distance):
+    [x1,y1] = spline_waypoint[0:2]
+    [x2,y2] = obstacle[0:2]
+    vec = np.array([x1-x2, y1-y2])
+    norm_vec = vec * (1/np.linalg.norm(vec))
+    new_waypoint = norm_vec * distance + np.array(obstacle[0:2])
+    z = spline_waypoint[2]
+    yaw = pi/2. + atan2(new_waypoint[1], new_waypoint[0])
+    new_waypoint = [new_waypoint[0], new_waypoint[1], z, yaw]
+    print("new_waypoint: ", new_waypoint)
+    return new_waypoint
+
+def update_waypoints_avoid_obstacles(spline_waypoints, waypoints, obstacles, initial_info):
+    is_collision = False
+
+    ### Determine range around obstacle that is dangerous (low,high)
+    obstacle_distrib_dict = initial_info['gates_and_obs_randomization']
+    tolerance = 0.1 # magic number to say how near we can be to the obs. includes drone size as well
+    low = -initial_info['obstacle_dimensions']['radius'] - tolerance
+    high = initial_info['obstacle_dimensions']['radius'] + tolerance
+    if 'obstacles' in obstacle_distrib_dict:
+        obstacle_distrib_dict = obstacle_distrib_dict['obstacles']
+        low -= obstacle_distrib_dict['low']
+        high += obstacle_distrib_dict['high']
+    
+    # Check if obstacle position uncertainty intersects with waypoint path 
+    for obstacle in obstacles:
+        collision, idx = is_intersect(spline_waypoints, obstacle, low, high)
+        if collision:
+            is_collision = True
+            print("Collision!")
+            dist = max(-low, high) + 0.5
+            new_waypoint = project_point(spline_waypoints[idx], obstacle, dist)
+            # TODO: Fix indexing!!
+            waypoints = np.insert(waypoints, 1, new_waypoint, axis=0)
+
+    return is_collision, waypoints

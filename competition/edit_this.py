@@ -28,6 +28,8 @@ import numpy as np
 
 from collections import deque
 
+from competition.custom_utils import update_waypoints_avoid_obstacles
+
 try:
     from competition_utils import Command, PIDController, timing_step, timing_ep, plot_trajectory, draw_trajectory
 except ImportError:
@@ -203,83 +205,89 @@ class Controller():
         #     yaw_curr = yaw_next
         #     dyaw = dyaw_next
 
-        x_coeffs = np.zeros((6,len(waypoints)-1))
-        y_coeffs = np.zeros((6,len(waypoints)-1))
-        z_coeffs = np.zeros((6,len(waypoints)-1))
-        [x0, y0, z0, yaw0] = waypoints[0]
-        dx0 = cos(yaw0)*0.01
-        dy0 = sin(yaw0)*0.01
-        dz0 = v_max
-        dzf = 0
-        d2x0 = 0
-        d2y0 = 0
-        d2z0 = a_max
-        d2xf = 0
-        d2yf = 0
-        d2zf = 0
-        for idx in range(1, self.length):
-            [xf, yf, zf, yawf] = waypoints[idx]
-            dt = self.ts[idx] - self.ts[idx - 1]
-            inv_t = 1/dt
-            dxf = cos(yawf) * self.grad_scale
-            dyf = sin(yawf) * self.grad_scale
-            if idx == self.length-1: # yaw of last goal not important
-                dxf = dx0 * 0.01
-                dyf = dy0 * 0.01
-            x_coeffs[::-1,idx-1] = utils.quintic_interp(inv_t, x0, xf, dx0, dxf, d2x0, d2xf)
-            y_coeffs[::-1,idx-1] = utils.quintic_interp(inv_t, y0, yf, dy0, dyf, d2y0, d2yf)
-            z_coeffs[::-1,idx-1] = utils.quintic_interp(inv_t, z0, zf, dz0, dzf, d2z0, d2zf)
-            [x0, y0, z0] = [xf, yf, zf]
-            [dx0, dy0, dz0] = [dxf, dyf, dzf]
-            [d2x0, d2y0, d2z0] = [d2xf, d2yf, d2zf]
-        waypoints = np.array(waypoints)
-        # z_coeffs = scipy.interpolate.PchipInterpolator(self.ts, waypoints[:,2], 0).c
+        is_collision = True
+        while is_collision:
+            x_coeffs = np.zeros((6,len(waypoints)-1))
+            y_coeffs = np.zeros((6,len(waypoints)-1))
+            z_coeffs = np.zeros((6,len(waypoints)-1))
+            [x0, y0, z0, yaw0] = waypoints[0]
+            dx0 = cos(yaw0)*0.01
+            dy0 = sin(yaw0)*0.01
+            dz0 = v_max
+            dzf = 0
+            d2x0 = 0
+            d2y0 = 0
+            d2z0 = a_max
+            d2xf = 0
+            d2yf = 0
+            d2zf = 0
+            for idx in range(1, self.length):
+                [xf, yf, zf, yawf] = waypoints[idx]
+                dt = self.ts[idx] - self.ts[idx - 1]
+                inv_t = 1/dt
+                dxf = cos(yawf) * self.grad_scale
+                dyf = sin(yawf) * self.grad_scale
+                if idx == self.length-1: # yaw of last goal not important
+                    dxf = dx0 * 0.01
+                    dyf = dy0 * 0.01
+                x_coeffs[::-1,idx-1] = utils.quintic_interp(inv_t, x0, xf, dx0, dxf, d2x0, d2xf)
+                y_coeffs[::-1,idx-1] = utils.quintic_interp(inv_t, y0, yf, dy0, dyf, d2y0, d2yf)
+                z_coeffs[::-1,idx-1] = utils.quintic_interp(inv_t, z0, zf, dz0, dzf, d2z0, d2zf)
+                [x0, y0, z0] = [xf, yf, zf]
+                [dx0, dy0, dz0] = [dxf, dyf, dzf]
+                [d2x0, d2y0, d2z0] = [d2xf, d2yf, d2zf]
+            waypoints = np.array(waypoints)
+            # z_coeffs = scipy.interpolate.PchipInterpolator(self.ts, waypoints[:,2], 0).c
 
-        # modify endpoint gradient for smooth z ending (pchip iterpolator)
-        # z_coeffs[::-1,-1] = utils.cubic_interp(1/(self.ts[-1]-self.ts[-2]),
-        #     waypoints[-2,2],
-        #     waypoints[-1,2],
-        #     z_coeffs[-2,-1],
-        #     0
-        # )
-        self.coeffs = [x_coeffs, y_coeffs, z_coeffs]
+            # modify endpoint gradient for smooth z ending (pchip iterpolator)
+            # z_coeffs[::-1,-1] = utils.cubic_interp(1/(self.ts[-1]-self.ts[-2]),
+            #     waypoints[-2,2],
+            #     waypoints[-1,2],
+            #     z_coeffs[-2,-1],
+            #     0
+            # )
+            self.coeffs = [x_coeffs, y_coeffs, z_coeffs]
 
-        # Integrate to get pathlength
-        pathlength = 0
-        for idx in range(self.length-1):
-            pathlength += scipy.integrate.quad(
-                utils.df_idx(self.length, self.ts, x_coeffs, y_coeffs, z_coeffs),
-                0, self.ts[idx+1] - self.ts[idx])[0]
-        self.scaling_factor = self.ts[-1] / pathlength
+            # Integrate to get pathlength
+            pathlength = 0
+            for idx in range(self.length-1):
+                pathlength += scipy.integrate.quad(
+                    utils.df_idx(self.length, self.ts, x_coeffs, y_coeffs, z_coeffs),
+                    0, self.ts[idx+1] - self.ts[idx])[0]
+            self.scaling_factor = self.ts[-1] / pathlength
 
-        if self.VERBOSE:
-            duration = self.ts[-1] - self.ts[0]
-            t_scaled = np.linspace(self.ts[0], self.ts[-1], int(duration*self.CTRL_FREQ))
-            t_diff_scaled = np.zeros(t_scaled.shape)
-            gate_scaled = np.zeros(t_scaled.shape, dtype=np.ushort)
-            gate = 0
-            for i, t in enumerate(t_scaled):
-                if gate < self.length and t > self.ts[gate+1]:
-                    gate += 1
-                t_diff_scaled[i] = t_scaled[i] - self.ts[gate]
-                gate_scaled[i] = gate
-            x_scaled = np.array(tuple(map(
-                lambda idx, t: utils.f(x_coeffs, idx, t),
-                gate_scaled, t_diff_scaled)))
-            y_scaled = np.array(tuple(map(
-                lambda idx, t: utils.f(y_coeffs, idx, t),
-                gate_scaled, t_diff_scaled)))
-            z_scaled = np.array(tuple(map(
-                lambda idx, t: utils.f(z_coeffs, idx, t),
-                gate_scaled, t_diff_scaled)))
-            print(x_coeffs)
-            print(y_coeffs)
-            print(z_coeffs)
-            print(waypoints)
-            # Plot trajectory in each dimension and 3D.
-            plot_trajectory(t_scaled, waypoints, x_scaled, y_scaled, z_scaled)
-            # Draw the trajectory on PyBullet's GUI
-            draw_trajectory(initial_info, waypoints, x_scaled, y_scaled, z_scaled)
+            if self.VERBOSE:
+                duration = self.ts[-1] - self.ts[0]
+                t_scaled = np.linspace(self.ts[0], self.ts[-1], int(duration*self.CTRL_FREQ))
+                t_diff_scaled = np.zeros(t_scaled.shape)
+                gate_scaled = np.zeros(t_scaled.shape, dtype=np.ushort)
+                gate = 0
+                for i, t in enumerate(t_scaled):
+                    if gate < self.length and t > self.ts[gate+1]:
+                        gate += 1
+                    t_diff_scaled[i] = t_scaled[i] - self.ts[gate]
+                    gate_scaled[i] = gate
+                x_scaled = np.array(tuple(map(
+                    lambda idx, t: utils.f(x_coeffs, idx, t),
+                    gate_scaled, t_diff_scaled)))
+                y_scaled = np.array(tuple(map(
+                    lambda idx, t: utils.f(y_coeffs, idx, t),
+                    gate_scaled, t_diff_scaled)))
+                z_scaled = np.array(tuple(map(
+                    lambda idx, t: utils.f(z_coeffs, idx, t),
+                    gate_scaled, t_diff_scaled)))
+                print(x_coeffs)
+                print(y_coeffs)
+                print(z_coeffs)
+                print(waypoints)
+                # Plot trajectory in each dimension and 3D.
+                plot_trajectory(t_scaled, waypoints, x_scaled, y_scaled, z_scaled)
+                # Draw the trajectory on PyBullet's GUI
+                draw_trajectory(initial_info, waypoints, x_scaled, y_scaled, z_scaled)
+
+                spline_waypoints = np.dstack((x_scaled, y_scaled, z_scaled))[0]
+                is_collision, waypoints = update_waypoints_avoid_obstacles(spline_waypoints, waypoints, self.NOMINAL_OBSTACLES, 
+                                                            initial_info)
 
         ### S-curve ###
         sf = pathlength
