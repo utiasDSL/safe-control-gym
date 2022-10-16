@@ -27,38 +27,16 @@ def quintic_interp(inv_t, x0, xf, dx0, dxf, d2x0, d2xf):
 
 
 def f(coeffs, t):
-    val = 0
-    for coeff in coeffs:
-        val *= t
-        val += coeff
-    return val
+    return np.polyval(coeffs, t)
 
 def df(coeffs, t):
-    coeffs_no = len(coeffs)
-    val = 0
-    for i, coeff in enumerate(coeffs[:-1]):
-        val *= t
-        factor = (coeffs_no - i - 1)
-        val += coeff * factor
-    return val
+    return np.polyval(np.polyder(coeffs), t)
 
 def d2f(coeffs, t):
-    coeffs_no = len(coeffs)
-    val = 0
-    for i, coeff in enumerate(coeffs[:-2]):
-        val *= t
-        factor = (coeffs_no - i - 1)
-        val += coeff * factor * (factor - 1)
-    return val
+    return np.polyval(np.polyder(coeffs,2), t)
 
 def d3f(coeffs, t):
-    coeffs_no = len(coeffs)
-    val = 0
-    for i, coeff in enumerate(coeffs[:-3]):
-        val *= t
-        factor = (coeffs_no - i - 1)
-        val += coeff * factor * (factor - 1) * (factor - 2)
-    return val
+    return np.polyval(np.polyder(coeffs,3), t)
 
 def df_idx(length, ts, x_coeffs, y_coeffs, z_coeffs):
     def df_(t):
