@@ -206,7 +206,7 @@ class Controller():
         #     dyaw = dyaw_next
 
         is_collision = True
-        while is_collision:
+        if is_collision:
             x_coeffs = np.zeros((6,len(waypoints)-1))
             y_coeffs = np.zeros((6,len(waypoints)-1))
             z_coeffs = np.zeros((6,len(waypoints)-1))

@@ -98,10 +98,12 @@ def is_intersect(waypoints, obstacle, low, high):
     [x,y] = obstacle[0:2]
     x_min, x_max = x + low, x + high
     y_min, y_max = y + low, y + high
+    print(waypoints.shape)
     for idx, waypoint in enumerate(waypoints):
         [x, y] = waypoint[0:2]
         # print((x,y), obstacle, (x_min, y_min), (x_max, y_max))
         if x_min <= x and x <= x_max and y_min <= y and y <= y_max:
+            print(idx)
             return True, idx
     return False, None
 
@@ -118,6 +120,22 @@ def project_point(spline_waypoint, obstacle, distance):
     new_waypoint = [new_waypoint[0], new_waypoint[1], z, yaw]
     print("new_waypoint: ", new_waypoint)
     return new_waypoint
+
+# Get nearest path segment (in x y plane)
+def get_nearest_path_segment(new_waypoint, waypoints):
+    if(len(waypoints) < 2):
+        return 0.0
+    min_dist_to_path = np.Inf
+    min_idx = 0
+    for idx in range(len(waypoints)-1):
+        vec = np.array(waypoints[idx+1] - waypoints[idx])
+        main_vec = new_waypoint - waypoints[idx]
+        vec[2] = main_vec[2] = 0.0
+        dist_to_path = np.dot(vec, main_vec) * (1/np.linalg.norm(vec))
+        if(dist_to_path < min_dist_to_path):
+            min_dist_to_path = dist_to_path
+            min_idx = idx
+    return min_idx+1
 
 def update_waypoints_avoid_obstacles(spline_waypoints, waypoints, obstacles, initial_info):
     is_collision = False
@@ -140,7 +158,7 @@ def update_waypoints_avoid_obstacles(spline_waypoints, waypoints, obstacles, ini
             print("Collision!")
             dist = max(-low, high) + 0.5
             new_waypoint = project_point(spline_waypoints[idx], obstacle, dist)
-            # TODO: Fix indexing!!
-            waypoints = np.insert(waypoints, 1, new_waypoint, axis=0)
+            insertion_idx = get_nearest_path_segment(new_waypoint, waypoints)
+            waypoints = np.insert(waypoints, insertion_idx, new_waypoint, axis=0)
 
     return is_collision, waypoints
