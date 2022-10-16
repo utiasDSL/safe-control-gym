@@ -429,6 +429,12 @@ class Controller():
                     # Local replan when near to goal
                     self.at_gate = True
                     [x, y, z, _, _, yaw] = info['current_target_gate_pos']
+                    prev_x = self.run_coeffs[0][-1,self.gate_no+1]
+                    prev_y = self.run_coeffs[1][-1,self.gate_no+1]
+                    prev_z = self.run_coeffs[2][-1,self.gate_no+1]
+                    error = sqrt((x-prev_x)**2 + (y-prev_y)**2 + (z-prev_z)**2)
+                    self.time_scale += -log1p(np.linalg.norm(error)-.25)*0.05
+                    self.time_scale = max(0.0, min(1.0, self.time_scale))
                     yaw += self.half_pi
                     dt = self.run_ts[self.gate_no + 1] - self.curve_t
                     inv_t = 1/dt
