@@ -41,11 +41,13 @@ from safetyplusplus_folder.slam import SLAM
 from safetyplusplus_folder.plus_logger import SafeLogger
 import random
 
-file_name='1016_04_L1_S9_KnowSelf_NoPongPenality_Offset_seed1337'
-# file_name='L2_test'
-test=False
+
+file_name='Submit'
+
+Pretrain=False
+test=True
 sim_only=False
-model_name='models/l2_1800'
+model_name='submit_models/1016_01_1800'
 #########################
 # REPLACE THIS (START) ##
 #########################
@@ -163,7 +165,7 @@ class Controller():
         # td3 policy
         self.policy = unconstrained.TD3(**kwargs)
         self.replay_buffer = replay_buffer.IrosReplayBuffer(self.global_state_dim,self.local_state_dim,action_dim,load=False)
-        if test:
+        if test or Pretrain:
             self.policy.load(model_name)
             print("load ok ")
 
@@ -276,8 +278,11 @@ class Controller():
         elif info!={} and info['current_target_gate_id'] == -1 and self.episode_iteration % 5 ==0:
             self.rule_control_time+=1
             # navigate to the goal_pos.and stop
-            command_type =  Command(1) 
-            if self.rule_control_time <=25: 
+            command_type =  Command(1)
+            if self.rule_control_time <=5: 
+                target_pos = np.array(self.goal_pos)
+                target_pos[1] -=0.4 
+            elif self.rule_control_time <=20: 
                 target_pos = np.array(self.goal_pos)
                 target_pos[1] -=0.2
             else:
@@ -302,10 +307,10 @@ class Controller():
             command_type =  Command(1)  
             all_state=self.get_state(obs,info)
             global_state=all_state[0]
-            if not test and self.interepisode_counter < self.begin_net_infer_epo:
+            if not (test or Pretrain) and self.interepisode_counter < self.begin_net_infer_epo:
                 action= self.action_space.sample() 
             else:
-                action = self.policy.select_action(all_state, exploration= True)  # array  delta_x , delta_y, delta_z
+                action = self.policy.select_action(all_state, exploration=True if not test else False)  # array  delta_x , delta_y, delta_z
             action /= 10
             target_pos = global_state[[0,1,2]] + action
             self.current_all_state=all_state
@@ -320,6 +325,27 @@ class Controller():
             command_type = Command(0)  # None.
             args = []
 
+        # if test and info !={}:
+        #     all_state=self.get_state(obs,info)
+        #     global_state=all_state[0]
+        #     current_local_space=all_state[1][2-1:2+2,11-1:11+2,11-1:11+2]
+        #     if (current_local_space<0).any():
+        #         command_type =  Command(1)  
+        #         if info['current_target_gate_id'] ==-1:
+        #             last_gate_id=3
+        #         elif info['current_target_gate_id'] ==0:
+        #             last_gate_id=0
+        #         else:
+        #             last_gate_id=info['current_target_gate_id']-1
+        #         last_gate_pos=self.NOMINAL_GATES[last_gate_id]
+        #         last_gate_pos[2]=1 if last_gate_pos[-1]==0 else 0.525
+        #         last_gate_pos=np.array(last_gate_pos[0:3])
+        #         target_pos=last_gate_pos
+        #         target_vel = np.zeros(3)
+        #         target_acc = np.zeros(3)
+        #         target_yaw = 0.
+        #         target_rpy_rates = np.zeros(3)
+        #         args=[target_pos, target_vel, target_acc, target_yaw, target_rpy_rates]
         #########################
         # REPLACE THIS (END) ####
         #########################
@@ -403,6 +429,20 @@ class Controller():
                 self.last_action = self.current_action
 
             if  self.episode_iteration> self.begin_train_seconds * self.CTRL_FREQ   :
+                if info['constraint_violation']:
+                    self.reward -= 50
+                if info["collision"][1]:
+                    self.reward -= 100
+                    self.collisions_count += 1 
+                    self.episode_cost+=1
+                if 'constraint_values' in info and info['constraint_violation'] == True:
+                    self.violations_count += 1
+                    self.episode_cost+=1
+                # if info['constraint_violation'] and (  test or self.interepisode_counter> 100 ) :
+                #     print(f"step{self.episode_iteration} , constraint_violation : current pos : {current_pos}")
+                # if info["collision"][1] and (  test or self.interepisode_counter> 100 ):
+                #     print(info["collision"])
+                
                 if self.episode_iteration % (30*self.net_work_freq) ==0:
                     last_pos= self.last_all_state[0][[0,1,2]]
                     current_pos=self.current_all_state[0][[0,1,2]]
@@ -415,41 +455,29 @@ class Controller():
                     last2goal_dis=sum(last2goal_vector * last2goal_vector)
 
                     if self.target_gate_id == info['current_target_gate_id']:
-                        reward +=( last2goal_dis - cur2goal_dis ) * 20
+                        self.reward +=( last2goal_dis - cur2goal_dis ) * 20
                     # cross the gate ,get the big reward
                     else:
-                        reward = reward + 100 * ( (info['current_target_gate_id'] if info['current_target_gate_id']!=-1 else 4) +1)
+                        self.reward = self.reward + 100 * ( (info['current_target_gate_id'] if info['current_target_gate_id']!=-1 else 4) +1)
                         print(f"STEP{self.episode_iteration} , step gate{self.target_gate_id}")
                         if info['current_target_gate_id']==-1:
                             print("step all gates")
                             self.trigger=True
                         self.get_offset(info)
                     if info['at_goal_position']:
-                        reward += 100
+                        self.reward += 100
                     # if (current_local_space<0).any():
                     #     reward -= 5    
-                    if info['constraint_violation']:
-                        reward -= 15
-                    if info["collision"][1]:
-                        reward -= 25
-                        self.collisions_count += 1 
-                        self.episode_cost+=1
-                    if 'constraint_values' in info and info['constraint_violation'] == True:
-                        self.violations_count += 1
-                        self.episode_cost+=1
-                    if info['constraint_violation'] and (  test or self.interepisode_counter> 100 ) :
-                        print(f"step{self.episode_iteration} , constraint_violation : current pos : {current_pos}")
-                    if info["collision"][1] and (  test or self.interepisode_counter> 100 ):
-                        print(info["collision"])   
+                       
                     # cmdFullState
-                    self.replay_buffer.add(self.last_all_state[0],self.last_all_state[1],self.last_action * 10 ,self.current_all_state[0],self.current_all_state[1],reward,done)
+                    self.replay_buffer.add(self.last_all_state[0],self.last_all_state[1],self.last_action * 10 ,self.current_all_state[0],self.current_all_state[1],self.reward,done)
                     if self.episode_iteration % 900 ==0  and not test:
                         print(f"Step{self.episode_iteration} add buffer:\nlast_pos:{last_pos} aim vector: {last2goal_vector} ")
                         print(f"action_infer: {self.last_action * 10}\t lastDis-CurDis:{( last2goal_dis - cur2goal_dis )}")
-                        print(f"last2cur_pos_vector: {last2cur_vector } \t reward: {reward}")
+                        print(f"last2cur_pos_vector: {last2cur_vector } \t reward: {self.reward}")
                         print(f"target_gate_id:{info['current_target_gate_id']} ; pos: {info['current_target_gate_pos']} ; distance : {cur2goal_dis}")
                         print("*************************************************************************************")
-                    self.episode_reward+=reward
+                    self.episode_reward+=self.reward
 
                     # ready for next update
                     self.last_all_state=self.current_all_state
@@ -457,12 +485,13 @@ class Controller():
                     self.target_gate_id= info['current_target_gate_id']
                     self.cur2goal_dis=cur2goal_dis
                     self.info=info
+                    self.reward=0
                     
                     
                 else :
                     pass
             # change_Train_Num Better
-            if self.interepisode_counter > self.begin_train_epo  and not test :
+            if (self.interepisode_counter > self.begin_train_epo  and not test) or ( Pretrain and self.interepisode_counter > 20) :
                 # self.policy.train(self.replay_buffer,batch_size=min(128,64*int(self.interepisode_counter/100+1)),train_nums=int(1))   
                 self.policy.train(self.replay_buffer,batch_size=self.batch_size,train_nums=int(1)) 
         #########################
@@ -524,4 +553,5 @@ class Controller():
         self.info=None
         self.trigger=False
         self.rule_control_time=0
+        self.reward=0
 
