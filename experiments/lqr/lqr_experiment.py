@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 
-from safe_control_gym.experiment import Experiment
+from safe_control_gym.experiments.base_experiment import BaseExperiment
 from safe_control_gym.envs.benchmark_env import Task
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
@@ -51,7 +51,7 @@ def run(gui=True, n_episodes=2, n_steps=None, save_data=True):
         static_train_env = env_func(gui=False, randomized_init=False, init_state=init_state)
 
         # Create experiment, train, and run evaluation
-        experiment = Experiment(env=static_env, ctrl=ctrl, train_env=static_train_env)
+        experiment = BaseExperiment(env=static_env, ctrl=ctrl, train_env=static_train_env)
         experiment.launch_training()
 
         if n_steps is None:

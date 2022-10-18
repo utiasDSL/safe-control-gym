@@ -3,6 +3,7 @@
 from time import time
 from copy import deepcopy
 from collections import defaultdict
+from munch import munchify
 
 import gym
 import numpy as np
@@ -12,7 +13,7 @@ from safe_control_gym.utils.utils import is_wrapped
 from safe_control_gym.math_and_models.metrics.performance_metrics import compute_cvar
 
 
-class Experiment:
+class BaseExperiment:
     '''Generic Experiment Class. '''
 
     def __init__(self,
@@ -69,9 +70,19 @@ class Experiment:
         return dict(trajs_data), metrics
 
     def _execute_evaluations(self, n_episodes=None, n_steps=None, log_freq=None):
+        trajs_data = self._execute_task(ctrl=self.ctrl,
+                                        env=self.env,
+                                        n_episodes=n_episodes,
+                                        n_steps=n_steps,
+                                        log_freq=log_freq)
+        return trajs_data
+
+    def _execute_task(self, ctrl=None, env=None, n_episodes=None, n_steps=None, log_freq=None):
         '''Runs the experiments and collects all the required data.
 
         Args:
+            ctrl : Controller to run the task. Default is self.train.
+            env : Environment of the task to run. Defulat is self.env.
             n_episodes (int): Number of runs to execute.
             n_steps (int): The number of steps to collect in total.
             log_freq (int): The frequency with which to log information.
@@ -84,48 +95,61 @@ class Experiment:
             raise ValueError('One of n_episodes or n_steps must be defined.')
         elif n_episodes is not None and n_steps is not None:
             raise ValueError('Only one of n_episodes or n_steps can be defined.')
+        if ctrl is None:
+            ctrl = self.ctrl
+        if env is None:
+            env = self.env
 
         # initialize
-        sim_steps = log_freq // self.env.CTRL_FREQ if log_freq else 1
+        sim_steps = log_freq // env.CTRL_FREQ if log_freq else 1
         steps, trajs = 0, 0
-        obs, info = self._evaluation_reset(ctrl_data=None, sf_data=None)
+        obs, info = self._evaluation_reset(ctrl=ctrl,
+                                           env=env,
+                                           ctrl_data=None,
+                                           sf_data=None)
         ctrl_data = defaultdict(list)
         sf_data = defaultdict(list)
 
         if n_episodes is not None:
             while trajs < n_episodes:
-                action = self._select_action(obs=obs, info=info)
+                action = ctrl.select_action(obs=obs, info=info)
                 # inner sim loop to accomodate different control frequencies
                 for _ in range(sim_steps):
-                    obs, _, done, info = self.env.step(action)
+                    obs, _, done, info = env.step(action)
                     if done:
                         trajs += 1
-                        obs, info = self._evaluation_reset(ctrl_data=ctrl_data, sf_data=sf_data)
+                        obs, info = self._evaluation_reset(ctrl=ctrl,
+                                                           env=env,
+                                                           ctrl_data=ctrl_data,
+                                                           sf_data=sf_data)
                         break
         elif n_steps is not None:
             while steps < n_steps:
-                action = self._select_action(obs=obs, info=info)
+                action = ctrl.select_action(obs=obs, info=info)
                 # inner sim loop to accomodate different control frequencies
                 for _ in range(sim_steps):
-                    obs, _, done, info = self.env.step(action)
+                    obs, _, done, info = env.step(action)
                     steps += 1
                     if steps >= n_steps:
-                        self.env.save_data()
-                        for data_key, data_val in self.ctrl.results_dict.items():
+                        env.save_data()
+                        for data_key, data_val in ctrl.results_dict.items():
                             ctrl_data[data_key].append(np.array(deepcopy(data_val)))
                         if self.safety_filter is not None:
                             for data_key, data_val in self.safety_filter.results_dict.items():
                                 sf_data[data_key].append(np.array(deepcopy(data_val)))
                         break
                     if done:
-                        obs, info = self._evaluation_reset(ctrl_data=ctrl_data, sf_data=sf_data)
+                        obs, info = self._evaluation_reset(ctrl=ctrl,
+                                                           env=env,
+                                                           ctrl_data=ctrl_data,
+                                                           sf_data=sf_data)
                         break
 
-        trajs_data = self.env.data
-        trajs_data['controller_data'].append(dict(ctrl_data))
+        trajs_data = env.data
+        trajs_data['controller_data'].append(munchify(dict(ctrl_data)))
         if self.safety_filter is not None:
-            trajs_data['safety_filter_data'].append(dict(sf_data))
-        return trajs_data
+            trajs_data['safety_filter_data'].append(munchify(dict(sf_data)))
+        return munchify(trajs_data)
 
     def _select_action(self, obs, info):
         '''Determines the executed action using the controller and safety filter.
@@ -148,7 +172,7 @@ class Experiment:
 
         return action
 
-    def _evaluation_reset(self, ctrl_data, sf_data):
+    def _evaluation_reset(self, ctrl, env, ctrl_data, sf_data):
         '''Resets the evaluation between runs.
 
         Args:
@@ -159,20 +183,24 @@ class Experiment:
             obs (ndarray): The initial observation.
             info (dict): The initial info.
         '''
-        if self.env.INFO_IN_RESET:
-            obs, info = self.env.reset()
+        if ctrl is None:
+            ctrl = self.ctrl
+        if env is None:
+            env = self.env
+        if env.INFO_IN_RESET:
+            obs, info = env.reset()
         else:
-            obs = self.env.reset()
+            obs = env.reset()
             info = None
         if ctrl_data is not None:
-            for data_key, data_val in self.ctrl.results_dict.items():
+            for data_key, data_val in ctrl.results_dict.items():
                 ctrl_data[data_key].append(np.array(deepcopy(data_val)))
         if sf_data is not None and self.safety_filter is not None:
             for data_key, data_val in self.safety_filter.results_dict.items():
                 sf_data[data_key].append(np.array(deepcopy(data_val)))
-        self.ctrl.reset_before_run(obs, info, env=self.env)
+        ctrl.reset_before_run(obs, info, env=env)
         if self.safety_filter is not None:
-            self.safety_filter.reset_before_run(env=self.env)
+            self.safety_filter.reset_before_run(env=env)
         return obs, info
 
     def launch_training(self, **kwargs):
@@ -435,3 +463,4 @@ class MetricExtractor:
         '''
         return self.get_episode_data('constraint_violation',
                                      postprocess_func=sum)
+

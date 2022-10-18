@@ -462,3 +462,6 @@ class MPC(BaseController):
             raise Exception("[ERROR] mpc.run().py: MPC could not find a solution for the first step given the initial conditions. "
                   "Check to make sure initial conditions are feasible.")
         return deepcopy(self.results_dict)
+
+    def reset_before_run(self, obs, info=None, env=None):
+        self.reset()
