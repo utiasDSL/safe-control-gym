@@ -112,7 +112,7 @@ class BaseExperiment:
 
         if n_episodes is not None:
             while trajs < n_episodes:
-                action = ctrl.select_action(obs=obs, info=info)
+                action = self._select_action(obs=obs, info=info, ctrl=ctrl, env=env)
                 # inner sim loop to accomodate different control frequencies
                 for _ in range(sim_steps):
                     obs, _, done, info = env.step(action)
@@ -125,7 +125,7 @@ class BaseExperiment:
                         break
         elif n_steps is not None:
             while steps < n_steps:
-                action = ctrl.select_action(obs=obs, info=info)
+                action = self._select_action(obs=obs, info=info, ctrl=ctrl, env=env)
                 # inner sim loop to accomodate different control frequencies
                 for _ in range(sim_steps):
                     obs, _, done, info = env.step(action)
@@ -151,24 +151,31 @@ class BaseExperiment:
             trajs_data['safety_filter_data'].append(munchify(dict(sf_data)))
         return munchify(trajs_data)
 
-    def _select_action(self, obs, info):
+    def _select_action(self, obs, info, ctrl=None, env=None):
         '''Determines the executed action using the controller and safety filter.
 
         Args:
             obs (ndarray): The observation at this timestep.
             info (dict): The info at this timestep.
+            ctrl (BaseController): Controller to select the action.
+            env (BenchmarkEnv): Environment to normalize actions.
 
         Returns:
             action (ndarray): The action chosen by the controller and safety filter.
         '''
-        action = self.ctrl.select_action(obs, info)
+        if env is None:
+            env = self.env
+        if ctrl is None:
+            ctrl = self.ctrl
+
+        action = ctrl.select_action(obs, info)
 
         if self.safety_filter is not None:
-            physical_action = self.env.denormalize_action(action)
-            unextended_obs = obs[:self.env.symbolic.nx]
+            physical_action = env.denormalize_action(action)
+            unextended_obs = obs[:env.symbolic.nx]
             certified_action, success = self.safety_filter.certify_action(unextended_obs, physical_action, info)
             if success:
-                action = self.env.normalize_action(certified_action)
+                action = env.normalize_action(certified_action)
 
         return action
 
