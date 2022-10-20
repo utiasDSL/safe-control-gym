@@ -209,6 +209,7 @@ class EpochExp(BaseExperiment):
         else:
             for key in self.metrics:
                 self.metrics[key].append(deepcopy(metrics[key][0]))
+
     def compute_metrics(self, trajs_data):
         '''Compute all standard metrics on the given trajectory data.
 
