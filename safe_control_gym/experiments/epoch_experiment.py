@@ -75,6 +75,19 @@ class EpochExp(BaseExperiment):
 
     def launch_training(self,
                         **kwargs):
+        """Launches the epoch training.
+
+
+        Returns:
+            metrics (dict): Metric data from training. Then
+        if self.save_train_trajs:
+                Also returns:
+                    all_train_data (dict): Dictionary of the training data keyed by the epoch
+        if self.save_test_trajs:
+                Also returns:
+                    all_test_data (dict): Dictionary of the test data keyed by the epoch
+
+        """
         epoch_start_ind = 0
         # Check if the controller has a prior_ctrl that should be run to collect data first.
         if hasattr(self.ctrl, 'prior_ctrl'):
@@ -151,7 +164,18 @@ class EpochExp(BaseExperiment):
                                   n_steps,
                                   log_freq,
                                   **kwargs):
-        """Defined per controller?"""
+        """Run a single training epoch
+
+        Args:
+            run_ctrl (BaseController): Controller used to collect the data.
+            env (BenchmarkEnv): Environment to collect the data.
+            n_episodes (int): Number of runs to execute.
+            episode_i (int): The current episode.
+            log_freq (int): The frequency with which to log information.
+
+        Returns:
+
+        """
         # Training Data Collection
         traj_data = self._execute_task(ctrl=run_ctrl,
                                        env=env,
@@ -190,6 +214,12 @@ class EpochExp(BaseExperiment):
 
 
     def add_to_all_train_data(self, traj_data):
+        """Add data from single run to all training data.
+
+        Args:
+            traj_data (dict): Single training run data.
+
+        """
         if self.all_train_data is None:
             self.all_train_data = deepcopy(traj_data)
         else:
@@ -197,6 +227,12 @@ class EpochExp(BaseExperiment):
                 self.all_train_data[key].append(deepcopy(traj_data[key][0]))
 
     def add_to_all_test_data(self, traj_data):
+        """Add data from single run to all test data.
+
+        Args:
+            traj_data (dict): Single test run data.
+
+        """
         if self.all_test_data is None:
             self.all_test_data = deepcopy(traj_data)
         else:
@@ -204,6 +240,14 @@ class EpochExp(BaseExperiment):
                 self.all_test_data[key].append(deepcopy(traj_data[key][0]))
 
     def add_to_metrics(self, metrics):
+        """Collect metric data from a single run.
+
+        Args:
+            metrics (dict): Dictionary of run metrics.
+
+        Returns:
+
+        """
         if self.metrics is None:
             self.metrics = deepcopy(metrics)
         else:
