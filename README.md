@@ -3,8 +3,6 @@
 [![video](https://img.youtube.com/vi/PwphA_jsNKw/maxresdefault.jpg)](https://www.youtube.com/watch?v=PwphA_jsNKw)
 
 > (The image above links to the video of a flight example)
->
-> Note: beta release subject to change throughout the month of August 2022; register for updates
 
 - [Official Webpage](https://www.dynsyslab.org/iros-2022-safe-robot-learning-competition/)
 - [IROS Competition Page](https://iros2022.org/program/competition/#toggle-id-8)
@@ -262,6 +260,15 @@ Kindly supported by [Bitcraze](https://www.bitcraze.io):
 - 3rd: [Bitcraze Crazyflie STEM Bundle](https://store.bitcraze.io/collections/bundles/products/stem-drone-bundle)
 
 The authors of the best solutions will be invited to co-author a "lessons learned" paper with the organizers.
+
+
+## Winners
+
+Congratulations to the winning teams!
+
+- 1st: Team H^2 (Niu Xinyuan, Hashir Zahir, and Huiyu Leong from Singapore)
+- 2nd: Team Ekuflie (Michel Hidalgo, Gerardo Puga, Tomas Lorente, Nahuel Espinosa, and John Alejandro Duarte Carrasco from Ekumen)
+- 3rd: Team ustc-arg (Kaizheng Zhang, Jian Di, Tao Jin, Xiaohan Li, Yijia Zhou, Xiuhua Liang, and Chenxu Zhang from the University of Science and Technology of China)
 
 ## Organizers
 
