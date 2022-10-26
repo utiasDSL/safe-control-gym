@@ -1,5 +1,3 @@
-> For the [IROS 2022 Safe Robot Learning Competition](https://www.dynsyslab.org/iros-2022-safe-robot-learning-competition/), check out branch [`beta-iros-competition`](https://github.com/utiasDSL/safe-control-gym/tree/beta-iros-competition)
-
 # safe-control-gym
 
 
