@@ -261,7 +261,6 @@ Kindly supported by [Bitcraze](https://www.bitcraze.io):
 
 The authors of the best solutions will be invited to co-author a "lessons learned" paper with the organizers.
 
-
 ## Winners
 
 Congratulations to the winning teams!
@@ -269,6 +268,8 @@ Congratulations to the winning teams!
 - 1st: Team H^2 (Niu Xinyuan, Hashir Zahir, and Huiyu Leong from Singapore)
 - 2nd: Team Ekuflie (Michel Hidalgo, Gerardo Puga, Tomas Lorente, Nahuel Espinosa, and John Alejandro Duarte Carrasco from Ekumen)
 - 3rd: Team ustc-arg (Kaizheng Zhang, Jian Di, Tao Jin, Xiaohan Li, Yijia Zhou, Xiuhua Liang, and Chenxu Zhang from the University of Science and Technology of China)
+
+[![video](https://img.youtube.com/vi/C6PZYJ5R1MI/maxresdefault.jpg)](https://www.youtube.com/watch?v=C6PZYJ5R1MI)
 
 ## Organizers
 
