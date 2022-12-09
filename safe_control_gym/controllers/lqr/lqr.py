@@ -63,7 +63,7 @@ class LQR(BaseController):
         if self.env.TASK == Task.STABILIZATION:
             return -self.gain @ (obs - self.env.X_GOAL) + self.model.U_EQ
         elif self.env.TASK == Task.TRAJ_TRACKING:
-            self.gain = compute_lqr_gain(self.model, self.env.X_GOAL[step],
+            self.gain = compute_lqr_gain(self.model, self.model.X_EQ,
                                          self.model.U_EQ, self.Q, self.R,
                                          self.discrete_dynamics)
             return -self.gain @ (obs - self.env.X_GOAL[step]) + self.model.U_EQ

@@ -62,11 +62,8 @@ class iLQR(BaseController):
         self.R = get_cost_weight_matrix(self.r_lqr, self.model.nu)
         self.env.set_cost_function_param(self.Q, self.R)
 
-        # Linearize at operating point (equilibrium for stabilization).
-        self.x_0, self.u_0 = self.env.X_GOAL, self.model.U_EQ
-
         if self.env.TASK == Task.STABILIZATION:
-            self.gain = compute_lqr_gain(self.model, self.x_0, self.u_0,
+            self.gain = compute_lqr_gain(self.model, self.model.X_EQ, self.model.U_EQ,
                                          self.Q, self.R, self.discrete_dynamics)
 
         # Control stepsize.
@@ -196,9 +193,9 @@ class iLQR(BaseController):
         input_k = self.model.U_EQ
 
         if env.TASK == Task.STABILIZATION:
-            x_goal = self.x_0
+            x_goal = self.env.X_GOAL
         elif env.TASK == Task.TRAJ_TRACKING:
-            x_goal = self.x_0[-1]
+            x_goal = self.env.X_GOAL[-1]
         loss_k = loss(x=state_k,
                       u=input_k,
                       Xr=x_goal,
@@ -223,9 +220,9 @@ class iLQR(BaseController):
             # Get symbolic loss function that includes the necessary Jacobian
             # and Hessian of the loss w.r.t. state and input.
             if env.TASK == Task.STABILIZATION:
-                x_goal = self.x_0
+                x_goal = self.env.X_GOAL
             elif env.TASK == Task.TRAJ_TRACKING:
-                x_goal = self.x_0[k]
+                x_goal = self.env.X_GOAL[k]
             loss_k = loss(x=state_k,
                           u=input_k,
                           Xr=x_goal,
@@ -309,7 +306,7 @@ class iLQR(BaseController):
 
     def calculate_lqr_action(self, obs, step):
         '''Compute gain for the first iteration.
-           action = -self.gain @ (x - self.x_0) + self.u_0
+           action = -self.gain @ (x - self.x_goal) + self.model.U_EQ
 
         Args:
             obs (ndarray): The observation at this timestep.
@@ -322,13 +319,13 @@ class iLQR(BaseController):
         '''
         if self.env.TASK == Task.STABILIZATION:
             gains_fb = -self.gain
-            input_ff = self.gain @ self.x_0 + self.u_0
+            input_ff = self.gain @ self.env.X_GOAL + self.model.U_EQ
         elif self.env.TASK == Task.TRAJ_TRACKING:
-            self.gain = compute_lqr_gain(self.model, self.x_0[step],
-                                        self.u_0, self.Q, self.R,
+            self.gain = compute_lqr_gain(self.model, self.model.X_EQ,
+                                        self.model.U_EQ, self.Q, self.R,
                                         self.discrete_dynamics)
             gains_fb = -self.gain
-            input_ff = self.gain @ self.x_0[step] + self.u_0
+            input_ff = self.gain @ self.env.X_GOAL[step] + self.model.U_EQ
 
         # Compute action
         action = gains_fb.dot(obs) + input_ff
