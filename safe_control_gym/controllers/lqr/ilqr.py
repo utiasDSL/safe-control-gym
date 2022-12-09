@@ -62,9 +62,8 @@ class iLQR(BaseController):
         self.R = get_cost_weight_matrix(self.r_lqr, self.model.nu)
         self.env.set_cost_function_param(self.Q, self.R)
 
-        if self.env.TASK == Task.STABILIZATION:
-            self.gain = compute_lqr_gain(self.model, self.model.X_EQ, self.model.U_EQ,
-                                         self.Q, self.R, self.discrete_dynamics)
+        self.gain = compute_lqr_gain(self.model, self.model.X_EQ, self.model.U_EQ,
+                                     self.Q, self.R, self.discrete_dynamics)
 
         # Control stepsize.
         self.stepsize = self.model.dt
@@ -321,9 +320,6 @@ class iLQR(BaseController):
             gains_fb = -self.gain
             input_ff = self.gain @ self.env.X_GOAL + self.model.U_EQ
         elif self.env.TASK == Task.TRAJ_TRACKING:
-            self.gain = compute_lqr_gain(self.model, self.model.X_EQ,
-                                        self.model.U_EQ, self.Q, self.R,
-                                        self.discrete_dynamics)
             gains_fb = -self.gain
             input_ff = self.gain @ self.env.X_GOAL[step] + self.model.U_EQ
 

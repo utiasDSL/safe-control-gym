@@ -35,9 +35,8 @@ class LQR(BaseController):
         self.R = get_cost_weight_matrix(r_lqr, self.model.nu)
         self.env.set_cost_function_param(self.Q, self.R)
 
-        if self.env.TASK == Task.STABILIZATION:
-            self.gain = compute_lqr_gain(self.model, self.model.X_EQ, self.model.U_EQ,
-                                         self.Q, self.R, self.discrete_dynamics)
+        self.gain = compute_lqr_gain(self.model, self.model.X_EQ, self.model.U_EQ,
+                                     self.Q, self.R, self.discrete_dynamics)
 
     def reset(self):
         '''Prepares for evaluation. '''
@@ -63,7 +62,4 @@ class LQR(BaseController):
         if self.env.TASK == Task.STABILIZATION:
             return -self.gain @ (obs - self.env.X_GOAL) + self.model.U_EQ
         elif self.env.TASK == Task.TRAJ_TRACKING:
-            self.gain = compute_lqr_gain(self.model, self.model.X_EQ,
-                                         self.model.U_EQ, self.Q, self.R,
-                                         self.discrete_dynamics)
             return -self.gain @ (obs - self.env.X_GOAL[step]) + self.model.U_EQ
