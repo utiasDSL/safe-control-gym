@@ -36,7 +36,7 @@ class LQR(BaseController):
         self.env.set_cost_function_param(self.Q, self.R)
 
         if self.env.TASK == Task.STABILIZATION:
-            self.gain = compute_lqr_gain(self.model, self.env.X_GOAL, self.model.U_EQ,
+            self.gain = compute_lqr_gain(self.model, self.model.X_EQ, self.model.U_EQ,
                                          self.Q, self.R, self.discrete_dynamics)
 
     def reset(self):
