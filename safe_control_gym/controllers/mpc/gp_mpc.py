@@ -909,6 +909,7 @@ class GPMPC(MPC):
             self.set_gp_dynamics_func(n_ind_points)
             self.setup_gp_optimizer(n_ind_points)
         self.prior_ctrl.reset()
+        self.setup_results_dict()
         # Previously solved states & inputs, useful for warm start.
         self.x_prev = None
         self.u_prev = None

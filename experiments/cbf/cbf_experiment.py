@@ -7,7 +7,7 @@ from functools import partial
 import numpy as np
 import matplotlib.pyplot as plt
 
-from safe_control_gym.experiment import Experiment
+from safe_control_gym.experiments.base_experiment import BaseExperiment
 from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.configuration import ConfigFactory
 
@@ -42,7 +42,7 @@ def run(plot=True, training=True, n_episodes=1, n_steps=None, curr_path='.', sav
     ctrl.load(os.path.join(model_dir, f'{config.algo}_model_{config.task}.pt'))
 
     # Run without safety filter
-    experiment = Experiment(env, ctrl)
+    experiment = BaseExperiment(env, ctrl)
     results, _ = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
 
     # Setup CBF.
@@ -65,7 +65,7 @@ def run(plot=True, training=True, n_episodes=1, n_steps=None, curr_path='.', sav
     shutil.rmtree(os.path.dirname(os.path.abspath(__file__))+'/temp', ignore_errors=True)
 
     # Run with safety filter
-    experiment = Experiment(env, ctrl, safety_filter=safety_filter)
+    experiment = BaseExperiment(env, ctrl, safety_filter=safety_filter)
     certified_results, _ = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
     ctrl.close()
     cbf_results = certified_results['safety_filter_data'][0]

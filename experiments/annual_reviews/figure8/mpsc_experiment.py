@@ -10,7 +10,7 @@ import shutil
 import numpy as np
 import matplotlib.pyplot as plt
 
-from safe_control_gym.experiment import Experiment
+from safe_control_gym.experiments.base_experiment import BaseExperiment
 from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.configuration import ConfigFactory
 
@@ -47,7 +47,7 @@ def run(plot=True, training=True, n_steps=30, curr_path='.'):
     shutil.rmtree(os.path.dirname(os.path.abspath(__file__))+'/temp', ignore_errors=True)
 
     # Run without safety filter
-    experiment = Experiment(env, ctrl)
+    experiment = BaseExperiment(env, ctrl)
     results, _ = experiment.run_evaluation(n_steps=n_steps)
 
     # Setup MPSC.
@@ -63,7 +63,7 @@ def run(plot=True, training=True, n_steps=30, curr_path='.'):
         safety_filter.load(f'{curr_path}/mpsc_data.pkl')
 
     # Run with safety filter
-    experiment = Experiment(env, ctrl, safety_filter=safety_filter)
+    experiment = BaseExperiment(env, ctrl, safety_filter=safety_filter)
     certified_results, _ = experiment.run_evaluation(n_steps=n_steps)
     ctrl.close()
     mpsc_results = certified_results['safety_filter_data'][0]
