@@ -14,15 +14,13 @@ import pickle
 import yaml
 from functools import partial
 import matplotlib.pyplot as plt
-from munch import Munch, munchify
-import pybullet as p
 from termcolor import colored
 import tqdm 
 
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
-from safe_control_gym.utils.utils import read_file, merge_dict
-from safe_control_gym.experiment import Experiment
+from safe_control_gym.utils.utils import merge_dict
+from safe_control_gym.experiments.base_experiment import BaseExperiment
 from safe_control_gym.math_and_models.metrics.similarity_metrics import *
 
 
@@ -52,7 +50,7 @@ def test_trajectory_metric(config):
     env = env_func()
     env.seed(config.seed)
     ctrl = make(config.algo, env_func, seed=config.seed)
-    experiment = Experiment(env, ctrl)
+    experiment = BaseExperiment(env, ctrl)
     trajs_data, metrics = experiment.run_evaluation(n_episodes=n_episodes, verbose=False)
     experiment.close()
     
@@ -75,7 +73,7 @@ def test_trajectory_metric(config):
         else:
             raise NotImplementedError("The given similarity metric is not available for data collection.")
         ctrl = make(config.algo, env_func, seed=config.seed)
-        experiment = Experiment(env, ctrl)
+        experiment = BaseExperiment(env, ctrl)
         trajs_data_, metrics_ = experiment.run_evaluation(n_episodes=n_episodes, verbose=False)
         experiment.close()
         

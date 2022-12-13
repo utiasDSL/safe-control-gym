@@ -7,7 +7,7 @@ from functools import partial
 import numpy as np
 import matplotlib.pyplot as plt
 
-from safe_control_gym.experiment import Experiment
+from safe_control_gym.experiments.base_experiment import BaseExperiment
 from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.envs.benchmark_env import Task, Cost, Environment
@@ -61,7 +61,7 @@ def run(plot=True, training=False, n_episodes=1, n_steps=None, curr_path='.'):
         shutil.rmtree(os.path.dirname(os.path.abspath(__file__))+'/temp', ignore_errors=True)
 
     # Run without safety filter
-    experiment = Experiment(env, ctrl)
+    experiment = BaseExperiment(env, ctrl)
     results, uncert_metrics = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
     elapsed_time_uncert = results['timestamp'][0][-1] - results['timestamp'][0][0]
 
@@ -90,7 +90,7 @@ def run(plot=True, training=False, n_episodes=1, n_steps=None, curr_path='.'):
     ctrl.reset()
 
     # Run with safety filter
-    experiment = Experiment(env, ctrl, safety_filter=safety_filter)
+    experiment = BaseExperiment(env, ctrl, safety_filter=safety_filter)
     certified_results, cert_metrics = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
     ctrl.close()
     mpsc_results = certified_results['safety_filter_data'][0]

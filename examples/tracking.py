@@ -9,7 +9,7 @@ Run as:
 
 from functools import partial
 
-from safe_control_gym.experiment import Experiment
+from safe_control_gym.experiments.base_experiment import BaseExperiment
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 
@@ -43,7 +43,7 @@ def run(gui=True, n_episodes=1, n_steps=None):
                     )
 
         # Run the experiment.
-        experiment = Experiment(env, ctrl)
+        experiment = BaseExperiment(env, ctrl)
         trajs_data, _ = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
         experiment.close()
 

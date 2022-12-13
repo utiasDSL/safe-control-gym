@@ -11,7 +11,7 @@ import numpy as np
 import pybullet as p
 import matplotlib.pyplot as plt
 
-from safe_control_gym.experiment import Experiment
+from safe_control_gym.experiments.base_experiment import BaseExperiment
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 
@@ -92,7 +92,7 @@ def run(gui=True, n_episodes=1, n_steps=None, custom_trajectory=True):
                         physicsClientId=ctrl.env.PYB_CLIENT)
 
     # Run the experiment.
-    experiment = Experiment(ctrl.env, ctrl)
+    experiment = BaseExperiment(ctrl.env, ctrl)
     trajs_data, _ = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
     experiment.close()
 
