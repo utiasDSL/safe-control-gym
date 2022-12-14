@@ -819,7 +819,7 @@ class Quadrotor(BaseAviary):
                 dist = np.sum(self.rew_state_weight * state_error * state_error)
                 dist += np.sum(self.rew_act_weight * act_error * act_error)
             if self.TASK == Task.TRAJ_TRACKING:
-                wp_idx = min(self.ctrl_step_counter, self.X_GOAL.shape[0]-1)
+                wp_idx = min(self.ctrl_step_counter + 1, self.X_GOAL.shape[0]-1)
                 state_error = state - self.X_GOAL[wp_idx]
                 dist = np.sum(self.rew_state_weight * state_error * state_error)
                 dist += np.sum(self.rew_act_weight * act_error * act_error)
@@ -905,7 +905,7 @@ class Quadrotor(BaseAviary):
         elif self.TASK == Task.TRAJ_TRACKING:
             # TODO: should use angle wrapping
             # state[4] = normalize_angle(state[4])
-            wp_idx = min(self.ctrl_step_counter, self.X_GOAL.shape[0]-1)
+            wp_idx = min(self.ctrl_step_counter + 1, self.X_GOAL.shape[0]-1)
             state_error = state - self.X_GOAL[wp_idx]
         # Filter only relevant dimensions.
         state_error = state_error * self.info_mse_metric_state_weight
