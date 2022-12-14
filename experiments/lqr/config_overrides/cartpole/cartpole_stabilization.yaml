@@ -25,7 +25,7 @@ task_config:
 
   task: stabilization
   task_info:
-    stabilization_goal: [0.0, 0.0]
+    stabilization_goal: [1.0, 0.0]
     stabilization_goal_tolerance: 0.0
 
   episode_len_sec: 6

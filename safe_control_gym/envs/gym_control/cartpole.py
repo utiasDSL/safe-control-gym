@@ -420,7 +420,7 @@ class CartPole(BenchmarkEnv):
             "pole_mass": m,
             "cart_mass": M,
             # equilibrium point for linearization
-            "X_EQ": np.atleast_2d(self.X_GOAL)[0,:].T,
+            "X_EQ": np.zeros(self.state_dim),
             "U_EQ": np.atleast_2d(self.U_GOAL)[0,:],
         }
         # Setup symbolic model.
