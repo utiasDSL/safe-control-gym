@@ -2,7 +2,7 @@
 
 Then run:
 
-    $ python3 aer_course_project.py --overrides ./getting_started.yaml
+    $ python3 final_project.py --overrides ./getting_started.yaml
 
 Tips:
     Search for strings `INSTRUCTIONS:` and `REPLACE THIS (START)` in this file.
@@ -18,10 +18,8 @@ Tips:
     with your own code.
 
     They are in methods:
-        1) __init__
+        1) planning
         2) cmdFirmware
-        3) interStepLearn (optional)
-        4) interEpisodeLearn (optional)
 
 """
 import numpy as np
@@ -106,10 +104,23 @@ class Controller():
         self.reset()
         self.interEpisodeReset()
 
+        # perform trajectory planning
+        t_scaled = self.planning(use_firmware, initial_info)
+
+        if self.VERBOSE:
+            # Plot trajectory in each dimension and 3D.
+            plot_trajectory(t_scaled, self.waypoints, self.ref_x, self.ref_y, self.ref_z)
+
+            # Draw the trajectory on PyBullet's GUI.
+            draw_trajectory(initial_info, self.waypoints, self.ref_x, self.ref_y, self.ref_z)
+
+
+    def planning(self, use_firmware, initial_info):
+        """Trajectory planning algorithm"""
         #########################
         # REPLACE THIS (START) ##
         #########################
-        ## generate waypoints for pre-plan
+        ## generate waypoints for planning
 
         # Call a function in module `example_custom_utils`.
         ecu.exampleFunction()
@@ -170,16 +181,11 @@ class Controller():
         self.ref_y = fy(t_scaled)
         self.ref_z = fz(t_scaled)
 
-        if self.VERBOSE:
-            # Plot trajectory in each dimension and 3D.
-            plot_trajectory(t_scaled, self.waypoints, self.ref_x, self.ref_y, self.ref_z)
-
-            # Draw the trajectory on PyBullet's GUI.
-            draw_trajectory(initial_info, self.waypoints, self.ref_x, self.ref_y, self.ref_z)
-
         #########################
         # REPLACE THIS (END) ####
         #########################
+
+        return t_scaled
 
     def cmdFirmware(self,
                     time,
@@ -218,7 +224,9 @@ class Controller():
         #########################
 
         # Handwritten solution for GitHub's getting_stated scenario.
-
+        print("The info. of the gates ")
+        print(self.NOMINAL_GATES)
+        
         if iteration == 0:
             height = 1
             duration = 2

@@ -2,7 +2,7 @@
 
 Run as:
 
-    $ python3 aer_course_project.py --overrides ./getting_started.yaml
+    $ python3 final_project.py --overrides ./getting_started.yaml
 
 Look for instructions in `README.md` and `edit_this.py`.
 
