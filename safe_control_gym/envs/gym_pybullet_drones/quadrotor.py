@@ -1043,7 +1043,8 @@ class Quadrotor(BaseAviary):
         #                           # linkIndexA=-1, linkIndexB=-1,
         #                           physicsClientId=self.PYB_CLIENT)
         # print(tmp1, tmp2, tmp3)
-        for GATE_OBS_ID in self.GATES_IDS + self.OBSTACLES_IDS + [self.PLANE_ID]:
+        # for GATE_OBS_ID in self.GATES_IDS + self.OBSTACLES_IDS + [self.PLANE_ID]:   # original objects
+        for GATE_OBS_ID in self.GATES_IDS + self.OBSTACLES_IDS:                       # remove the ground from object list to avoid collision
             ret = p.getContactPoints(bodyA=GATE_OBS_ID,
                                      bodyB=self.DRONE_IDS[0],
                                      # linkIndexA=-1, linkIndexB=-1,
