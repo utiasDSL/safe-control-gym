@@ -120,6 +120,9 @@ class Controller():
         else:
             waypoints = [(self.initial_obs[0], self.initial_obs[2], self.initial_obs[4])]
 
+        print("The prior info. of the gates ")
+        print(self.NOMINAL_GATES)
+
         for idx, g in enumerate(self.NOMINAL_GATES):
             height = initial_info["gate_dimensions"]["tall"]["height"] if g[6] == 0 else initial_info["gate_dimensions"]["low"]["height"]
             if g[5] > 0.75 or g[5] < 0:

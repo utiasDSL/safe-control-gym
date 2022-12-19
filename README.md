@@ -1,17 +1,12 @@
-# IROS 2022 Safe Robot Learning Competition
+# AER1217 Final Project
 
 [![video](https://img.youtube.com/vi/PwphA_jsNKw/maxresdefault.jpg)](https://www.youtube.com/watch?v=PwphA_jsNKw)
 
 > (The image above links to the video of a flight example)
 
-- [Official Webpage](https://www.dynsyslab.org/iros-2022-safe-robot-learning-competition/)
-- [IROS Competition Page](https://iros2022.org/program/competition/#toggle-id-8)
-- [GitHub Discussions](https://github.com/utiasDSL/safe-control-gym/discussions/categories/iros-2022-competition)
-- [Google Form](https://forms.gle/vEmVK99n1SyaE4Zw9) (to register your interest and receive e-mail updates)
-
 ## Description
 
-The task is to design a controller/planner that enables a quadrotor (*Crazyflie 2.x*) to **safely fly through a set of gates and reach a predefined target despite uncertainties in the robot dynamics (e.g., mass and inertia) and the environment (e.g., wind and position of the gates)**. The algorithms will be evaluated regarding their safety (e.g., no collisions) and performance (e.g., time to target). We encourage participants to explore both control and reinforcement learning approaches (e.g., robust, adaptive, predictive, learning-based and optimal control, and model-based/model-free reinforcement learning). The controller/planner has access to the position and attitude measurements provided by a motion capture system and the noisy pose of the closest next gate. The controller can [send position, velocity, acceleration and heading references to an onboard position controller](https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.cmdFullState).
+The final project of AER1217 is to design a controller/planner that enables a quadrotor (*Crazyflie 2.x*) to **fly through a set of gates and reach a predefined target despite uncertainties in the environment (e.g., position of the gates and obstacles)**. The algorithms will be evaluated regarding their safety (e.g., no collisions) and performance (e.g., time to target). The controller/planner has access to the position and attitude measurements provided by a motion capture system and the pose of the gates and obstacles with uncertainties. The controller can [send position, velocity, acceleration and heading references to an onboard position controller](https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie.cmdFullState).
 
 ## Install on Ubuntu/macOS
 
@@ -20,15 +15,15 @@ We recommend Ubuntu 20.04 on a mid-tier laptop and GPU (e.g., a Lenovo P52 with 
 ```bash
 git clone https://github.com/utiasDSL/safe-control-gym.git
 cd safe-control-gym
-git checkout beta-iros-competition
+git checkout aer1217-course-project
 ```
 
 Create and access a Python 3.8 environment using
 [`conda`](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
 
 ```bash
-conda create -n safe python=3.8
-conda activate safe
+conda create -n aer1217-project python=3.8
+conda activate aer1217-project
 ```
 
 Install the `safe-control-gym` repository
@@ -80,8 +75,8 @@ Also see how to install [SWIG](https://www.dev2qa.com/how-to-install-swig-on-mac
 Run the scripts in [`competition/`](https://github.com/utiasDSL/safe-control-gym/tree/beta-iros-competition/competition)
 
 ```bash
-cd ../../safe-control-gym/competition/
-python3 getting_started.py --overrides ./getting_started.yaml
+cd ../../safe-control-gym/aer-course-project/
+python3 final_project.py --overrides ./getting_started.yaml
 ```
 
 **Modify file [`edit_this.py`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py) to customize your controller based on [Crazyswarm's Crazyflie interface](https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie)**
@@ -112,7 +107,7 @@ Proposed solutions will be evaluated in 5 scenarios with different challenges:
 [link2]: https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level2.yaml
 [link3]: https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/level3.yaml
 
-## Implement Your Controller/Solution
+## Implement Your Solution
 
 Methods to Re-implement in [`edit_this.py`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py)
 
@@ -193,45 +188,6 @@ edit_this.py : Controller.cmdFirmware(time, obs, reward, done, info)    # Select
         and: https://crazyswarm.readthedocs.io/en/latest/api.html#crazyflie-class
 ```
 
-### Optional, recommended for learning, adaptive control (1 of 2)
-
-```docstring
-edit_this.py : Controller.interStepLearn(...)       # Update the controller's internal state at each step
-
-    Args:
-        N/A
-
-    Leverage the data in `self.action_buffer`, `self.obs_buffer`, `self.reward_buffer`, self.done_buffer`, `self.info_buffer`
-
-    Returns: N/A     
-```
-
-### Optional, recommended for learning, adaptive control (2 of 2)
-
-```docstring
-edit_this.py : Controller.interEpisodeLearn(...)    # Update the controller's internal state between episodes
-
-    Args:
-        N/A
-
-    Leverage the data in `self.action_buffer`, `self.obs_buffer`, `self.reward_buffer`, self.done_buffer`, `self.info_buffer`
-
-    Returns: N/A
-```
-
-## Submission
-
-- Fork this repository ([help](https://docs.github.com/en/get-started/quickstart/fork-a-repo))
-- Checkout this branch (`beta-iros-competition`)
-- Implement your solution by modifying [`edit_this.py`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py)
-- Create a Pull Request into `utiasDSL/safe-control-gym:beta-iros-competition` from your fork ([help](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork))
-- Mention in the Pull Request's Conversation tab (i) how many `num_episodes` you want your solution to use in each level (mandatory) and (ii) what method(s) you used and results you obtained (optional)
-- Tag @JacopoPan in the Pull Request's Conversation tab
-
-### Note: Private Submissions
-
-If you prefer not to publicly disclose your solution implementation, you can instead create a [private import of this repository](https://docs.github.com/en/get-started/importing-your-projects-to-github/importing-source-code-to-github/importing-a-repository-with-github-importer) to develop it and give access to @JacopoPan and @utiasDSLadmin, or even send your `edit_this.py` to jacopo.panerati@utoronto.ca. In this case, please submit early to allow the time to run extra checks.
-
 ## Scoring (v0.3)
 
 A) For ALL levels (0-3, sim2real), solutions will be evaluated—on the **last episode**—by:
@@ -246,53 +202,6 @@ B) For ALL levels (0-3, sim2real), solutions that accomplish A) will be evaluate
 C) For ALL levels (0-3, sim2real), the top 3 solutions ranked by the criteria in A) and the top 3 solutions ranked by the criteria in B) will score 20, 10, and 5 points respectively. The sum of these points will determine the final classification.
 
 ![terminal output](./figures/terminal1.png)
-
-## Important Dates
-
-- IROS Conference and Competition days: October 24-26, 2022
-
-## Prizes
-
-Kindly supported by [Bitcraze](https://www.bitcraze.io):
-
-- 1st: [Bitcraze Crazyflie AI Bundle](https://store.bitcraze.io/collections/bundles/products/the-ai-bundle)
-- 2nd: [Bitcraze Crazyflie STEM Ranging Bundle](https://store.bitcraze.io/collections/bundles/products/stem-ranging-bundle)
-- 3rd: [Bitcraze Crazyflie STEM Bundle](https://store.bitcraze.io/collections/bundles/products/stem-drone-bundle)
-
-The authors of the best solutions will be invited to co-author a "lessons learned" paper with the organizers.
-
-## Winners
-
-Congratulations to the winning teams!
-
-- 1st: Team H^2 (Niu Xinyuan, Hashir Zahir, and Huiyu Leong from Singapore)
-- 2nd: Team Ekuflie (Michel Hidalgo, Gerardo Puga, Tomas Lorente, Nahuel Espinosa, and John Alejandro Duarte Carrasco from Ekumen)
-- 3rd: Team ustc-arg (Kaizheng Zhang, Jian Di, Tao Jin, Xiaohan Li, Yijia Zhou, Xiuhua Liang, and Chenxu Zhang from the University of Science and Technology of China)
-
-[![video](https://img.youtube.com/vi/C6PZYJ5R1MI/maxresdefault.jpg)](https://www.youtube.com/watch?v=C6PZYJ5R1MI)
-
-## Organizers
-
-- Angela Schoellig (Technische Universität München, University of Toronto, Vector Institute)
-- Davide Scaramuzza (University of Zurich)
-- Vijay Kumar (University of Pennsylvania)
-- Nicholas Roy (Massachusetts Institute of Technology)
-- Todd Murphey (Northwestern University)
-- Sebastian Trimpe (RWTH Aachen University)
-- Wolfgang Hönig (TU Berlin)
-- Mark Muller (University of California Berkeley)
-- Jose Martinez-Carranza (INAOE)
-- SiQi Zhou (University of Toronto, Vector Institute)
-- Melissa Greeff (University of Toronto, Vector Institute)
-- Jacopo Panerati (University of Toronto, Vector Institute)
-- Wenda Zhao (University of Toronto, Vector Institute)
-- Spencer Teetaert (University of Toronto)
-- Yunlong Song (University of Zurich)
-- Leticia Oyuki Rojas Pérez (INAOE)
-- Adam W. Hall (University of Toronto, Vector Institute)
-- Justin Yuan (University of Toronto, Vector Institute)
-- Lukas Brunke (University of Toronto, Vector Institute)
-- Antonio Loquercio (UC Berkeley)
 
 -----
 > University of Toronto's [Dynamic Systems Lab](https://github.com/utiasDSL) / [Vector Institute for Artificial Intelligence](https://github.com/VectorInstitute)
