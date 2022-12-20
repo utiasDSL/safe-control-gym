@@ -131,8 +131,10 @@ class Controller():
         else:
             waypoints = [(self.initial_obs[0], self.initial_obs[2], self.initial_obs[4])]
 
-        print("The prior info. of the gates ")
-        print(self.NOMINAL_GATES)
+        ## [debug] ##
+        # print("The prior info. of the gates ")
+        # print(self.NOMINAL_GATES)
+        #############
 
         for idx, g in enumerate(self.NOMINAL_GATES):
             height = initial_info["gate_dimensions"]["tall"]["height"] if g[6] == 0 else initial_info["gate_dimensions"]["low"]["height"]
@@ -224,8 +226,8 @@ class Controller():
         #########################
 
         # Handwritten solution for GitHub's getting_stated scenario.
-        print("The info. of the gates ")
-        print(self.NOMINAL_GATES)
+        # print("The info. of the gates ")
+        # print(self.NOMINAL_GATES)
         
         if iteration == 0:
             height = 1

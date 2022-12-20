@@ -201,7 +201,5 @@ B) For ALL levels (0-3, sim2real), solutions that accomplish A) will be evaluate
 
 C) For ALL levels (0-3, sim2real), the top 3 solutions ranked by the criteria in A) and the top 3 solutions ranked by the criteria in B) will score 20, 10, and 5 points respectively. The sum of these points will determine the final classification.
 
-![terminal output](./figures/terminal1.png)
-
 -----
 > University of Toronto's [Dynamic Systems Lab](https://github.com/utiasDSL) / [Vector Institute for Artificial Intelligence](https://github.com/VectorInstitute)

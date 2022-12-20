@@ -48,15 +48,15 @@ quadrotor_config:
   gates:
     [  # x, y, z, r, p, y, type (0: `tall` obstacle, 1: `low` obstacle)
       [0.5, -2.5, 0, 0, 0, -1.57, 0],
-      [2, -1.5, 0, 0, 0, 0, 1],
-      [0, 0.2, 0, 0, 0, 1.57, 1],
+      [2, -1.5, 0, 0, 0, 0, 0],
+      [0, 0.2, 0, 0, 0, 1.57, 0],
       [-0.5, 1.5, 0, 0, 0, 0, 0]     # original: [-0.5, 1.5]
     ]
   obstacles:
     [  # x, y, z, r, p, y
       [1.5, -2.5, 0, 0, 0, 0],
       # [2.0, -2.5, 0, 0, 0, 0],
-      # [2.5, -2.5, 0, 0, 0, 0],
+      # [2.5, -2.5, 0, 0, 0, 0], 
       [0.5, -1, 0, 0, 0, 0],
       [1.5, 0, 0, 0, 0, 0],
       [-1, 0, 0, 0, 0, 0]
@@ -91,7 +91,7 @@ quadrotor_config:
       high: 0.1
 
   # Randomization of the quadrotor inertial properties
-  randomized_inertial_prop: True
+  randomized_inertial_prop: False
   inertial_prop_randomization_info:
     M:
       distrib: "uniform"
