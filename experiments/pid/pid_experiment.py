@@ -4,7 +4,7 @@ import os
 import pickle
 from functools import partial
 
-from safe_control_gym.experiment import Experiment
+from safe_control_gym.experiments.base_experiment import BaseExperiment
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 
@@ -36,7 +36,7 @@ def run(gui=True, n_episodes=2, n_steps=None, save_data=True):
                 )
 
     # Run the experiment.
-    experiment = Experiment(env, ctrl)
+    experiment = BaseExperiment(env, ctrl)
     trajs_data, metrics = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
     experiment.close()
 
