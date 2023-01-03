@@ -1,8 +1,10 @@
 # AER1217 Final Project
 
-[![video](https://img.youtube.com/vi/PwphA_jsNKw/maxresdefault.jpg)](https://www.youtube.com/watch?v=PwphA_jsNKw)
+<!-- [![video](https://img.youtube.com/vi/PwphA_jsNKw/maxresdefault.jpg)](https://www.youtube.com/watch?v=PwphA_jsNKw)
 
-> (The image above links to the video of a flight example)
+> (The image above links to the video of a flight example) -->
+
+<img src="doc/overview.png" alt="" width="800">
 
 ## Description
 

@@ -328,11 +328,11 @@ def draw_trajectory(initial_info,
     for i in range(step, ref_x.shape[0], step):
         p.addUserDebugLine(lineFromXYZ=[ref_x[i-step], ref_y[i-step], ref_z[i-step]],
                            lineToXYZ=[ref_x[i], ref_y[i], ref_z[i]],
-                           lineColorRGB=[1, 0, 0],
+                           lineColorRGB=[1, 0, 0], lineWidth=3,
                            physicsClientId=initial_info["pyb_client"])
     p.addUserDebugLine(lineFromXYZ=[ref_x[i], ref_y[i], ref_z[i]],
                        lineToXYZ=[ref_x[-1], ref_y[-1], ref_z[-1]],
-                       lineColorRGB=[1, 0, 0],
+                       lineColorRGB=[1, 0, 0], lineWidth=3,
                        physicsClientId=initial_info["pyb_client"])
 
 def thrusts(controller,
