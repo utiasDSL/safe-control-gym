@@ -1,6 +1,6 @@
 """Example utility module.
 
-For the IROS competition, use a file like this one to add extra functions.
+Please use a file like this one to add extra functions.
 
 """
 

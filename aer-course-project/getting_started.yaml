@@ -1,7 +1,7 @@
 # Configuration
 num_episodes: 1 # Customizable number of episodes (NOTE: solutions that require fewer episode will receive higher scores)
 use_firmware: True # Whether to use pycffirmware or not (NOTE: only set to False for debugging purposes)
-verbose: False # Boolean passed to the Controller class, can be used to turn on and off additional printouts
+verbose: True # Boolean passed to the Controller class, can be used to turn on and off additional printouts
 
 # Note: DSL's flyable/usable space in Toronto extends from -3 to +3 meters in x and y and 0 and 2 meters in z
 # Thus, only scenarios that meet these constraints are suitable for sim2real experiments
@@ -27,7 +27,7 @@ quadrotor_config:
   
   task: stabilization
   task_info:
-    stabilization_goal: [-0.5, 2.0, 0.75]  # Final goal (target position in x-y-z)
+    stabilization_goal: [-0.5, 2.0, 1.0]  # Final goal (target position in x-y-z)
     stabilization_goal_tolerance: 0.15
 
   # Nominal (pre-randomization) initial state
@@ -57,15 +57,13 @@ quadrotor_config:
   obstacles:
     [  # x, y, z, r, p, y
       [1.5, -2.5, 0, 0, 0, 0],
-      # [2.0, -2.5, 0, 0, 0, 0],
-      # [2.5, -2.5, 0, 0, 0, 0], 
       [0.5, -1, 0, 0, 0, 0],
       [1.5, 0, 0, 0, 0, 0],
       [-1, 0, 0, 0, 0, 0]
     ]
 
   # Randomization of the initial state
-  randomized_init: True
+  randomized_init: False
   init_state_randomization_info:
     init_x: 
       distrib: "uniform"

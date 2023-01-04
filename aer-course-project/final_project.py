@@ -234,12 +234,14 @@ def run(test=False):
             print('\tTotal collisions: ' + str(collisions_count))
             print('\tCollided objects (history): ' + str(collided_objects))
 
+        # print('\tCollision: ' + str(info["collision"]))
+
         ## [DEBUG testing] obstacle and gate positions
         # the accurate gate info. will be available within certain ranges (the closest next gate)
         # the accurate obstacle info. is not available, we only provide the nomial obstacle positions in the beginning.
-        print('\tCurrent target gate in range: ' + str(info['current_target_gate_in_range']))
-        print('\tCurrent target gate position: ' + str(info['current_target_gate_pos']))
-
+        # print('\tCurrent target gate in range: ' , info['current_target_gate_in_range'])
+        # print('\tCurrent target gate position: ' , info['current_target_gate_pos'])
+        
         # Log data.
         pos = [obs[0],obs[2],obs[4]]
         rpy = [obs[6],obs[7],obs[8]]
@@ -259,9 +261,6 @@ def run(test=False):
             # Plot logging (comment as desired).
             if not test:
                 logger.plot(comment="get_start-episode-"+str(episodes_count), autoclose=True)
-
-            # # CSV save.
-            # logger.save_as_csv(comment="get_start-episode-"+str(episodes_count))
 
             # Update the controller internal state and models.
             # ctrl.interEpisodeLearn()

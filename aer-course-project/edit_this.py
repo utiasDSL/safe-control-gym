@@ -305,7 +305,7 @@ class Controller():
         """PID per-propeller thrusts with a simplified, software-only PID quadrotor controller.
 
         INSTRUCTIONS:
-            You do NOT need to re-implement this method for the IROS 2022 Safe Robot Learning competition.
+            You do NOT need to re-implement this method for the project.
             Only re-implement this method when `use_firmware` == False to return the target position and velocity.
 
         Args:
