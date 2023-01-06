@@ -4,7 +4,7 @@
 
 > (The image above links to the video of a flight example) -->
 
-<img src="doc/overview.png" alt="" width="800">
+<img src=".figure/overview.png" alt="" width="800">
 
 ## Description
 
