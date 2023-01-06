@@ -19,7 +19,6 @@ from rich import print
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.utils import sync
-from safe_control_gym.envs.gym_pybullet_drones.Logger import Logger
 
 try:
     from project_utils import Command, thrusts
@@ -96,8 +95,7 @@ def run(test=False):
     #       when creating the controller object. 
     ctrl = Controller(vicon_obs, info, config.use_firmware, verbose=config.verbose)
 
-    # Create a logger and counters
-    logger = Logger(logging_freq_hz=CTRL_FREQ)
+    # Create counters
     episodes_count = 1
     cumulative_reward = 0
     collisions_count = 0
@@ -242,15 +240,6 @@ def run(test=False):
         # print('\tCurrent target gate in range: ' , info['current_target_gate_in_range'])
         # print('\tCurrent target gate position: ' , info['current_target_gate_pos'])
         
-        # Log data.
-        pos = [obs[0],obs[2],obs[4]]
-        rpy = [obs[6],obs[7],obs[8]]
-        vel = [obs[1],obs[3],obs[5]]
-        bf_rates = [obs[9],obs[10],obs[11]]
-        logger.log(drone=0,
-                   timestamp=i/CTRL_FREQ,
-                   state=np.hstack([pos, np.zeros(4), rpy, vel, bf_rates, np.sqrt(action/env.KF)])
-                   )
 
         # Synchronize the GUI.
         if config.quadrotor_config.gui:
@@ -258,13 +247,6 @@ def run(test=False):
 
         # If an episode is complete, reset the environment.
         if done:
-            # Plot logging (comment as desired).
-            if not test:
-                logger.plot(comment="get_start-episode-"+str(episodes_count), autoclose=True)
-
-            # Update the controller internal state and models.
-            # ctrl.interEpisodeLearn()
-
             # Append episode stats.
             if info['current_target_gate_id'] == -1:
                 gates_passed = num_of_gates
@@ -293,9 +275,6 @@ def run(test=False):
                 '[white]Interepisode learning time (s): '+str(ctrl.interepisode_learning_time),
                 ]
             stats.append(episode_stats)
-
-            # Create a new logger.
-            logger = Logger(logging_freq_hz=CTRL_FREQ)
 
             # Reset/update counters.
             episodes_count += 1
