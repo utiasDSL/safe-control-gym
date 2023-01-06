@@ -246,7 +246,6 @@ class PIDController():
         pwm = np.clip(pwm, self.MIN_PWM, self.MAX_PWM)
         return self.PWM2RPM_SCALE * pwm + self.PWM2RPM_CONST
 
-
 def timing_step(function):
     """Interstep learning timing decorator.
 
@@ -264,7 +263,6 @@ def timing_step(function):
             print('\n{}-th call to function "{}" took: {} sec'.format(args[0].interstep_counter, function.__name__, elapsed))
         return result
     return wrap
-
 
 def timing_ep(function):
     """Interepisode learning timing decorator.
@@ -306,6 +304,9 @@ def plot_trajectory(t_scaled,
     ax = plt.axes(projection='3d')
     ax.plot3D(ref_x, ref_y, ref_z)
     ax.scatter3D(waypoints[:,0], waypoints[:,1], waypoints[:,2])
+    ax.set_xlim([-3.5, 3.5])
+    ax.set_ylim([-3.5, 3.5])
+    ax.set_zlim([0.0, 2.0])
     plt.show(block=False)
     plt.pause(2)
     plt.close()

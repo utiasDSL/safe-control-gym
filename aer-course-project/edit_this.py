@@ -8,7 +8,7 @@ Then run:
     $ python3 final_project.py --overrides ./getting_started.yaml
 
 Tips:
-    Search for strings `INSTRUCTIONS:` and `REPLACE THIS (START)` in this file.
+    Search for strings `INSTRUCTIONS` and `REPLACE THIS (START)` in this file.
 
     Change the code between the 5 blocks starting with
         #########################
@@ -128,50 +128,20 @@ class Controller():
         # Call a function in module `example_custom_utils`.
         ecu.exampleFunction()
 
-        # Example: hardcode waypoints through the gates.
+        # initial waypoint
         if use_firmware:
             waypoints = [(self.initial_obs[0], self.initial_obs[2], initial_info["gate_dimensions"]["tall"]["height"])]  # Height is hardcoded scenario knowledge.
         else:
             waypoints = [(self.initial_obs[0], self.initial_obs[2], self.initial_obs[4])]
 
-        ## [debug] ##
-        # print("The prior info. of the gates ")
-        # print(self.NOMINAL_GATES)
-        #############
-
-        for idx, g in enumerate(self.NOMINAL_GATES):
-            height = initial_info["gate_dimensions"]["tall"]["height"] if g[6] == 0 else initial_info["gate_dimensions"]["low"]["height"]
-            if g[5] > 0.75 or g[5] < 0:
-                if idx == 2:  # Hardcoded scenario knowledge (direction in which to take gate 2).
-                    waypoints.append((g[0]+0.3, g[1]-0.3, height))
-                    waypoints.append((g[0]-0.3, g[1]-0.3, height))
-                else:
-                    waypoints.append((g[0]-0.3, g[1], height))
-                    waypoints.append((g[0]+0.3, g[1], height))
-            else:
-                if idx == 3:  # Hardcoded scenario knowledge (correct how to take gate 3).
-                    waypoints.append((g[0]+0.1, g[1]-0.3, height))
-                    waypoints.append((g[0]+0.1, g[1]+0.3, height))
-                else:
-                    waypoints.append((g[0], g[1]-0.3, height))
-                    waypoints.append((g[0], g[1]+0.3, height))
+        # Example code: hardcode waypoints 
+        waypoints.append((-0.5, -3.0, 2.0))
+        waypoints.append((-0.5, -2.0, 2.0))
+        waypoints.append((-0.5, -1.0, 2.0))
+        waypoints.append((-0.5,  0.0, 2.0))
+        waypoints.append((-0.5,  1.0, 2.0))
+        waypoints.append((-0.5,  2.0, 2.0))
         waypoints.append([initial_info["x_reference"][0], initial_info["x_reference"][2], initial_info["x_reference"][4]])
-
-        # --- waypoints (debug)
-        # # overwrite the existing
-        # waypoints = [(-0.97, -3.0, 1.0), 
-        #              ( 0.2, -2.5, 1.0), 
-        #              ( 0.8, -2.5, 1.0), 
-        #              ( 2.0, -1.8, 0.525), 
-        #              ( 2.0, -1.2, 0.525), 
-        #              ( 0.3, -0.1, 0.525), 
-        #              (-0.3, -0.1, 0.525), 
-        #              (-0.4, 1.2, 1.0), 
-        #              (-0.4, 1.8, 1.0), 
-        #              (-0.5, 2.9, 0.75)]
-
-        # print(waypoints)
-        # -------- (debug)
 
         # Polynomial fit.
         self.waypoints = np.array(waypoints)
@@ -221,17 +191,18 @@ class Controller():
         if self.ctrl is not None:
             raise RuntimeError("[ERROR] Using method 'cmdFirmware' but Controller was created with 'use_firmware' = False.")
 
-
+        # [INSTRUCTIONS] 
+        # self.CTRL_FREQ is 30 (set in the getting_started.yaml file) 
+        # control input iteration indicates the number of control inputs sent to the quadrotor
         iteration = int(time*self.CTRL_FREQ)
 
         #########################
         # REPLACE THIS (START) ##
         #########################
 
-        # Handwritten solution for GitHub's getting_stated scenario.
         # print("The info. of the gates ")
         # print(self.NOMINAL_GATES)
-        
+
         if iteration == 0:
             height = 1
             duration = 2
@@ -239,6 +210,7 @@ class Controller():
             command_type = Command(2)  # Take-off.
             args = [height, duration]
 
+        # [INSTRUCTIONS] Example code for using cmdFullState interface   
         elif iteration >= 3*self.CTRL_FREQ and iteration < 20*self.CTRL_FREQ:
             step = min(iteration-3*self.CTRL_FREQ, len(self.ref_x) -1)
             target_pos = np.array([self.ref_x[step], self.ref_y[step], self.ref_z[step]])
@@ -254,6 +226,7 @@ class Controller():
             command_type = Command(6)  # Notify setpoint stop.
             args = []
 
+       # [INSTRUCTIONS] Example code for using goTo interface 
         elif iteration == 20*self.CTRL_FREQ+1:
             x = self.ref_x[-1]
             y = self.ref_y[-1]

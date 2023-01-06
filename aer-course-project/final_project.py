@@ -39,7 +39,7 @@ finally:
 
 
 def run(test=False):
-    """The main function creating, running, and closing an environment over N episodes.
+    """The main function creating, running, and closing an environment.
 
     """
 
@@ -65,6 +65,9 @@ def run(test=False):
     CTRL_DT = 1/CTRL_FREQ
 
     # Create environment.
+    # [INSTRUCTIONS:] 
+    # When the simulation env. reset, we can get the current observation and information 
+    # of the simulation env.
     if config.use_firmware:
         FIRMWARE_FREQ = 500
         assert(config.quadrotor_config['pyb_freq'] % FIRMWARE_FREQ == 0), "pyb_freq must be a multiple of firmware freq"
@@ -76,7 +79,7 @@ def run(test=False):
         firmware_wrapper = make('firmware',
                     env_func, FIRMWARE_FREQ, CTRL_FREQ
                     ) 
-        obs, info = firmware_wrapper.reset()
+        obs, info = firmware_wrapper.reset()      
         info['ctrl_timestep'] = CTRL_DT
         info['ctrl_freq'] = CTRL_FREQ
         env = firmware_wrapper.env
@@ -86,10 +89,11 @@ def run(test=False):
         obs, info = env.reset()
     
     # Create controller.
+    # [INSTRUCTIONS:] 
     # vicon_obs indicates the initial observation (initial state) from Vicon.
+    # obs = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
+    # vicon_obs = {x, 0, y, 0, z, 0, phi, theta, psi, 0, 0, 0}.
     vicon_obs = [obs[0], 0, obs[2], 0, obs[4], 0, obs[6], obs[7], obs[8], 0, 0, 0]
-        # obs = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
-        # vicon_obs = {x, 0, y, 0, z, 0, phi, theta, psi, 0, 0, 0}.
 
     # NOTE: students can get access to the information of the gates and obstacles 
     #       when creating the controller object. 
@@ -142,10 +146,8 @@ def run(test=False):
     ep_start = time.time()
     first_ep_iteration = True
     for i in range(config.num_episodes*CTRL_FREQ*env.EPISODE_LEN_SEC):
-
-        # Step by keyboard input.
-        # _ = input("Press any key to continue")
-
+        # label for if the trajectory is complete
+        complete = False
         # Elapsed sim time.
         curr_time = (i-episode_start_iter)*CTRL_DT
 
@@ -162,6 +164,8 @@ def run(test=False):
 
         # Compute control input.
         if config.use_firmware:
+            # [INSTRUCTIONS:] 
+            # vicon_obs provides the state measurements from Vicon
             vicon_obs = [obs[0], 0, obs[2], 0, obs[4], 0, obs[6], obs[7], obs[8], 0, 0, 0]
                 # obs = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r}.
                 # vicon_obs = {x, 0, y, 0, z, 0, phi, theta, psi, 0, 0, 0}.
@@ -172,6 +176,9 @@ def run(test=False):
                 info = {}
                 first_ep_iteration = False
             command_type, args = ctrl.cmdFirmware(curr_time, vicon_obs, reward, done, info)
+            
+            # --- debug 
+            # print(vicon_obs)
 
             # Select interface.
             if command_type == Command.FULLSTATE:
@@ -182,6 +189,8 @@ def run(test=False):
                 firmware_wrapper.sendLandCmd(*args)
             elif command_type == Command.STOP:
                 firmware_wrapper.sendStopCmd()
+                # indicate the trajectory is complete
+                complete = True
             elif command_type == Command.GOTO:
                 firmware_wrapper.sendGotoCmd(*args)
             elif command_type == Command.NOTIFYSETPOINTSTOP:
@@ -202,7 +211,6 @@ def run(test=False):
             target_pos, target_vel = ctrl.cmdSimOnly(curr_time, obs, reward, done, info)
             action = thrusts(ctrl.ctrl, ctrl.CTRL_TIMESTEP, ctrl.KF, obs, target_pos, target_vel)
             obs, reward, done, info = env.step(action)
-
 
         # Add up reward, collisions, violations.
         cumulative_reward += reward
@@ -230,23 +238,14 @@ def run(test=False):
                 print('\tConstraints violation: ' + str(bool(info['constraint_violation'])))
             print('\tCollision: ' + str(info["collision"]))
             print('\tTotal collisions: ' + str(collisions_count))
-            print('\tCollided objects (history): ' + str(collided_objects))
-
-        # print('\tCollision: ' + str(info["collision"]))
-
-        ## [DEBUG testing] obstacle and gate positions
-        # the accurate gate info. will be available within certain ranges (the closest next gate)
-        # the accurate obstacle info. is not available, we only provide the nomial obstacle positions in the beginning.
-        # print('\tCurrent target gate in range: ' , info['current_target_gate_in_range'])
-        # print('\tCurrent target gate position: ' , info['current_target_gate_pos'])
-        
+            print('\tCollided objects (history): ' + str(collided_objects))      
 
         # Synchronize the GUI.
         if config.quadrotor_config.gui:
             sync(i-episode_start_iter, ep_start, CTRL_DT)
 
         # If an episode is complete, reset the environment.
-        if done:
+        if done or complete:
             # Append episode stats.
             if info['current_target_gate_id'] == -1:
                 gates_passed = num_of_gates
@@ -275,31 +274,8 @@ def run(test=False):
                 '[white]Interepisode learning time (s): '+str(ctrl.interepisode_learning_time),
                 ]
             stats.append(episode_stats)
-
-            # Reset/update counters.
-            episodes_count += 1
-            if episodes_count > config.num_episodes:
-                break
-            cumulative_reward = 0
-            collisions_count = 0
-            collided_objects = set()
-            violations_count = 0
-            ctrl.interEpisodeReset()
-
-            # Reset the environment.
-            if config.use_firmware:
-                # Re-initialize firmware.
-                new_initial_obs, _ = firmware_wrapper.reset()
-            else:
-                new_initial_obs, _ = env.reset()
-            first_ep_iteration = True
-
-            if config.verbose:
-                print(str(episodes_count)+'-th reset.')
-                print('Reset obs' + str(new_initial_obs))
-            
-            episode_start_iter = i+1
-            ep_start = time.time()
+            # break the loop when the trajectory is complete
+            break 
 
     # Close the environment and print timing statistics.
     env.close()
