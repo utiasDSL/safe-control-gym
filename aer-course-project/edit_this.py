@@ -1,4 +1,4 @@
-"""Write your control strategy.
+"""Write your proposed algorithm.
 [NOTE]: The idea for the final project is to use the planning algorithm to compute the trajectory given 
 the uncertainty of the gates and obstacles. Students can also design some adaptive control when the gate 
 information becomes accurate during the flights.
