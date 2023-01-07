@@ -10,7 +10,7 @@ The final project includes two phases:
 
 - **In the second phase**, we will execute the algorithm you developed in a real-world experimental setup. We will check if the proposed algorithm can navigate safely to the target point and the amount of time it takes to complete the task. 
 
-## Install on Ubuntu/macOS
+## Install on Ubuntu
 
 We recommend Ubuntu 20.04 on a mid-tier laptop and GPU (e.g., a Lenovo P52 with i7-8850H/Quadro P2000)
 
@@ -42,11 +42,6 @@ cd ..
 git clone https://github.com/utiasDSL/pycffirmware.git
 cd pycffirmware/
 git submodule update --init --recursive
-```
-
-### On Ubuntu
-
-```bash
 sudo apt update
 sudo apt -y install swig
 sudo apt install build-essential
