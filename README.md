@@ -52,7 +52,6 @@ sudo apt -y install swig
 sudo apt install build-essential
 cd wrapper/
 chmod +x build_linux.sh
-conda activate safe
 ./build_linux.sh
 ```
 
