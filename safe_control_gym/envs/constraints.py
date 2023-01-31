@@ -388,8 +388,8 @@ class DefaultConstraint(BoundedConstraint):
             assert len(lower_bounds) == default_constraint_space.shape[0],\
                 ValueError('[ERROR]: Lower bound must have length equal to space dimension.')
         super().__init__(env,
-                         lower_bounds=lower_bounds,
-                         upper_bounds=upper_bounds,
+                         lower_bounds=lower_bounds.astype(np.float64),
+                         upper_bounds=upper_bounds.astype(np.float64),
                          constrained_variable=constrained_variable,
                          strict=strict,
                          active_dims=None,
@@ -664,4 +664,3 @@ def create_constraint_list(constraint_specs, available_constraints, env):
         cfg = {key: constraint[key] for key in constraint if key != 'constraint_form'}
         constraint_list.append(con_class(env, **cfg))
     return ConstraintList(constraint_list)
-
