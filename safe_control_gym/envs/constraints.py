@@ -103,7 +103,7 @@ class Constraint:
             env (BenchmarkEnv): The environment to constrain.
 
         Returns:
-            value (ndarray): The evaulation of the constraint.
+            value (ndarray): The evaluation of the constraint.
         '''
         env_value = self.get_env_constraint_var(env)
         return np.round_(np.atleast_1d(np.squeeze(self.sym_func(np.array(env_value, ndmin=1)))), decimals=self.decimals)

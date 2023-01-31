@@ -230,7 +230,8 @@ class BaseExperiment:
             trajs_data = self.train_env.data
         return dict(trajs_data)
 
-    def compute_metrics(self, trajs_data):
+    @staticmethod
+    def compute_metrics(trajs_data):
         '''Compute all standard metrics on the given trajectory data.
 
         Args:
@@ -345,6 +346,8 @@ class RecordDataWrapper(gym.Wrapper):
             obs, info = self.env.reset(**kwargs)
             if 'symbolic_model' in info:
                 info.pop('symbolic_model')
+            if 'symbolic_constraints' in info:
+                info.pop('symbolic_constraints')
             step_data = dict(
                 obs=obs, info=info, state=self.env.state
             )
