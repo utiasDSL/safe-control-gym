@@ -1,13 +1,13 @@
 '''Epoch based training for experiments. '''
-import numpy as np
 from copy import deepcopy
 
 from safe_control_gym.utils.utils import is_wrapped
-from safe_control_gym.experiments.base_experiment import BaseExperiment, RecordDataWrapper, MetricExtractor
-from safe_control_gym.math_and_models.metrics.performance_metrics import compute_cvar
+from safe_control_gym.experiments.base_experiment import BaseExperiment, RecordDataWrapper
 
 
-class EpochExp(BaseExperiment):
+class EpochExperiment(BaseExperiment):
+    '''Experiment Class for Learning through Epochs. '''
+
     def __init__(self,
                  test_envs,
                  ctrl,
@@ -17,9 +17,11 @@ class EpochExp(BaseExperiment):
                  n_test_episodes_per_epoch,
                  output_dir,
                  save_train_trajs: bool=False,
-                 save_test_trajs: bool=False
+                 save_test_trajs: bool=False,
+                 train_seeds: list=None,
+                 test_seeds: list=None,
                  ):
-        """ Class for an experiment using Epoch training with evaluation every iteration.
+        ''' Class for an experiment using Epoch training with evaluation every iteration.
 
         Args:
             test_envs (list of BenchmarkEnv): List of evaluation environments. There should be either one per epoch, or only
@@ -36,13 +38,17 @@ class EpochExp(BaseExperiment):
                 algorithms that require lots of training data.
             save_test_trajs (bool): Save all test trajectories. Note that this might result in memory issues for
                 algorithms that require lots of training data.
-        """
+            train_seeds (list): List of seeds for the train envs to seed with on reset. Length Needs to match the number
+                of train episodes n_train_episodes_per_epoch.
+            test_seeds (list): List of seeds for the test envs to seed with. Length needs to match the number of train
+                episodes n_train_episodes_per_epoch.
+        '''
 
         super().__init__(test_envs[0], ctrl, train_env=train_envs[0], safety_filter=None)
 
         self.train_envs = []
         self.test_envs = []
-        if not(len(train_envs) == n_epochs) or len(train_envs) == 1:
+        if len(train_envs) != n_epochs and len(train_envs) != 1:
             raise ValueError('The number of train_envs must match the number of epochs, or be a list of only a single env if only one is used during training.')
         for train_env in train_envs:
             env = None
@@ -52,11 +58,12 @@ class EpochExp(BaseExperiment):
         self.prior_ctrl_exists=False
         if hasattr(self.ctrl, 'prior_ctrl'):
             self.prior_ctrl_exists = True
-        if (not(len(test_envs) == n_epochs+1) and self.prior_ctrl_exists) or \
-                ( not(len(test_envs) == n_epochs) and not(self.prior_ctrl_exists) ) or len(test_envs) == 1:
-            # We want one test environment per epoch such that all the testing is done with the same noise profile to
-            # ensure consistency. Otherwise, only one test environment is required.
-            raise ValueError('The number of test envs must match the number of epochs, or 1 plus the number of epochs if there is a prior_ctrl,'
+        if len(test_envs) != 1:
+            if (len(test_envs) != n_epochs+1 and self.prior_ctrl_exists) or \
+                    (len(test_envs) != n_epochs and not self.prior_ctrl_exists):
+                # We want one test environment per epoch such that all the testing is done with the same noise profile to
+                # ensure consistency. Otherwise, only one test environment is required.
+                raise ValueError('The number of test envs must match the number of epochs, or 1 plus the number of epochs if there is a prior_ctrl,'
                              ' or be a list of only a single env if only one is used for all evaluations.')
         for test_env in test_envs:
             env = None
@@ -67,6 +74,22 @@ class EpochExp(BaseExperiment):
         self.n_train_episodes_per_epoch = n_train_episodes_per_epoch
         self.n_test_episodes_per_epoch = n_test_episodes_per_epoch
         self.output_dir = output_dir
+        if train_seeds is None:
+            self.train_seeds = None
+        else:
+            if len(train_seeds) != n_train_episodes_per_epoch:
+                raise ValueError('train_seeds needs to be the same length as n_train_episodes_per_epoch')
+            else:
+                self.train_seeds = train_seeds
+
+        if test_seeds is None:
+            self.test_seeds = None
+        else:
+            if len(test_seeds) != n_test_episodes_per_epoch:
+                raise ValueError('test_seeds needs to be the same length as n_test_episodes_per_epoch')
+            else:
+                self.test_seeds = test_seeds
+
         self.metrics = None
         self.save_train_trajs = save_train_trajs
         self.save_test_trajs = save_test_trajs
@@ -75,8 +98,7 @@ class EpochExp(BaseExperiment):
 
     def launch_training(self,
                         **kwargs):
-        """Launches the epoch training.
-
+        '''Launches the epoch training.
 
         Returns:
             metrics (dict): Metric data from training. Then
@@ -86,8 +108,7 @@ class EpochExp(BaseExperiment):
         if self.save_test_trajs:
                 Also returns:
                     all_test_data (dict): Dictionary of the test data keyed by the epoch
-
-        """
+        '''
         epoch_start_ind = 0
         # Check if the controller has a prior_ctrl that should be run to collect data first.
         if hasattr(self.ctrl, 'prior_ctrl'):
@@ -96,42 +117,48 @@ class EpochExp(BaseExperiment):
                                            env=self.test_envs[0],
                                            n_episodes=self.n_test_episodes_per_epoch,
                                            n_steps=None,
-                                           log_freq=self.env.CTRL_FREQ)
-            if self.save_test_trajs:
-                self.add_to_all_test_data(eval_data)
-            metrics = self.compute_metrics(eval_data)
-            self.add_to_metrics(metrics)
+                                           log_freq=self.env.CTRL_FREQ,
+                                           seeds=self.test_seeds)
+            self.record_metrics_and_traj_data(eval_data)
+
             # Train with prior model.
-            self.launch_single_train_epoch(self.ctrl.prior_ctrl,
-                                           self.train_envs[0],
-                                           self.n_train_episodes_per_epoch,
-                                           0,
-                                           None,
-                                           self.env.CTRL_FREQ,
+            self.launch_single_train_epoch(run_ctrl=self.ctrl.prior_ctrl,
+                                           env=self.train_envs[0],
+                                           n_episodes=self.n_train_episodes_per_epoch,
+                                           n_steps=None,
+                                           episode_i=0,
+                                           log_freq=self.env.CTRL_FREQ,
+                                           seeds=self.train_seeds,
                                            **kwargs)
+            if len(self.test_envs) > 1:
+                test_env = self.test_envs[1]
+            else:
+                test_env = self.test_envs[0]
             eval_data = self._execute_task(ctrl=self.ctrl,
-                                           env=self.test_envs[1],
+                                           env=test_env,
                                            n_episodes=self.n_test_episodes_per_epoch,
                                            n_steps=None,
-                                           log_freq=self.env.CTRL_FREQ)
-            if self.save_test_trajs:
-                self.add_to_all_test_data(eval_data)
-            metrics = self.compute_metrics(eval_data)
-            self.add_to_metrics(metrics)
+                                           log_freq=self.env.CTRL_FREQ,
+                                           seeds=self.test_seeds)
+            self.record_metrics_and_traj_data(eval_data)
+
             epoch_start_ind = 1
+
         for episode_i in range(epoch_start_ind, self.n_epochs):
             if len(self.train_envs) == 1:
                 train_env_num = 0
             else:
                 train_env_num = episode_i
-            self.launch_single_train_epoch(self.ctrl,
-                                           self.train_envs[train_env_num],
-                                           self.n_train_episodes_per_epoch,
-                                           episode_i,
-                                           None,
-                                           self.env.CTRL_FREQ,
+            self.launch_single_train_epoch(run_ctrl=self.ctrl,
+                                           env=self.train_envs[train_env_num],
+                                           n_episodes=self.n_train_episodes_per_epoch,
+                                           n_steps=None,
+                                           episode_i=episode_i,
+                                           log_freq=self.env.CTRL_FREQ,
+                                           seeds=self.train_seeds,
                                            **kwargs)
 
+            # Choose index based on how many test envs there are.
             if len(self.test_envs) == 1:
                 test_env_num = 0
             elif self.prior_ctrl_exists:
@@ -142,11 +169,9 @@ class EpochExp(BaseExperiment):
                                            env=self.test_envs[test_env_num],
                                            n_episodes=self.n_test_episodes_per_epoch,
                                            n_steps=None,
-                                           log_freq=self.env.CTRL_FREQ)
-            if self.save_test_trajs:
-                self.add_to_all_test_data(eval_data)
-            metrics = self.compute_metrics(eval_data)
-            self.add_to_metrics(metrics)
+                                           log_freq=self.env.CTRL_FREQ,
+                                           seeds=self.test_seeds)
+            self.record_metrics_and_traj_data(eval_data)
 
         # return learning stats
         return_values = [deepcopy(self.metrics)]
@@ -156,32 +181,46 @@ class EpochExp(BaseExperiment):
             return_values.append(deepcopy(self.all_test_data))
         return tuple(return_values)
 
+    def record_metrics_and_traj_data(self, eval_data):
+        '''Record the metrics and trajectory data from the eval_data.
+
+        Args:
+            eval_data (dict): The raw data from the executed runs.
+        '''
+        if self.save_test_trajs:
+            self.add_to_all_test_data(eval_data)
+        metrics = self.compute_metrics(eval_data)
+        self.add_to_metrics(metrics)
+        if len(self.test_envs) == 1:
+            self.test_envs[0].clear_data()
+
     def launch_single_train_epoch(self,
                                   run_ctrl,
                                   env,
                                   n_episodes,
-                                  episode_i,
                                   n_steps,
+                                  episode_i,
                                   log_freq,
+                                  seeds=None,
                                   **kwargs):
-        """Run a single training epoch
+        '''Run a single training epoch
 
         Args:
             run_ctrl (BaseController): Controller used to collect the data.
             env (BenchmarkEnv): Environment to collect the data.
             n_episodes (int): Number of runs to execute.
+            n_steps (int): Number of steps to execute.
             episode_i (int): The current episode.
             log_freq (int): The frequency with which to log information.
-
-        Returns:
-
-        """
+            seeds (list): Seeds to reset n_episodes with.
+        '''
         # Training Data Collection
         traj_data = self._execute_task(ctrl=run_ctrl,
                                        env=env,
                                        n_episodes=n_episodes,
                                        n_steps=n_steps,
-                                       log_freq=log_freq)
+                                       log_freq=log_freq,
+                                       seeds=seeds)
         # Add trajectory data to all training data.
         if self.save_train_trajs:
             self.add_to_all_train_data(traj_data)
@@ -191,35 +230,32 @@ class EpochExp(BaseExperiment):
         self.train_controller(train_inputs, train_outputs, **kwargs)
 
     def preprocess_training_data(self, traj_data, **kwargs):
-        """Preprocess the trajectory data into training data for controller training.
+        '''Preprocess the trajectory data into training data for controller training.
 
         Args:
             traj_data (dict): Dictionary of the trajectory data.
-
-        """
+        '''
 
         raise NotImplementedError('preprocessing_training_data not implemented!')
 
     def train_controller(self, train_inputs, train_outputs, **kwargs):
-        """Train the controller from training data train_inputs and train_outputs. The intention is that
+        '''Train the controller from training data train_inputs and train_outputs. The intention is that
         preprocess_trianing_data has processed the data and formatted such that ctrl.learn should be able to learn
         from the given data.
 
         Args:
             train_inputs (np.array): Training data array.
             train_outputs (np.array): Training data targets.
-        """
-        train_output = self.ctrl.learn(input_data=train_inputs, target_data=train_outputs)
+        '''
         raise NotImplementedError('Controller training needs to be implemented.')
 
 
     def add_to_all_train_data(self, traj_data):
-        """Add data from single run to all training data.
+        '''Add data from single run to all training data.
 
         Args:
             traj_data (dict): Single training run data.
-
-        """
+        '''
         if self.all_train_data is None:
             self.all_train_data = deepcopy(traj_data)
         else:
@@ -227,28 +263,30 @@ class EpochExp(BaseExperiment):
                 self.all_train_data[key].append(deepcopy(traj_data[key][0]))
 
     def add_to_all_test_data(self, traj_data):
-        """Add data from single run to all test data.
+        '''Add data from single run to all test data.
 
         Args:
             traj_data (dict): Single test run data.
-
-        """
+        '''
         if self.all_test_data is None:
-            self.all_test_data = deepcopy(traj_data)
+            self.all_test_data = {}
+            for key in traj_data:
+                self.all_test_data[key] = []
+                self.all_test_data[key].append(deepcopy(traj_data[key]))
         else:
             for key in self.all_test_data:
-                self.all_test_data[key].append(deepcopy(traj_data[key][0]))
+                if len(traj_data[key]) > 1:
+                    self.all_test_data[key].append(deepcopy(traj_data[key]))
+                else:
+                    self.all_test_data[key].append(deepcopy(traj_data[key][0]))
 
     def add_to_metrics(self, metrics):
-        """Collect metric data from a single run.
+        '''Collect metric data from a single run.
 
         Args:
             metrics (dict): Dictionary of run metrics.
-
-        Returns:
-
-        """
-        if self.metrics is None:
+        '''
+        if self.metrics is None: # or len(self.test_envs) == 1:
             self.metrics = deepcopy(metrics)
         else:
             for key in self.metrics:

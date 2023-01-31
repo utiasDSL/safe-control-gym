@@ -69,15 +69,16 @@ class BaseExperiment:
             print('Evaluation done.')
         return dict(trajs_data), metrics
 
-    def _execute_evaluations(self, n_episodes=None, n_steps=None, log_freq=None):
+    def _execute_evaluations(self, n_episodes=None, n_steps=None, log_freq=None, seeds=None):
         trajs_data = self._execute_task(ctrl=self.ctrl,
                                         env=self.env,
                                         n_episodes=n_episodes,
                                         n_steps=n_steps,
-                                        log_freq=log_freq)
+                                        log_freq=log_freq,
+                                        seeds=seeds)
         return trajs_data
 
-    def _execute_task(self, ctrl=None, env=None, n_episodes=None, n_steps=None, log_freq=None):
+    def _execute_task(self, ctrl=None, env=None, n_episodes=None, n_steps=None, log_freq=None, seeds=None):
         '''Runs the experiments and collects all the required data.
 
         Args:
@@ -99,14 +100,21 @@ class BaseExperiment:
             ctrl = self.ctrl
         if env is None:
             env = self.env
+        if seeds is not None:
+            assert len(seeds) == n_episodes, "Number of seeds must match the number of episodes"
 
         # initialize
         sim_steps = log_freq // env.CTRL_FREQ if log_freq else 1
         steps, trajs = 0, 0
+        if seeds is not None:
+            seed = seeds[0]
+        else:
+            seed = None
         obs, info = self._evaluation_reset(ctrl=ctrl,
                                            env=env,
                                            ctrl_data=None,
-                                           sf_data=None)
+                                           sf_data=None,
+                                           seed=seed)
         ctrl_data = defaultdict(list)
         sf_data = defaultdict(list)
 
@@ -118,10 +126,16 @@ class BaseExperiment:
                     obs, _, done, info = env.step(action)
                     if done:
                         trajs += 1
-                        obs, info = self._evaluation_reset(ctrl=ctrl,
-                                                           env=env,
-                                                           ctrl_data=ctrl_data,
-                                                           sf_data=sf_data)
+                        if trajs < n_episodes:
+                            if seeds is not None:
+                                seed = seeds[trajs]
+                            else:
+                                seed = None
+                            obs, info = self._evaluation_reset(ctrl=ctrl,
+                                                               env=env,
+                                                               ctrl_data=ctrl_data,
+                                                               sf_data=sf_data,
+                                                               seed=seed)
                         break
         elif n_steps is not None:
             while steps < n_steps:
@@ -179,7 +193,7 @@ class BaseExperiment:
 
         return action
 
-    def _evaluation_reset(self, ctrl, env, ctrl_data, sf_data):
+    def _evaluation_reset(self, ctrl, env, ctrl_data, sf_data, seed=None):
         '''Resets the evaluation between runs.
 
         Args:
@@ -195,9 +209,9 @@ class BaseExperiment:
         if env is None:
             env = self.env
         if env.INFO_IN_RESET:
-            obs, info = env.reset()
+            obs, info = env.reset(seed=seed)
         else:
-            obs = env.reset()
+            obs = env.reset(seed=seed)
             info = None
         if ctrl_data is not None:
             for data_key, data_val in ctrl.results_dict.items():
@@ -245,12 +259,16 @@ class BaseExperiment:
         # collect & compute all sorts of metrics here
         metrics = {
             'average_length': np.asarray(met.get_episode_lengths()).mean(),
+            'length': met.get_episode_lengths() if len(met.get_episode_lengths()) > 1 else met.get_episode_lengths()[0],
             'average_return': np.asarray(met.get_episode_returns()).mean(),
             'average_rmse': np.asarray(met.get_episode_rmse()).mean(),
+            'rmse': np.asarray(met.get_episode_rmse())  if len(met.get_episode_rmse()) > 1 else met.get_episode_rmse()[0],
             'rmse_std': np.asarray(met.get_episode_rmse()).std(),
             'worst_case_rmse_at_0.5': compute_cvar(np.asarray(met.get_episode_rmse()), 0.5, lower_range=False),
             'failure_rate':  np.asarray(met.get_episode_constraint_violations()).mean(),
             'average_constraint_violation': np.asarray(met.get_episode_constraint_violation_steps()).mean(),
+            'constraint_violation_std': np.asarray(met.get_episode_constraint_violation_steps()).std(),
+            'constraint_violation': np.asarray(met.get_episode_constraint_violation_steps()) if len(met.get_episode_constraint_violation_steps()) > 1 else met.get_episode_constraint_violation_steps()[0],
             # others ???
         }
         return metrics
@@ -355,7 +373,7 @@ class RecordDataWrapper(gym.Wrapper):
                 self.episode_data[key].append(val)
             return obs, info
         else:
-            obs = self.env.reset()
+            obs = self.env.reset(**kwargs)
             step_data = dict(
                 obs=obs, state=self.env.state
             )
