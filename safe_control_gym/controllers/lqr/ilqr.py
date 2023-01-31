@@ -74,14 +74,12 @@ class iLQR(BaseController):
 
         self.reset()
 
-
     def close(self):
         '''Cleans up resources. '''
         self.env.close()
 
-
     def learn(self, env=None, **kwargs):
-        '''Run iLQR to iteratively update policy.
+        '''Run iLQR to iteratively update policy for each time step.
 
         Args:
             env (BenchmarkEnv): The environment to be used for training.
@@ -90,97 +88,93 @@ class iLQR(BaseController):
         if env is None:
             env = self.env
 
+        # Initialize step size
+        self.lamb = 1.0
+
+        # Set update unstable flag to False
+        self.update_unstable = False
+
+        # Initialize previous cost
+        self.previous_total_cost = -float('inf')
+
         # Loop through iLQR iterations
         while self.ite_counter < self.max_iterations:
-            self.learn_one_iteration(env)
+            self.run(env=env, training=True)
 
+            # Save data and update policy if iteration is finished.
+            self.state_stack = np.vstack((self.state_stack, self.final_obs))
 
-    def learn_one_iteration(self, env):
-        '''Run one update step of iLQR.
+            print(colored(f'Iteration: {self.ite_counter}, Cost: {self.total_cost}', 'green'))
+            print(colored('--------------------------', 'green'))
 
-        Args:
-            env (BenchmarkEnv): The environment to be used for training.
-        '''
+            if self.ite_counter == 0 and env.done_on_out_of_bound and self.final_info['out_of_bounds']:
+                print(colored('[ERROR] The initial policy might be unstable. '
+                                + 'Break from iLQR updates.', 'red'))
+                break
 
-        self.run(env=env, training=True)
+            # Maximum episode length.
+            self.num_steps = np.shape(self.input_stack)[0]
 
-        # Save data and update policy if iteration is finished.
-        self.state_stack = np.vstack((self.state_stack, self.final_obs))
+            # Check if cost is increased and update lambda correspondingly
+            delta_cost = self.total_cost - self.previous_total_cost
+            if self.ite_counter == 0:
+                # Save best iteration.
+                self.best_iteration = self.ite_counter
+                self.previous_total_cost = self.total_cost
+                self.input_ff_best = np.copy(self.input_ff)
+                self.gains_fb_best = np.copy(self.gains_fb)
 
-        print(colored(f'Iteration: {self.ite_counter}, Cost: {self.total_cost}', 'green'))
-        print(colored('--------------------------', 'green'))
+                # Update controller gains
+                self.update_policy(env)
 
-        if self.ite_counter == 0 and env.done_on_out_of_bound and self.final_info['out_of_bounds']:
-            print(colored('[ERROR] The initial policy might be unstable. '
-                            + 'Break from iLQR updates.', 'red'))
-            self.ite_counter = self.max_iterations
-            return
+                # Initialize improved flag.
+                self.prev_ite_improved = False
+            elif delta_cost > 0.0 or self.update_unstable:
+                # If cost is increased, increase lambda
+                self.lamb *= self.lamb_factor
 
-        # Maximum episode length.
-        self.num_steps = np.shape(self.input_stack)[0]
+                print(f'Cost increased by {-delta_cost}. '
+                      + 'Set feedforward term and controller gain to that '
+                      'from the previous iteration. '
+                      f'Increased lambda to {self.lamb}.')
+                print(f'Current policy is from iteration {self.best_iteration}.')
 
-        # Check if cost is increased and update lambda correspondingly
-        delta_cost = self.total_cost - self.previous_total_cost
-        if self.ite_counter == 0:
-            # Save best iteration.
-            self.best_iteration = self.ite_counter
-            self.previous_total_cost = self.total_cost
-            self.input_ff_best = np.copy(self.input_ff)
-            self.gains_fb_best = np.copy(self.gains_fb)
+                # Reset feedforward term and controller gain to that from
+                # the previous iteration.
+                self.input_ff = np.copy(self.input_ff_best)
+                self.gains_fb = np.copy(self.gains_fb_best)
 
-            # Update controller gains
-            self.update_policy(env)
+                # Set improved flag to False.
+                self.prev_ite_improved = False
 
-            # Initialize improved flag.
-            self.prev_ite_improved = False
-        elif delta_cost > 0.0 or self.update_unstable:
-            # If cost is increased, increase lambda
-            self.lamb *= self.lamb_factor
+                # Break if maximum lambda is reached.
+                if self.lamb > self.lamb_max:
+                    print(colored('Maximum lambda reached.', 'red'))
+                    self.lamb = self.lamb_max
 
-            print(f'Cost increased by {-delta_cost}. '
-                    + 'Set feedforward term and controller gain to that '
-                    'from the previous iteration. '
-                    f'Increased lambda to {self.lamb}.')
-            print(f'Current policy is from iteration {self.best_iteration}.')
+                # Reset update_unstable flag to False.
+                self.update_unstable = False
+            elif delta_cost <= 0.0:
+                # Save feedforward term and gain and state and input stacks.
+                self.best_iteration = self.ite_counter
+                self.previous_total_cost = self.total_cost
+                self.input_ff_best = np.copy(self.input_ff)
+                self.gains_fb_best = np.copy(self.gains_fb)
 
-            # Reset feedforward term and controller gain to that from
-            # the previous iteration.
-            self.input_ff = np.copy(self.input_ff_best)
-            self.gains_fb = np.copy(self.gains_fb_best)
+                # Check consecutive cost increment (cost decrement).
+                if abs(delta_cost) < self.epsilon and self.prev_ite_improved:
+                    # Cost converged.
+                    print(colored('iLQR cost converged with a tolerance '
+                                  + f'of {self.epsilon}.', 'yellow'))
+                    break
 
-            # Set improved flag to False.
-            self.prev_ite_improved = False
+                # Set improved flag to True.
+                self.prev_ite_improved = True
 
-            # Break if maximum lambda is reached.
-            if self.lamb > self.lamb_max:
-                print(colored('Maximum lambda reached.', 'red'))
-                self.lamb = self.lamb_max
+                # Update controller gains
+                self.update_policy(env)
 
-            # Reset update_unstable flag to False.
-            self.update_unstable = False
-        elif delta_cost <= 0.0:
-            # Save feedforward term and gain and state and input stacks.
-            self.best_iteration = self.ite_counter
-            self.previous_total_cost = self.total_cost
-            self.input_ff_best = np.copy(self.input_ff)
-            self.gains_fb_best = np.copy(self.gains_fb)
-
-            # Check consecutive cost increment (cost decrement).
-            if abs(delta_cost) < self.epsilon and self.prev_ite_improved:
-                # Cost converged.
-                print(colored('iLQR cost converged with a tolerance '
-                                + f'of {self.epsilon}.', 'yellow'))
-                self.ite_counter = self.max_iterations
-                return
-
-            # Set improved flag to True.
-            self.prev_ite_improved = True
-
-            # Update controller gains
-            self.update_policy(env)
-
-        self.ite_counter += 1
-
+            self.ite_counter += 1
 
     def update_policy(self, env):
         '''Updates policy.
@@ -277,7 +271,6 @@ class iLQR(BaseController):
             else:
                 self.update_unstable = True
 
-
     def select_action(self, obs, info=None, training=False):
         '''Determine the action to take at the current timestep.
 
@@ -310,7 +303,6 @@ class iLQR(BaseController):
 
         return action
 
-
     def calculate_lqr_action(self, obs, step):
         '''Compute gain for the first iteration.
            action = -self.gain @ (x - self.x_goal) + self.model.U_EQ
@@ -336,19 +328,10 @@ class iLQR(BaseController):
 
         return action, gains_fb, input_ff
 
-
     def reset(self):
         '''Prepares for evaluation. '''
         self.env.reset()
         self.ite_counter = 0
-
-        # Initialize step size
-        self.lamb = 1.0
-        # Set update unstable flag to False
-        self.update_unstable = False
-        # Initialize previous cost
-        self.previous_total_cost = -float('inf')
-
 
     def run(self, env=None, max_steps=500, training=True):
         '''Runs evaluation with current policy.
