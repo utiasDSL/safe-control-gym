@@ -801,7 +801,10 @@ class Quadrotor(BaseAviary):
         # Plus two because ctrl_step_counter has not incremented yet, and we want to return the obs (which would be
         # ctrl_step_counter + 1 as the action has already been applited), and the next state (+ 2) for the RL to see
         # the next state.
-        obs = self.extend_obs(obs, self.ctrl_step_counter+2)
+        if self.at_reset:
+            obs = self.extend_obs(obs, self.ctrl_step_counter+1)
+        else:
+            obs = self.extend_obs(obs, self.ctrl_step_counter+2)
         return obs
 
     def _get_reward(self):
