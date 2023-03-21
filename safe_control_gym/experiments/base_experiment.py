@@ -65,7 +65,11 @@ class BaseExperiment:
         # terminal printouts
         if verbose:
             for metric_key, metric_val in metrics.items():
-                print('{}: {:.3f}'.format(colored(metric_key, 'yellow'), metric_val))
+                if isinstance(metric_val, list) or isinstance(metric_val, np.ndarray):
+                    rounded = [f'{elem:.3f}' for elem in metric_val]
+                    print('{}: {}'.format(colored(metric_key, 'yellow'), rounded))
+                else:
+                    print('{}: {:.3f}'.format(colored(metric_key, 'yellow'), metric_val))
             print('Evaluation done.')
         return dict(trajs_data), metrics
 
@@ -491,4 +495,3 @@ class MetricExtractor:
         '''
         return self.get_episode_data('constraint_violation',
                                      postprocess_func=sum)
-
