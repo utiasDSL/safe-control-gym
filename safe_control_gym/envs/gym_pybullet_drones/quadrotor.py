@@ -274,7 +274,7 @@ class Quadrotor(BaseAviary):
                 ])  # x = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p_body, q_body, r_body}.
         elif self.TASK == Task.TRAJ_TRACKING:
             POS_REF, VEL_REF, _ = self._generate_trajectory(traj_type=self.TASK_INFO['trajectory_type'],
-                                              traj_length=self.EPISODE_LEN_SEC + self.CTRL_TIMESTEP, # Added to extend trajectory by 1 (PR #119)
+                                              traj_length=self.EPISODE_LEN_SEC,
                                               num_cycles=self.TASK_INFO['num_cycles'],
                                               traj_plane=self.TASK_INFO['trajectory_plane'],
                                               position_offset=self.TASK_INFO['trajectory_position_offset'],
@@ -802,7 +802,7 @@ class Quadrotor(BaseAviary):
         # ctrl_step_counter + 1 as the action has already been applited), and the next state (+ 2) for the RL to see
         # the next state.
         if self.at_reset:
-            obs = self.extend_obs(obs, self.ctrl_step_counter+1)
+            obs = self.extend_obs(obs, 1)
         else:
             obs = self.extend_obs(obs, self.ctrl_step_counter+2)
         return obs

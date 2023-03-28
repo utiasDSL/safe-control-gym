@@ -558,7 +558,7 @@ class BenchmarkEnv(gym.Env, ABC):
         else:
             raise ValueError('Trajectory plane should be in form of ab, where a and b can be {x, y, z}.')
         # Generate time stamps.
-        times = np.arange(0, traj_length, sample_time)
+        times = np.arange(0, traj_length+sample_time, sample_time) #sample time added to make reference one step longer than
         pos_ref_traj = np.zeros((len(times), 3))
         vel_ref_traj = np.zeros((len(times), 3))
         speed_traj = np.zeros((len(times), 1))
