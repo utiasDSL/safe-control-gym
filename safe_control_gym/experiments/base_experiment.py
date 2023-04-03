@@ -422,8 +422,13 @@ class MetricExtractor:
             episode_data = [postprocess_func(ep_val) for ep_val in self.data[key]]
         elif key in self.data['info'][0][-1]:
             # if the data field is contained in step info dict
-            episode_data = [postprocess_func([info.get(key, 0.) for info in ep_info])
-                            for ep_info in self.data['info']]
+            episode_data = []
+            for ep_info in self.data['info']:
+                ep_info_data = []
+                for info in ep_info:
+                    if key in info:
+                        ep_info_data.append(info.get(key))
+                episode_data.append(postprocess_func(ep_info_data))
         else:
             raise KeyError(f'Given data key \'{key}\' does not exist in recorded trajectory data.')
         return episode_data
