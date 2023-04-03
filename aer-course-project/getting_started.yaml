@@ -115,8 +115,8 @@ quadrotor_config:
   gates_and_obstacles_randomization_info:
     gates:
       distrib: "uniform"
-      low: -0.1
-      high: 0.1
+      low: -0.0
+      high: 0.0
     obstacles:
       distrib: "uniform"
       low: -0.2

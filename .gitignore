@@ -149,3 +149,5 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+aer-course-project/edit_this_original.py
