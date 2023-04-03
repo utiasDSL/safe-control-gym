@@ -436,7 +436,7 @@ class MetricExtractor:
                     if key in info:
                         ep_info_data.append(info.get(key))
                     elif self.verbose:
-                        print(f"[Warn] MetricExtractor.get_episode_data: key {key} not in info dict.")
+                        print(f'[Warn] MetricExtractor.get_episode_data: key {key} not in info dict.')
                 episode_data.append(postprocess_func(ep_info_data))
         else:
             raise KeyError(f'Given data key \'{key}\' does not exist in recorded trajectory data.')

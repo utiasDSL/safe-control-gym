@@ -587,7 +587,7 @@ class CartPole(BenchmarkEnv):
 
         # Concatenate goal info (goal state(s)) for RL
         # Plus two because ctrl_step_counter has not incremented yet, and we want to return the obs (which would be
-        # ctrl_step_counter + 1 as the action has already been applited), and the next state (+ 2) for the RL to see
+        # ctrl_step_counter + 1 as the action has already been applied), and the next state (+ 2) for the RL to see
         # the next state.
         if self.at_reset:
             obs = self.extend_obs(obs, 1)
