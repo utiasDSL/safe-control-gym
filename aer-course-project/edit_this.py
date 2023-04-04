@@ -111,12 +111,12 @@ class Controller():
         # perform trajectory planning
         t_scaled = self.planning(use_firmware, initial_info)
 
-        if self.VERBOSE:
-            # Plot trajectory in each dimension and 3D.
-            plot_trajectory(t_scaled, self.waypoints, self.ref_x, self.ref_y, self.ref_z)
+        ## visualization
+        # Plot trajectory in each dimension and 3D.
+        plot_trajectory(t_scaled, self.waypoints, self.ref_x, self.ref_y, self.ref_z)
 
-            # Draw the trajectory on PyBullet's GUI.
-            draw_trajectory(initial_info, self.waypoints, self.ref_x, self.ref_y, self.ref_z)
+        # Draw the trajectory on PyBullet's GUI.
+        draw_trajectory(initial_info, self.waypoints, self.ref_x, self.ref_y, self.ref_z)
 
 
     def planning(self, use_firmware, initial_info):
