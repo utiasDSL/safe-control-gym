@@ -1,7 +1,8 @@
 """Write your proposed algorithm.
-[NOTE]: The idea for the final project is to use the planning algorithm to compute the trajectory given 
-the uncertainty of the gates and obstacles. Students can also design some adaptive control when the gate 
-information becomes accurate during the flights.
+[NOTE]: The idea for the final project is to plan the trajectory based on a sequence of gates 
+while considering the uncertainty of the obstacles. The students should show that the proposed 
+algorithm is able to safely navigate a quadrotor to complete the task in both simulation and
+real-world experiments.
 
 Then run:
 
