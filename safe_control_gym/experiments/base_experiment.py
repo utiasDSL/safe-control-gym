@@ -21,6 +21,7 @@ class BaseExperiment:
                  ctrl,
                  train_env=None,
                  safety_filter=None,
+                 verbose: bool = False,
                  ):
         '''Creates a generic experiment class to run evaluations and collect standard metrics.
 
@@ -29,8 +30,10 @@ class BaseExperiment:
             ctrl (BaseController): The controller for the task.
             train_env (BenchmarkEnv): The environment used for training.
             safety_filter (BaseSafetyFilter): The safety filter to filter the controller.
+            verbose (bool, optional): If to suppress BaseExperiment print statetments.
         '''
 
+        self.verbose = verbose
         self.env = env
         if not is_wrapped(self.env, RecordDataWrapper):
             self.env = RecordDataWrapper(self.env)
@@ -248,8 +251,7 @@ class BaseExperiment:
             trajs_data = self.train_env.data
         return dict(trajs_data)
 
-    @staticmethod
-    def compute_metrics(trajs_data):
+    def compute_metrics(self, trajs_data):
         '''Compute all standard metrics on the given trajectory data.
 
         Args:
@@ -259,7 +261,7 @@ class BaseExperiment:
             metrics (dict): The metrics calculated from the raw data.
         '''
 
-        met = MetricExtractor(trajs_data)
+        met = MetricExtractor(trajs_data, verbose=self.verbose)
         # collect & compute all sorts of metrics here
         metrics = {
             'average_length': np.asarray(met.get_episode_lengths()).mean(),
@@ -424,13 +426,17 @@ class MetricExtractor:
         (how many constraint violations happened in each episode)
     '''
 
-    def __init__(self, data):
+    def __init__(self,
+                 data,
+                 verbose: bool = False):
         '''Creates a class to extract metrics from standard trajectory data.
 
         Args:
             data (defaultdict(list)): The raw data from the executed runs, in standard form from the Experiment class.
+            verbose (bool, optional): If to suppress extractor print statetments.
         '''
         self.data = data
+        self.verbose = verbose
 
     def get_episode_data(self, key, postprocess_func=lambda x: x):
         '''Extract data field from recorded trajectory data, optionally postprocess each episode data (e.g. get sum).
@@ -447,8 +453,15 @@ class MetricExtractor:
             episode_data = [postprocess_func(ep_val) for ep_val in self.data[key]]
         elif key in self.data['info'][0][-1]:
             # if the data field is contained in step info dict
-            episode_data = [postprocess_func([info.get(key, 0.) for info in ep_info])
-                            for ep_info in self.data['info']]
+            episode_data = []
+            for ep_info in self.data['info']:
+                ep_info_data = []
+                for info in ep_info:
+                    if key in info:
+                        ep_info_data.append(info.get(key))
+                    elif self.verbose:
+                        print(f'[Warn] MetricExtractor.get_episode_data: key {key} not in info dict.')
+                episode_data.append(postprocess_func(ep_info_data))
         else:
             raise KeyError(f'Given data key \'{key}\' does not exist in recorded trajectory data.')
         return episode_data

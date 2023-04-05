@@ -801,7 +801,13 @@ class Quadrotor(BaseAviary):
             obs = self.disturbances['observation'].apply(obs, self)
 
         # Concatenate goal info (references state(s)) for RL.
-        obs = self.extend_obs(obs, self.ctrl_step_counter+1)
+        # Plus two because ctrl_step_counter has not incremented yet, and we want to return the obs (which would be
+        # ctrl_step_counter + 1 as the action has already been applied), and the next state (+ 2) for the RL to see
+        # the next state.
+        if self.at_reset:
+            obs = self.extend_obs(obs, 1)
+        else:
+            obs = self.extend_obs(obs, self.ctrl_step_counter+2)
         return obs
 
     def _get_reward(self):
@@ -822,7 +828,7 @@ class Quadrotor(BaseAviary):
                 dist = np.sum(self.rew_state_weight * state_error * state_error)
                 dist += np.sum(self.rew_act_weight * act_error * act_error)
             if self.TASK == Task.TRAJ_TRACKING:
-                wp_idx = min(self.ctrl_step_counter + 1, self.X_GOAL.shape[0]-1)
+                wp_idx = min(self.ctrl_step_counter + 1, self.X_GOAL.shape[0]-1) # +1 because state has already advanced but counter not incremented.
                 state_error = state - self.X_GOAL[wp_idx]
                 dist = np.sum(self.rew_state_weight * state_error * state_error)
                 dist += np.sum(self.rew_act_weight * act_error * act_error)
@@ -843,7 +849,7 @@ class Quadrotor(BaseAviary):
                                                      R=self.R)['l'])
             if self.TASK == Task.TRAJ_TRACKING:
                 return float(-1 * self.symbolic.loss(x=self.state,
-                                                     Xr=self.X_GOAL[self.ctrl_step_counter,:],
+                                                     Xr=self.X_GOAL[self.ctrl_step_counter+1,:], # +1 because state has already advanced but counter not incremented.
                                                      u=self.current_clipped_action,
                                                      Ur=self.U_GOAL,
                                                      Q=self.Q,
@@ -908,7 +914,7 @@ class Quadrotor(BaseAviary):
         elif self.TASK == Task.TRAJ_TRACKING:
             # TODO: should use angle wrapping
             # state[4] = normalize_angle(state[4])
-            wp_idx = min(self.ctrl_step_counter + 1, self.X_GOAL.shape[0]-1)
+            wp_idx = min(self.ctrl_step_counter + 1, self.X_GOAL.shape[0]-1)  # +1 so that state is being compared with proper reference state.
             state_error = state - self.X_GOAL[wp_idx]
         # Filter only relevant dimensions.
         state_error = state_error * self.info_mse_metric_state_weight
