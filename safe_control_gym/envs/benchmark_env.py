@@ -199,6 +199,7 @@ class BenchmarkEnv(gym.Env, ABC):
         # Default seed None means pure randomness/no seeding.
         self.seed(seed)
         self.initial_reset = False
+        self.at_reset = False
         self.INFO_IN_RESET = info_in_reset
 
     def seed(self,
@@ -351,6 +352,7 @@ class BenchmarkEnv(gym.Env, ABC):
         '''Pre-processing before calling `.reset()`. '''
         # Housekeeping variables.
         self.initial_reset = True
+        self.at_reset = True
         self.pyb_step_counter = 0
         self.ctrl_step_counter = 0
         self.current_raw_action = None  # Action sent by controller, possibly normalized and unclipped
@@ -378,6 +380,7 @@ class BenchmarkEnv(gym.Env, ABC):
         info['current_step'] = 0
         if self.constraints is not None and not(self.constraints.state_constraints == []):
             info['constraint_values'] = self.constraints.get_values(self, only_state=True)
+        self.at_reset = False
         return obs, info
 
     @abstractmethod
@@ -555,7 +558,7 @@ class BenchmarkEnv(gym.Env, ABC):
         else:
             raise ValueError('Trajectory plane should be in form of ab, where a and b can be {x, y, z}.')
         # Generate time stamps.
-        times = np.arange(0, traj_length, sample_time)
+        times = np.arange(0, traj_length+sample_time, sample_time) # sample time added to make reference one step longer than traj_length
         pos_ref_traj = np.zeros((len(times), 3))
         vel_ref_traj = np.zeros((len(times), 3))
         speed_traj = np.zeros((len(times), 1))
