@@ -320,17 +320,20 @@ class Quadrotor(BaseAviary):
         # Set prior/symbolic info.
         self._setup_symbolic()
 
-    def reset(self):
+    def reset(self, seed=None):
         '''(Re-)initializes the environment to start an episode.
 
         Mandatory to call at least once after __init__().
+
+        Args:
+            seed (int): An optional seed to reseed the environment.
 
         Returns:
             obs (ndarray): The initial state of the environment.
             info (dict): A dictionary with information about the dynamics and constraints symbolic models.
         '''
 
-        super().before_reset()
+        super().before_reset(seed=seed)
         # PyBullet simulation reset.
         super()._reset_simulation()
 
@@ -462,14 +465,14 @@ class Quadrotor(BaseAviary):
         return np.reshape(rgb, (h, w, 4))
 
     def _setup_symbolic(self, prior_prop={}, **kwargs):
-        '''Creates symbolic (CasADi) models for dynamics, observation, and cost. 
-        
+        '''Creates symbolic (CasADi) models for dynamics, observation, and cost.
+
         Args:
             prior_prop (dict): specify the prior inertial prop to use in the symbolic model.
         '''
         m = prior_prop.get("M", self.MASS)
         Iyy = prior_prop.get("Iyy", self.J[1, 1])
-        g, l = self.GRAVITY_ACC, self.L        
+        g, l = self.GRAVITY_ACC, self.L
         dt = self.CTRL_TIMESTEP
         # Define states.
         z = cs.MX.sym('z')
@@ -541,7 +544,7 @@ class Quadrotor(BaseAviary):
 
             # From Ch. 2 of Luis, Carlos, and Jérôme Le Ny. 'Design of a trajectory tracking controller for a
             # nanoquadcopter.' arXiv preprint arXiv:1608.05786 (2016).
-    
+
             # Defining the dynamics function.
             # We are using the velocity of the base wrt to the world frame expressed in the world frame.
             # Note that the reference expresses this in the body frame.
@@ -583,7 +586,7 @@ class Quadrotor(BaseAviary):
         # Additional params to cache
         params = {
             # prior inertial properties
-            "quad_mass": m, 
+            "quad_mass": m,
             "quad_Iyy": Iyy,
             "quad_Ixx": Ixx if "Ixx" in locals() else None,
             "quad_Izz": Izz if "Izz" in locals() else None,

@@ -5,3 +5,4 @@ def test_imports():
     import safe_control_gym.envs.env_wrappers
     import safe_control_gym.safety_filters
     import safe_control_gym.utils
+    import safe_control_gym.experiments

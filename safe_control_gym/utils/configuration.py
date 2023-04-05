@@ -56,12 +56,15 @@ class ConfigFactory:
                           type=str,
                           help="override key-value pairs")
 
-    def merge(self):
+    def merge(self, config_override=None):
         """Creates experiment config object from command line and config files.
 
         """
         config_dict = self.base_dict
         args, _ = self.parser.parse_known_args()
+        if config_override is not None:
+            args.overrides = config_override
+
         if args.restore:
             # Restore for continual training or evaluation.
             restore_path = os.path.join(args.restore, "config.yaml")

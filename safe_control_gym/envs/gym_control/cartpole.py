@@ -250,17 +250,20 @@ class CartPole(BenchmarkEnv):
         obs, rew, done, info = super().after_step(obs, rew, done, info)
         return obs, rew, done, info
 
-    def reset(self):
+    def reset(self, seed=None):
         '''(Re-)initializes the environment to start an episode.
 
         Mandatory to call at least once after __init__().
+
+        Args:
+            seed (int): An optional seed to reseed the environment.
 
         Returns:
             obs (ndarray): The initial state of the environment.
             info (dict): A dictionary with information about the dynamics and constraints symbolic models.
         '''
 
-        super().before_reset()
+        super().before_reset(seed=seed)
         # PyBullet simulation reset.
         p.resetSimulation(physicsClientId=self.PYB_CLIENT)
         p.setGravity(0, 0, -self.GRAVITY_ACC, physicsClientId=self.PYB_CLIENT)

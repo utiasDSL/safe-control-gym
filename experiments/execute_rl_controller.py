@@ -17,11 +17,11 @@ from safe_control_gym.utils.utils import mkdirs, set_dir_from_config, set_device
 
 def train(config):
     """Training template.
-    
+
     Usage:
         * to start training, use with `--func train`.
-        * to restore from a previous training, additionally use `--restore {dir_path}` 
-            where `dir_path` is the output folder from previous training.  
+        * to restore from a previous training, additionally use `--restore {dir_path}`
+            where `dir_path` is the output folder from previous training.
 
     """
     # Experiment setup.
@@ -51,9 +51,9 @@ def train(config):
 
 def make_plots(config):
     """Produces plots for logged stats during training.
-    
+
     Usage
-        * use with `--func plot` and `--restore {dir_path}` where `dir_path` is 
+        * use with `--func plot` and `--restore {dir_path}` where `dir_path` is
             the experiment folder containing the logs.
         * save figures under `dir_path/plots/`.
 
@@ -68,10 +68,10 @@ def make_plots(config):
 
 def test_policy(config):
     """Run the (trained) policy/controller for evaluation.
-    
+
     Usage
         * use with `--func test`.
-        * to test policy from a trained model checkpoint, additionally use 
+        * to test policy from a trained model checkpoint, additionally use
             `--restore {dir_path}` where `dir_path` is folder to the trained model.
         * to test un-trained policy (e.g. non-learning based), use as it is.
 
@@ -109,7 +109,7 @@ def test_policy(config):
     else:
         eval_output_dir = os.path.join(config.output_dir, "eval")
     os.makedirs(eval_output_dir, exist_ok=True)
-    # test trajs and statistics 
+    # test trajs and statistics
     eval_path = os.path.join(eval_output_dir, config.eval_output_path)
     os.makedirs(os.path.dirname(eval_path), exist_ok=True)
     with open(eval_path, "wb") as f:
