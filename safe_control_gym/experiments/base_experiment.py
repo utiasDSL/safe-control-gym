@@ -33,6 +33,7 @@ class BaseExperiment:
             verbose (bool, optional): If to suppress BaseExperiment print statetments.
         '''
 
+        self.metric_extractor = MetricExtractor()
         self.verbose = verbose
         self.env = env
         if not is_wrapped(self.env, RecordDataWrapper):
@@ -261,22 +262,8 @@ class BaseExperiment:
             metrics (dict): The metrics calculated from the raw data.
         '''
 
-        met = MetricExtractor(trajs_data, verbose=self.verbose)
-        # collect & compute all sorts of metrics here
-        metrics = {
-            'average_length': np.asarray(met.get_episode_lengths()).mean(),
-            'length': met.get_episode_lengths() if len(met.get_episode_lengths()) > 1 else met.get_episode_lengths()[0],
-            'average_return': np.asarray(met.get_episode_returns()).mean(),
-            'average_rmse': np.asarray(met.get_episode_rmse()).mean(),
-            'rmse': np.asarray(met.get_episode_rmse())  if len(met.get_episode_rmse()) > 1 else met.get_episode_rmse()[0],
-            'rmse_std': np.asarray(met.get_episode_rmse()).std(),
-            'worst_case_rmse_at_0.5': compute_cvar(np.asarray(met.get_episode_rmse()), 0.5, lower_range=False),
-            'failure_rate':  np.asarray(met.get_episode_constraint_violations()).mean(),
-            'average_constraint_violation': np.asarray(met.get_episode_constraint_violation_steps()).mean(),
-            'constraint_violation_std': np.asarray(met.get_episode_constraint_violation_steps()).std(),
-            'constraint_violation': np.asarray(met.get_episode_constraint_violation_steps()) if len(met.get_episode_constraint_violation_steps()) > 1 else met.get_episode_constraint_violation_steps()[0],
-            # others ???
-        }
+        metrics = self.metric_extractor.compute_metrics(data=trajs_data, verbose=self.verbose)
+
         return metrics
 
     def reset(self):
@@ -426,17 +413,36 @@ class MetricExtractor:
         (how many constraint violations happened in each episode)
     '''
 
-    def __init__(self,
-                 data,
-                 verbose: bool = False):
-        '''Creates a class to extract metrics from standard trajectory data.
+    def compute_metrics(self, data, verbose=False):
+        '''Compute all standard metrics on the given trajectory data.
 
         Args:
-            data (defaultdict(list)): The raw data from the executed runs, in standard form from the Experiment class.
-            verbose (bool, optional): If to suppress extractor print statetments.
+            data (defaultdict(list)): The raw data from the executed runs.
+            verbose (bool, optional): If to suppress compute_metrics print statetments.
+
+        Returns:
+            metrics (dict): The metrics calculated from the raw data.
         '''
+
         self.data = data
         self.verbose = verbose
+
+        # collect & compute all sorts of metrics here
+        metrics = {
+            'average_length': np.asarray(self.get_episode_lengths()).mean(),
+            'length': self.get_episode_lengths() if len(self.get_episode_lengths()) > 1 else self.get_episode_lengths()[0],
+            'average_return': np.asarray(self.get_episode_returns()).mean(),
+            'average_rmse': np.asarray(self.get_episode_rmse()).mean(),
+            'rmse': np.asarray(self.get_episode_rmse())  if len(self.get_episode_rmse()) > 1 else self.get_episode_rmse()[0],
+            'rmse_std': np.asarray(self.get_episode_rmse()).std(),
+            'worst_case_rmse_at_0.5': compute_cvar(np.asarray(self.get_episode_rmse()), 0.5, lower_range=False),
+            'failure_rate':  np.asarray(self.get_episode_constraint_violations()).mean(),
+            'average_constraint_violation': np.asarray(self.get_episode_constraint_violation_steps()).mean(),
+            'constraint_violation_std': np.asarray(self.get_episode_constraint_violation_steps()).std(),
+            'constraint_violation': np.asarray(self.get_episode_constraint_violation_steps()) if len(self.get_episode_constraint_violation_steps()) > 1 else self.get_episode_constraint_violation_steps()[0],
+            # others ???
+        }
+        return metrics
 
     def get_episode_data(self, key, postprocess_func=lambda x: x):
         '''Extract data field from recorded trajectory data, optionally postprocess each episode data (e.g. get sum).
