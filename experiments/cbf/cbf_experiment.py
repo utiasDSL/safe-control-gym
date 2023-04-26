@@ -12,7 +12,7 @@ from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.configuration import ConfigFactory
 
 
-def run(plot=True, training=True, n_episodes=1, n_steps=None, curr_path='.', save_data=True):
+def run(plot=True, training=True, n_episodes=1, n_steps=None, curr_path='.', save_data=False):
     '''The main function running CBF experiments.
 
     Args:

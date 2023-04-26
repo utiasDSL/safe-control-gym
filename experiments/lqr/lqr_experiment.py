@@ -15,7 +15,7 @@ from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 
 
-def run(gui=True, n_episodes=2, n_steps=None, save_data=True):
+def run(gui=True, n_episodes=1, n_steps=None, save_data=False):
     '''The main function running LQR and iLQR experiments.
 
     Args:

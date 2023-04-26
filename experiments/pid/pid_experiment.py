@@ -4,12 +4,16 @@ import os
 import pickle
 from functools import partial
 
+import numpy as np
+import pybullet as p
+import matplotlib.pyplot as plt
+
 from safe_control_gym.experiments.base_experiment import BaseExperiment
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 
 
-def run(gui=True, n_episodes=2, n_steps=None, save_data=True):
+def run(gui=True, n_episodes=1, n_steps=None, save_data=False):
     '''The main function running PID experiments.
 
     Args:
@@ -23,20 +27,82 @@ def run(gui=True, n_episodes=2, n_steps=None, save_data=True):
     CONFIG_FACTORY = ConfigFactory()
     config = CONFIG_FACTORY.merge()
 
+    config.task_config['gui'] = gui
+
+    custom_trajectory = False
+    if config.task_config.task == 'traj_tracking' and config.task_config.task_info.trajectory_type == 'custom':
+        custom_trajectory = True
+        config.task_config.task_info.trajectory_type = 'circle'  # Placeholder
+        config.task_config.randomized_init = False
+        config.task_config.init_state = np.zeros((12,1))
+
     # Create controller.
     env_func = partial(make,
                     config.task,
                     **config.task_config
                     )
-    env = env_func(gui=gui)
 
     ctrl = make(config.algo,
                 env_func,
-                **config.algo_config
                 )
 
+    if custom_trajectory:
+        # Set iterations and episode counter.
+        ITERATIONS = int(config.task_config['episode_len_sec']*config.task_config['ctrl_freq']) + 2  # +2 for start and end of reference
+
+        # Curve fitting with waypoints.
+        waypoints = np.array([(0, 0, 0), (0.2, 0.5, 0.5), (0.5, 0.1, 0.6), (1, 1, 1), (1.3, 1, 1.2)])
+        deg = 6
+        t = np.arange(waypoints.shape[0])
+        fit_x = np.polyfit(t, waypoints[:,0], deg)
+        fit_y = np.polyfit(t, waypoints[:,1], deg)
+        fit_z = np.polyfit(t, waypoints[:,2], deg)
+        fx = np.poly1d(fit_x)
+        fy = np.poly1d(fit_y)
+        fz = np.poly1d(fit_z)
+        t_scaled = np.linspace(t[0], t[-1], ITERATIONS)
+        ref_x = fx(t_scaled)
+        ref_y = fy(t_scaled)
+        ref_z = fz(t_scaled)
+
+        X_GOAL = np.zeros((ITERATIONS, ctrl.env.symbolic.nx))
+        X_GOAL[:, 0] = ref_x
+        X_GOAL[:, 2] = ref_y
+        X_GOAL[:, 4] = ref_z
+
+        ctrl.env.X_GOAL = X_GOAL
+        ctrl.reference = X_GOAL
+
+    obs, _ = ctrl.env.reset()
+
+    if config.task_config.task == 'traj_tracking' and gui is True:
+        if config.task_config.quad_type == 2:
+            ref_3D = np.hstack([ctrl.env.X_GOAL[:, [0]], np.zeros(ctrl.env.X_GOAL[:, [0]].shape), ctrl.env.X_GOAL[:, [2]]])
+        else:
+            ref_3D = ctrl.env.X_GOAL[:, [0, 2, 4]]
+        # Plot in 3D.
+        ax = plt.axes(projection='3d')
+        ax.plot3D(ref_3D[:, 0], ref_3D[:, 1], ref_3D[:, 2])
+        if custom_trajectory:
+            ax.scatter3D(waypoints[:,0], waypoints[:,1], waypoints[:,2])
+        plt.show()
+
+        for i in range(10, ctrl.env.X_GOAL.shape[0], 10):
+
+            p.addUserDebugLine(lineFromXYZ=[ref_3D[i-10,0], ref_3D[i-10,1], ref_3D[i-10,2]],
+                            lineToXYZ=[ref_3D[i,0], ref_3D[i,1], ref_3D[i,2]],
+                            lineColorRGB=[1, 0, 0],
+                            physicsClientId=ctrl.env.PYB_CLIENT)
+
+        if custom_trajectory:
+            for point in waypoints:
+                p.loadURDF(os.path.join(ctrl.env.URDF_DIR, 'gate.urdf'),
+                        [point[0], point[1], point[2]-0.05],
+                        p.getQuaternionFromEuler([0,0,0]),
+                        physicsClientId=ctrl.env.PYB_CLIENT)
+
     # Run the experiment.
-    experiment = BaseExperiment(env, ctrl)
+    experiment = BaseExperiment(ctrl.env, ctrl)
     trajs_data, metrics = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
     experiment.close()
 

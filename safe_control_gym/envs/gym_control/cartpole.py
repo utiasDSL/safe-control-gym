@@ -615,7 +615,7 @@ class CartPole(BenchmarkEnv):
                 dist += np.sum(self.rew_act_weight * act * act)
             if self.TASK == Task.TRAJ_TRACKING:
                 wp_idx = min(self.ctrl_step_counter + 1, self.X_GOAL.shape[0]-1) # +1 because state has already advanced but counter not incremented.
-                state_error = state - self.X_GOAL[wp_idx + 1] # +1 because state has already advanced but counter not incremented.
+                state_error = state - self.X_GOAL[wp_idx]
                 dist = np.sum(self.rew_state_weight * state_error * state_error)
                 dist += np.sum(self.rew_act_weight * act * act)
             rew = -dist

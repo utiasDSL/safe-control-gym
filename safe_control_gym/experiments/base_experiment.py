@@ -78,23 +78,13 @@ class BaseExperiment:
         return dict(trajs_data), metrics
 
     def _execute_evaluations(self, n_episodes=None, n_steps=None, log_freq=None, seeds=None):
-        trajs_data = self._execute_task(ctrl=self.ctrl,
-                                        env=self.env,
-                                        n_episodes=n_episodes,
-                                        n_steps=n_steps,
-                                        log_freq=log_freq,
-                                        seeds=seeds)
-        return trajs_data
-
-    def _execute_task(self, ctrl=None, env=None, n_episodes=None, n_steps=None, log_freq=None, seeds=None):
         '''Runs the experiments and collects all the required data.
 
         Args:
-            ctrl : Controller to run the task. Default is self.train.
-            env : Environment of the task to run. Defulat is self.env.
             n_episodes (int): Number of runs to execute.
             n_steps (int): The number of steps to collect in total.
             log_freq (int): The frequency with which to log information.
+            seeds (list): An optional list of seeds for each episode.
 
         Returns:
             trajs_data (defaultdict(list)): The raw data from the executed runs.
@@ -104,132 +94,104 @@ class BaseExperiment:
             raise ValueError('One of n_episodes or n_steps must be defined.')
         elif n_episodes is not None and n_steps is not None:
             raise ValueError('Only one of n_episodes or n_steps can be defined.')
-        if ctrl is None:
-            ctrl = self.ctrl
-        if env is None:
-            env = self.env
         if seeds is not None:
             assert len(seeds) == n_episodes, "Number of seeds must match the number of episodes"
 
         # initialize
-        sim_steps = log_freq // env.CTRL_FREQ if log_freq else 1
+        sim_steps = log_freq // self.env.CTRL_FREQ if log_freq else 1
         steps, trajs = 0, 0
         if seeds is not None:
             seed = seeds[0]
         else:
             seed = None
-        obs, info = self._evaluation_reset(ctrl=ctrl,
-                                           env=env,
-                                           ctrl_data=None,
-                                           sf_data=None,
-                                           seed=seed)
+        obs, info = self._evaluation_reset(ctrl_data=None, sf_data=None, seed=seed)
         ctrl_data = defaultdict(list)
         sf_data = defaultdict(list)
 
         if n_episodes is not None:
             while trajs < n_episodes:
-                action = self._select_action(obs=obs, info=info, ctrl=ctrl, env=env)
+                action = self._select_action(obs=obs, info=info)
                 # inner sim loop to accomodate different control frequencies
                 for _ in range(sim_steps):
-                    obs, _, done, info = env.step(action)
+                    obs, _, done, info = self.env.step(action)
                     if done:
                         trajs += 1
-                        if trajs < n_episodes:
-                            if seeds is not None:
-                                seed = seeds[trajs]
-                            else:
-                                seed = None
-                            obs, info = self._evaluation_reset(ctrl=ctrl,
-                                                               env=env,
-                                                               ctrl_data=ctrl_data,
-                                                               sf_data=sf_data,
-                                                               seed=seed)
+                        if trajs < n_episodes and seeds is not None:
+                            seed = seeds[trajs]
+                        obs, info = self._evaluation_reset(ctrl_data=ctrl_data, sf_data=sf_data)
                         break
         elif n_steps is not None:
             while steps < n_steps:
-                action = self._select_action(obs=obs, info=info, ctrl=ctrl, env=env)
+                action = self._select_action(obs=obs, info=info)
                 # inner sim loop to accomodate different control frequencies
                 for _ in range(sim_steps):
-                    obs, _, done, info = env.step(action)
+                    obs, _, done, info = self.env.step(action)
                     steps += 1
                     if steps >= n_steps:
-                        env.save_data()
-                        for data_key, data_val in ctrl.results_dict.items():
+                        self.env.save_data()
+                        for data_key, data_val in self.ctrl.results_dict.items():
                             ctrl_data[data_key].append(np.array(deepcopy(data_val)))
                         if self.safety_filter is not None:
                             for data_key, data_val in self.safety_filter.results_dict.items():
                                 sf_data[data_key].append(np.array(deepcopy(data_val)))
                         break
                     if done:
-                        obs, info = self._evaluation_reset(ctrl=ctrl,
-                                                           env=env,
-                                                           ctrl_data=ctrl_data,
-                                                           sf_data=sf_data)
+                        obs, info = self._evaluation_reset(ctrl_data=ctrl_data, sf_data=sf_data)
                         break
 
-        trajs_data = env.data
+        trajs_data = self.env.data
         trajs_data['controller_data'].append(munchify(dict(ctrl_data)))
         if self.safety_filter is not None:
             trajs_data['safety_filter_data'].append(munchify(dict(sf_data)))
         return munchify(trajs_data)
 
-    def _select_action(self, obs, info, ctrl=None, env=None):
+    def _select_action(self, obs, info):
         '''Determines the executed action using the controller and safety filter.
 
         Args:
             obs (ndarray): The observation at this timestep.
             info (dict): The info at this timestep.
-            ctrl (BaseController): Controller to select the action.
-            env (BenchmarkEnv): Environment to normalize actions.
 
         Returns:
             action (ndarray): The action chosen by the controller and safety filter.
         '''
-        if env is None:
-            env = self.env
-        if ctrl is None:
-            ctrl = self.ctrl
-
-        action = ctrl.select_action(obs, info)
+        action = self.ctrl.select_action(obs, info)
 
         if self.safety_filter is not None:
-            physical_action = env.denormalize_action(action)
-            unextended_obs = obs[:env.symbolic.nx]
+            physical_action = self.env.denormalize_action(action)
+            unextended_obs = obs[:self.env.symbolic.nx]
             certified_action, success = self.safety_filter.certify_action(unextended_obs, physical_action, info)
             if success:
-                action = env.normalize_action(certified_action)
+                action = self.env.normalize_action(certified_action)
 
         return action
 
-    def _evaluation_reset(self, ctrl, env, ctrl_data, sf_data, seed=None):
+    def _evaluation_reset(self, ctrl_data, sf_data, seed=None):
         '''Resets the evaluation between runs.
 
         Args:
             ctrl_data (defaultdict): The controller specific data collected during execution.
             sf_data (defaultdict): The safety filter specific data collected during execution.
+            seed (int): An optional seed to reset the environment.
 
         Returns:
             obs (ndarray): The initial observation.
             info (dict): The initial info.
         '''
-        if ctrl is None:
-            ctrl = self.ctrl
-        if env is None:
-            env = self.env
-        if env.INFO_IN_RESET:
-            obs, info = env.reset(seed=seed)
+        if self.env.INFO_IN_RESET:
+            obs, info = self.env.reset(seed=seed)
         else:
-            obs = env.reset(seed=seed)
+            obs = self.env.reset(seed=seed)
             info = None
         if ctrl_data is not None:
-            for data_key, data_val in ctrl.results_dict.items():
+            for data_key, data_val in self.ctrl.results_dict.items():
                 ctrl_data[data_key].append(np.array(deepcopy(data_val)))
         if sf_data is not None and self.safety_filter is not None:
             for data_key, data_val in self.safety_filter.results_dict.items():
                 sf_data[data_key].append(np.array(deepcopy(data_val)))
-        ctrl.reset_before_run(obs, info, env=env)
+        self.ctrl.reset_before_run(obs, info, env=self.env)
         if self.safety_filter is not None:
-            self.safety_filter.reset_before_run(env=env)
+            self.safety_filter.reset_before_run(env=self.env)
         return obs, info
 
     def launch_training(self, **kwargs):

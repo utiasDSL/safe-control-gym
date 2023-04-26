@@ -131,7 +131,7 @@ def run(plot=True, training=False, n_episodes=1, n_steps=None, curr_path='.'):
 
         if config.task_config.task == Task.TRAJ_TRACKING and config.task == Environment.CARTPOLE:
             _, ax2 = plt.subplots()
-            ax2.plot(np.linspace(0, 20, certified_results['obs'][0].shape[0])[1:], safety_filter.env.X_GOAL[:,0],'g--', label='Reference')
+            ax2.plot(np.linspace(0, 20, certified_results['obs'][0].shape[0]), safety_filter.env.X_GOAL[:,0],'g--', label='Reference')
             ax2.plot(np.linspace(0, 20, results['obs'][0].shape[0]), results['obs'][0][:,0],'r--', label='Uncertified')
             ax2.plot(np.linspace(0, 20, certified_results['obs'][0].shape[0]), certified_results['obs'][0][:,0],'.-', label='Certified')
             ax2.plot(np.linspace(0, 20, certified_results['obs'][0].shape[0])[corrections], certified_results['obs'][0][corrections, 0], 'r.', label='Modified')
