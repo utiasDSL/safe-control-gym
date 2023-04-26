@@ -1,16 +1,14 @@
 #### Temporary files
-experiments/lqr/*data/
+examples/lqr/*data/
 #
-experiments/mpsc/temp-data/
-experiments/mpsc/unsafe_rl_temp_data/
+examples/mpsc/temp-data/
+examples/mpsc/unsafe_rl_temp_data/
 #
-experiments/pid/*data/
+examples/pid/*data/
 #
 results/
 z_docstring.py
 TODOs.md
-experiments/metrics/archived/
-experiments/metrics/temp_data/
 
 
 

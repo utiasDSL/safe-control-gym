@@ -6,7 +6,7 @@ Reference paper & code:
     * [DeepRL - ddpg](https://github.com/ShangtongZhang/DeepRL/blob/master/deep_rl/agent/DDPG_agent.py)
 
 Example:
-    $ python experiments/main.py --algo ddpg --task cartpole --output_dir results --tag test/cartpole_ddpg --seed 6
+    $ python examples/execute_rl_controller.py --algo ddpg --task cartpole --output_dir results --tag test/cartpole_ddpg --seed 6
 """
 
 import os

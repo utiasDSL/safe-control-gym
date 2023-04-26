@@ -1,7 +1,7 @@
 import sys
 import pytest
 
-from experiments.mpsc.mpsc_experiment import run
+from examples.mpsc.mpsc_experiment import run
 
 @pytest.mark.parametrize('SYS',             ['cartpole', 'quadrotor_2D'])
 @pytest.mark.parametrize('TASK',            ['stab', 'track'])
@@ -17,9 +17,9 @@ def test_mpsc(SYS, TASK, ALGO, SAFETY_FILTER, MPSC_COST):
         '--algo', ALGO,
         '--safety_filter', SAFETY_FILTER,
         '--overrides',
-            f'./experiments/mpsc/config_overrides/{SYS}/{SYS}_{TASK}.yaml',
-            f'./experiments/mpsc/config_overrides/{SYS}/{ALGO}_{SYS}.yaml',
-            f'./experiments/mpsc/config_overrides/{SYS}/{SAFETY_FILTER}_{SYS}.yaml',
+            f'./examples/mpsc/config_overrides/{SYS}/{SYS}_{TASK}.yaml',
+            f'./examples/mpsc/config_overrides/{SYS}/{ALGO}_{SYS}.yaml',
+            f'./examples/mpsc/config_overrides/{SYS}/{SAFETY_FILTER}_{SYS}.yaml',
         '--kv_overrides', f'sf_config.cost_function={MPSC_COST}'
         ]
-    run(plot=False, training=False, n_episodes=None, n_steps=5, curr_path='./experiments/mpsc')
+    run(plot=False, training=False, n_episodes=None, n_steps=5, curr_path='./examples/mpsc')

@@ -1,7 +1,7 @@
 import sys
 import pytest
 
-from experiments.lqr.lqr_experiment import run
+from examples.lqr.lqr_experiment import run
 
 
 @pytest.mark.parametrize('SYS', ['cartpole', 'quadrotor_2D', 'quadrotor_3D'])
@@ -12,8 +12,8 @@ def test_lqr(SYS, TASK, ALGO):
     sys.argv[1:] = ['--algo', ALGO,
                     '--task', SYS_NAME,
                     '--overrides',
-                        f'./experiments/lqr/config_overrides/{SYS}/{SYS}_{TASK}.yaml',
-                        f'./experiments/lqr/config_overrides/{SYS}/{ALGO}_{SYS}_{TASK}.yaml',
+                        f'./examples/lqr/config_overrides/{SYS}/{SYS}_{TASK}.yaml',
+                        f'./examples/lqr/config_overrides/{SYS}/{ALGO}_{SYS}_{TASK}.yaml',
                     '--kv_overrides',
                         'algo_config.max_iterations=2'
                     ]

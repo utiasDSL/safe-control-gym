@@ -9,7 +9,7 @@ References papers & code:
 
 Example:
     train on cartpole with disturbance:
-        $ python mains/main.py --algo rarl --task cartpole --overrides benchmark/configs/overrides/rarl_cartpole.yaml
+        $ python examples/execute_rl_controller.py --algo rarl --task cartpole --overrides benchmark/configs/overrides/rarl_cartpole.yaml
 """
 
 import os

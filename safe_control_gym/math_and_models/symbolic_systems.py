@@ -12,7 +12,7 @@ class SymbolicModel():
     (e.g. cost, constraints), serve as priors for the controllers.
 
     Notes:
-        * naming convention on symbolic variable and functions. 
+        * naming convention on symbolic variable and functions.
             * for single-letter symbol, use {}_sym, otherwise use underscore for delimiter.
             * for symbolic functions to be exposed, use {}_func.
 
@@ -23,7 +23,7 @@ class SymbolicModel():
                  cost,
                  dt=1e-3,
                  integration_algo='cvodes',
-                 funcs=None, 
+                 funcs=None,
                  params=None,
                  ):
         """
@@ -46,7 +46,7 @@ class SymbolicModel():
             for name, func in funcs.items():
                 assert name not in self.__dict__
                 self.__dict__[name] = func
-        # Cache ohter parameters, for example, X_EQ and U_EQ
+        # Cache other parameters, for example, X_EQ and U_EQ
         # that would be used in the controller via the symbolic model
         if params is not None:
             for name, param in params.items():

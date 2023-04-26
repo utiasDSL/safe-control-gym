@@ -152,7 +152,7 @@ class BaseController(ABC):
         and to ensure the resulting config.algo_config contains both the params
         from ctrl config and prior config, chain them to the --overrides like::
 
-            python main.py --algo mpc --task quadrotor --overrides base.yaml mpc.yaml prior.yaml ...
+            python execute_rl_controller.py --algo mpc --task quadrotor --overrides base.yaml mpc.yaml prior.yaml ...
 
         Also note we look for prior_info from the incoming function arg first, then the ctrl itself.
         this allows changing the prior model during learning by calling::
