@@ -23,21 +23,24 @@ def run(plot=True, training=True, n_episodes=1, n_steps=None, curr_path='.', sav
         curr_path (str): The current relative path to the experiment folder.
     '''
 
+    # Create the configuration dictionary.
     fac = ConfigFactory()
     config = fac.merge()
+
+    # Create an environment
     env_func = partial(make,
                        config.task,
                        **config.task_config)
 
     env = env_func()
 
-    # Setup PPO controller.
+    # Setup controller.
     ctrl = make(config.algo,
                 env_func,
                 **config.algo_config,
                 output_dir=curr_path+'/temp')
 
-    # Load state_dict from trained PPO.
+    # Load state_dict from trained model.
     model_dir = os.path.dirname(os.path.abspath(__file__))+'/models'
     ctrl.load(os.path.join(model_dir, f'{config.algo}_model_{config.task}.pt'))
 

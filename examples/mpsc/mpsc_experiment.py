@@ -24,7 +24,7 @@ def run(plot=True, training=False, n_episodes=1, n_steps=None, curr_path='.'):
         curr_path (str): The current relative path to the experiment folder.
     '''
 
-    # Define arguments.
+    # Create the configuration dictionary.
     fac = ConfigFactory()
     config = fac.merge()
     config.task_config['randomized_init'] = False
@@ -40,6 +40,7 @@ def run(plot=True, training=False, n_episodes=1, n_steps=None, curr_path='.'):
     else:
         system = config.task
 
+    # Create an environment
     env_func = partial(make,
                        config.task,
                        **config.task_config)

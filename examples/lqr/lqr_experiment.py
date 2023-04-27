@@ -25,16 +25,18 @@ def run(gui=True, n_episodes=1, n_steps=None, save_data=False):
         save_data (bool): Whether to save the collected experiment data.
     '''
 
-    # Create an environment
+    # Create the configuration dictionary.
     CONFIG_FACTORY = ConfigFactory()
     config = CONFIG_FACTORY.merge()
 
-    # Create controller.
+    # Create an environment
     env_func = partial(make,
                        config.task,
                        **config.task_config
                        )
     random_env = env_func(gui=False)
+
+    # Create controller.
     ctrl = make(config.algo,
                 env_func,
                 **config.algo_config
