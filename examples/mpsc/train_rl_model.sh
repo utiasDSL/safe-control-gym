@@ -13,7 +13,7 @@ ALGO='ppo'
 rm -r -f ./unsafe_rl_temp_data/
 
 # Train the unsafe controller/agent.
-python3 ../execute_rl_controller.py --algo ${ALGO} --task ${SYS} --overrides ./config_overrides/${SYS}/${ALGO}_${SYS}.yaml ./config_overrides/${SYS}/${SYS}_${TASK}.yaml --output_dir ./ \
+python3 ../../safe_control_gym/experiments/execute_rl_controller.py --algo ${ALGO} --task ${SYS} --overrides ./config_overrides/${SYS}/${ALGO}_${SYS}.yaml ./config_overrides/${SYS}/${SYS}_${TASK}.yaml --output_dir ./ \
                     --tag unsafe_rl_temp_data/ --seed 2
 
 # Move the newly trained unsafe model.

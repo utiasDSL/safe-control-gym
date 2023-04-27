@@ -2,11 +2,9 @@
 
 """
 import os
-import sys
-from functools import partial
-import os
 import pickle
-import sys
+from functools import partial
+
 import torch
 
 from safe_control_gym.utils.configuration import ConfigFactory
@@ -149,5 +147,3 @@ if __name__ == "__main__":
     if func is None:
         raise Exception("Main function {} not supported.".format(config.func))
     func(config)
-
-

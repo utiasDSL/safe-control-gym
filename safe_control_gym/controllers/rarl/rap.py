@@ -9,7 +9,7 @@ References papers & code:
 
 Example:
     train on cartpole_adversary:
-        $ python examples/execute_rl_controller.py --mode train_two_phase --exp_id rap_cartpole_adv \
+        $ python safe_control_gym/experiments/execute_rl_controller.py --mode train_two_phase --exp_id rap_cartpole_adv \
         --algo rap --task cartpole_adversary --num_workers 2 --max_env_steps 2000000 \
         --tensorboard --use_gae --num_adversaries 2
 """
