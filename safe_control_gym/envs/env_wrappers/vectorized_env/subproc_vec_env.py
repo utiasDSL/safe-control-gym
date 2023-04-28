@@ -1,13 +1,14 @@
-"""Subprocess vectorized environments.
+'''Subprocess vectorized environments.
 
 See also:
     * https://github.com/openai/baselines/blob/master/baselines/common/vec_env/subproc_vec_env.py
     * https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/common/vec_env/subproc_vec_env.py
+'''
 
-"""
 import copy
-import numpy as np
 import multiprocessing as mp
+
+import numpy as np
 
 from safe_control_gym.utils.utils import get_random_state, set_random_state
 from safe_control_gym.envs.env_wrappers.vectorized_env.vec_env import VecEnv
@@ -15,16 +16,14 @@ from safe_control_gym.envs.env_wrappers.vectorized_env.vec_env_utils import _fla
 
 
 class SubprocVecEnv(VecEnv):
-    """Multiprocess envs.
+    '''Multiprocess envs.'''
 
-    """
-
-    def __init__(self, env_fns, spaces=None, context="spawn", n_workers=1):
+    def __init__(self, env_fns, spaces=None, context='spawn', n_workers=1):
         self.waiting = False
         self.closed = False
         nenvs = len(env_fns)
         self.n_workers = n_workers
-        assert nenvs % n_workers == 0, "Number of envs must be divisible by number of workers to run in series"
+        assert nenvs % n_workers == 0, 'Number of envs must be divisible by number of workers to run in series'
         env_fns = np.array_split(env_fns, self.n_workers)
         # Context is necessary for multiprocessing with CUDA, see pytorch.org/docs/stable/notes/multiprocessing.html
         ctx = mp.get_context(context)
@@ -60,7 +59,7 @@ class SubprocVecEnv(VecEnv):
         results = _flatten_list(results)
         self.waiting = False
         obs, rews, dones, infos = zip(*results)
-        return _flatten_obs(obs), np.stack(rews), np.stack(dones), {"n": infos}
+        return _flatten_obs(obs), np.stack(rews), np.stack(dones), {'n': infos}
 
     def reset(self):
         self._assert_not_closed()
@@ -69,12 +68,10 @@ class SubprocVecEnv(VecEnv):
         results = [remote.recv() for remote in self.remotes]
         results = _flatten_list(results)
         obs, infos = zip(*results)
-        return _flatten_obs(obs), {"n": infos}
+        return _flatten_obs(obs), {'n': infos}
 
     def get_images(self):
-        """Called by parent `render` to support tiling images.
-
-        """
+        '''Called by parent `render` to support tiling images.'''
         self._assert_not_closed()
         for pipe in self.remotes:
             pipe.send(('render', None))
@@ -97,7 +94,7 @@ class SubprocVecEnv(VecEnv):
         self.closed = True
 
     def _assert_not_closed(self):
-        assert not self.closed, "Trying to operate on a SubprocVecEnv after calling close()"
+        assert not self.closed, 'Trying to operate on a SubprocVecEnv after calling close()'
 
     def get_env_random_state(self):
         for remote in self.remotes:
@@ -108,21 +105,16 @@ class SubprocVecEnv(VecEnv):
     def set_env_random_state(self, worker_random_states):
         for remote, random_state in zip(self.remotes, worker_random_states):
             remote.send(('set_random_state', random_state))
-        res = [remote.recv() for remote in self.remotes]
 
     def get_attr(self, attr_name, indices=None):
-        """Return attribute from vectorized environment (see base class).
-
-        """
+        '''Return attribute from vectorized environment (see base class).'''
         target_remotes, remote_env_indices = self._get_target_envs(indices)
         for remote, env_indices in zip(target_remotes, remote_env_indices):
-            remote.send(("get_attr", (env_indices, attr_name)))
+            remote.send(('get_attr', (env_indices, attr_name)))
         return _flatten_list([remote.recv() for remote in target_remotes])
 
     def set_attr(self, attr_name, values, indices=None):
-        """Set attribute inside vectorized environments (see base class).
-
-        """
+        '''Set attribute inside vectorized environments (see base class).'''
         target_remotes, remote_env_indices, splits = self._get_target_envs(
             indices)
         value_splits = []
@@ -133,7 +125,7 @@ class SubprocVecEnv(VecEnv):
         for remote, env_indices, value_split in zip(target_remotes,
                                                     remote_env_indices,
                                                     value_splits):
-            remote.send(("set_attr", (env_indices, attr_name, value_split)))
+            remote.send(('set_attr', (env_indices, attr_name, value_split)))
         for remote in target_remotes:
             remote.recv()
 
@@ -142,9 +134,7 @@ class SubprocVecEnv(VecEnv):
                    method_args=None,
                    method_kwargs=None,
                    indices=None):
-        """Call instance methods of vectorized environments.
-
-        """
+        '''Call instance methods of vectorized environments.'''
         target_remotes, remote_env_indices, splits = self._get_target_envs(indices)
         method_arg_splits, method_kwarg_splits = [], []
         for i in range(len(splits) - 1):
@@ -161,13 +151,12 @@ class SubprocVecEnv(VecEnv):
         for remote, env_indices, method_arg_split, method_kwarg_split in zip(
                 target_remotes, remote_env_indices, method_arg_splits,
                 method_kwarg_splits):
-            remote.send(("env_method", (env_indices, method_name,
+            remote.send(('env_method', (env_indices, method_name,
                                         method_arg_split, method_kwarg_split)))
         return _flatten_list([remote.recv() for remote in target_remotes])
 
     def _get_target_envs(self, indices):
-        """
-
+        '''
         Example:
             n_workers: 3
             current envs: [0,1,2,3,4,5]
@@ -177,10 +166,10 @@ class SubprocVecEnv(VecEnv):
             remote_indices: [0,0,1,1] -> [0,1]
             splits: [0,2] -> [0,2,4]
             remote_env_indices: [1,1,0,1] -> [1,1], [0,1]
+        '''
 
-        """
         assert indices is None or sorted(
-            indices) == indices, "Indices must be ordered"
+            indices) == indices, 'Indices must be ordered'
         indices = self._get_indices(indices)
         remote_indices = [idx // self.n_workers for idx in indices]
         remote_env_indices = [idx % self.n_workers for idx in indices]
@@ -193,17 +182,15 @@ class SubprocVecEnv(VecEnv):
 
 
 def worker(remote, parent_remote, env_fn_wrappers):
-    """Worker func to execute vec_env commands.
-
-    """
+    '''Worker func to execute vec_env commands.'''
     def step_env(env, action):
         ob, reward, done, info = env.step(action)
         if done:
             end_obs = copy.deepcopy(ob)
             end_info = copy.deepcopy(info)
             ob, info = env.reset()
-            info["terminal_observation"] = end_obs
-            info["terminal_info"] = end_info
+            info['terminal_observation'] = end_obs
+            info['terminal_info'] = end_info
         return ob, reward, done, info
     parent_remote.close()
     envs = [env_fn_wrapper() for env_fn_wrapper in env_fn_wrappers.x]
@@ -225,24 +212,24 @@ def worker(remote, parent_remote, env_fn_wrappers):
                 remote.send(
                     CloudpickleWrapper(
                         (envs[0].observation_space, envs[0].action_space)))
-            elif cmd == "get_random_state":
+            elif cmd == 'get_random_state':
                 remote.send(CloudpickleWrapper(get_random_state()))
-            elif cmd == "set_random_state":
+            elif cmd == 'set_random_state':
                 set_random_state(data)
                 # Placeholder for the return.
                 remote.send(True)
-            elif cmd == "get_attr":
+            elif cmd == 'get_attr':
                 env_indices, attr_name = data
                 target_envs = [envs[idx] for idx in env_indices]
                 remote.send([getattr(env, attr_name) for env in target_envs])
-            elif cmd == "set_attr":
+            elif cmd == 'set_attr':
                 env_indices, attr_name, values = data
                 target_envs = [envs[idx] for idx in env_indices]
                 remote.send([
                     setattr(env, attr_name, value)
                     for env, value in zip(target_envs, values)
                 ])
-            elif cmd == "env_method":
+            elif cmd == 'env_method':
                 env_indices, name, args_list, kwargs_list = data
                 target_envs = [envs[idx] for idx in env_indices]
                 methods = [getattr(env, name) for env in target_envs]

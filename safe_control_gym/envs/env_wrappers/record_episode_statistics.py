@@ -1,19 +1,20 @@
+'''Record Episode Statistics.'''
+
 import time
+from copy import deepcopy
+from collections import deque
+
 import gym
 import numpy as np
-
-from collections import deque
-from copy import deepcopy
 
 from safe_control_gym.envs.env_wrappers.vectorized_env.vec_env import VecEnvWrapper
 
 
 class RecordEpisodeStatistics(gym.Wrapper):
-    """ Keep track of episode length and returns per instantiated env 
+    ''' Keep track of episode length and returns per instantiated env
 
         Based on OpenAI's Gym wrapper record_episode_statistics.py
-
-    """
+    '''
 
     def __init__(self,
                  env,
@@ -35,22 +36,21 @@ class RecordEpisodeStatistics(gym.Wrapper):
     def add_tracker(self,
                     name,
                     init_value,
-                    mode="accumulate"
+                    mode='accumulate'
                     ):
-        """Adds a specific stat to be tracked (accumulate|queue).
-        
+        '''Adds a specific stat to be tracked (accumulate|queue).
+
         Modes to track stats
             * accumulate: rolling sum, e.g. total # of constraint violations during training.
             * queue: finite, individual storage, e.g. returns, lengths, constraint costs.
-
-        """
+        '''
         self.episode_stats[name] = init_value
-        if mode == "accumulate":
+        if mode == 'accumulate':
             self.accumulated_stats[name] = init_value
-        elif mode == "queue":
+        elif mode == 'queue':
             self.queued_stats[name] = deque(maxlen=self.deque_size)
         else:
-            raise Exception("Tracker mode not implemented.")
+            raise Exception('Tracker mode not implemented.')
 
     def reset(self,
               **kwargs
@@ -90,11 +90,10 @@ class RecordEpisodeStatistics(gym.Wrapper):
 
 
 class VecRecordEpisodeStatistics(VecEnvWrapper):
-    """ A vectorized wrapper that records episodic statistics.
+    ''' A vectorized wrapper that records episodic statistics.
 
     E.g. episode lengths, returns, constraint violations.
-
-    """
+    '''
 
     def __init__(self,
                  venv,
@@ -115,18 +114,16 @@ class VecRecordEpisodeStatistics(VecEnvWrapper):
     def add_tracker(self,
                     name,
                     init_value,
-                    mode="accumulate"
+                    mode='accumulate'
                     ):
-        """Adds a specific stat to be tracked (accumulated).
-
-        """
+        '''Adds a specific stat to be tracked (accumulated).'''
         self.episode_stats[name] = [init_value for _ in range(self.num_envs)]
-        if mode == "accumulate":
+        if mode == 'accumulate':
             self.accumulated_stats[name] = init_value
-        elif mode == "queue":
+        elif mode == 'queue':
             self.queued_stats[name] = deque(maxlen=self.deque_size)
         else:
-            raise Exception("Tracker mode not implemented.")
+            raise Exception('Tracker mode not implemented.')
 
     def reset(self,
               **kwargs
@@ -147,20 +144,20 @@ class VecRecordEpisodeStatistics(VecEnvWrapper):
             # Add other tracked stats.
             for key in self.episode_stats:
                 if d:
-                    inf = info["n"][i]["terminal_info"]
+                    inf = info['n'][i]['terminal_info']
                 else:
-                    inf = info["n"][i]
+                    inf = info['n'][i]
                 if key in inf:
                     self.episode_stats[key][i] += inf[key]
             if d:
-                info["n"][i]['episode'] = {'r': self.episode_return[i], 'l': self.episode_length[i]}
+                info['n'][i]['episode'] = {'r': self.episode_return[i], 'l': self.episode_length[i]}
                 self.return_queue.append(deepcopy(self.episode_return[i]))
                 self.length_queue.append(deepcopy(self.episode_length[i]))
                 self.episode_return[i] = 0
                 self.episode_length[i] = 0
                 # Other tracked stats.
                 for key in self.episode_stats:
-                    info["n"][i]['episode'][key] = deepcopy(self.episode_stats[key][i])
+                    info['n'][i]['episode'][key] = deepcopy(self.episode_stats[key][i])
                     if key in self.accumulated_stats:
                         self.accumulated_stats[key] += deepcopy(self.episode_stats[key][i])
                     if key in self.queued_stats:

@@ -11,7 +11,7 @@ from gym import spaces
 
 
 class ConstrainedVariableType(str, Enum):
-    '''Allowable constraint type specifiers. '''
+    '''Allowable constraint type specifiers.'''
 
     STATE = 'state'  # Constraints who are a function of the state X.
     INPUT = 'input'  # Constraints who are a function of the input U.
@@ -34,10 +34,10 @@ class Constraint:
     def __init__(self,
                  env,
                  constrained_variable: ConstrainedVariableType,
-                 strict: bool=False,
+                 strict: bool = False,
                  active_dims=None,
                  tolerance=None,
-                 decimals: int=8,
+                 decimals: int = 8,
                  **kwargs
                  ):
         '''Defines params (e.g. bounds) and state.
@@ -83,7 +83,7 @@ class Constraint:
             self.tolerance = None
 
     def reset(self):
-        '''Clears up the constraint state (if any). '''
+        '''Clears up the constraint state (if any).'''
         return
 
     def get_symbolic_model(self):
@@ -173,23 +173,23 @@ class Constraint:
             raise NotImplementedError('Constraint input type not implemented.')
 
     def check_tolerance_shape(self):
-        '''Checks the tolerance and makes sure it is the correct shape. '''
+        '''Checks the tolerance and makes sure it is the correct shape.'''
         if self.tolerance is not None and len(self.tolerance) != self.num_constraints:
             raise ValueError('[ERROR] the tolerance dimension does not match the number of constraints.')
 
 
 class QuadraticContstraint(Constraint):
-    '''Constraint class for constraints of the form x.T @ P @ x <= b. '''
+    '''Constraint class for constraints of the form x.T @ P @ x <= b.'''
 
     def __init__(self,
                  env,
                  P: np.ndarray,
                  b: float,
                  constrained_variable: ConstrainedVariableType,
-                 strict: bool=False,
+                 strict: bool = False,
                  active_dims=None,
                  tolerance=None,
-                 decimals: int=8
+                 decimals: int = 8
                  ):
         '''Initializes the class.
 
@@ -232,17 +232,17 @@ class QuadraticContstraint(Constraint):
 
 
 class LinearConstraint(Constraint):
-    '''Constraint class for constraints of the form A @ x <= b. '''
+    '''Constraint class for constraints of the form A @ x <= b.'''
 
     def __init__(self,
                  env,
                  A: np.ndarray,
                  b: np.ndarray,
                  constrained_variable: ConstrainedVariableType,
-                 strict: bool=False,
+                 strict: bool = False,
                  active_dims=None,
                  tolerance=None,
-                 decimals: int=8
+                 decimals: int = 8
                  ):
         '''Initialize the class.
 
@@ -284,17 +284,17 @@ class LinearConstraint(Constraint):
 
 
 class BoundedConstraint(LinearConstraint):
-    ''' Class for bounded constraints lb <= x <= ub as polytopic constraints -Ix + b <= 0 and Ix - b <= 0. '''
+    ''' Class for bounded constraints lb <= x <= ub as polytopic constraints -Ix + b <= 0 and Ix - b <= 0.'''
 
     def __init__(self,
                  env,
                  lower_bounds: np.ndarray,
                  upper_bounds: np.ndarray,
                  constrained_variable: ConstrainedVariableType,
-                 strict: bool=False,
+                 strict: bool = False,
                  active_dims=None,
                  tolerance=None,
-                 decimals: int=8):
+                 decimals: int = 8):
         '''Initialize the constraint.
 
         Args:
@@ -312,11 +312,11 @@ class BoundedConstraint(LinearConstraint):
         self.lower_bounds = np.array(lower_bounds, ndmin=1)
         self.upper_bounds = np.array(upper_bounds, ndmin=1)
         dim = self.lower_bounds.shape[0]
-        if active_dims is not None and type(active_dims) == list:
+        if active_dims is not None and isinstance(active_dims, list):
             assert self.lower_bounds.shape[0] == len(active_dims), '[Error] active_dims and lower_bounds must have the same dimension.'
-        if active_dims is not None and type(active_dims) == int:
+        if active_dims is not None and isinstance(active_dims, int):
             assert self.lower_bounds.shape[0] == 1, '[Error] active_dims and lower_bounds must have the same dimension.'
-        if active_dims is not None and type(active_dims) == int:
+        if active_dims is not None and isinstance(active_dims, int):
             assert self.upper_bounds.shape[0] == 1, '[Error] active_dims and upper_bounds must have the same dimension.'
         A = np.vstack((-np.eye(dim), np.eye(dim)))
         b = np.hstack((-self.lower_bounds, self.upper_bounds))
@@ -343,9 +343,9 @@ class DefaultConstraint(BoundedConstraint):
                  constrained_variable: ConstrainedVariableType,
                  lower_bounds=None,
                  upper_bounds=None,
-                 strict: bool=False,
+                 strict: bool = False,
                  tolerance=None,
-                 decimals: int=8
+                 decimals: int = 8
                  ):
         ''''Initialize the class.
 
@@ -407,10 +407,10 @@ class SymmetricStateConstraint(BoundedConstraint):
                  env,
                  constrained_variable,
                  bound,
-                 strict: bool=False,
+                 strict: bool = False,
                  active_dims=None,
                  tolerance=None,
-                 decimals: int=8,
+                 decimals: int = 8,
                  **kwrags
                  ):
         ''''Initialize the class.
@@ -437,7 +437,7 @@ class SymmetricStateConstraint(BoundedConstraint):
                          active_dims=active_dims,
                          tolerance=tolerance,
                          decimals=decimals
-                         **kwrags)
+                         ** kwrags)
         assert (env.NAME == 'cartpole'), '[ERROR] SymmetricStateConstraint is meant for CartPole environments'
         assert (env.COST == 'rl_reward'), '[ERROR] SymmetricStateConstraint is meant for RL environments'
         self.num_constraints = self.bound.shape[0]
@@ -470,7 +470,7 @@ def get_symbolic_constraint_models(constraint_list):
 
 
 class ConstraintList:
-    '''Collates a (ordered) list of constraints. '''
+    '''Collates a (ordered) list of constraints.'''
 
     def __init__(self,
                  constraints
