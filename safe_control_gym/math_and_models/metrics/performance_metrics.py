@@ -1,4 +1,4 @@
-'''Methods to calculate various metrics. '''
+'''Methods to calculate various metrics.'''
 
 import numpy as np
 

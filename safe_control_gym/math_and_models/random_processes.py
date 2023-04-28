@@ -10,12 +10,12 @@ import numpy as np
 class RandomProcess(object):
     def reset_states(self):
         pass
-    
+
     def state_dict(self):
         return {}
-    
+
     def load_state_dict(self, state):
-        pass 
+        pass
 
 
 class GaussianProcess(RandomProcess):
@@ -47,9 +47,8 @@ class OrnsteinUhlenbeckProcess(RandomProcess):
         self.x_prev = self.x0 if self.x0 is not None else np.zeros(self.size)
 
     def state_dict(self):
-        return {"x_prev": self.x_prev, "std": self.std.state_dict()}
-    
+        return {'x_prev': self.x_prev, 'std': self.std.state_dict()}
+
     def load_state_dict(self, state):
-        self.x_prev = state["x_prev"]
-        self.std.load_state_dict(state["std"])
-        
+        self.x_prev = state['x_prev']
+        self.std.load_state_dict(state['std'])
