@@ -44,9 +44,9 @@ def run(gui=True, n_episodes=1, n_steps=None, curr_path='.'):
 
     # Setup controller.
     ctrl = make(config.algo,
-                    env_func,
-                    **config.algo_config,
-                    output_dir=curr_path+'/temp')
+                env_func,
+                **config.algo_config,
+                output_dir=curr_path + '/temp')
 
     # Load state_dict from trained.
     ctrl.load(f'{curr_path}/models/{config.algo}/{config.algo}_model_{system}_{task}.pt')
@@ -86,24 +86,24 @@ def run(gui=True, n_episodes=1, n_steps=None, curr_path='.'):
 
         if config.task_config.task == Task.TRAJ_TRACKING and config.task == Environment.CARTPOLE:
             _, ax2 = plt.subplots()
-            ax2.plot(np.linspace(0, 20, results['obs'][0].shape[0]), results['obs'][0][:,0],'r--', label='RL Trajectory')
-            ax2.plot(np.linspace(0, 20, results['obs'][0].shape[0]), env.X_GOAL[:,0],'b', label='Reference')
+            ax2.plot(np.linspace(0, 20, results['obs'][0].shape[0]), results['obs'][0][:, 0], 'r--', label='RL Trajectory')
+            ax2.plot(np.linspace(0, 20, results['obs'][0].shape[0]), env.X_GOAL[:, 0], 'b', label='Reference')
             ax2.set_xlabel(r'Time')
             ax2.set_ylabel(r'X')
             ax2.set_box_aspect(0.5)
             ax2.legend(loc='upper right')
         elif config.task == Environment.QUADROTOR:
             _, ax2 = plt.subplots()
-            ax2.plot(results['obs'][0][:,graph3_1+1], results['obs'][0][:,graph3_2+1],'r--', label='RL Trajectory')
+            ax2.plot(results['obs'][0][:, graph3_1 + 1], results['obs'][0][:, graph3_2 + 1], 'r--', label='RL Trajectory')
             ax2.set_xlabel(r'x_dot')
             ax2.set_ylabel(r'z_dot')
             ax2.set_box_aspect(0.5)
             ax2.legend(loc='upper right')
 
         _, ax3 = plt.subplots()
-        ax3.plot(results['obs'][0][:,graph3_1], results['obs'][0][:,graph3_2],'r--', label='RL Trajectory')
+        ax3.plot(results['obs'][0][:, graph3_1], results['obs'][0][:, graph3_2], 'r--', label='RL Trajectory')
         if config.task_config.task == Task.TRAJ_TRACKING and config.task == Environment.QUADROTOR:
-            ax3.plot(env.X_GOAL[:,graph3_1], env.X_GOAL[:,graph3_2],'g--', label='Reference')
+            ax3.plot(env.X_GOAL[:, graph3_1], env.X_GOAL[:, graph3_2], 'g--', label='Reference')
         ax3.scatter(results['obs'][0][0, graph3_1], results['obs'][0][0, graph3_2], color='g', marker='o', s=100, label='Initial State')
         ax3.set_xlabel(r'X')
         if config.task == Environment.CARTPOLE:

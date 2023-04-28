@@ -54,7 +54,7 @@ def run():
     print_str_with_style(out, 0)
     out = '\t\tDynamics: ' + str(initial_info['symbolic_model'].x_dot).strip('vertcat')
     print_str_with_style(out, 0)
-    out = '\t\tCost: ' + str(initial_info['symbolic_model'].cost_func).replace('vertcat', '').replace(', (',',\n\t\t\t(').replace(', @',',\n\t\t\t@')
+    out = '\t\tCost: ' + str(initial_info['symbolic_model'].cost_func).replace('vertcat', '').replace(', (', ',\n\t\t\t(').replace(', @', ',\n\t\t\t@')
     print_str_with_style(out, 0)
     print_str_with_style('\tConstraints:', 0)
     for fun in initial_info['symbolic_constraints']:
@@ -78,7 +78,7 @@ def run():
         # Step the environment and print all returned information.
         obs, reward, done, info = env.step(action)
 
-        print_str_with_style(str(i)+'-th step.', 7)
+        print_str_with_style(str(i) + '-th step.', 7)
         out = '\tApplied action: ' + str(action) + '\n'
         print(out)
 
@@ -101,7 +101,7 @@ def run():
         if done:
             num_episodes += 1
             new_initial_obs, new_initial_info = env.reset()
-            print_str_with_style(str(num_episodes)+'-th reset.', 7)
+            print_str_with_style(str(num_episodes) + '-th reset.', 7)
             print_str_with_style('Reset obs' + str(new_initial_obs), 2)
             print_str_with_style('Reset info' + str(new_initial_info), 0)
             print('\n\n------------------------------------------------------------------------------')
@@ -111,8 +111,8 @@ def run():
     env.close()
     elapsed_sec = time.time() - START
     out = str('\n{:d} iterations (@{:d}Hz) and {:d} episodes in {:.2f} seconds, i.e. {:.2f} steps/sec for a {:.2f}x speedup.\n\n'
-          .format(ITERATIONS, env.CTRL_FREQ, num_episodes, elapsed_sec, ITERATIONS/elapsed_sec, (ITERATIONS*env.CTRL_TIMESTEP)/elapsed_sec))
-    print_str_with_style(out,7)
+              .format(ITERATIONS, env.CTRL_FREQ, num_episodes, elapsed_sec, ITERATIONS / elapsed_sec, (ITERATIONS * env.CTRL_TIMESTEP) / elapsed_sec))
+    print_str_with_style(out, 7)
 
 
 class bcolors:
@@ -128,7 +128,7 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 
-def print_str_with_style(string: str='', style: int=0):
+def print_str_with_style(string: str = '', style: int = 0):
     '''Function to convert to string and print in color.
 
     Args:

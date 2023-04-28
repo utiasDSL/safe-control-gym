@@ -3,6 +3,7 @@ import pytest
 
 from examples.mpsc.mpsc_experiment import run
 
+
 @pytest.mark.parametrize('SYS',             ['cartpole', 'quadrotor_2D'])
 @pytest.mark.parametrize('TASK',            ['stab', 'track'])
 @pytest.mark.parametrize('ALGO',            ['lqr', 'pid', 'ppo', 'sac'])

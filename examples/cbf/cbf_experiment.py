@@ -38,10 +38,10 @@ def run(plot=True, training=True, n_episodes=1, n_steps=None, curr_path='.', sav
     ctrl = make(config.algo,
                 env_func,
                 **config.algo_config,
-                output_dir=curr_path+'/temp')
+                output_dir=curr_path + '/temp')
 
     # Load state_dict from trained model.
-    model_dir = os.path.dirname(os.path.abspath(__file__))+'/models'
+    model_dir = os.path.dirname(os.path.abspath(__file__)) + '/models'
     ctrl.load(os.path.join(model_dir, f'{config.algo}_model_{config.task}.pt'))
 
     # Run without safety filter
@@ -50,9 +50,9 @@ def run(plot=True, training=True, n_episodes=1, n_steps=None, curr_path='.', sav
 
     # Setup CBF.
     safety_filter = make(config.safety_filter,
-                env_func,
-                **config.sf_config,
-                output_dir=curr_path+'/temp')
+                         env_func,
+                         **config.sf_config,
+                         output_dir=curr_path + '/temp')
     safety_filter.reset()
 
     if training is True and config.safety_filter == 'cbf_nn':
@@ -60,12 +60,12 @@ def run(plot=True, training=True, n_episodes=1, n_steps=None, curr_path='.', sav
         safety_filter.uncertified_controller = ctrl
         safety_filter.learn(env=train_env)
         if save_data is True:
-            safety_filter.save(path=curr_path+f'/models/{config.safety_filter}_{config.algo}_model_{config.task}.pt')
+            safety_filter.save(path=curr_path + f'/models/{config.safety_filter}_{config.algo}_model_{config.task}.pt')
     else:
-        safety_filter.load(path=curr_path+f'/models/{config.safety_filter}_{config.algo}_model_{config.task}.pt')
+        safety_filter.load(path=curr_path + f'/models/{config.safety_filter}_{config.algo}_model_{config.task}.pt')
 
     # Remove temporary files and directories
-    shutil.rmtree(os.path.dirname(os.path.abspath(__file__))+'/temp', ignore_errors=True)
+    shutil.rmtree(os.path.dirname(os.path.abspath(__file__)) + '/temp', ignore_errors=True)
 
     # Run with safety filter
     experiment = BaseExperiment(env, ctrl, safety_filter=safety_filter)
@@ -99,7 +99,7 @@ def run(plot=True, training=True, n_episodes=1, n_steps=None, curr_path='.', sav
         ax_act.set_box_aspect(0.5)
 
         _, ax = plt.subplots()
-        ax.plot(certified_results['obs'][0][:,2], certified_results['obs'][0][:,3],'.-', label='Certified')
+        ax.plot(certified_results['obs'][0][:, 2], certified_results['obs'][0][:, 3], '.-', label='Certified')
         ax.plot(certified_results['obs'][0][corrections, 2], certified_results['obs'][0][corrections, 3], 'r.', label='Modified')
         uncert_end = results['obs'][0].shape[0]
         ax.plot(results['obs'][0][:uncert_end, 2], results['obs'][0][:uncert_end, 3], 'r--', label='Uncertified')

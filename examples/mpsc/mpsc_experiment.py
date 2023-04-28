@@ -48,18 +48,18 @@ def run(plot=True, training=False, n_episodes=1, n_steps=None, curr_path='.'):
 
     # Setup controller.
     ctrl = make(config.algo,
-                    env_func,
-                    **config.algo_config,
-                    output_dir=curr_path+'/temp')
+                env_func,
+                **config.algo_config,
+                output_dir=curr_path + '/temp')
 
     if config.algo in ['ppo', 'sac']:
         # Load state_dict from trained.
-        model_dir = os.path.dirname(os.path.abspath(__file__))+'/models'
+        model_dir = os.path.dirname(os.path.abspath(__file__)) + '/models'
         task = 'stab' if config.task_config.task == Task.STABILIZATION else 'track'
         ctrl.load(os.path.join(model_dir, f'{config.algo}_model_{system}_{task}.pt'))
 
         # Remove temporary files and directories
-        shutil.rmtree(os.path.dirname(os.path.abspath(__file__))+'/temp', ignore_errors=True)
+        shutil.rmtree(os.path.dirname(os.path.abspath(__file__)) + '/temp', ignore_errors=True)
 
     # Run without safety filter
     experiment = BaseExperiment(env, ctrl)
@@ -69,11 +69,11 @@ def run(plot=True, training=False, n_episodes=1, n_steps=None, curr_path='.'):
     # Setup MPSC.
     config.task_config['normalized_rl_action_space'] = False
     env_func_filter = partial(make,
-                       config.task,
-                       **config.task_config)
+                              config.task,
+                              **config.task_config)
     safety_filter = make(config.safety_filter,
-                env_func_filter,
-                **config.sf_config)
+                         env_func_filter,
+                         **config.sf_config)
     safety_filter.reset()
 
     if training is True:
@@ -82,7 +82,7 @@ def run(plot=True, training=False, n_episodes=1, n_steps=None, curr_path='.'):
                              cost='quadratic',
                              normalized_rl_action_space=False,
                              disturbance=None,
-                            )
+                             )
         safety_filter.learn(env=train_env)
         safety_filter.save(path=f'{curr_path}/models/{config.safety_filter}_{system}.pkl')
     else:
@@ -116,7 +116,7 @@ def run(plot=True, training=False, n_episodes=1, n_steps=None, curr_path='.'):
 
         _, ax = plt.subplots()
         ax.plot(results['obs'][0][:, graph1_1], results['obs'][0][:, graph1_2], 'r--', label='Uncertified')
-        ax.plot(certified_results['obs'][0][:,graph1_1], certified_results['obs'][0][:,graph1_2],'.-', label='Certified')
+        ax.plot(certified_results['obs'][0][:, graph1_1], certified_results['obs'][0][:, graph1_2], '.-', label='Certified')
         ax.plot(certified_results['obs'][0][corrections, graph1_1], certified_results['obs'][0][corrections, graph1_2], 'r.', label='Modified')
         ax.scatter(results['obs'][0][0, graph1_1], results['obs'][0][0, graph1_2], color='g', marker='o', s=100, label='Initial State')
         if config.task == Environment.CARTPOLE:
@@ -132,9 +132,9 @@ def run(plot=True, training=False, n_episodes=1, n_steps=None, curr_path='.'):
 
         if config.task_config.task == Task.TRAJ_TRACKING and config.task == Environment.CARTPOLE:
             _, ax2 = plt.subplots()
-            ax2.plot(np.linspace(0, 20, certified_results['obs'][0].shape[0]), safety_filter.env.X_GOAL[:,0],'g--', label='Reference')
-            ax2.plot(np.linspace(0, 20, results['obs'][0].shape[0]), results['obs'][0][:,0],'r--', label='Uncertified')
-            ax2.plot(np.linspace(0, 20, certified_results['obs'][0].shape[0]), certified_results['obs'][0][:,0],'.-', label='Certified')
+            ax2.plot(np.linspace(0, 20, certified_results['obs'][0].shape[0]), safety_filter.env.X_GOAL[:, 0], 'g--', label='Reference')
+            ax2.plot(np.linspace(0, 20, results['obs'][0].shape[0]), results['obs'][0][:, 0], 'r--', label='Uncertified')
+            ax2.plot(np.linspace(0, 20, certified_results['obs'][0].shape[0]), certified_results['obs'][0][:, 0], '.-', label='Certified')
             ax2.plot(np.linspace(0, 20, certified_results['obs'][0].shape[0])[corrections], certified_results['obs'][0][corrections, 0], 'r.', label='Modified')
             ax2.set_xlabel(r'Time')
             ax2.set_ylabel(r'X')
@@ -142,8 +142,8 @@ def run(plot=True, training=False, n_episodes=1, n_steps=None, curr_path='.'):
             ax2.legend(loc='upper right')
         elif config.task == Environment.QUADROTOR:
             _, ax2 = plt.subplots()
-            ax2.plot(results['obs'][0][:,1], results['obs'][0][:,3],'r--', label='Uncertified')
-            ax2.plot(certified_results['obs'][0][:,1], certified_results['obs'][0][:,3],'.-', label='Certified')
+            ax2.plot(results['obs'][0][:, 1], results['obs'][0][:, 3], 'r--', label='Uncertified')
+            ax2.plot(certified_results['obs'][0][:, 1], certified_results['obs'][0][:, 3], '.-', label='Certified')
             ax2.plot(certified_results['obs'][0][corrections, 1], certified_results['obs'][0][corrections, 3], 'r.', label='Modified')
             ax2.set_xlabel(r'x_dot')
             ax2.set_ylabel(r'z_dot')
@@ -151,10 +151,10 @@ def run(plot=True, training=False, n_episodes=1, n_steps=None, curr_path='.'):
             ax2.legend(loc='upper right')
 
         _, ax3 = plt.subplots()
-        ax3.plot(results['obs'][0][:,graph3_1], results['obs'][0][:,graph3_2],'r--', label='Uncertified')
-        ax3.plot(certified_results['obs'][0][:,graph3_1], certified_results['obs'][0][:,graph3_2],'.-', label='Certified')
+        ax3.plot(results['obs'][0][:, graph3_1], results['obs'][0][:, graph3_2], 'r--', label='Uncertified')
+        ax3.plot(certified_results['obs'][0][:, graph3_1], certified_results['obs'][0][:, graph3_2], '.-', label='Certified')
         if config.task_config.task == Task.TRAJ_TRACKING and config.task == Environment.QUADROTOR:
-            ax3.plot(safety_filter.env.X_GOAL[:,0], safety_filter.env.X_GOAL[:,2],'g--', label='Reference')
+            ax3.plot(safety_filter.env.X_GOAL[:, 0], safety_filter.env.X_GOAL[:, 2], 'g--', label='Reference')
         ax3.plot(certified_results['obs'][0][corrections, graph3_1], certified_results['obs'][0][corrections, graph3_2], 'r.', label='Modified')
         ax3.scatter(results['obs'][0][0, graph3_1], results['obs'][0][0, graph3_2], color='g', marker='o', s=100, label='Initial State')
         ax3.set_xlabel(r'X')
