@@ -13,7 +13,7 @@ from safe_control_gym.envs.benchmark_env import Task
 
 
 class iLQR(BaseController):
-    '''Linear quadratic regulator. '''
+    '''Linear quadratic regulator.'''
 
     def __init__(
             self,
@@ -75,7 +75,7 @@ class iLQR(BaseController):
         self.reset()
 
     def close(self):
-        '''Cleans up resources. '''
+        '''Cleans up resources.'''
         self.env.close()
 
     def learn(self, env=None, **kwargs):
@@ -109,7 +109,7 @@ class iLQR(BaseController):
 
             if self.ite_counter == 0 and env.done_on_out_of_bound and self.final_info['out_of_bounds']:
                 print(colored('[ERROR] The initial policy might be unstable. '
-                                + 'Break from iLQR updates.', 'red'))
+                              + 'Break from iLQR updates.', 'red'))
                 break
 
             # Maximum episode length.
@@ -261,11 +261,11 @@ class iLQR(BaseController):
 
                 # Update s variables for time step k.
                 Sm = Qm + Ad_k.transpose().dot(Sm.dot(Ad_k)) + \
-                     K.transpose().dot(H.dot(K)) + \
-                     K.transpose().dot(G) + G.transpose().dot(K)
+                    K.transpose().dot(H.dot(K)) + \
+                    K.transpose().dot(G) + G.transpose().dot(K)
                 Sv = Qv + Ad_k.transpose().dot(Sv) + \
-                     K.transpose().dot(H.dot(duff)) + K.transpose().dot(g) + \
-                     G.transpose().dot(duff)
+                    K.transpose().dot(H.dot(duff)) + K.transpose().dot(g) + \
+                    G.transpose().dot(duff)
                 s = q + s + 0.5 * duff.transpose().dot(H.dot(duff)) + \
                     duff.transpose().dot(g)
             else:
@@ -329,7 +329,7 @@ class iLQR(BaseController):
         return action, gains_fb, input_ff
 
     def reset(self):
-        '''Prepares for evaluation. '''
+        '''Prepares for evaluation.'''
         self.env.reset()
         self.ite_counter = 0
 

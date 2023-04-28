@@ -1,4 +1,4 @@
-'''To standardize training/evaluation interface. '''
+'''To standardize training/evaluation interface.'''
 
 from time import time
 from copy import deepcopy
@@ -14,7 +14,7 @@ from safe_control_gym.math_and_models.metrics.performance_metrics import compute
 
 
 class BaseExperiment:
-    '''Generic Experiment Class. '''
+    '''Generic Experiment Class.'''
 
     def __init__(self,
                  env,
@@ -95,7 +95,7 @@ class BaseExperiment:
         elif n_episodes is not None and n_steps is not None:
             raise ValueError('Only one of n_episodes or n_steps can be defined.')
         if seeds is not None:
-            assert len(seeds) == n_episodes, "Number of seeds must match the number of episodes"
+            assert len(seeds) == n_episodes, 'Number of seeds must match the number of episodes'
 
         # initialize
         sim_steps = log_freq // self.env.CTRL_FREQ if log_freq else 1
@@ -229,7 +229,7 @@ class BaseExperiment:
         return metrics
 
     def reset(self):
-        '''Resets the environments, controller, and safety filter to prepare for training or evaluation. '''
+        '''Resets the environments, controller, and safety filter to prepare for training or evaluation.'''
 
         self.env.reset()
         self.env.clear_data()
@@ -243,7 +243,7 @@ class BaseExperiment:
             self.train_env.clear_data()
 
     def close(self):
-        '''Closes the environments, controller, and safety filter. '''
+        '''Closes the environments, controller, and safety filter.'''
 
         self.env.close()
         self.ctrl.close()
@@ -296,7 +296,7 @@ class RecordDataWrapper(gym.Wrapper):
         self.clear_data()
 
     def save_data(self):
-        '''Saves the current self.episode_data to self.data and clears self.episode_data. '''
+        '''Saves the current self.episode_data to self.data and clears self.episode_data.'''
         if self.episode_data:
             # save to data container
             for key, ep_val in self.episode_data.items():
@@ -308,12 +308,12 @@ class RecordDataWrapper(gym.Wrapper):
             self.episode_data = defaultdict(list)
 
     def clear_data(self):
-        '''Clears all data in self.data and self.episode_data. '''
+        '''Clears all data in self.data and self.episode_data.'''
         self.data = defaultdict(list)
         self.episode_data = defaultdict(list)
 
     def reset(self, **kwargs):
-        '''Wrapper for the gym.env reset function. '''
+        '''Wrapper for the gym.env reset function.'''
 
         if self.env.INFO_IN_RESET:
             obs, info = self.env.reset(**kwargs)
@@ -337,7 +337,7 @@ class RecordDataWrapper(gym.Wrapper):
             return obs
 
     def step(self, action):
-        '''Wrapper for the gym.env step function. '''
+        '''Wrapper for the gym.env step function.'''
 
         obs, reward, done, info = self.env.step(action)
         # save to episode data container
@@ -395,10 +395,10 @@ class MetricExtractor:
             'length': self.get_episode_lengths() if len(self.get_episode_lengths()) > 1 else self.get_episode_lengths()[0],
             'average_return': np.asarray(self.get_episode_returns()).mean(),
             'average_rmse': np.asarray(self.get_episode_rmse()).mean(),
-            'rmse': np.asarray(self.get_episode_rmse())  if len(self.get_episode_rmse()) > 1 else self.get_episode_rmse()[0],
+            'rmse': np.asarray(self.get_episode_rmse()) if len(self.get_episode_rmse()) > 1 else self.get_episode_rmse()[0],
             'rmse_std': np.asarray(self.get_episode_rmse()).std(),
             'worst_case_rmse_at_0.5': compute_cvar(np.asarray(self.get_episode_rmse()), 0.5, lower_range=False),
-            'failure_rate':  np.asarray(self.get_episode_constraint_violations()).mean(),
+            'failure_rate': np.asarray(self.get_episode_constraint_violations()).mean(),
             'average_constraint_violation': np.asarray(self.get_episode_constraint_violation_steps()).mean(),
             'constraint_violation_std': np.asarray(self.get_episode_constraint_violation_steps()).std(),
             'constraint_violation': np.asarray(self.get_episode_constraint_violation_steps()) if len(self.get_episode_constraint_violation_steps()) > 1 else self.get_episode_constraint_violation_steps()[0],

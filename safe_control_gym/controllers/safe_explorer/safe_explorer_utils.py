@@ -1,26 +1,19 @@
-"""Utility function for a generic safe explorer.
+'''Utility function for a generic safe explorer.'''
 
-"""
+import warnings
+
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 from gym.spaces import Box
-from collections import defaultdict
-from copy import deepcopy
-import warnings
 
-from safe_control_gym.envs.env_wrappers.vectorized_env.vec_env_utils import _flatten_obs
-from safe_control_gym.math_and_models.neural_networks import MLP, CNN, RNN, init_
-from safe_control_gym.math_and_models.distributions import Normal, Categorical
+from safe_control_gym.math_and_models.neural_networks import MLP
 from safe_control_gym.controllers.ppo.ppo_utils import random_sample
 
 
 class SafetyLayer:
-    """Layer to learn constraint models and to impose action projection.
-
-    """
+    '''Layer to learn constraint models and to impose action projection.'''
 
     def __init__(self,
                  obs_space,
@@ -37,14 +30,14 @@ class SafetyLayer:
         # Seperate model per constraint.
         input_dim = obs_space.shape[0]
         output_dim = act_space.shape[0]
-        
-        # default 1 layer 
+
+        # default 1 layer
         if isinstance(hidden_dim, int):
-            hidden_dims=[hidden_dim]
+            hidden_dims = [hidden_dim]
         elif isinstance(hidden_dim, list):
             hidden_dims = hidden_dim
         else:
-            raise ValueError("hidden_dim can only be int or list.")
+            raise ValueError('hidden_dim can only be int or list.')
         self.constraint_models = nn.ModuleList([
             # MLP(input_dim, output_dim, hidden_dims=[hidden_dim])
             MLP(input_dim, output_dim, hidden_dims=hidden_dims)
@@ -53,7 +46,7 @@ class SafetyLayer:
         # Constraint slack variables/values.
         assert slack is not None and isinstance(slack, (int, float, list))
         if isinstance(slack, (int, float)):
-            slack = [slack]*obs_space.shape[0]
+            slack = [slack] * obs_space.shape[0]
         self.slack = np.array(slack)
         # Optimizers.
         self.optimizers = [
@@ -64,50 +57,38 @@ class SafetyLayer:
     def to(self,
            device
            ):
-        """Puts agent to device.
-
-        """
+        '''Puts agent to device.'''
         self.constraint_models.to(device)
 
     def train(self):
-        """Sets training mode.
-
-        """
+        '''Sets training mode.'''
         self.constraint_models.train()
 
     def eval(self):
-        """Sets evaluation mode.
-
-        """
+        '''Sets evaluation mode.'''
         self.constraint_models.eval()
 
     def state_dict(self):
-        """Snapshots agent state.
-
-        """
+        '''Snapshots agent state.'''
         return {
-            "constraint_models": self.constraint_models.state_dict(),
-            "optimizers": [opt.state_dict() for opt in self.optimizers]
+            'constraint_models': self.constraint_models.state_dict(),
+            'optimizers': [opt.state_dict() for opt in self.optimizers]
         }
 
     def load_state_dict(self,
                         state_dict
                         ):
-        """Restores agent state.
-
-        """
-        self.constraint_models.load_state_dict(state_dict["constraint_models"])
-        for i, opt_state_dict in enumerate(state_dict["optimizers"]):
+        '''Restores agent state.'''
+        self.constraint_models.load_state_dict(state_dict['constraint_models'])
+        for i, opt_state_dict in enumerate(state_dict['optimizers']):
             self.optimizers[i].load_state_dict(opt_state_dict)
 
     def compute_loss(self,
                      batch
                      ):
-        """Gets constraint value L2 loss for each constraint.
-
-        """
-        obs, act = batch["obs"].to(self.device), batch["act"].to(self.device)
-        c, c_next = batch["c"].to(self.device), batch["c_next"].to(self.device)
+        '''Gets constraint value L2 loss for each constraint.'''
+        obs, act = batch['obs'].to(self.device), batch['act'].to(self.device)
+        c, c_next = batch['c'].to(self.device), batch['c_next'].to(self.device)
 
         gs = [model(obs) for model in self.constraint_models]
 
@@ -124,16 +105,14 @@ class SafetyLayer:
         return losses
 
     def update(self, batch):
-        """Updates the constraint models from data batch.
-
-        """
+        '''Updates the constraint models from data batch.'''
         losses = self.compute_loss(batch)
         for loss, opt in zip(losses, self.optimizers):
             opt.zero_grad()
             loss.backward()
             opt.step()
         results = {
-            "constraint_{}_loss".format(i): loss.item()
+            f'constraint_{i}_loss': loss.item()
             for i, loss in enumerate(losses)
         }
         return results
@@ -143,7 +122,7 @@ class SafetyLayer:
                         act,
                         c
                         ):
-        """Does action projection with the trained safety layer.
+        '''Does action projection with the trained safety layer.
 
         According to Dalal 2018, this simple projection works when only 1 constraint at a time
         is active; for multiple active constriants, either resort to in-graph QP solver such as
@@ -153,11 +132,10 @@ class SafetyLayer:
             obs (torch.FloatTensor): observations, shape (B,O).
             act (torch.FloatTensor): actions, shape (B,A).
             c (torch.FloatTensor): constraints, shape (B,C).
-            
+
         Returns:
             torch.FloatTensor: transformed/projected actions, shape (B,A).
-
-        """
+        '''
         self.eval()
         # [(B,A)]_C
         g = [model(obs) for model in self.constraint_models]
@@ -175,17 +153,17 @@ class SafetyLayer:
             mult = F.relu(numer / denomin)  # (B,)
             multipliers.append(mult)
         multipliers = torch.stack(multipliers, -1)  # (B,C)
-        # Check assumption on at most 1 active constraint 
-        # - as mentioned in the original paper, this simple, analytical solution of the safety layer only holds 
-        # with this assumption; otherwise resort to a differentiable layer for solving constrained optimization, 
+        # Check assumption on at most 1 active constraint
+        # - as mentioned in the original paper, this simple, analytical solution of the safety layer only holds
+        # with this assumption; otherwise resort to a differentiable layer for solving constrained optimization,
         # e.g. OptLayer or the differentiable MPC works; or alternatively combine multiple constraints to a single one.
-        # - if the assumption is not satisfied, the layer will try to address the worst violation from the 
+        # - if the assumption is not satisfied, the layer will try to address the worst violation from the
         # the largest lagrange variable (with the use of `topk(..., 1)`)
         # - to check the assumption, check for each step in batch if |{i | \lambda_i > 0}| <= 1
         if float(torch.gt(multipliers, 0).float().sum()) > multipliers.shape[0]:
-            warnings.warn("""Assumption of at most 1 active constraint per step is violated in the current batch, 
-                the filtered action will alleviate the worst violation but do not guarantee 
-                satisfaction of all constraints, are you sure to proceed?""")
+            warnings.warn('''Assumption of at most 1 active constraint per step is violated in the current batch,
+                the filtered action will alleviate the worst violation but do not guarantee
+                satisfaction of all constraints, are you sure to proceed?''')
         # Calculate correction, equation (6) from Dalal 2018.
         max_mult, max_idx = torch.topk(multipliers, 1, dim=-1)  # (B,1)
         max_idx = max_idx.view(-1).tolist()  # []_B
@@ -198,15 +176,14 @@ class SafetyLayer:
 
 
 class ConstraintBuffer(object):
-    """Storage for replay buffer during training.
+    '''Storage for replay buffer during training.
 
     Attributes:
         max_size (int): maximum size of the replay buffer.
         batch_size (int): number of samples (steps) per batch.
         scheme (dict): describs shape & other info of data to be stored.
         keys (list): names of all data from scheme.
-
-    """
+    '''
 
     def __init__(self,
                  obs_space,
@@ -225,46 +202,39 @@ class ConstraintBuffer(object):
             act_dim = act_space.n
         N = max_size
         self.scheme = {
-            "obs": {
-                "vshape": (N, *obs_dim)
+            'obs': {
+                'vshape': (N, *obs_dim)
             },
-            "act": {
-                "vshape": (N, act_dim)
+            'act': {
+                'vshape': (N, act_dim)
             },
-            "c": {
-                "vshape": (N, num_constraints)
+            'c': {
+                'vshape': (N, num_constraints)
             },
-            "c_next": {
-                "vshape": (N, num_constraints)
+            'c_next': {
+                'vshape': (N, num_constraints)
             }
         }
         self.keys = list(self.scheme.keys())
         self.reset()
 
     def reset(self):
-        """Allocate space for containers.
-
-        """
+        '''Allocate space for containers.'''
         for k, info in self.scheme.items():
-            assert "vshape" in info, "Scheme must define vshape for {}".format(
-                k)
-            vshape = info["vshape"]
-            dtype = info.get("dtype", np.float32)
-            init = info.get("init", np.zeros)
+            assert 'vshape' in info, f'Scheme must define vshape for {k}'
+            vshape = info['vshape']
+            dtype = info.get('dtype', np.float32)
+            init = info.get('init', np.zeros)
             self.__dict__[k] = init(vshape, dtype=dtype)
         self.pos = 0
         self.buffer_size = 0
 
     def __len__(self):
-        """Returns current size of the buffer.
-
-        """
+        '''Returns current size of the buffer.'''
         return self.buffer_size
 
     def state_dict(self):
-        """Returns a snapshot of current buffer.
-
-        """
+        '''Returns a snapshot of current buffer.'''
         state = dict(
             pos=self.pos,
             buffer_size=self.buffer_size,
@@ -277,24 +247,20 @@ class ConstraintBuffer(object):
     def load_state_dict(self,
                         state
                         ):
-        """Restores buffer from previous state.
-
-        """
+        '''Restores buffer from previous state.'''
         for k, v in state.items():
             self.__dict__[k] = v
 
     def push(self,
              batch
              ):
-        """Inserts transition step data (as dict) to storage.
-
-        """
+        '''Inserts transition step data (as dict) to storage.'''
         # Batch size.
         k = list(batch.keys())[0]
         n = batch[k].shape[0]
         for k, v in batch.items():
-            shape = self.scheme[k]["vshape"][1:]
-            dtype = self.scheme[k].get("dtype", np.float32)
+            shape = self.scheme[k]['vshape'][1:]
+            dtype = self.scheme[k].get('dtype', np.float32)
             v_ = np.asarray(v, dtype=dtype).reshape((n,) + shape)
             if self.pos + n <= self.max_size:
                 self.__dict__[k][self.pos:self.pos + n] = v_
@@ -310,23 +276,19 @@ class ConstraintBuffer(object):
     def sample(self,
                indices
                ):
-        """Returns partial data.
-
-        """
+        '''Returns partial data.'''
         batch = {}
         for k, info in self.scheme.items():
-            shape = info["vshape"][1:]
+            shape = info['vshape'][1:]
             batch[k] = self.__dict__[k].reshape(-1, *shape)[indices]
         return batch
 
     def sampler(self,
                 batch_size,
-                device="cpu",
+                device='cpu',
                 drop_last=True
                 ):
-        """Makes sampler to loop through all data.
-
-        """
+        '''Makes sampler to loop through all data.'''
         total_steps = len(self)
         sampler = random_sample(np.arange(total_steps), batch_size, drop_last)
         for indices in sampler:
