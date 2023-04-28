@@ -1,4 +1,4 @@
-'''Base class for safety filter. '''
+'''Base class for safety filter.'''
 
 from abc import abstractmethod
 
@@ -6,7 +6,7 @@ from safe_control_gym.controllers.base_controller import BaseController
 
 
 class BaseSafetyFilter(BaseController):
-    '''Template for safety filter, implement the following methods as needed. '''
+    '''Template for safety filter, implement the following methods as needed.'''
 
     @abstractmethod
     def certify_action(self,

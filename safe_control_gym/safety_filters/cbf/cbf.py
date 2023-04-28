@@ -14,14 +14,14 @@ from safe_control_gym.safety_filters.cbf.cbf_utils import linear_function, cbf_c
 
 
 class CBF(BaseSafetyFilter):
-    '''Control Barrier Function Class. '''
+    '''Control Barrier Function Class.'''
 
     def __init__(self,
                  env_func,
-                 slope: float=0.1,
-                 soft_constrained: bool=True,
-                 slack_weight: float=10000.0,
-                 slack_tolerance: float=1.0E-3,
+                 slope: float = 0.1,
+                 soft_constrained: bool = True,
+                 slack_weight: float = 10000.0,
+                 slack_tolerance: float = 1.0E-3,
                  **kwargs):
         '''
         CBF-QP Safety Filter: The CBF's superlevel set defines a positively control invariant set.
@@ -103,7 +103,7 @@ class CBF(BaseSafetyFilter):
         return not cs.depends_on(dfdu, self.u)
 
     def setup_optimizer(self):
-        '''Setup the certifying CBF problem. '''
+        '''Setup the certifying CBF problem.'''
         nx, nu = self.model.nx, self.model.nu
 
         # Define optimizer
@@ -218,7 +218,7 @@ class CBF(BaseSafetyFilter):
     def certify_action(self,
                        current_state: np.ndarray,
                        uncertified_action: np.ndarray,
-                       info: dict=None
+                       info: dict = None
                        ) -> Tuple[np.ndarray, bool]:
         '''Determines a safe action from the current state and proposed action.
 
@@ -236,13 +236,13 @@ class CBF(BaseSafetyFilter):
         certified_action, success = self.solve_optimization(current_state, uncertified_action)
         self.results_dict['feasible'].append(success)
         self.results_dict['certified_action'].append(certified_action)
-        self.results_dict['correction'].append(np.linalg.norm(certified_action-uncertified_action))
+        self.results_dict['correction'].append(np.linalg.norm(certified_action - uncertified_action))
 
         return certified_action, success
 
     def is_cbf(self,
-               num_points: int=100,
-               tolerance: float=0.01
+               num_points: int = 100,
+               tolerance: float = 0.01
                ) -> Tuple[bool, list]:
         '''
         Check if the provided CBF candidate is actually a CBF for the system using a gridded approach.
@@ -317,7 +317,7 @@ class CBF(BaseSafetyFilter):
         return valid_cbf, infeasible_states
 
     def setup_results_dict(self):
-        '''Setup the results dictionary to store run information. '''
+        '''Setup the results dictionary to store run information.'''
         self.results_dict = {}
         self.results_dict['feasible'] = []
         self.results_dict['uncertified_action'] = []
@@ -325,11 +325,11 @@ class CBF(BaseSafetyFilter):
         self.results_dict['correction'] = []
 
     def reset(self):
-        '''Resets the safety filter. '''
+        '''Resets the safety filter.'''
         self.model = self.get_prior(self.env, self.prior_info)
         self.env.reset()
         self.setup_results_dict()
 
     def close(self):
-        '''Cleans up resources. '''
+        '''Cleans up resources.'''
         self.env.close()

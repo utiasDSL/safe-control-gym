@@ -22,7 +22,7 @@ from safe_control_gym.safety_filters.mpsc.mpsc_utils import Cost_Function
 
 
 class MPSC(BaseSafetyFilter, ABC):
-    '''Abstract Model Predictive Safety Certification Class. '''
+    '''Abstract Model Predictive Safety Certification Class.'''
 
     def __init__(self,
                  env_func,
@@ -63,7 +63,7 @@ class MPSC(BaseSafetyFilter, ABC):
                                      init_state=None,
                                      cost='quadratic',
                                      normalized_rl_action_space=False,
-                                    )
+                                     )
 
         # Setup attributes.
         self.reset()
@@ -82,23 +82,22 @@ class MPSC(BaseSafetyFilter, ABC):
         if self.additional_constraints is None:
             additional_constraints = []
         self.constraints, self.state_constraints_sym, self.input_constraints_sym = reset_constraints(
-                                                                                    self.env.constraints.constraints +
-                                                                                    additional_constraints)
+            self.env.constraints.constraints +
+            additional_constraints)
 
         if cost_function == Cost_Function.ONE_STEP_COST:
             self.cost_function = ONE_STEP_COST()
         else:
             raise NotImplementedError(f'The MPSC cost function {cost_function} has not been implemented')
 
-
     @abstractmethod
     def set_dynamics(self):
-        '''Compute the dynamics. '''
+        '''Compute the dynamics.'''
         raise NotImplementedError
 
     @abstractmethod
     def setup_optimizer(self):
-        '''Setup the certifying MPC problem. '''
+        '''Setup the certifying MPC problem.'''
         raise NotImplementedError
 
     def before_optimization(self, obs):
@@ -201,11 +200,11 @@ class MPSC(BaseSafetyFilter, ABC):
             certified_action = action
         else:
             self.kinf += 1
-            if (self.kinf <= self.horizon-1 and
+            if (self.kinf <= self.horizon - 1 and
                 self.z_prev is not None and
-                self.v_prev is not None):
+                    self.v_prev is not None):
                 action = np.squeeze(self.v_prev[:, self.kinf]) + \
-                         np.squeeze(self.lqr_gain @ (current_state.reshape((self.model.nx, 1)) - self.z_prev[:, self.kinf].reshape((self.model.nx, 1))))
+                    np.squeeze(self.lqr_gain @ (current_state.reshape((self.model.nx, 1)) - self.z_prev[:, self.kinf].reshape((self.model.nx, 1))))
                 if self.integration_algo == 'LTI':
                     action = np.squeeze(action) + np.squeeze(self.U_EQ)
                 action = np.squeeze(action)
@@ -225,12 +224,12 @@ class MPSC(BaseSafetyFilter, ABC):
 
         self.results_dict['kinf'].append(self.kinf)
         self.results_dict['certified_action'].append(certified_action)
-        self.results_dict['correction'].append(np.linalg.norm(certified_action-uncertified_action))
+        self.results_dict['correction'].append(np.linalg.norm(certified_action - uncertified_action))
 
         return certified_action, success
 
     def setup_results_dict(self):
-        '''Setup the results dictionary to store run information. '''
+        '''Setup the results dictionary to store run information.'''
         self.results_dict = {}
         self.results_dict['feasible'] = []
         self.results_dict['kinf'] = []
@@ -239,12 +238,12 @@ class MPSC(BaseSafetyFilter, ABC):
         self.results_dict['correction'] = []
 
     def close(self):
-        '''Cleans up resources. '''
+        '''Cleans up resources.'''
         self.env.close()
         self.training_env.close()
 
     def reset(self):
-        '''Prepares for training or evaluation. '''
+        '''Prepares for training or evaluation.'''
         self.model = self.get_prior(self.env, self.prior_info)
         self.env.reset()
         self.training_env.reset()

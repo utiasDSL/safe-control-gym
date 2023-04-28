@@ -1,4 +1,4 @@
-'''Utils for CBF and CBF_NN safety filters. '''
+'''Utils for CBF and CBF_NN safety filters.'''
 
 import torch
 import numpy as np
@@ -20,13 +20,14 @@ def cbf_cartpole(X: cs.MX,
     '''
     shrink_factor = 1.0
     x_max, v_max, theta_max, omega_max = state_limits
-    cbf = shrink_factor - (X[0]/x_max)**2 - (X[1]/v_max)**2 - (X[2]/theta_max)**2 - (X[3]/omega_max)**2
+    cbf = shrink_factor - (X[0] / x_max)**2 - (X[1] / v_max)**2 - (X[2] / theta_max)**2 - (X[3] / omega_max)**2
     # cbf = 0.5 * (1 - (X[0]) ** 2 / (x_max) ** 2)
     # cbf = 0.5 * (1 - (X[2]) ** 2 / (theta_max) ** 2)
     # cbf = 0.5 * (1 - (X[0]) ** 2 / (x_max) ** 2 - (X[3]) ** 2 / (omega_max) ** 2)
     # cbf = 0.5 * (1 - (X[0]) ** 2 / (x_max) ** 2 - (X[1]) ** 2 / (v_max) ** 2)
     cbf_func = cs.Function('barrier', [X], [cbf], ['X'], ['cbf'])
     return cbf_func
+
 
 def linear_function(slope: float) -> cs.Function:
     '''Creates a one dimensional linear function.
@@ -40,6 +41,7 @@ def linear_function(slope: float) -> cs.Function:
     x = cs.MX.sym('x', 1)
     linear_func = cs.Function('linear', [x], [slope * x], ['x'], ['y'])
     return linear_func
+
 
 def cartesian_product(*arrays: list) -> np.ndarray:
     '''Creates the cartesian product of a list of arrays from:
@@ -91,7 +93,7 @@ class CBFBuffer(object):
         self.max_size = max_size
         self.batch_size = batch_size
 
-        self.device=device
+        self.device = device
 
         obs_dim = obs_space.shape
         if isinstance(act_space, Box):
@@ -118,7 +120,7 @@ class CBFBuffer(object):
         self.reset()
 
     def reset(self):
-        '''Allocate space for containers. '''
+        '''Allocate space for containers.'''
         for k, info in self.scheme.items():
             assert 'vshape' in info, f'Scheme must define vshape for {k}'
             vshape = info['vshape']
@@ -193,7 +195,7 @@ class CBFBuffer(object):
             self.buffer_size = min(self.max_size, self.pos + n)
 
     def sample(self,
-               batch_size: int=None
+               batch_size: int = None
                ) -> dict:
         '''Returns data batch.
 

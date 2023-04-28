@@ -23,7 +23,7 @@ from safe_control_gym.envs.benchmark_env import Task, Environment
 
 
 class LINEAR_MPSC(MPSC):
-    '''Model Predictive Safety Certification Class. '''
+    '''Model Predictive Safety Certification Class.'''
 
     def __init__(self,
                  env_func,
@@ -69,28 +69,28 @@ class LINEAR_MPSC(MPSC):
         self.terminal_set_verts = None
 
     def set_dynamics(self):
-        '''Compute the linear dynamics. '''
+        '''Compute the linear dynamics.'''
 
         # Original version, used in shooting.
         dfdxdfdu = self.model.df_func(x=self.X_EQ, u=self.U_EQ)
         dfdx = dfdxdfdu['dfdx'].toarray()
         dfdu = dfdxdfdu['dfdu'].toarray()
-        delta_x = cs.MX.sym('delta_x', self.model.nx,1)
-        delta_u = cs.MX.sym('delta_u', self.model.nu,1)
+        delta_x = cs.MX.sym('delta_x', self.model.nx, 1)
+        delta_u = cs.MX.sym('delta_u', self.model.nu, 1)
         self.discrete_dfdx, self.discrete_dfdu = discretize_linear_system(dfdx, dfdu, self.dt)
 
         if self.integration_algo == 'LTI':
             x_dot_lin_vec = self.discrete_dfdx @ delta_x + self.discrete_dfdu @ delta_u
             dynamics_func = cs.Function('fd',
-                                            [delta_x, delta_u],
-                                            [x_dot_lin_vec],
-                                            ['x0', 'p'],
-                                            ['xf'])
+                                        [delta_x, delta_u],
+                                        [x_dot_lin_vec],
+                                        ['x0', 'p'],
+                                        ['xf'])
         elif self.integration_algo == 'rk4':
             dynamics_func = rk_discrete(self.model.fc_func,
-                                         self.model.nx,
-                                         self.model.nu,
-                                         self.dt)
+                                        self.model.nx,
+                                        self.model.nu,
+                                        self.dt)
         else:
             x_dot_lin_vec = dfdx @ delta_x + dfdu @ delta_u
             dynamics_func = cs.integrator(
@@ -121,12 +121,12 @@ class LINEAR_MPSC(MPSC):
         for i in range(self.n_samples):
             init_state, _ = env.reset()
             if self.env.NAME == Environment.QUADROTOR:
-                u = np.random.rand(self.model.nu)/20 - 1/40 + self.U_EQ
+                u = np.random.rand(self.model.nu) / 20 - 1 / 40 + self.U_EQ
             else:
-                u = env.action_space.sample() # Will yield a random action within action space.
+                u = env.action_space.sample()  # Will yield a random action within action space.
             x_next_obs, _, _, _ = env.step(u)
             x_next_linear = np.squeeze(self.dynamics_func(x0=init_state - self.X_EQ, p=u - self.U_EQ)['xf'].toarray()) + self.X_EQ
-            w[:,i] = x_next_obs - x_next_linear
+            w[:, i] = x_next_obs - x_next_linear
         A_cl = self.discrete_dfdx + self.discrete_dfdu @ self.lqr_gain
         self.P = compute_RPI_set(A_cl, w, self.tau)
         self.omega_AABB_verts = ellipse_bounding_box(self.P)
@@ -156,12 +156,12 @@ class LINEAR_MPSC(MPSC):
                     init_state = self.terminal_set.V[np.random.choice(self.terminal_set.V.shape[0], 1)]
 
                 init_state = init_state.reshape((self.model.nx, 1))
-                init_state += (np.random.rand(self.model.nx, 1) - np.ones((self.model.nx, 1))/2)/2
+                init_state += (np.random.rand(self.model.nx, 1) - np.ones((self.model.nx, 1)) / 2) / 2
 
                 if self.env.NAME == Environment.QUADROTOR:
-                    u = np.random.rand(self.model.nu)/6 - 1/12 + self.U_EQ
+                    u = np.random.rand(self.model.nu) / 6 - 1 / 12 + self.U_EQ
                 else:
-                    u = env.action_space.sample() # Will yield a random action within action space.
+                    u = env.action_space.sample()  # Will yield a random action within action space.
 
                 _, feasible = self.solve_optimization(obs=init_state, uncertified_action=u)
                 if feasible:
@@ -220,7 +220,7 @@ class LINEAR_MPSC(MPSC):
             pickle.dump(parameters, file)
 
     def tighten_state_and_input_constraints(self):
-        '''Tigthen the state and input constraints based on the RPI. '''
+        '''Tigthen the state and input constraints based on the RPI.'''
 
         K_omega_AABB_verts_raw = (self.lqr_gain @ self.omega_AABB_verts.T).T
         # Take the outermost values.
@@ -239,25 +239,25 @@ class LINEAR_MPSC(MPSC):
         self.U_vertices = np.clip(np.vstack(list(product(*U_vertices_raw))), -100, 100)
         self.tightened_input_constraint_verts, tightened_input_constr_func\
             = pontryagin_difference_AABB(
-            self.U_vertices,
-            self.K_omega_AABB_verts)
+                self.U_vertices,
+                self.K_omega_AABB_verts)
 
         if self.training_env.NAME == Environment.QUADROTOR:
             min_input = input_constraint.lower_bounds[0] + np.max(self.U_vertices) - np.max(self.tightened_input_constraint_verts)
             self.tightened_input_constraint_verts = np.clip(self.tightened_input_constraint_verts, min_input, 100)
         self.tightened_input_constraint = tightened_input_constr_func(env=self.env,
-                                                                        constrained_variable=ConstrainedVariableType.INPUT)
+                                                                      constrained_variable=ConstrainedVariableType.INPUT)
         # Get the state constraint vertices.
         state_constraints = self.constraints.state_constraints
         if len(state_constraints) > 1:
             raise NotImplementedError('MPSC currently can\'t handle more than 1 constraint')
         state_constraints = state_constraints[0]
-        X_vertices_raw = [(state_constraints.upper_bounds[i],state_constraints.lower_bounds[i]) for i in range(self.model.nx)]
+        X_vertices_raw = [(state_constraints.upper_bounds[i], state_constraints.lower_bounds[i]) for i in range(self.model.nx)]
         self.X_vertices = np.clip(np.vstack(list(product(*X_vertices_raw))), -100, 100)
         self.tightened_state_constraint_verts, tightened_state_constraint_func = pontryagin_difference_AABB(self.X_vertices,
                                                                                                             self.omega_AABB_verts)
         self.tightened_state_constraint = tightened_state_constraint_func(env=self.env,
-                                                                            constrained_variable=ConstrainedVariableType.STATE)
+                                                                          constrained_variable=ConstrainedVariableType.STATE)
 
         self.simple_terminal_set = QuadraticContstraint(env=self.env,
                                                         P=np.eye(self.model.nx),
@@ -265,7 +265,7 @@ class LINEAR_MPSC(MPSC):
                                                         constrained_variable=ConstrainedVariableType.STATE)
 
     def setup_optimizer(self):
-        '''Setup the certifying MPC problem. '''
+        '''Setup the certifying MPC problem.'''
 
         # Horizon parameter.
         horizon = self.horizon
@@ -297,12 +297,12 @@ class LINEAR_MPSC(MPSC):
         simple_terminal_constraint = self.simple_terminal_set.get_symbolic_model()
         for i in range(self.horizon):
             # Dynamics constraints (eqn 5.b).
-            next_state = self.dynamics_func(x0=z_var[:,i], p=v_var[:,i])['xf']
+            next_state = self.dynamics_func(x0=z_var[:, i], p=v_var[:, i])['xf']
             opti.subject_to(z_var[:, i + 1] == next_state)
             # Input constraints (eqn 5.c).
-            opti.subject_to(input_constraints(v_var[:,i] + self.U_EQ) <= 0)
+            opti.subject_to(input_constraints(v_var[:, i] + self.U_EQ) <= 0)
             # State Constraints
-            opti.subject_to(state_constraints(z_var[:,i] + X_EQ) <= 0)
+            opti.subject_to(state_constraints(z_var[:, i] + X_EQ) <= 0)
 
         # Final state constraints (5.d).
         if self.use_terminal_set:
@@ -316,7 +316,7 @@ class LINEAR_MPSC(MPSC):
         # Initial state constraints (5.e).
         opti.subject_to(omega_constraint(x_init - z_var[:, 0]) <= 0)
         # Real input (5.f).
-        opti.subject_to(next_u == (v_var[:,0] + self.U_EQ) + self.lqr_gain @ (x_init - z_var[:,0]))
+        opti.subject_to(next_u == (v_var[:, 0] + self.U_EQ) + self.lqr_gain @ (x_init - z_var[:, 0]))
 
         # Create solver (IPOPT solver as of this version).
         opts = {'expand': False,
