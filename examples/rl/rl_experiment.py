@@ -1,4 +1,4 @@
-'''This script tests the RL implementation. '''
+'''This script tests the RL implementation.'''
 
 import shutil
 from functools import partial

@@ -1,4 +1,4 @@
-'''A PID example on a quadrotor. '''
+'''A PID example on a quadrotor.'''
 
 import os
 import pickle
@@ -89,7 +89,6 @@ def run(gui=True, n_episodes=1, n_steps=None, save_data=False):
         plt.show()
 
         for i in range(10, ctrl.env.X_GOAL.shape[0], 10):
-
             p.addUserDebugLine(lineFromXYZ=[ref_3D[i - 10, 0], ref_3D[i - 10, 1], ref_3D[i - 10, 2]],
                                lineToXYZ=[ref_3D[i, 0], ref_3D[i, 1], ref_3D[i, 2]],
                                lineColorRGB=[1, 0, 0],

@@ -14,7 +14,7 @@ from safe_control_gym.utils.registration import make
 
 
 def run():
-    '''The main function running the API example. '''
+    '''The main function running the API example.'''
 
     # Set iterations and episode counter.
     num_episodes = 1
@@ -116,7 +116,7 @@ def run():
 
 
 class bcolors:
-    '''Support for color output. '''
+    '''Support for color output.'''
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
     OKCYAN = '\033[96m'
