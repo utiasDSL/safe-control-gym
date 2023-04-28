@@ -1,0 +1,67 @@
+task_config:
+  seed: 42
+  info_in_reset: True
+  ctrl_freq: 15
+  pyb_freq: 750
+  physics: pyb
+  normalized_rl_action_space: True
+
+  # state initialization
+  randomized_init: True
+  randomized_inertial_prop: False
+
+  init_state_randomization_info:
+    init_x:
+      distrib: 'uniform'
+      low: -1
+      high: 1
+    init_x_dot:
+      distrib: 'uniform'
+      low: -0.1
+      high: 0.1
+    init_theta:
+      distrib: 'uniform'
+      low: -0.16
+      high: 0.16
+    init_theta_dot:
+      distrib: 'uniform'
+      low: -0.1
+      high: 0.1
+
+  task: stabilization
+  task_info:
+    stabilization_goal: [0.7, 0]
+    stabilization_goal_tolerance: 0.0
+
+  inertial_prop:
+    pole_length: 0.5
+    cart_mass: 1
+    pole_mass: 0.1
+
+  episode_len_sec: 10
+  cost: rl_reward
+  obs_goal_horizon: 1
+
+  # RL Reward
+  rew_state_weight: [1, 1, 1, 1]
+  rew_act_weight: 0.1
+  rew_exponential: True
+
+  # constraints
+  constraints:
+  - constraint_form: default_constraint
+    constrained_variable: state
+    upper_bounds:
+      - 2
+      - 2
+      - 0.16
+      - 1
+    lower_bounds:
+      - -2
+      - -2
+      - -0.16
+      - -1
+  - constraint_form: default_constraint
+    constrained_variable: input
+  done_on_out_of_bound: True
+  done_on_violation: False
