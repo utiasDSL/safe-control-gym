@@ -97,7 +97,7 @@ class PID(BaseController):
             cur_pos=np.array([obs[0], 0, obs[2]])
             cur_quat=np.array(p.getQuaternionFromEuler([0, obs[4], 0]))
             cur_vel=np.array([obs[1], 0, obs[3]])
-            cur_ang_vel=np.array([0, obs[4], 0])
+            cur_ang_vel=np.array([0, obs[5], 0])
         elif self.env.QUAD_TYPE == 3:
             cur_pos=np.array([obs[0],obs[2],obs[4]])
             cur_quat=np.array(p.getQuaternionFromEuler([obs[6],obs[7],obs[8]]))
