@@ -6,8 +6,7 @@ from collections import defaultdict
 import torch
 import torch.nn as nn
 import numpy as np
-from gym.spaces import Box
-
+from gymnasium.spaces import Box
 
 from safe_control_gym.math_and_models.neural_networks import MLP
 from safe_control_gym.math_and_models.distributions import Normal, Categorical

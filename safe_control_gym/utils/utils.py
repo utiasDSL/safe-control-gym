@@ -8,7 +8,7 @@ import random
 import subprocess
 import sys
 
-import gym
+import gymnasium as gym
 import munch
 import yaml
 import imageio

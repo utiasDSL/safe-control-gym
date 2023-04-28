@@ -4,7 +4,7 @@ import time
 from copy import deepcopy
 from collections import deque
 
-import gym
+import gymnasium as gym
 import numpy as np
 
 from safe_control_gym.envs.env_wrappers.vectorized_env.vec_env import VecEnvWrapper

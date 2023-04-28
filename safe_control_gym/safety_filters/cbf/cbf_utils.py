@@ -3,7 +3,7 @@
 import torch
 import numpy as np
 import casadi as cs
-from gym.spaces import box, Box
+from gymnasium.spaces import box, Box
 
 
 def cbf_cartpole(X: cs.MX,

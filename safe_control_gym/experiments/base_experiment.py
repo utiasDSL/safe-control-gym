@@ -5,7 +5,7 @@ from copy import deepcopy
 from collections import defaultdict
 from munch import munchify
 
-import gym
+import gymnasium as gym
 import numpy as np
 from termcolor import colored
 

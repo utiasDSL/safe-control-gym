@@ -17,7 +17,7 @@ import casadi as cs
 import numpy as np
 import pybullet as p
 import pybullet_data
-from gym import spaces
+from gymnasium import spaces
 
 from safe_control_gym.envs.benchmark_env import BenchmarkEnv, Cost, Task
 from safe_control_gym.envs.constraints import SymmetricStateConstraint, GENERAL_CONSTRAINTS
