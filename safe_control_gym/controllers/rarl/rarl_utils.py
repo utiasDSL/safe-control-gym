@@ -1,4 +1,4 @@
-from gym.spaces import Box, Discrete
+from gymnasium.spaces import Box, Discrete
 from collections import defaultdict
 from copy import deepcopy
 import numpy as np

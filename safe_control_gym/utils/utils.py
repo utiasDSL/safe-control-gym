@@ -3,7 +3,7 @@
 """
 import argparse
 import datetime
-import gym
+import gymnasium as gym
 import json
 import os
 import random

@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from gym.spaces import Box
+from gymnasium.spaces import Box
 from collections import defaultdict
 from copy import deepcopy
 

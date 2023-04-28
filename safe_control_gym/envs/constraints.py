@@ -7,7 +7,7 @@ from enum import Enum
 
 import casadi as cs
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 
 
 class ConstrainedVariableType(str, Enum):

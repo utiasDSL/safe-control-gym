@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from gym.spaces import Box, Discrete
+from gymnasium.spaces import Box, Discrete
 
 from safe_control_gym.math_and_models.distributions import Normal, Categorical
 from safe_control_gym.math_and_models.neural_networks import MLP, CNN, RNN, init_

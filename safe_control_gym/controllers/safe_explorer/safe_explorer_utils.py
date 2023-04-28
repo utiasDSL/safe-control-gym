@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from gym.spaces import Box
+from gymnasium.spaces import Box
 from collections import defaultdict
 from copy import deepcopy
 import warnings
