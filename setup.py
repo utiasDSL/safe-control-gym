@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='safe_control_gym',
-      version='0.5.0',
+      version='2.0.0',
       install_requires=[
           'matplotlib',
           'Pillow',

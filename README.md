@@ -42,11 +42,11 @@ cd safe-control-gym
 
 ### Option A (recommended): using `conda`
 
-Create and access a Python 3.8 environment using
+Create and access a Python 3.10 environment using
 [`conda`](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
 
 ```bash
-conda create -n safe python=3.8.10
+conda create -n safe python=3.10
 conda activate safe
 ```
 
@@ -59,13 +59,13 @@ pip install -e .
 
 ### Option B: using venv and poetry
 
-Create and access a Python 3.8 virtual environment using
+Create and access a Python 3.10 virtual environment using
 [`pyenv`](https://github.com/pyenv/pyenv) and
 [`venv`](https://docs.python.org/3/library/venv.html)
 
 ```bash
-pyenv install 3.8.10
-pyenv local 3.8.10
+pyenv install 3.10
+pyenv local 3.10
 python3 -m venv safe
 source safe/bin/activate
 pip install --upgrade pip
