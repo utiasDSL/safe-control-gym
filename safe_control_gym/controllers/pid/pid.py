@@ -4,8 +4,9 @@ Based on work conducted at UTIAS' DSL by SiQi Zhou and James Xu.
 '''
 
 import os
-import numpy as np
 import math
+
+import numpy as np
 import pybullet as p
 from scipy.spatial.transform import Rotation
 
@@ -14,7 +15,7 @@ from safe_control_gym.envs.benchmark_env import Task, Environment
 
 
 class PID(BaseController):
-    ''' PID Class. '''
+    '''PID Class.'''
 
     def __init__(self,
                  env_func=None,
@@ -94,61 +95,58 @@ class PID(BaseController):
 
         # Step the environment and print all returned information.
         if self.env.QUAD_TYPE == 2:
-            cur_pos=np.array([obs[0], 0, obs[2]])
-            cur_quat=np.array(p.getQuaternionFromEuler([0, obs[4], 0]))
-            cur_vel=np.array([obs[1], 0, obs[3]])
-            cur_ang_vel=np.array([0, obs[5], 0])
+            cur_pos = np.array([obs[0], 0, obs[2]])
+            cur_quat = np.array(p.getQuaternionFromEuler([0, obs[4], 0]))
+            cur_vel = np.array([obs[1], 0, obs[3]])
         elif self.env.QUAD_TYPE == 3:
-            cur_pos=np.array([obs[0],obs[2],obs[4]])
-            cur_quat=np.array(p.getQuaternionFromEuler([obs[6],obs[7],obs[8]]))
-            cur_vel=np.array([obs[1],obs[3],obs[5]])
-            cur_ang_vel=np.array([obs[9],obs[10],obs[11]])
+            cur_pos = np.array([obs[0], obs[2], obs[4]])
+            cur_quat = np.array(p.getQuaternionFromEuler([obs[6], obs[7], obs[8]]))
+            cur_vel = np.array([obs[1], obs[3], obs[5]])
 
         if self.env.QUAD_TYPE == 2:
             if self.env.TASK == Task.TRAJ_TRACKING:
-                target_pos=np.array([   self.reference[step,0],
-                                        0,
-                                        self.reference[step,2]])
-                target_vel=np.array([   self.reference[step,1],
-                                        0,
-                                        self.reference[step,3]])
+                target_pos = np.array([self.reference[step, 0],
+                                       0,
+                                       self.reference[step, 2]])
+                target_vel = np.array([self.reference[step, 1],
+                                       0,
+                                       self.reference[step, 3]])
             elif self.env.TASK == Task.STABILIZATION:
-                target_pos=np.array([self.reference[0], 0, self.reference[2] ])
-                target_vel=np.array([0, 0, 0 ])
+                target_pos = np.array([self.reference[0], 0, self.reference[2]])
+                target_vel = np.array([0, 0, 0])
         elif self.env.QUAD_TYPE == 3:
             if self.env.TASK == Task.TRAJ_TRACKING:
-                target_pos=np.array([   self.reference[step,0],
-                                        self.reference[step,2],
-                                        self.reference[step,4]])
-                target_vel=np.array([   self.reference[step,1],
-                                        self.reference[step,3],
-                                        self.reference[step,5]])
+                target_pos = np.array([self.reference[step, 0],
+                                       self.reference[step, 2],
+                                       self.reference[step, 4]])
+                target_vel = np.array([self.reference[step, 1],
+                                       self.reference[step, 3],
+                                       self.reference[step, 5]])
             elif self.env.TASK == Task.STABILIZATION:
-                target_pos=np.array([self.reference[0], self.reference[2], self.reference[4]])
-                target_vel=np.array([0, 0, 0 ])
+                target_pos = np.array([self.reference[0], self.reference[2], self.reference[4]])
+                target_vel = np.array([0, 0, 0])
 
         target_rpy = np.zeros(3)
         target_rpy_rates = np.zeros(3)
 
         # Compute the next action.
-        thrust, computed_target_rpy, pos_e = self._dslPIDPositionControl(   cur_pos,
-                                                                            cur_quat,
-                                                                            cur_vel,
-                                                                            target_pos,
-                                                                            target_rpy,
-                                                                            target_vel
-                                                                            )
-        rpm = self._dslPIDAttitudeControl(  thrust,
-                                            cur_quat,
-                                            computed_target_rpy,
-                                            target_rpy_rates
-                                            )
-        cur_rpy = p.getEulerFromQuaternion(cur_quat)
+        thrust, computed_target_rpy, _ = self._dslPIDPositionControl(cur_pos,
+                                                                     cur_quat,
+                                                                     cur_vel,
+                                                                     target_pos,
+                                                                     target_rpy,
+                                                                     target_vel
+                                                                     )
+        rpm = self._dslPIDAttitudeControl(thrust,
+                                          cur_quat,
+                                          computed_target_rpy,
+                                          target_rpy_rates
+                                          )
 
         action = rpm
         action = self.KF * action**2
         if self.env.QUAD_TYPE == 2:
-            action = np.array([action[0]+action[3], action[1]+action[2]])
+            action = np.array([action[0] + action[3], action[1] + action[2]])
 
         return action
 
@@ -179,16 +177,16 @@ class PID(BaseController):
         cur_rotation = np.array(p.getMatrixFromQuaternion(cur_quat)).reshape(3, 3)
         pos_e = target_pos - cur_pos
         vel_e = target_vel - cur_vel
-        self.integral_pos_e = self.integral_pos_e + pos_e*self.control_timestep
+        self.integral_pos_e = self.integral_pos_e + pos_e * self.control_timestep
         self.integral_pos_e = np.clip(self.integral_pos_e, -2., 2.)
         self.integral_pos_e[2] = np.clip(self.integral_pos_e[2], -0.15, .15)
 
         # PID target thrust.
         target_thrust = np.multiply(self.P_COEFF_FOR, pos_e) \
-                        + np.multiply(self.I_COEFF_FOR, self.integral_pos_e) \
-                        + np.multiply(self.D_COEFF_FOR, vel_e) + np.array([0, 0, self.GRAVITY])
-        scalar_thrust = max(0., np.dot(target_thrust, cur_rotation[:,2]))
-        thrust = (math.sqrt(scalar_thrust / (4*self.KF)) - self.PWM2RPM_CONST) / self.PWM2RPM_SCALE
+            + np.multiply(self.I_COEFF_FOR, self.integral_pos_e) \
+            + np.multiply(self.D_COEFF_FOR, vel_e) + np.array([0, 0, self.GRAVITY])
+        scalar_thrust = max(0., np.dot(target_thrust, cur_rotation[:, 2]))
+        thrust = (math.sqrt(scalar_thrust / (4 * self.KF)) - self.PWM2RPM_CONST) / self.PWM2RPM_SCALE
         target_z_ax = target_thrust / np.linalg.norm(target_thrust)
         target_x_c = np.array([math.cos(target_rpy[2]), math.sin(target_rpy[2]), 0])
         target_y_ax = np.cross(target_z_ax, target_x_c) / np.linalg.norm(np.cross(target_z_ax, target_x_c))
@@ -224,20 +222,20 @@ class PID(BaseController):
         cur_rotation = np.array(p.getMatrixFromQuaternion(cur_quat)).reshape(3, 3)
         cur_rpy = np.array(p.getEulerFromQuaternion(cur_quat))
         target_quat = (Rotation.from_euler('XYZ', target_euler, degrees=False)).as_quat()
-        w,x,y,z = target_quat
+        w, x, y, z = target_quat
         target_rotation = (Rotation.from_quat([w, x, y, z])).as_matrix()
-        rot_matrix_e = np.dot((target_rotation.transpose()),cur_rotation) - np.dot(cur_rotation.transpose(),target_rotation)
+        rot_matrix_e = np.dot((target_rotation.transpose()), cur_rotation) - np.dot(cur_rotation.transpose(), target_rotation)
         rot_e = np.array([rot_matrix_e[2, 1], rot_matrix_e[0, 2], rot_matrix_e[1, 0]])
-        rpy_rates_e = target_rpy_rates - (cur_rpy - self.last_rpy)/self.control_timestep
+        rpy_rates_e = target_rpy_rates - (cur_rpy - self.last_rpy) / self.control_timestep
         self.last_rpy = cur_rpy
-        self.integral_rpy_e = self.integral_rpy_e - rot_e*self.control_timestep
+        self.integral_rpy_e = self.integral_rpy_e - rot_e * self.control_timestep
         self.integral_rpy_e = np.clip(self.integral_rpy_e, -1500., 1500.)
         self.integral_rpy_e[0:2] = np.clip(self.integral_rpy_e[0:2], -1., 1.)
 
         # PID target torques.
         target_torques = - np.multiply(self.P_COEFF_TOR, rot_e) \
-                         + np.multiply(self.D_COEFF_TOR, rpy_rates_e) \
-                         + np.multiply(self.I_COEFF_TOR, self.integral_rpy_e)
+            + np.multiply(self.D_COEFF_TOR, rpy_rates_e) \
+            + np.multiply(self.I_COEFF_TOR, self.integral_rpy_e)
         target_torques = np.clip(target_torques, -3200, 3200)
         pwm = thrust + np.dot(self.MIXER_MATRIX, target_torques)
         pwm = np.clip(pwm, self.MIN_PWM, self.MAX_PWM)
@@ -249,12 +247,18 @@ class PID(BaseController):
            errors for both position and attitude are set to zero.
         '''
         self.model = self.get_prior(self.env, self.prior_info)
-        self.GRAVITY = self.g * self.model.quad_mass # The gravitational force (g*M) acting on each drone.
+        self.GRAVITY = self.g * self.model.quad_mass  # The gravitational force (g*M) acting on each drone.
         self.env.reset()
         self.reset_before_run()
 
     def reset_before_run(self, obs=None, info=None, env=None):
-        '''Reinitialize just the controller before a new run. '''
+        '''Reinitialize just the controller before a new run.
+
+        Args:
+            obs (ndarray): The initial observation for the new run.
+            info (dict): The first info of the new run.
+            env (BenchmarkEnv): The environment to be used for the new run.
+        '''
         # Clear PID control variables.
         self.integral_pos_e = np.zeros(3)
         self.last_rpy = np.zeros(3)
@@ -262,7 +266,7 @@ class PID(BaseController):
         self.setup_results_dict()
 
     def close(self):
-        '''Shuts down and cleans up lingering resources. '''
+        '''Shuts down and cleans up lingering resources.'''
         self.env.close()
 
     def save(self, path):

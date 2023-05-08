@@ -1,4 +1,5 @@
-'''Linear Quadratic Regulator (LQR) utilities. '''
+'''Linear Quadratic Regulator (LQR) utilities.'''
+
 import numpy as np
 import scipy.linalg
 

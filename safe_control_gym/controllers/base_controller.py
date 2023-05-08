@@ -1,4 +1,4 @@
-'''Base controller. '''
+'''Base controller.'''
 
 from abc import ABC, abstractmethod
 
@@ -6,7 +6,7 @@ import torch
 
 
 class BaseController(ABC):
-    '''Template for controller/agent, implement the following methods as needed. '''
+    '''Template for controller/agent, implement the following methods as needed.'''
 
     def __init__(self,
                  env_func,
@@ -87,7 +87,7 @@ class BaseController(ABC):
 
     @abstractmethod
     def reset(self):
-        '''Do initializations for training or evaluation. '''
+        '''Do initializations for training or evaluation.'''
         raise NotImplementedError
 
     def reset_before_run(self, obs=None, info=None, env=None):
@@ -102,7 +102,7 @@ class BaseController(ABC):
 
     @abstractmethod
     def close(self):
-        '''Shuts down and cleans up lingering resources. '''
+        '''Shuts down and cleans up lingering resources.'''
         raise NotImplementedError
 
     def save(self,
@@ -126,7 +126,7 @@ class BaseController(ABC):
         return
 
     def setup_results_dict(self):
-        '''Setup the results dictionary to store run information. '''
+        '''Setup the results dictionary to store run information.'''
         self.results_dict = {}
 
     def get_prior(self, env, prior_info={}):
@@ -171,17 +171,17 @@ class BaseController(ABC):
             SymbolicModel: CasAdi prior model.
         '''
         if not prior_info:
-            prior_info = getattr(self, "prior_info", {})
-        prior_prop = prior_info.get("prior_prop", {})
+            prior_info = getattr(self, 'prior_info', {})
+        prior_prop = prior_info.get('prior_prop', {})
 
         # randomize prior prop, similar to randomizing the inertial_prop in BenchmarkEnv
         # this can simulate the estimation errors in the prior model
-        randomize_prior_prop = prior_info.get("randomize_prior_prop", False)
-        prior_prop_rand_info = prior_info.get("prior_prop_rand_info", {})
+        randomize_prior_prop = prior_info.get('randomize_prior_prop', False)
+        prior_prop_rand_info = prior_info.get('prior_prop_rand_info', {})
         if randomize_prior_prop and prior_prop_rand_info:
             # check keys, this is due to the current implementation of BenchmarkEnv._randomize_values_by_info()
             for k in prior_prop_rand_info:
-                assert k in prior_prop, "A prior param to randomize does not have a base value in prior_prop."
+                assert k in prior_prop, 'A prior param to randomize does not have a base value in prior_prop.'
             prior_prop = env._randomize_values_by_info(prior_prop, prior_prop_rand_info)
 
         # Note we only reset the symbolic model when prior_prop is nonempty

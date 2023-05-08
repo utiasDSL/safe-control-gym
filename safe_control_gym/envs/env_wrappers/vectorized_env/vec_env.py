@@ -1,12 +1,9 @@
-"""Adapted from OpenAI Baselines. 
+'''Adapted from OpenAI Baselines.
 
 See also:
     * https://github.com/openai/baselines/blob/master/baselines/common/vec_env/vec_env.py
     * https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/common/vec_env/base_vec_env.py
-
-"""
-import os
-import numpy as np
+'''
 
 from abc import ABC, abstractmethod
 
@@ -14,12 +11,11 @@ from safe_control_gym.envs.env_wrappers.vectorized_env.vec_env_utils import tile
 
 
 class VecEnv(ABC):
-    """An abstract asynchronous, vectorized environment.
-    
+    '''An abstract asynchronous, vectorized environment.
+
     Used to batch data from multiple copies of an environment, so that each observation becomes a
     batch of observations, and expected action is a batch of actions to be applied per-environment.
-
-    """
+    '''
     closed = False
     viewer = None
     metadata = {'render.modes': ['human', 'rgb_array']}
@@ -35,43 +31,38 @@ class VecEnv(ABC):
 
     @abstractmethod
     def reset(self):
-        """Reset all the environments and return an array of observations, or a dict of observation arrays.
+        '''Reset all the environments and return an array of observations, or a dict of observation arrays.
 
         If step_async is still doing work, that work will be cancelled and step_wait() should not
         be called until step_async() is invoked again.
-
-        """
+        '''
         pass
 
     @abstractmethod
     def step_async(self,
                    actions
                    ):
-        """Tell all the environments to start taking a step with the given actions.
+        '''Tell all the environments to start taking a step with the given actions.
 
         Call step_wait() to get the results of the step.
         You should not call this if a step_async run is already pending.
-
-        """
+        '''
         pass
 
     @abstractmethod
     def step_wait(self):
-        """Wait for the step taken with step_async().
+        '''Wait for the step taken with step_async().
 
         Returns (obs, rews, dones, infos):
             - obs: an array of observations, or a dict of arrays of observations.
             - rews: an array of rewards
-            - dones: an array of "episode done" booleans
+            - dones: an array of 'episode done' booleans
             - infos: a sequence of info objects
-
-        """
+        '''
         pass
 
     def close_extras(self):
-        """Clean up the  extra resources. Only runs when not self.closed.
-
-        """
+        '''Clean up the  extra resources. Only runs when not self.closed.'''
         pass
 
     def close(self):
@@ -85,18 +76,14 @@ class VecEnv(ABC):
     def step(self,
              actions
              ):
-        """Step the environments synchronously.
-
-        """
+        '''Step the environments synchronously.'''
         self.step_async(actions)
         return self.step_wait()
 
     def render(self,
                mode='human'
                ):
-        """Display environment via a viewer.
-
-        """
+        '''Display environment via a viewer.'''
         imgs = self.get_images()
         bigimg = tile_images(imgs)
         if mode == 'human':
@@ -108,9 +95,7 @@ class VecEnv(ABC):
             raise NotImplementedError
 
     def get_images(self):
-        """Return RGB images from each environment.
-
-        """
+        '''Return RGB images from each environment.'''
         raise NotImplementedError
 
     @property
@@ -128,16 +113,12 @@ class VecEnv(ABC):
 
     @abstractmethod
     def get_attr(self, attr_name, indices=None):
-        """Return attribute from vectorized environment.
-
-        """
+        '''Return attribute from vectorized environment.'''
         pass
 
     @abstractmethod
     def set_attr(self, attr_name, values, indices=None):
-        """Set attribute inside vectorized environments.
-
-        """
+        '''Set attribute inside vectorized environments.'''
         pass
 
     @abstractmethod
@@ -146,15 +127,13 @@ class VecEnv(ABC):
                    method_args=None,
                    method_kwargs=None,
                    indices=None):
-        """Call instance methods of vectorized environments.
-
-        """
+        '''Call instance methods of vectorized environments.'''
         raise NotImplementedError()
 
     def _get_indices(self,
                      indices
                      ):
-        """Convert a flexibly-typed reference to environment indices to an implied list of indices."""
+        '''Convert a flexibly-typed reference to environment indices to an implied list of indices.'''
         if indices is None:
             indices = range(self.num_envs)
         elif isinstance(indices, int):
@@ -163,7 +142,7 @@ class VecEnv(ABC):
 
 
 class VecEnvWrapper(VecEnv):
-    """An environment wrapper that applies to an entire batch of environments at once."""
+    '''An environment wrapper that applies to an entire batch of environments at once.'''
 
     def __init__(self,
                  venv,
@@ -200,7 +179,7 @@ class VecEnvWrapper(VecEnv):
                     ):
         if name.startswith('_'):
             raise AttributeError(
-                "attempted to get missing private attribute '{}'".format(name))
+                f'attempted to get missing private attribute \'{name}\'')
         return getattr(self.venv, name)
 
     def get_attr(self,

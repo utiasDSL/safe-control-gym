@@ -1,14 +1,16 @@
-from collections import defaultdict
+'''SAC Utils.'''
+
 from copy import deepcopy
+from collections import defaultdict
+
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from gymnasium.spaces import Box, Discrete
+from gymnasium.spaces import Box
 
 from safe_control_gym.math_and_models.distributions import Normal, Categorical
-from safe_control_gym.math_and_models.neural_networks import MLP, CNN, RNN, init_
-from safe_control_gym.math_and_models.normalization import BaseNormalizer, MeanStdNormalizer, RewardStdNormalizer
+from safe_control_gym.math_and_models.neural_networks import MLP
 
 # -----------------------------------------------------------------------------------
 #                   Agent
@@ -16,7 +18,7 @@ from safe_control_gym.math_and_models.normalization import BaseNormalizer, MeanS
 
 
 class SACAgent:
-    """A SAC class that encapsulates model, optimizer and update functions."""
+    '''A SAC class that encapsulates model, optimizer and update functions.'''
 
     def __init__(self,
                  obs_space,
@@ -40,7 +42,7 @@ class SACAgent:
         self.use_entropy_tuning = use_entropy_tuning
 
         # model
-        self.ac = MLPActorCritic(obs_space, act_space, hidden_dims=[hidden_dim] * 2, activation="relu")
+        self.ac = MLPActorCritic(obs_space, act_space, hidden_dims=[hidden_dim] * 2, activation='relu')
         self.log_alpha = torch.tensor(np.log(init_temperature))
 
         if self.use_entropy_tuning:
@@ -63,48 +65,48 @@ class SACAgent:
 
     @property
     def alpha(self):
-        """Entropy-tuning parameter/temperature"""
+        '''Entropy-tuning parameter/temperature'''
         return self.log_alpha.exp()
 
     def to(self, device):
-        """Puts agent to device."""
+        '''Puts agent to device.'''
         self.ac.to(device)
         self.ac_targ.to(device)
         self.log_alpha = self.log_alpha.to(device)
 
     def train(self):
-        """Sets training mode."""
+        '''Sets training mode.'''
         self.ac.train()
         self.log_alpha.requires_grad = True
 
     def eval(self):
-        """Sets evaluation mode."""
+        '''Sets evaluation mode.'''
         self.ac.eval()
         self.log_alpha.requires_grad = False
 
     def state_dict(self):
-        """Snapshots agent state."""
+        '''Snapshots agent state.'''
         return {
-            "ac": self.ac.state_dict(),
-            "log_alpha": self.log_alpha,
-            "ac_targ": self.ac_targ.state_dict(),
-            "actor_opt": self.actor_opt.state_dict(),
-            "critic_opt": self.critic_opt.state_dict(),
-            "alpha_opt": self.alpha_opt.state_dict()
+            'ac': self.ac.state_dict(),
+            'log_alpha': self.log_alpha,
+            'ac_targ': self.ac_targ.state_dict(),
+            'actor_opt': self.actor_opt.state_dict(),
+            'critic_opt': self.critic_opt.state_dict(),
+            'alpha_opt': self.alpha_opt.state_dict()
         }
 
     def load_state_dict(self, state_dict):
-        """Restores agent state."""
-        self.ac.load_state_dict(state_dict["ac"])
-        self.log_alpha = state_dict["log_alpha"]
-        self.ac_targ.load_state_dict(state_dict["ac_targ"])
-        self.actor_opt.load_state_dict(state_dict["actor_opt"])
-        self.critic_opt.load_state_dict(state_dict["critic_opt"])
-        self.alpha_opt.load_state_dict(state_dict["alpha_opt"])
+        '''Restores agent state.'''
+        self.ac.load_state_dict(state_dict['ac'])
+        self.log_alpha = state_dict['log_alpha']
+        self.ac_targ.load_state_dict(state_dict['ac_targ'])
+        self.actor_opt.load_state_dict(state_dict['actor_opt'])
+        self.critic_opt.load_state_dict(state_dict['critic_opt'])
+        self.alpha_opt.load_state_dict(state_dict['alpha_opt'])
 
     def compute_policy_loss(self, batch):
-        """Returns policy loss(es) given batch of data."""
-        obs = batch["obs"]
+        '''Returns policy loss(es) given batch of data.'''
+        obs = batch['obs']
         act, logp = self.ac.actor(obs, deterministic=False, with_logprob=True)
         q1 = self.ac.q1(obs, act)
         q2 = self.ac.q2(obs, act)
@@ -117,8 +119,8 @@ class SACAgent:
         return policy_loss, entropy_loss
 
     def compute_q_loss(self, batch):
-        """Returns q-value loss(es) given batch of data."""
-        obs, act, rew, next_obs, mask = batch["obs"], batch["act"], batch["rew"], batch["next_obs"], batch["mask"]
+        '''Returns q-value loss(es) given batch of data.'''
+        obs, act, rew, next_obs, mask = batch['obs'], batch['act'], batch['rew'], batch['next_obs'], batch['mask']
         q1 = self.ac.q1(obs, act)
         q2 = self.ac.q2(obs, act)
 
@@ -136,7 +138,7 @@ class SACAgent:
         return critic_loss
 
     def update(self, batch):
-        """Updates model parameters based on current training batch."""
+        '''Updates model parameters based on current training batch.'''
         resutls = defaultdict(list)
 
         # actor update
@@ -159,9 +161,9 @@ class SACAgent:
         # update target networks
         soft_update(self.ac, self.ac_targ, self.tau)
 
-        resutls["policy_loss"] = policy_loss.item()
-        resutls["critic_loss"] = critic_loss.item()
-        resutls["entropy_loss"] = entropy_loss.item()
+        resutls['policy_loss'] = policy_loss.item()
+        resutls['critic_loss'] = critic_loss.item()
+        resutls['entropy_loss'] = entropy_loss.item()
         return resutls
 
 
@@ -248,14 +250,14 @@ class MLPQFunction(nn.Module):
 
 
 class MLPActorCritic(nn.Module):
-    """Model for the actor-critic agent.
+    '''Model for the actor-critic agent.
 
     Attributes:
         actor (MLPActor|MLPActorDiscrete): policy network.
         q1, q2 (MLPQFunction): q-value networks.
-    """
+    '''
 
-    def __init__(self, obs_space, act_space, hidden_dims=(64, 64), activation="relu"):
+    def __init__(self, obs_space, act_space, hidden_dims=(64, 64), activation='relu'):
         super().__init__()
 
         obs_dim = obs_space.shape[0]
@@ -274,7 +276,7 @@ class MLPActorCritic(nn.Module):
             low = torch.FloatTensor(low)
             high = torch.FloatTensor(high)
             # Rescale action from [-1, 1] to [low, high]
-            unscale_fn = lambda x: low.to(x.device) + (0.5 * (x + 1.0) * (high.to(x.device) - low.to(x.device)))
+            def unscale_fn(x): return low.to(x.device) + (0.5 * (x + 1.0) * (high.to(x.device) - low.to(x.device)))
             self.actor = MLPActor(obs_dim, act_dim, hidden_dims, activation, postprocess_fn=unscale_fn)
 
         # Q functions
@@ -292,14 +294,14 @@ class MLPActorCritic(nn.Module):
 
 
 class SACBuffer(object):
-    """Storage for replay buffer during training.
+    '''Storage for replay buffer during training.
 
     Attributes:
         max_size (int): maximum size of the replay buffer.
         batch_size (int): number of samples (steps) per batch.
         scheme (dict): describs shape & other info of data to be stored.
         keys (list): names of all data from scheme.
-    """
+    '''
 
     def __init__(self, obs_space, act_space, max_size, batch_size=None):
         super().__init__()
@@ -314,44 +316,44 @@ class SACBuffer(object):
 
         N = max_size
         self.scheme = {
-            "obs": {
-                "vshape": (N, *obs_dim)
+            'obs': {
+                'vshape': (N, *obs_dim)
             },
-            "next_obs": {
-                "vshape": (N, *obs_dim)
+            'next_obs': {
+                'vshape': (N, *obs_dim)
             },
-            "act": {
-                "vshape": (N, act_dim)
+            'act': {
+                'vshape': (N, act_dim)
             },
-            "rew": {
-                "vshape": (N, 1)
+            'rew': {
+                'vshape': (N, 1)
             },
-            "mask": {
-                "vshape": (N, 1),
-                "init": np.ones
+            'mask': {
+                'vshape': (N, 1),
+                'init': np.ones
             }
         }
         self.keys = list(self.scheme.keys())
         self.reset()
 
     def reset(self):
-        """Allocate space for containers."""
+        '''Allocate space for containers.'''
         for k, info in self.scheme.items():
-            assert "vshape" in info, "Scheme must define vshape for {}".format(k)
-            vshape = info["vshape"]
-            dtype = info.get("dtype", np.float32)
-            init = info.get("init", np.zeros)
+            assert 'vshape' in info, f'Scheme must define vshape for {k}'
+            vshape = info['vshape']
+            dtype = info.get('dtype', np.float32)
+            init = info.get('init', np.zeros)
             self.__dict__[k] = init(vshape, dtype=dtype)
 
         self.pos = 0
         self.buffer_size = 0
 
     def __len__(self):
-        """Returns current size of the buffer."""
+        '''Returns current size of the buffer.'''
         return self.buffer_size
 
     def state_dict(self):
-        """Returns a snapshot of current buffer."""
+        '''Returns a snapshot of current buffer.'''
         state = dict(
             pos=self.pos,
             buffer_size=self.buffer_size,
@@ -362,19 +364,19 @@ class SACBuffer(object):
         return state
 
     def load_state_dict(self, state):
-        """Restores buffer from previous state."""
+        '''Restores buffer from previous state.'''
         for k, v in state.items():
             self.__dict__[k] = v
 
     def push(self, batch):
-        """Inserts transition step data (as dict) to storage."""
+        '''Inserts transition step data (as dict) to storage.'''
         # batch size
         k = list(batch.keys())[0]
         n = batch[k].shape[0]
 
         for k, v in batch.items():
-            shape = self.scheme[k]["vshape"][1:]
-            dtype = self.scheme[k].get("dtype", np.float32)
+            shape = self.scheme[k]['vshape'][1:]
+            dtype = self.scheme[k].get('dtype', np.float32)
             v_ = np.asarray(v, dtype=dtype).reshape((n,) + shape)
 
             if self.pos + n <= self.max_size:
@@ -390,14 +392,14 @@ class SACBuffer(object):
         self.pos = (self.pos + n) % self.max_size
 
     def sample(self, batch_size=None, device=None):
-        """Returns data batch."""
+        '''Returns data batch.'''
         if not batch_size:
             batch_size = self.batch_size
 
         indices = np.random.randint(0, len(self), size=batch_size)
         batch = {}
         for k, info in self.scheme.items():
-            shape = info["vshape"][1:]
+            shape = info['vshape'][1:]
             v = self.__dict__[k].reshape(-1, *shape)[indices]
             if device is None:
                 batch[k] = torch.as_tensor(v)
@@ -412,12 +414,12 @@ class SACBuffer(object):
 
 
 def soft_update(source, target, tau):
-    """Synchronizes target networks with exponential moving average."""
+    '''Synchronizes target networks with exponential moving average.'''
     for target_param, param in zip(target.parameters(), source.parameters()):
         target_param.data.copy_(target_param.data * (1.0 - tau) + param.data * tau)
 
 
 def hard_update(source, target):
-    """Synchronizes target networks by copying over parameters directly."""
+    '''Synchronizes target networks by copying over parameters directly.'''
     for target_param, param in zip(target.parameters(), source.parameters()):
         target_param.data.copy_(param.data)

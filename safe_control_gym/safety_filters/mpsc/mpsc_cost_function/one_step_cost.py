@@ -1,10 +1,10 @@
-'''Standard cost function for MPSC, minimizing change in the next step's input. '''
+'''Standard cost function for MPSC, minimizing change in the next step's input.'''
 
 from safe_control_gym.safety_filters.mpsc.mpsc_cost_function.abstract_cost import MPSC_COST
 
 
 class ONE_STEP_COST(MPSC_COST):
-    '''Standard one step MPSC Cost Function. '''
+    '''Standard one step MPSC Cost Function.'''
 
     def get_cost(self, opti_dict):
         '''Returns the cost function for the MPSC optimization in symbolic form.

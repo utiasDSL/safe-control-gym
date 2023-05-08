@@ -10,12 +10,12 @@ class ConstantSchedule:
 
     def __call__(self, steps=1):
         return self.val
-    
+
     def state_dict(self):
         return {}
-    
+
     def load_state_dict(self, state):
-        pass 
+        pass
 
 
 class LinearSchedule:
@@ -35,9 +35,9 @@ class LinearSchedule:
         val = self.current
         self.current = self.bound(self.current + self.inc * steps, self.end)
         return val
-    
+
     def state_dict(self):
-        return {"current": self.current}
-    
+        return {'current': self.current}
+
     def load_state_dict(self, state):
-        self.current = state["current"] 
+        self.current = state['current']

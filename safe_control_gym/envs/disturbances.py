@@ -1,14 +1,10 @@
-"""Disturbances.
+'''Disturbances.'''
 
-"""
-from enum import Enum
 import numpy as np
 
 
 class Disturbance:
-    """Base class for disturbance or noise applied to inputs or dyanmics.
-
-    """
+    '''Base class for disturbance or noise applied to inputs or dyanmics.'''
 
     def __init__(self,
                  env,
@@ -31,38 +27,27 @@ class Disturbance:
               target,
               env
               ):
-        """Default is identity.
-
-        """
+        '''Default is identity.'''
         return target
-    
+
     def seed(self, env):
-        """Reset seed from env.
-        
-        """
+        '''Reset seed from env.'''
         self.np_random = env.np_random
-        
 
 
 class DisturbanceList:
-    """Combine list of disturbances as one.
-
-    """
+    '''Combine list of disturbances as one.'''
 
     def __init__(self,
                  disturbances
                  ):
-        """Initialization of the list of disturbances.
-
-        """
+        '''Initialization of the list of disturbances.'''
         self.disturbances = disturbances
 
     def reset(self,
               env
               ):
-        """Sequentially reset disturbances.
-
-        """
+        '''Sequentially reset disturbances.'''
         for disturb in self.disturbances:
             disturb.reset(env)
 
@@ -70,31 +55,26 @@ class DisturbanceList:
               target,
               env
               ):
-        """Sequentially apply disturbances.
-
-        """
+        '''Sequentially apply disturbances.'''
         disturbed = target
         for disturb in self.disturbances:
             disturbed = disturb.apply(disturbed, env)
         return disturbed
-    
+
     def seed(self, env):
-        """Reset seed from env.
-        
-        """
+        '''Reset seed from env.'''
         for disturb in self.disturbances:
             disturb.seed(env)
 
 
 class ImpulseDisturbance(Disturbance):
-    """Impulse applied during a short time interval.
-    
+    '''Impulse applied during a short time interval.
+
     Examples:
         * single step, square (duration=1, decay_rate=1): ______|-|_______
         * multiple step, square (duration>1, decay_rate=1): ______|-----|_____
-        * multiple step, triangle (duration>1, decay_rate<1): ______/\_____
-
-    """
+        * multiple step, triangle (duration>1, decay_rate<1): ______/\\_____
+    '''
 
     def __init__(self,
                  env,
@@ -144,11 +124,10 @@ class ImpulseDisturbance(Disturbance):
 
 
 class StepDisturbance(Disturbance):
-    """Constant disturbance at all time steps (but after offset).
-    
-    Applied after offset step (randomized or given): _______|---------
+    '''Constant disturbance at all time steps (but after offset).
 
-    """
+    Applied after offset step (randomized or given): _______|---------
+    '''
 
     def __init__(self,
                  env,
@@ -183,8 +162,9 @@ class StepDisturbance(Disturbance):
         disturbed = target + noise
         return disturbed
 
+
 class UniformNoise(Disturbance):
-    """i.i.d uniform noise ~ U(low, high) per time step."""
+    '''i.i.d uniform noise ~ U(low, high) per time step.'''
 
     def __init__(self, env, dim, mask=None, low=0.0, high=1.0, **kwargs):
         super().__init__(env, dim, mask)
@@ -195,14 +175,14 @@ class UniformNoise(Disturbance):
         elif isinstance(low, list):
             self.low = np.asarray(low)
         else:
-            raise ValueError("[ERROR] UniformNoise.__init__(): low must be specified as a float or list.")
+            raise ValueError('[ERROR] UniformNoise.__init__(): low must be specified as a float or list.')
 
         if isinstance(high, float):
             self.high = np.asarray([high] * self.dim)
         elif isinstance(low, list):
             self.high = np.asarray(high)
         else:
-            raise ValueError("[ERROR] UniformNoise.__init__(): high must be specified as a float or list.")
+            raise ValueError('[ERROR] UniformNoise.__init__(): high must be specified as a float or list.')
 
     def apply(self, target, env):
         noise = self.np_random.uniform(self.low, self.high, size=self.dim)
@@ -213,9 +193,7 @@ class UniformNoise(Disturbance):
 
 
 class WhiteNoise(Disturbance):
-    """I.i.d Gaussian noise per time step.
-
-    """
+    '''I.i.d Gaussian noise per time step.'''
 
     def __init__(self,
                  env,
@@ -231,17 +209,14 @@ class WhiteNoise(Disturbance):
         elif isinstance(std, list):
             self.std = np.asarray(std)
         else:
-            raise ValueError("[ERROR] WhiteNoise.__init__(): std must be specified as a float or list.")
-        assert self.dim == len(self.std), "std shape should be the same as dim."
+            raise ValueError('[ERROR] WhiteNoise.__init__(): std must be specified as a float or list.')
+        assert self.dim == len(self.std), 'std shape should be the same as dim.'
 
     def apply(self,
               target,
               env
               ):
         noise = self.np_random.normal(0, self.std, size=self.dim)
-        # # TODO: hack for debug 
-        # noise = np.clip(noise, -self.std, self.std)
-
         if self.mask is not None:
             noise *= self.mask
         disturbed = target + noise
@@ -249,18 +224,14 @@ class WhiteNoise(Disturbance):
 
 
 class BrownianNoise(Disturbance):
-    """Simple random walk noise.
-
-    """
+    '''Simple random walk noise.'''
 
     def __init__(self):
         super().__init__()
 
 
 class PeriodicNoise(Disturbance):
-    """Sinuisodal noise.
-
-    """
+    '''Sinuisodal noise.'''
 
     def __init__(self,
                  env,
@@ -289,11 +260,10 @@ class PeriodicNoise(Disturbance):
 
 
 class StateDependentDisturbance(Disturbance):
-    """Time varying and state varying, e.g. friction.
-    
-    Here to provide an explicit form, can also enable friction in simulator directly.
+    '''Time varying and state varying, e.g. friction.
 
-    """
+    Here to provide an explicit form, can also enable friction in simulator directly.
+    '''
 
     def __init__(self,
                  env,
@@ -304,32 +274,30 @@ class StateDependentDisturbance(Disturbance):
         super().__init__()
 
 
-DISTURBANCE_TYPES = {"impulse": ImpulseDisturbance,
-                     "step": StepDisturbance,
-                     "uniform": UniformNoise,
-                     "white_noise": WhiteNoise,
-                     "periodic": PeriodicNoise,
+DISTURBANCE_TYPES = {'impulse': ImpulseDisturbance,
+                     'step': StepDisturbance,
+                     'uniform': UniformNoise,
+                     'white_noise': WhiteNoise,
+                     'periodic': PeriodicNoise,
                      }
 
 
 def create_disturbance_list(disturbance_specs, shared_args, env):
-    """Creates a DisturbanceList from yaml disturbance specification.
+    '''Creates a DisturbanceList from yaml disturbance specification.
 
     Args:
         disturbance_specs (list): List of dicts defining the disturbances info.
         shared_args (dict): args shared across the disturbances in the list.
         env (BenchmarkEnv): Env for which the constraints will be applied
-    """
+    '''
     disturb_list = []
     # Each disturbance for the mode.
     for disturb in disturbance_specs:
-        assert "disturbance_func" in disturb.keys(), "[ERROR]: Every distrubance must specify a disturbance_func."
-        disturb_func = disturb["disturbance_func"]
-        assert disturb_func in DISTURBANCE_TYPES, "[ERROR] in BenchmarkEnv._setup_disturbances(), disturbance type not available."
+        assert 'disturbance_func' in disturb.keys(), '[ERROR]: Every distrubance must specify a disturbance_func.'
+        disturb_func = disturb['disturbance_func']
+        assert disturb_func in DISTURBANCE_TYPES, '[ERROR] in BenchmarkEnv._setup_disturbances(), disturbance type not available.'
         disturb_cls = DISTURBANCE_TYPES[disturb_func]
-        cfg = {key: disturb[key] for key in disturb if key != "disturbance_func"}
+        cfg = {key: disturb[key] for key in disturb if key != 'disturbance_func'}
         disturb = disturb_cls(env, **shared_args, **cfg)
         disturb_list.append(disturb)
     return DisturbanceList(disturb_list)
-            
-

@@ -4,9 +4,7 @@ import numpy as np
 
 
 class CloudpickleWrapper(object):
-    """Uses cloudpickle to serialize contents and stop multiprocessing from using pickle.
-
-    """
+    '''Uses cloudpickle to serialize contents and stop multiprocessing from using pickle.'''
 
     def __init__(self, x):
         self.x = x
@@ -22,15 +20,14 @@ class CloudpickleWrapper(object):
 
 @contextlib.contextmanager
 def clear_mpi_env_vars():
-    """From mpi4py import MPI will call MPI_Init by default.  
-    
+    '''From mpi4py import MPI will call MPI_Init by default.
+
     If the child process has MPI environment variables, MPI will think that the child process
     is an MPI process just like the parent and do bad things such as hang.
-    
+
     This context manager is a hacky way to clear those environment variables temporarily such
     as when we are starting multiprocessing Processes.
-
-    """
+    '''
     removed_environment = {}
     for k, v in list(os.environ.items()):
         for prefix in ['OMPI_', 'PMI_']:
@@ -44,18 +41,17 @@ def clear_mpi_env_vars():
 
 
 def tile_images(img_nhwc):
-    """Tile N images into one big PxQ image.
+    '''Tile N images into one big PxQ image.
 
     (P,Q) are chosen to be as close as possible, and if N is square, then P=Q.
 
-    Args: 
+    Args:
         img_nhwc: list or array of images, ndim=4 once turned into array,
                   n = batch index, h = height, w = width, c = channel.
 
     Returns:
         img_Hh_Ww_c: ndarray with ndim=3.
-
-    """
+    '''
     img_nhwc = np.asarray(img_nhwc)
     N, h, w, c = img_nhwc.shape
     H = int(np.ceil(np.sqrt(N)))
@@ -69,9 +65,6 @@ def tile_images(img_nhwc):
 
 
 def _flatten_obs(obs):
-    """
-
-    """
     assert isinstance(obs, (list, tuple))
     assert len(obs) > 0
 
@@ -83,10 +76,8 @@ def _flatten_obs(obs):
 
 
 def _unflatten_obs(obs):
-    """
-    
-    """
     assert isinstance(obs, (np.ndarray, dict))
+
     def split_batch(data):
         return [d[0] for d in np.split(data, len(data))]
     if isinstance(obs, dict):
@@ -100,9 +91,6 @@ def _unflatten_obs(obs):
 
 
 def _flatten_list(l):
-    """
-    
-    """
     assert isinstance(l, (list, tuple))
     assert len(l) > 0
     assert all([len(l_) > 0 for l_ in l])

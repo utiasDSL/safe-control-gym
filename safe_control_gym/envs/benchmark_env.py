@@ -19,32 +19,28 @@ from safe_control_gym.envs.disturbances import create_disturbance_list
 
 
 class Cost(str, Enum):
-    '''Reward/cost functions enumeration class. '''
+    '''Reward/cost functions enumeration class.'''
 
     RL_REWARD = 'rl_reward'  # Default RL reward function.
     QUADRATIC = 'quadratic'  # Quadratic cost.
 
 
 class Task(str, Enum):
-    '''Environment tasks enumeration class. '''
+    '''Environment tasks enumeration class.'''
 
     STABILIZATION = 'stabilization'  # Stabilization task.
     TRAJ_TRACKING = 'traj_tracking'  # Trajectory tracking task.
 
 
 class Environment(str, Enum):
-    '''Environment enumeration class. '''
+    '''Environment enumeration class.'''
 
     CARTPOLE = 'cartpole'  # Cartpole system
     QUADROTOR = 'quadrotor'  # Quadrotor, both 1D and 2D
 
 
 class BenchmarkEnv(gym.Env, ABC):
-    '''Benchmark environment base class.
-
-    Attributes:
-        id (int): Unique identifier of the current env instance (among other instances).
-    '''
+    '''Benchmark environment base class.'''
 
     _count = 0  # Class variable, count env instance in current process.
     NAME = 'base'  # Environment name.
@@ -127,10 +123,10 @@ class BenchmarkEnv(gym.Env, ABC):
             adversary_disturbance_scale (float, optional): Parameterizes magnitude of adversary disturbance.
 
         Attributes:
-            id (int): Unique identifier of the current env instance (among other instances).
+            idx (int): Unique identifier of the current env instance (among other instances).
         '''
         # Assign unique ID based on env instance count.
-        self.id = self.__class__._count
+        self.idx = self.__class__._count
         self.__class__._count += 1
         # Directory to save any env output.
         if output_dir is None:
@@ -259,7 +255,7 @@ class BenchmarkEnv(gym.Env, ABC):
             )
 
     def _check_initial_reset(self):
-        '''Makes sure that .reset() is called at least once before .step(). '''
+        '''Makes sure that .reset() is called at least once before .step().'''
         if not self.initial_reset:
             raise RuntimeError(
                 '[ERROR] You must call env.reset() at least once before using env.step().'
@@ -308,7 +304,7 @@ class BenchmarkEnv(gym.Env, ABC):
         raise NotImplementedError
 
     def _setup_disturbances(self):
-        '''Creates attributes and action spaces for the disturbances. '''
+        '''Creates attributes and action spaces for the disturbances.'''
         # Default: no passive disturbances.
         self.disturbances = {}
         if self.DISTURBANCES is not None:
@@ -326,7 +322,7 @@ class BenchmarkEnv(gym.Env, ABC):
             self.adversary_observation_space = self.observation_space
 
     def _setup_constraints(self):
-        '''Creates a list of constraints as an attribute. '''
+        '''Creates a list of constraints as an attribute.'''
         self.constraints = None
         self.num_constraints = 0
         if self.CONSTRAINTS is not None:
@@ -335,7 +331,7 @@ class BenchmarkEnv(gym.Env, ABC):
 
     @abstractmethod
     def _set_action_space(self):
-        '''Defines the action space of the environment. '''
+        '''Defines the action space of the environment.'''
         raise NotImplementedError
 
     @abstractmethod
@@ -384,7 +380,7 @@ class BenchmarkEnv(gym.Env, ABC):
         '''
         # Add initial constraint info (no action/input yet, so only state-based constraints)
         info['current_step'] = 0
-        if self.constraints is not None and not(self.constraints.state_constraints == []):
+        if self.constraints is not None and not (self.constraints.state_constraints == []):
             info['constraint_values'] = self.constraints.get_values(self, only_state=True)
         self.at_reset = False
         return obs, info
@@ -462,7 +458,7 @@ class BenchmarkEnv(gym.Env, ABC):
         '''
         if self.COST == Cost.RL_REWARD and self.TASK == Task.TRAJ_TRACKING and self.obs_goal_horizon > 0:
             wp_idx = [
-                min(next_step + i, self.X_GOAL.shape[0]-1)
+                min(next_step + i, self.X_GOAL.shape[0] - 1)
                 for i in range(self.obs_goal_horizon)
             ]
             goal_state = self.X_GOAL[wp_idx].flatten()
@@ -564,7 +560,7 @@ class BenchmarkEnv(gym.Env, ABC):
         else:
             raise ValueError('Trajectory plane should be in form of ab, where a and b can be {x, y, z}.')
         # Generate time stamps.
-        times = np.arange(0, traj_length+sample_time, sample_time) # sample time added to make reference one step longer than traj_length
+        times = np.arange(0, traj_length + sample_time, sample_time)  # sample time added to make reference one step longer than traj_length
         pos_ref_traj = np.zeros((len(times), 3))
         vel_ref_traj = np.zeros((len(times), 3))
         speed_traj = np.zeros((len(times), 1))
@@ -758,12 +754,12 @@ class BenchmarkEnv(gym.Env, ABC):
         '''
 
         # Print basic properties.
-        print('Trajectory type: %s' % traj_type)
-        print('Trajectory plane: %s' % traj_plane)
-        print('Trajectory length: %s sec' % traj_length)
-        print('Number of cycles: %d' % num_cycles)
-        print('Trajectory period: %.2f sec' % (traj_length / num_cycles))
-        print('Angular speed: %.2f rad/sec' % (2.0 * np.pi / (traj_length / num_cycles)))
+        print(f'Trajectory type: {traj_type}')
+        print(f'Trajectory plane: {traj_plane}')
+        print(f'Trajectory length: {traj_length} sec')
+        print(f'Number of cycles: {num_cycles}')
+        print(f'Trajectory period: {traj_length / num_cycles:.2f} sec')
+        print(f'Angular speed: {2.0 * np.pi / (traj_length / num_cycles):.2f} rad/sec')
         print(
             'Position bounds: x [%.2f, %.2f] m, y [%.2f, %.2f] m, z [%.2f, %.2f] m'
             % (min(pos_ref_traj[:, 0]), max(pos_ref_traj[:, 0]),

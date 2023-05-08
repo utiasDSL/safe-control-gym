@@ -1,43 +1,33 @@
-"""Neural networks.
+'''Neural networks.'''
 
-"""
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 
 def get_activation(name):
-    """
-
-    """
     return getattr(F, name) if name else lambda x: x
 
 
 def init_(module):
-    """
-
-    """
     nn.init.orthogonal_(module.weight.data, gain=1)
     nn.init.constant_(module.bias.data, 0)
     return module
 
 
 class MLP(nn.Module):
-    """MLP network (can be used as value or policy).
-
-    """
+    '''MLP network (can be used as value or policy).'''
 
     def __init__(self,
                  input_dim,
                  output_dim,
                  hidden_dims=[],
-                 act="relu",
+                 act='relu',
                  output_act=None,
                  init_weights=False,
                  **kwargs
                  ):
-        """Multi-layer perception/fully-connected network.
+        '''Multi-layer perception/fully-connected network.
 
         Args:
             input_dim (int): input dimension.
@@ -45,8 +35,7 @@ class MLP(nn.Module):
             hidden_dims (list): hidden layer dimensions.
             act (str): hidden layer activation.
             output_act (str): output layer activation.
-
-        """
+        '''
         super(MLP, self).__init__()
         dims = [input_dim] + hidden_dims + [output_dim]
         init_func = init_ if init_weights else lambda x: x
@@ -58,9 +47,6 @@ class MLP(nn.Module):
         self.output_act = get_activation(output_act)
 
     def forward(self, x):
-        """
-
-        """
         out = x
         for fc in self.fcs[:-1]:
             out = self.act(fc(out))
@@ -69,20 +55,15 @@ class MLP(nn.Module):
 
 
 class CNN(nn.Module):
-    """CNN network for encoding images.
-
-    """
+    '''CNN network for encoding images.'''
 
     def __init__(self,
                  input_dim,
                  output_dim,
-                 act="relu",
-                 output_act="relu",
+                 act='relu',
+                 output_act='relu',
                  **kwargs
                  ):
-        """
-
-        """
         super(CNN, self).__init__()
         self.convs = nn.ModuleList([
             init_(nn.Conv2d(input_dim, 32, 8, stride=4)),
@@ -95,9 +76,6 @@ class CNN(nn.Module):
         self.output_act = get_activation(output_act)
 
     def forward(self, x, normalize=False):
-        """
-
-        """
         out = x / 255.0 if normalize else x
         N = x.shape[0]
         for conv in self.convs:
@@ -107,18 +85,13 @@ class CNN(nn.Module):
 
 
 class RNN(nn.Module):
-    """RNN network (can be used as value or policy).
-
-    """
+    '''RNN network (can be used as value or policy).'''
 
     def __init__(self,
                  input_dim,
                  output_dim,
                  **kwargs
                  ):
-        """
-
-        """
         super(RNN, self).__init__()
         self.gru = nn.GRU(input_dim, output_dim)
         for name, param in self.gru.named_parameters():
@@ -128,9 +101,6 @@ class RNN(nn.Module):
                 nn.init.orthogonal_(param)
 
     def forward(self, x, hxs, masks):
-        """
-
-        """
         if x.size(0) == hxs.size(0):
             # Forward one step, x, hxs, masks: (N, *).
             x, hxs = self.gru(x.unsqueeze(0), (hxs * masks).unsqueeze(0))
@@ -139,7 +109,7 @@ class RNN(nn.Module):
             hxs = hxs.squeeze(0)
         else:
             # Forward a sequence, x, masks: (T, N, *), hxs: (N, *).
-            T, N = x.shape[:2]
+            T, _ = x.shape[:2]
             # Let's figure out which steps in the sequence have a zero for any agent.
             # We will always assume t=0 has a zero in it as that makes the logic cleaner.
             has_zeros = (masks.squeeze(-1)[1:] == 0.0).any(dim=-1).nonzero()

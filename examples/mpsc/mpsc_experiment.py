@@ -1,4 +1,4 @@
-'''This script tests the MPSC safety filter implementation. '''
+'''This script tests the MPSC safety filter implementation.'''
 
 import os
 import shutil

@@ -1,4 +1,4 @@
-'''Linear Quadratic Regulator (LQR) '''
+'''Linear Quadratic Regulator (LQR).'''
 
 from safe_control_gym.controllers.base_controller import BaseController
 from safe_control_gym.controllers.lqr.lqr_utils import get_cost_weight_matrix, compute_lqr_gain
@@ -6,7 +6,7 @@ from safe_control_gym.envs.benchmark_env import Task
 
 
 class LQR(BaseController):
-    '''Linear quadratic regulator. '''
+    '''Linear quadratic regulator.'''
 
     def __init__(
             self,
@@ -39,11 +39,11 @@ class LQR(BaseController):
                                      self.Q, self.R, self.discrete_dynamics)
 
     def reset(self):
-        '''Prepares for evaluation. '''
+        '''Prepares for evaluation.'''
         self.env.reset()
 
     def close(self):
-        '''Cleans up resources. '''
+        '''Cleans up resources.'''
         self.env.close()
 
     def select_action(self, obs, info=None):

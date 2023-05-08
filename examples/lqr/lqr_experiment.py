@@ -1,4 +1,4 @@
-'''A LQR and iLQR example. '''
+'''A LQR and iLQR example.'''
 
 import os
 import pickle

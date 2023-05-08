@@ -17,23 +17,23 @@ from safe_control_gym.math_and_models.neural_networks import MLP
 
 
 class CBF_NN(CBF):
-    '''Neural Network Based Control Barrier Function Class. '''
+    '''Neural Network Based Control Barrier Function Class.'''
 
     def __init__(self,
                  env_func,
                  # CBF Parameters
-                 slope: float=0.1,
-                 soft_constrained: bool=True,
-                 slack_weight: float=10000.0,
-                 slack_tolerance: float=1.0E-3,
+                 slope: float = 0.1,
+                 soft_constrained: bool = True,
+                 slack_weight: float = 10000.0,
+                 slack_tolerance: float = 1.0E-3,
                  # NN Parameters
-                 max_num_steps: int=250,
-                 hidden_dims: list=None,
-                 learning_rate: float=0.001,
-                 num_episodes: int=20,
-                 max_buffer_size: int=1.0E+6,
-                 train_batch_size: int=64,
-                 train_iterations: int=200,
+                 max_num_steps: int = 250,
+                 hidden_dims: list = None,
+                 learning_rate: float = 0.001,
+                 num_episodes: int = 20,
+                 max_buffer_size: int = 1.0E+6,
+                 train_batch_size: int = 64,
+                 train_iterations: int = 200,
                  **kwargs):
         '''
         CBF-QP safety filter with learned Lie derivative: The CBF's superlevel set defines a positively control invariant
@@ -82,7 +82,7 @@ class CBF_NN(CBF):
         self.setup_optimizer()
 
     def setup_optimizer(self):
-        '''Setup the certifying CBF problem. '''
+        '''Setup the certifying CBF problem.'''
         nx, nu = self.model.nx, self.model.nu
 
         # Define optimizer
@@ -237,7 +237,7 @@ class CBF_NN(CBF):
             loss (float): The loss of the batch.
         '''
         state, act, barrier_dot, barrier_dot_approx = batch['state'], batch['act'], batch['barrier_dot'], \
-                                                      batch['barrier_dot_approx']
+            batch['barrier_dot_approx']
 
         # Predict a and b vectors
         a_b = self.mlp(state)
@@ -265,7 +265,7 @@ class CBF_NN(CBF):
         self.opt.step()
 
     def reset(self):
-        '''Resets the safety filter. '''
+        '''Resets the safety filter.'''
         super().reset()
         if hasattr(self, 'buffer'):
             self.buffer.reset()

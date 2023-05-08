@@ -205,13 +205,13 @@ class CartPole(BenchmarkEnv):
             self.X_GOAL = np.hstack([self.TASK_INFO['stabilization_goal'][0], 0., 0., 0.])  # x = {x, x_dot, theta, theta_dot}.
         elif self.TASK == Task.TRAJ_TRACKING:
             POS_REF, VEL_REF, _ = self._generate_trajectory(traj_type=self.TASK_INFO['trajectory_type'],
-                                              traj_length=self.EPISODE_LEN_SEC,
-                                              num_cycles=self.TASK_INFO['num_cycles'],
-                                              traj_plane=self.TASK_INFO['trajectory_plane'],
-                                              position_offset=np.array(self.TASK_INFO['trajectory_position_offset']),
-                                              scaling=self.TASK_INFO['trajectory_scale'],
-                                              sample_time=self.CTRL_TIMESTEP
-                                              )
+                                                            traj_length=self.EPISODE_LEN_SEC,
+                                                            num_cycles=self.TASK_INFO['num_cycles'],
+                                                            traj_plane=self.TASK_INFO['trajectory_plane'],
+                                                            position_offset=np.array(self.TASK_INFO['trajectory_position_offset']),
+                                                            scaling=self.TASK_INFO['trajectory_scale'],
+                                                            sample_time=self.CTRL_TIMESTEP
+                                                            )
             self.X_GOAL = np.vstack([
                 POS_REF[:, 0],  # Possible feature: add initial position.
                 VEL_REF[:, 0],
@@ -270,7 +270,6 @@ class CartPole(BenchmarkEnv):
         p.setTimeStep(self.PYB_TIMESTEP, physicsClientId=self.PYB_CLIENT)
         p.setRealTimeSimulation(0, physicsClientId=self.PYB_CLIENT)
         p.setAdditionalSearchPath(pybullet_data.getDataPath(), physicsClientId=self.PYB_CLIENT)
-        # p.loadURDF('plane.urdf', [0, 0, -1], physicsClientId=self.PYB_CLIENT)
         # Choose randomized or deterministic inertial properties.
         prop_values = {'pole_length': self.EFFECTIVE_POLE_LENGTH, 'cart_mass': self.CART_MASS, 'pole_mass': self.POLE_MASS}
         if self.RANDOMIZED_INERTIAL_PROP:
@@ -284,12 +283,11 @@ class CartPole(BenchmarkEnv):
         OVERRIDDEN_POLE_INERTIA = (1 / 12) * self.OVERRIDDEN_POLE_MASS * (2 * self.OVERRIDDEN_EFFECTIVE_POLE_LENGTH)**2
         # Load the cartpole with new urdf.
         override_urdf_tree = self._create_urdf(self.URDF_PATH, length=self.OVERRIDDEN_EFFECTIVE_POLE_LENGTH, inertia=OVERRIDDEN_POLE_INERTIA)
-        self.override_path = os.path.join(self.output_dir, f'pid-{os.getpid()}_id-{self.id}_cartpole.urdf')
+        self.override_path = os.path.join(self.output_dir, f'pid-{os.getpid()}_id-{self.idx}_cartpole.urdf')
         override_urdf_tree.write(self.override_path)
         self.CARTPOLE_ID = p.loadURDF(
             self.override_path,
             basePosition=[0, 0, 0],
-            # flags = p.URDF_USE_INERTIA_FROM_FILE,
             physicsClientId=self.PYB_CLIENT)
         # Remove cache file after loading it into PyBullet.
         os.remove(self.override_path)
@@ -371,11 +369,10 @@ class CartPole(BenchmarkEnv):
                                                  viewMatrix=VIEW_MATRIX,
                                                  projectionMatrix=PROJ_MATRIX,
                                                  physicsClientId=self.PYB_CLIENT)
-        # Image.fromarray(np.reshape(rgb, (h, w, 4)), 'RGBA').show()
         return np.reshape(rgb, (h, w, 4))
 
     def close(self):
-        '''Clean up the environment and PyBullet connection. '''
+        '''Clean up the environment and PyBullet connection.'''
         if self.PYB_CLIENT >= 0:
             p.disconnect(physicsClientId=self.PYB_CLIENT)
         self.PYB_CLIENT = -1
@@ -386,9 +383,9 @@ class CartPole(BenchmarkEnv):
         Args:
             prior_prop (dict): specify the prior inertial prop to use in the symbolic model.
         '''
-        l = prior_prop.get("pole_length", self.EFFECTIVE_POLE_LENGTH)
-        m = prior_prop.get("pole_mass", self.POLE_MASS)
-        M = prior_prop.get("cart_mass", self.CART_MASS)
+        l = prior_prop.get('pole_length', self.EFFECTIVE_POLE_LENGTH)
+        m = prior_prop.get('pole_mass', self.POLE_MASS)
+        M = prior_prop.get('cart_mass', self.CART_MASS)
         Mm, ml = m + M, m * l
         g = self.GRAVITY_ACC
         dt = self.CTRL_TIMESTEP
@@ -419,20 +416,20 @@ class CartPole(BenchmarkEnv):
         # Additional params to cache
         params = {
             # prior inertial properties
-            "pole_length": l,
-            "pole_mass": m,
-            "cart_mass": M,
+            'pole_length': l,
+            'pole_mass': m,
+            'cart_mass': M,
             # equilibrium point for linearization
-            "X_EQ": np.zeros(self.state_dim),
-            "U_EQ": np.atleast_2d(self.U_GOAL)[0,:],
+            'X_EQ': np.zeros(self.state_dim),
+            'U_EQ': np.atleast_2d(self.U_GOAL)[0, :],
         }
         # Setup symbolic model.
         self.symbolic = SymbolicModel(dynamics=dynamics, cost=cost, dt=dt, params=params)
 
     def _set_action_space(self):
-        '''Sets the action space of the environment. '''
+        '''Sets the action space of the environment.'''
         self.action_scale = 10
-        self.physical_action_bounds = (-np.atleast_1d(self.action_scale), np.atleast_1d(self.action_scale))
+        self.physical_action_bounds = (-1 * np.atleast_1d(self.action_scale), np.atleast_1d(self.action_scale))
         self.action_threshold = 1 if self.NORMALIZED_RL_ACTION_SPACE else self.action_scale
         self.action_space = spaces.Box(low=-self.action_threshold, high=self.action_threshold, shape=(1,))
         # Define action/input labels and units.
@@ -440,9 +437,8 @@ class CartPole(BenchmarkEnv):
         self.ACTION_UNITS = ['N'] if not self.NORMALIZED_RL_ACTION_SPACE else ['-']
 
     def _set_observation_space(self):
-        '''Sets the observation space of the environment. '''
+        '''Sets the observation space of the environment.'''
         # Angle at which to fail the episode.
-        # Original 0.20943951023931953 rad/12 deg; current 90 deg.
         self.theta_threshold_radians = 90 * math.pi / 180
         # NOTE: different value in PyBullet gym (0.4) and OpenAI gym (2.4).
         self.x_threshold = 2.4
@@ -489,7 +485,7 @@ class CartPole(BenchmarkEnv):
         force = np.clip(action, self.physical_action_bounds[0], self.physical_action_bounds[1])
         self.current_clipped_action = force
 
-        return force[0] # Only use the scalar value.
+        return force[0]  # Only use the scalar value.
 
     def normalize_action(self, action):
         '''Converts a physical action into an normalized action if necessary.
@@ -595,7 +591,7 @@ class CartPole(BenchmarkEnv):
         if self.at_reset:
             obs = self.extend_obs(obs, 1)
         else:
-            obs = self.extend_obs(obs, self.ctrl_step_counter+2)
+            obs = self.extend_obs(obs, self.ctrl_step_counter + 2)
         return obs
 
     def _get_reward(self):
@@ -614,7 +610,7 @@ class CartPole(BenchmarkEnv):
                 dist = np.sum(self.rew_state_weight * state_error * state_error)
                 dist += np.sum(self.rew_act_weight * act * act)
             if self.TASK == Task.TRAJ_TRACKING:
-                wp_idx = min(self.ctrl_step_counter + 1, self.X_GOAL.shape[0]-1) # +1 because state has already advanced but counter not incremented.
+                wp_idx = min(self.ctrl_step_counter + 1, self.X_GOAL.shape[0] - 1)  # +1 because state has already advanced but counter not incremented.
                 state_error = state - self.X_GOAL[wp_idx]
                 dist = np.sum(self.rew_state_weight * state_error * state_error)
                 dist += np.sum(self.rew_act_weight * act * act)
@@ -623,11 +619,6 @@ class CartPole(BenchmarkEnv):
             if self.rew_exponential:
                 rew = np.exp(rew)
             return rew
-            # TODO: legacy code to match paper results
-            # if self.constraints is not None and self.use_constraint_penalty and self.constraints.is_almost_active(self):
-            #     return self.constraint_penalty
-            # # Constant reward if episode not done (pole stays upright).
-            # return 1.0
         if self.COST == Cost.QUADRATIC:
             if self.TASK == Task.STABILIZATION:
                 return float(
@@ -640,7 +631,7 @@ class CartPole(BenchmarkEnv):
             if self.TASK == Task.TRAJ_TRACKING:
                 return float(
                     -1 * self.symbolic.loss(x=self.state,
-                                            Xr=self.X_GOAL[self.ctrl_step_counter,:],
+                                            Xr=self.X_GOAL[self.ctrl_step_counter, :],
                                             u=self.current_clipped_action,
                                             Ur=self.U_GOAL,
                                             Q=self.Q,
@@ -657,13 +648,6 @@ class CartPole(BenchmarkEnv):
             self.goal_reached = bool(np.linalg.norm(self.state - self.X_GOAL) < self.TASK_INFO['stabilization_goal_tolerance'])
             if self.goal_reached:
                 return True
-        # # Done if the episode length is exceeded.
-        # if (self.ctrl_step_counter + 1) / self.CTRL_FREQ >= self.EPISODE_LEN_SEC:
-        #     return True
-        # # Done if a constraint is violated.
-        # if self.constraints is not None:
-        #     if self.DONE_ON_VIOLATION and self.constraints.is_violated(self):
-        #         return True
         # Done if state is out-of-bounds.
         if self.done_on_out_of_bound:
             x, _, theta, _ = self.state
@@ -684,17 +668,6 @@ class CartPole(BenchmarkEnv):
             info['goal_reached'] = self.goal_reached  # Add boolean flag for the goal being reached.
         if self.done_on_out_of_bound:
             info['out_of_bounds'] = self.out_of_bounds
-        # if self.constraints is not None:
-        #     info['constraint_values'] = self.constraints.get_values(self)
-        #     violation = np.any(np.greater(info['constraint_values'], 0.))
-        #     info['constraint_violation'] = int(violation)
-        # if self.pyb_step_counter / self.PYB_FREQ >= self.EPISODE_LEN_SEC:
-        #     x, _, theta, _ = self.state
-        #     done = bool(x < -self.x_threshold or x > self.x_threshold or theta < -self.theta_threshold_radians or theta > self.theta_threshold_radians)
-        #     if self.constraints is not None:
-        #         if self.DONE_ON_VIOLATION and self.constraints.is_violated(self):
-        #             done = True
-        #     info['TimeLimit.truncated'] = not done
         # Add MSE.
         state = deepcopy(self.state)
         info['mse'] = np.sum(state ** 2)
@@ -718,7 +691,7 @@ class CartPole(BenchmarkEnv):
         if self.constraints is not None:
             info['symbolic_constraints'] = self.constraints.get_all_symbolic_models()
             # NOTE: Cannot evaluate constraints on reset/without inputs.
-            info['constraint_values'] = self.constraints.get_values(self, only_state=True) # Fix for input constraints only
+            info['constraint_values'] = self.constraints.get_values(self, only_state=True)  # Fix for input constraints only
         return info
 
     def _parse_urdf_parameters(self, file_name):

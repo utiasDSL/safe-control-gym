@@ -1,21 +1,17 @@
-"""Utility function for the PPO-based safe explorer.
+'''Utility function for the PPO-based safe explorer.'''
 
-"""
 import numpy as np
 import torch
 import torch.nn as nn
-
 from gymnasium.spaces import Box
 
-from safe_control_gym.math_and_models.neural_networks import MLP, CNN, RNN, init_
+from safe_control_gym.math_and_models.neural_networks import MLP
 from safe_control_gym.math_and_models.distributions import Normal, Categorical
 import safe_control_gym.controllers.ppo.ppo_utils as ppo_utils
 
 
 class SafePPOAgent(ppo_utils.PPOAgent):
-    """A PPO class that encapsulates models, optimizers and update functions.
-
-    """
+    '''A PPO class that encapsulates models, optimizers and update functions.'''
 
     def __init__(self,
                  obs_space,
@@ -45,17 +41,15 @@ class SafePPOAgent(ppo_utils.PPOAgent):
         self.ac = MLPActorCritic(obs_space,
                                  act_space,
                                  hidden_dims=[hidden_dim] * 2,
-                                 activation="tanh",
+                                 activation='tanh',
                                  action_modifier=action_modifier)
         # Optimizers.
         self.actor_opt = torch.optim.Adam(self.ac.actor.parameters(), actor_lr)
         self.critic_opt = torch.optim.Adam(self.ac.critic.parameters(), critic_lr)
 
     def compute_policy_loss(self, batch):
-        """Returns policy loss(es) given batch of data.
-
-        """
-        obs, act, logp_old, adv, c = batch["obs"], batch["act"], batch["logp"], batch["adv"], batch["c"]
+        '''Returns policy loss(es) given batch of data.'''
+        obs, act, logp_old, adv, c = batch['obs'], batch['act'], batch['logp'], batch['adv'], batch['c']
         dist, logp = self.ac.actor(obs, act, c=c)
         # Policy.
         ratio = torch.exp(logp - logp_old)
@@ -69,9 +63,7 @@ class SafePPOAgent(ppo_utils.PPOAgent):
 
 
 class MLPActor(nn.Module):
-    """Actor model.
-
-    """
+    '''Actor model.'''
 
     def __init__(self,
                  obs_dim,
@@ -81,9 +73,6 @@ class MLPActor(nn.Module):
                  discrete=False,
                  action_modifier=None
                  ):
-        """
-
-        """
         super().__init__()
         self.pi_net = MLP(obs_dim, act_dim, hidden_dims, activation)
         # Construct output action distribution.
@@ -101,9 +90,6 @@ class MLPActor(nn.Module):
                 act=None,
                 c=None
                 ):
-        """
-
-        """
         mu = self.pi_net(obs)
         # Filter action if needed.
         if self.action_modifier:
@@ -125,24 +111,20 @@ class MLPActor(nn.Module):
 
 
 class MLPActorCritic(ppo_utils.MLPActorCritic):
-    """Model for the actor-critic agent.
+    '''Model for the actor-critic agent.
 
     Attributes:
-        actor (MLPActor): policy network. 
-        critic (MLPCritic): value network.  
-
-    """
+        actor (MLPActor): policy network.
+        critic (MLPCritic): value network.
+    '''
 
     def __init__(self,
                  obs_space,
                  act_space,
                  hidden_dims=(64, 64),
-                 activation="tanh",
+                 activation='tanh',
                  action_modifier=None
                  ):
-        """
-
-        """
         nn.Module.__init__(self)
         obs_dim = obs_space.shape[0]
         if isinstance(act_space, Box):
@@ -160,9 +142,6 @@ class MLPActorCritic(ppo_utils.MLPActorCritic):
              obs,
              c=None
              ):
-        """
-
-        """
         dist, _ = self.actor(obs, c=c)
         a = dist.sample()
         logp_a = dist.log_prob(a)
@@ -173,24 +152,20 @@ class MLPActorCritic(ppo_utils.MLPActorCritic):
             obs,
             c=None
             ):
-        """
-
-        """
         dist, _ = self.actor(obs, c=c)
         a = dist.mode()
         return a.numpy()
 
 
 class SafePPOBuffer(ppo_utils.PPOBuffer):
-    """Storage for a batch of episodes during training.
-    
+    '''Storage for a batch of episodes during training.
+
     Attributes:
         max_length (int): maximum length of episode.
         batch_size (int): number of episodes per batch.
         scheme (dict): describs shape & other info of data to be stored.
         keys (list): names of all data from scheme.
-
-    """
+    '''
 
     def __init__(self,
                  obs_space,
@@ -199,9 +174,6 @@ class SafePPOBuffer(ppo_utils.PPOBuffer):
                  max_length,
                  batch_size
                  ):
-        """
-
-        """
         self.max_length = max_length
         self.batch_size = batch_size
         T, N = max_length, batch_size
@@ -211,36 +183,36 @@ class SafePPOBuffer(ppo_utils.PPOBuffer):
         else:
             act_dim = act_space.n
         self.scheme = {
-            "obs": {
-                "vshape": (T, N, *obs_dim)
+            'obs': {
+                'vshape': (T, N, *obs_dim)
             },
-            "act": {
-                "vshape": (T, N, act_dim)
+            'act': {
+                'vshape': (T, N, act_dim)
             },
-            "rew": {
-                "vshape": (T, N, 1)
+            'rew': {
+                'vshape': (T, N, 1)
             },
-            "mask": {
-                "vshape": (T, N, 1),
-                "init": np.ones
+            'mask': {
+                'vshape': (T, N, 1),
+                'init': np.ones
             },
-            "v": {
-                "vshape": (T, N, 1)
+            'v': {
+                'vshape': (T, N, 1)
             },
-            "logp": {
-                "vshape": (T, N, 1)
+            'logp': {
+                'vshape': (T, N, 1)
             },
-            "ret": {
-                "vshape": (T, N, 1)
+            'ret': {
+                'vshape': (T, N, 1)
             },
-            "adv": {
-                "vshape": (T, N, 1)
+            'adv': {
+                'vshape': (T, N, 1)
             },
-            "terminal_v": {
-                "vshape": (T, N, 1)
+            'terminal_v': {
+                'vshape': (T, N, 1)
             },
-            "c": {
-                "vshape": (T, N, num_constraints)
+            'c': {
+                'vshape': (T, N, num_constraints)
             },
         }
         self.keys = list(self.scheme.keys())

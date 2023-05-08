@@ -1,12 +1,12 @@
-"""Plotting utilities.
+'''Plotting utilities.'''
 
-"""
-from collections import defaultdict
+import re
 import os
 import os.path as osp
+from collections import defaultdict
+
 import numpy as np
 import matplotlib.pyplot as plt
-import re
 
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
@@ -15,30 +15,30 @@ DIV_LINE_WIDTH = 50
 
 
 COLORS = [
-    "blue",
-    "green",
-    "red",
-    "black",
-    "cyan",
-    "magenta",
-    "yellow",
-    "brown",
-    "purple",
-    "pink",
-    "orange",
-    "teal",
-    "coral",
-    "lightblue",
-    "lime",
-    "lavender",
-    "turquoise",
-    "darkgreen",
-    "tan",
-    "salmon",
-    "gold",
-    "lightpurple",
-    "darkred",
-    "darkblue",
+    'blue',
+    'green',
+    'red',
+    'black',
+    'cyan',
+    'magenta',
+    'yellow',
+    'brown',
+    'purple',
+    'pink',
+    'orange',
+    'teal',
+    'coral',
+    'lightblue',
+    'lime',
+    'lavender',
+    'turquoise',
+    'darkgreen',
+    'tan',
+    'salmon',
+    'gold',
+    'lightpurple',
+    'darkred',
+    'darkblue',
 ]
 
 
@@ -60,31 +60,25 @@ LINE_STYLES2 = [('loosely dotted', (0, (1, 10))), ('dotted', (0, (1, 1))),
                 ('dashdotdotted', (0, (3, 5, 1, 5, 1, 5))),
                 ('loosely dashdotdotted', (0, (3, 10, 1, 10, 1, 10))),
                 ('densely dashdotdotted', (0, (3, 1, 1, 1, 1, 1)))
-]
+                ]
 
 
 def rolling_window(a, window):
-    """Window data.
-
-    """
+    '''Window data.'''
     shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
     strides = a.strides + (a.strides[-1],)
     return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
 
 
 def window_func(x, y, window, func):
-    """Evaluate a function on windowed data.
-
-    """
+    '''Evaluate a function on windowed data.'''
     yw = rolling_window(y, window)
     yw_func = func(yw, axis=-1)
     return x[window - 1:], yw_func
 
 
-def filter_log_dirs(pattern, negative_pattern=" ", root="./log", **kwargs):
-    """Gets list of experiment folders as specified.
-
-    """
+def filter_log_dirs(pattern, negative_pattern=' ', root='./log', **kwargs):
+    '''Gets list of experiment folders as specified.'''
     dirs = [item[0] for item in os.walk(root)]
     leaf_dirs = []
     for i in range(len(dirs)):
@@ -93,20 +87,18 @@ def filter_log_dirs(pattern, negative_pattern=" ", root="./log", **kwargs):
         leaf_dirs.append(dirs[i])
     names = []
     p = re.compile(pattern)
-    np = re.compile(negative_pattern)
-    for dir in leaf_dirs:
-        if p.match(dir) and not np.match(dir):
-            names.append(dir)
-            print(dir)
-    print("")
+    neg_p = re.compile(negative_pattern)
+    for leaf_dir in leaf_dirs:
+        if p.match(leaf_dir) and not neg_p.match(leaf_dir):
+            names.append(leaf_dir)
+            print(leaf_dir)
+    print('')
     return sorted(names)
 
 
 def align_runs(xy_list, x_num_max=None):
-    """Aligns the max of the x data across runs.
-
-    """
-    x_max = float("inf")
+    '''Aligns the max of the x data across runs.'''
+    x_max = float('inf')
     for x, y in xy_list:
         # Align length of x data (get min across all runs).
         x_max = min(x_max, len(x))
@@ -117,9 +109,7 @@ def align_runs(xy_list, x_num_max=None):
 
 
 def smooth_runs(xy_list, window=10):
-    """Smooth the data curves by mean filtering.
-
-    """
+    '''Smooth the data curves by mean filtering.'''
     smoothed_list = [
         window_func(np.asarray(x), np.asarray(y), window, np.mean)
         for x, y in xy_list
@@ -128,9 +118,7 @@ def smooth_runs(xy_list, window=10):
 
 
 def select_runs(xy_list, criterion, top_k=0):
-    """Pickes the top k runs based on a criterion.
-
-    """
+    '''Pickes the top k runs based on a criterion.'''
     perf = [criterion(y) for _, y in xy_list]
     top_k_runs = np.argsort(perf)[-top_k:]
     selected_list = []
@@ -141,10 +129,8 @@ def select_runs(xy_list, criterion, top_k=0):
 
 
 def interpolate_runs(xy_list, interp_interval=100):
-    """Uses the same x data by interpolation across runs.
-
-    """
-    x_right = float("inf")
+    '''Uses the same x data by interpolation across runs.'''
+    x_right = float('inf')
     for x, y in xy_list:
         x_right = min(x_right, x[-1])
     # Shape: (data_len,).
@@ -158,17 +144,15 @@ def interpolate_runs(xy_list, interp_interval=100):
 
 
 def load_from_log_file(path):
-    """Return x, y sequence data from the stat csv.
-
-    """
-    with open(path, "r") as f:
+    '''Return x, y sequence data from the stat csv.'''
+    with open(path, 'r') as f:
         lines = f.readlines()
     # Labels.
-    xk, yk = [k.strip() for k in lines[0].strip().split(",")]
+    xk, yk = [k.strip() for k in lines[0].strip().split(',')]
     # Values.
     x, y = [], []
     for l in lines[1:]:
-        data = l.strip().split(",")
+        data = l.strip().split(',')
         x.append(float(data[0].strip()))
         y.append(float(data[1].strip()))
     x = np.array(x)
@@ -177,44 +161,40 @@ def load_from_log_file(path):
 
 
 def load_from_logs(log_dir):
-    """Return dict of stats under log_dir folder (`exp_dir/logs/`).
-
-    """
+    '''Return dict of stats under log_dir folder (`exp_dir/logs/`).'''
     log_files = []
     # Fetch all log files.
     for r, _, f in os.walk(log_dir):
         for file in f:
-            if ".log" in file:
+            if '.log' in file:
                 log_files.append(os.path.join(r, file))
     # Fetch all stats from log files.
     data = {}
     for path in log_files:
-        name = path.split(log_dir)[-1].replace(".log", "")
+        name = path.split(log_dir)[-1].replace('.log', '')
         xk, x, yk, y = load_from_log_file(path)
         data[name] = (xk, x, yk, y)
     return data
 
 
 def plot_from_logs(src_dir, out_dir, window=None, keys=None):
-    """Generate a plot for each stat in an experiment `logs` folder.
+    '''Generate a plot for each stat in an experiment `logs` folder.
 
     Args:
         src_dir (str): folder to read logs.
         out_dir (str): folder to save figures.
         window (int): window size for smoothing.
-        keys (list): specify name of stats to plot, None means plot all.
-
-    """
+        keys (list): specify name of stats to plot, None means plot all.'''
     # Find all logs.
     log_files = []
     for r, _, f in os.walk(src_dir):
         for file in f:
-            if ".log" in file:
+            if '.log' in file:
                 log_files.append(os.path.join(r, file))
     # Make a figure for each log file.
     stats = {}
     for path in log_files:
-        name = path.split(src_dir)[-1].replace(".log", "")
+        name = path.split(src_dir)[-1].replace('.log', '')
         if keys:
             if name not in keys:
                 continue
@@ -227,7 +207,7 @@ def plot_from_logs(src_dir, out_dir, window=None, keys=None):
         plt.title(name)
         plt.xlabel(xk)
         plt.ylabel(yk)
-        plt.savefig(os.path.join(out_dir, name.replace("/", "-") + ".jpg"))
+        plt.savefig(os.path.join(out_dir, name.replace('/', '-') + '.jpg'))
     return stats
 
 
@@ -235,14 +215,12 @@ def plot_from_tensorboard_log(src_dir,
                               out_dir,
                               window=None,
                               keys=None,
-                              xlabel="step"):
-    """Generates a plot for each stat from tfb log file in source folder.
-
-    """
+                              xlabel='step'):
+    '''Generates a plot for each stat from tfb log file in source folder.'''
     event_acc = EventAccumulator(src_dir)
     event_acc.Reload()
     if not keys:
-        keys = event_acc.Tags()["scalars"]
+        keys = event_acc.Tags()['scalars']
     stats = {}
     for k in keys:
         _, x, y = zip(*event_acc.Scalars(k))
@@ -255,52 +233,51 @@ def plot_from_tensorboard_log(src_dir,
         plt.title(k)
         plt.xlabel(xlabel)
         plt.ylabel(k)
-        # Use "-" instead of "/" to connect group and stat name.
-        out_path = os.path.join(out_dir, k.replace("/", "-") + ".jpg")
+        # Use '-' instead of '/' to connect group and stat name.
+        out_path = os.path.join(out_dir, k.replace('/', '-') + '.jpg')
         plt.savefig(out_path)
     return stats
 
 
 def plot_from_experiments(legend_dir_specs,
-                          out_path="temp.jpg",
+                          out_path='temp.jpg',
                           scalar_name=None,
-                          title="Traing Curves",
-                          xlabel="Epochs",
-                          ylabel="Loss",
+                          title='Traing Curves',
+                          xlabel='Epochs',
+                          ylabel='Loss',
                           window=None,
                           x_num_max=None,
                           num_std=1,
                           use_tb_log=True
                           ):
-    """Generates plot among algos, each with several seed runs.
+    '''Generates plot among algos, each with several seed runs.
 
     Example:
         make a plot on average reward for gnn and mlp:
 
         > plot_from_experiments(
             {
-                "gnn": [
-                    "results/algo1/seed0",
-                    "results/algo1/seed1",
-                    "results/algo1/seed2"
+                'gnn': [
+                    'results/algo1/seed0',
+                    'results/algo1/seed1',
+                    'results/algo1/seed2'
                 ],
-                "mlp": [
-                    "results/algo2/seed6",
-                    "results/algo2/seed1",
-                    "results/algo2/seed9",
-                    "results/algo2/seed3"
+                'mlp': [
+                    'results/algo2/seed6',
+                    'results/algo2/seed1',
+                    'results/algo2/seed9',
+                    'results/algo2/seed3'
                 ],
             },
-            out_path="avg_reward.jpg",
-            scalar_name="loss_eval/total_rewards",
-            title="Average Reward",
-            xlabel="Epochs",
-            ylabel="Reward",
+            out_path='avg_reward.jpg',
+            scalar_name='loss_eval/total_rewards',
+            title='Average Reward',
+            xlabel='Epochs',
+            ylabel='Reward',
             window=10
         )
-
-    """
-    assert scalar_name is not None, "Must provide a scalar name to plot"
+    '''
+    assert scalar_name is not None, 'Must provide a scalar name to plot'
     # Get all stats.
     stats = defaultdict(list)
     for l, dirs in legend_dir_specs.items():
@@ -312,7 +289,7 @@ def plot_from_experiments(legend_dir_specs,
                 _, x, y = zip(*event_acc.Scalars(scalar_name))
                 del event_acc
             else:
-                path = os.path.join(d, "logs", scalar_name + ".log")
+                path = os.path.join(d, 'logs', scalar_name + '.log')
                 _, x, _, y = load_from_log_file(path)
             # Smoothing.
             x, y = np.asarray(x), np.asarray(y)
@@ -320,7 +297,7 @@ def plot_from_experiments(legend_dir_specs,
                 x, y = window_func(x, y, window, np.mean)
             stats[l].append([x, y])
     # Post-processing.
-    x_max = float("inf")
+    x_max = float('inf')
     for _, runs in stats.items():
         for x, y in runs:
             # Align length of x data (get min across all runs & all algos).
@@ -361,7 +338,7 @@ def get_log_dirs(all_logdirs,
                  select=None,
                  exclude=None
                  ):
-    """Find all folders for plotting.
+    '''Find all folders for plotting.
 
     All 3 arguments can be exposed as list args from command line.
 
@@ -370,15 +347,14 @@ def get_log_dirs(all_logdirs,
            pull data from it;
         2) if not, check to see if the entry is a prefix for a
            real directory, and pull data from that.
-
-    """
+    '''
     logdirs = []
     for logdir in all_logdirs:
         if osp.isdir(logdir) and logdir[-1] == os.sep:
             logdirs += [logdir]
         else:
             basedir = osp.dirname(logdir)
-            fulldir = lambda x: osp.join(basedir, x)
+            def fulldir(x): return osp.join(basedir, x)
             prefix = logdir.split(os.sep)[-1]
             listdir = os.listdir(basedir)
             logdirs += sorted([fulldir(x) for x in listdir if prefix in x])

@@ -1,10 +1,10 @@
-'''Abstract class for MPSC Cost Functions. '''
+'''Abstract class for MPSC Cost Functions.'''
 
 from abc import ABC, abstractmethod
 
 
 class MPSC_COST(ABC):
-    '''Abstract MPSC Cost Function to be extended for different cost functions. '''
+    '''Abstract MPSC Cost Function to be extended for different cost functions.'''
 
     @abstractmethod
     def get_cost(self, opti_dict):
