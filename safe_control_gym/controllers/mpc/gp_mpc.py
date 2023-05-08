@@ -398,6 +398,7 @@ class GPMPC(MPC):
         Gamma_inv = torch.diag_embed(1 / Gamma)
         # TODO: Should inverse be used here instead? pinverse was more stable previsouly.
         Sigma_inv = K_zind_zind + K_x_zind.transpose(1, 2) @ Gamma_inv @ K_x_zind
+        Sigma = torch.pinverse(K_zind_zind + K_x_zind.transpose(1,2) @ Gamma_inv @ K_x_zind) # For debugging
         mean_post_factor = torch.zeros((dim_gp_outputs, n_ind_points))
         for i in range(dim_gp_outputs):
             mean_post_factor[i] = torch.linalg.solve(Sigma_inv[i], K_x_zind[i].T @ Gamma_inv[i] @

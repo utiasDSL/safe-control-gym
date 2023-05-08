@@ -284,7 +284,7 @@ class LinearConstraint(Constraint):
 
 
 class BoundedConstraint(LinearConstraint):
-    ''' Class for bounded constraints lb <= x <= ub as polytopic constraints -Ix + b <= 0 and Ix - b <= 0.'''
+    '''Class for bounded constraints lb <= x <= ub as polytopic constraints -Ix + b <= 0 and Ix - b <= 0.'''
 
     def __init__(self,
                  env,

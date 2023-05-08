@@ -15,7 +15,7 @@ from safe_control_gym.envs.benchmark_env import Task, Environment
 
 
 class PID(BaseController):
-    ''' PID Class.'''
+    '''PID Class.'''
 
     def __init__(self,
                  env_func=None,

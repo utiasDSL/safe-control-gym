@@ -22,7 +22,7 @@ def load(name):
 
 
 class Spec():
-    ''' A specification for a particular instance of the environment.'''
+    '''A specification for a particular instance of the environment.'''
 
     def __init__(self, idx, entry_point=None, config_entry_point=None):
         '''Used in function 'register'.

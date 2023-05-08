@@ -110,7 +110,7 @@ def compute_state_rmse(state_error):
 
 
 def reset_constraints(constraints):
-    ''' Setup the constraints list.
+    '''Setup the constraints list.
 
     Args:
         constraints (list): List of constraints controller is subject too.

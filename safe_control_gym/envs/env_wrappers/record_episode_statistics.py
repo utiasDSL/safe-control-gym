@@ -11,9 +11,9 @@ from safe_control_gym.envs.env_wrappers.vectorized_env.vec_env import VecEnvWrap
 
 
 class RecordEpisodeStatistics(gym.Wrapper):
-    ''' Keep track of episode length and returns per instantiated env
+    '''Keep track of episode length and returns per instantiated env
 
-        Based on OpenAI's Gym wrapper record_episode_statistics.py
+       Based on OpenAI's Gym wrapper record_episode_statistics.py
     '''
 
     def __init__(self,
@@ -90,7 +90,7 @@ class RecordEpisodeStatistics(gym.Wrapper):
 
 
 class VecRecordEpisodeStatistics(VecEnvWrapper):
-    ''' A vectorized wrapper that records episodic statistics.
+    '''A vectorized wrapper that records episodic statistics.
 
     E.g. episode lengths, returns, constraint violations.
     '''

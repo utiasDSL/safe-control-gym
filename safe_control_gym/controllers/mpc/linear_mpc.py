@@ -18,7 +18,7 @@ from safe_control_gym.envs.benchmark_env import Task
 
 
 class LinearMPC(MPC):
-    ''' Simple linear MPC.'''
+    '''Simple linear MPC.'''
 
     def __init__(
             self,
