@@ -4,6 +4,7 @@
 # declaration at the top                                              #
 #######################################################################
 
+
 class ConstantSchedule:
     def __init__(self, val):
         self.val = val

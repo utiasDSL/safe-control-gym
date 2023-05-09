@@ -75,7 +75,7 @@ def ellipse_bounding_box(P):
     extremes = []
     for i in range(P.shape[0]):
         extremes.append((np.sqrt(c[:, i, None].T @ np.linalg.inv(P) @ c[:, i, None])[0, 0],
-                        -np.sqrt(c[:, i, None].T @ np.linalg.inv(P) @ c[:, i, None])[0, 0]))
+                         -np.sqrt(c[:, i, None].T @ np.linalg.inv(P) @ c[:, i, None])[0, 0]))
     vertices = list(product(*extremes))
     return np.vstack(vertices)
 

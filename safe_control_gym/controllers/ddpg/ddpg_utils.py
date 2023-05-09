@@ -161,7 +161,7 @@ class MLPActorCritic(nn.Module):
         low = torch.FloatTensor(low)
         high = torch.FloatTensor(high)
         # Rescale action from [-1, 1] to [low, high]
-        unscale_fn = lambda x: low.to(x.device) + (0.5 * (x + 1.0) * (high.to(x.device) - low.to(x.device)))
+        def unscale_fn(x): return low.to(x.device) + (0.5 * (x + 1.0) * (high.to(x.device) - low.to(x.device)))
         self.actor = MLPActor(obs_dim, act_dim, hidden_dims, activation, postprocess_fn=unscale_fn)
 
         # Q functions
