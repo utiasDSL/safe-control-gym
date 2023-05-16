@@ -10,24 +10,24 @@ task_config:
   init_state_randomization_info:
     init_x:
       distrib: 'uniform'
-      low: -1
-      high: 1
+      low: -0.5
+      high: 0.5
     init_x_dot:
       distrib: 'uniform'
       low: -0.1
       high: 0.1
     init_y:
       distrib: 'uniform'
-      low: -1
-      high: 1
+      low: -0.5
+      high: 0.5
     init_y_dot:
       distrib: 'uniform'
       low: -0.1
       high: 0.1
     init_z:
       distrib: 'uniform'
-      low: 0.5
-      high: 1.5
+      low: 0.75
+      high: 1.25
     init_z_dot:
       distrib: 'uniform'
       low: -0.1
