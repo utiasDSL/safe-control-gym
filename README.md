@@ -87,20 +87,52 @@ Overview of [`safe-control-gym`](https://arxiv.org/abs/2109.06325)'s API:
 
 Familiarize with APIs and environments with the scripts in [`examples/`](https://github.com/utiasDSL/safe-control-gym/tree/main/examples)
 
-### Systems Variables and 2D Quadrotor Lemniscate Trajectory Tracking
+### 3D Quadrotor Lemniscate Trajectory Tracking with PID
 
 ```bash
 cd ./examples/   # Navigate to the examples folder
-python3 pid/pid_experiment.py --algo pid --task quadrotor --overrides ./pid/config_overrides/quadrotor_3D/quadrotor_3D_tracking.yaml   # PID trajectory tracking with the 3D quadcopter
+python3 pid/pid_experiment.py \
+    --algo pid \
+    --task quadrotor \
+    --overrides \
+        ./pid/config_overrides/quadrotor_3D/quadrotor_3D_tracking.yaml   # PID trajectory tracking with the 3D quadcopter
 ```
 
 <img src="figures/systems.png" alt="systems" width="450"> <img src="figures/figure8.gif" alt="trajectory" width="350">
+
+### Cartpole Stabilization with LQR
+
+```bash
+cd ./examples/   # Navigate to the examples folder
+python3 lqr/lqr_experiment.py \
+    --algo lqr \
+    --task cartpole \
+    --overrides \
+        ./lqr/config_overrides/cartpole/cartpole_stabilization.yaml \
+        ./lqr/config_overrides/cartpole/lqr_cartpole_stabilization.yaml  # LQR stabilization of a cartpole
+```
+
+### 2D Quadrotor Trajectory Tracking with PPO
+
+```bash
+cd ./examples/rl/   # Navigate to the RL examples folder
+python3 rl_experiment.py \
+    --algo ppo \
+    --task quadrotor \
+    --overrides \
+        ./config_overrides/quadrotor_2D/quadrotor_2D_track.yaml \
+        ./config_overrides/quadrotor_2D/ppo_quadrotor_2D.yaml \
+    --kv_overrides \
+        algo_config.training=False # RL tracking of a 2D quadrotor
+```
 
 ### Verbose API Example
 
 ```bash
 cd ./examples/   # Navigate to the examples folder
-python3 no_controller/verbose_api.py --task cartpole --overrides no_controller/verbose_api.yaml   # Printout of the extended safe-control-gym APIs
+python3 no_controller/verbose_api.py \
+    --task cartpole \
+    --overrides no_controller/verbose_api.yaml   # Printout of the extended safe-control-gym APIs
 ```
 
 <img src="figures/prints.png" al="prints" width="800">
