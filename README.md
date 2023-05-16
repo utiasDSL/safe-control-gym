@@ -40,7 +40,7 @@ git clone https://github.com/utiasDSL/safe-control-gym.git
 cd safe-control-gym
 ```
 
-### Option A (recommended): using `conda`
+### (optional) Create a `conda` environment
 
 Create and access a Python 3.10 environment using
 [`conda`](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
@@ -50,27 +50,13 @@ conda create -n safe python=3.10
 conda activate safe
 ```
 
+### Install
+
 Install the `safe-control-gym` repository
 
 ```bash
 pip install --upgrade pip
 pip install -e .
-```
-
-### Option B: using venv and poetry
-
-Create and access a Python 3.10 virtual environment using
-[`pyenv`](https://github.com/pyenv/pyenv) and
-[`venv`](https://docs.python.org/3/library/venv.html)
-
-```bash
-pyenv install 3.10
-pyenv local 3.10
-python3 -m venv safe
-source safe/bin/activate
-pip install --upgrade pip
-pip install poetry
-poetry install
 ```
 
 #### Note
@@ -96,6 +82,48 @@ Overview of [`safe-control-gym`](https://arxiv.org/abs/2109.06325)'s API:
 ## Configuration
 
 <img src="figures/config.png" alt="config" width="800">
+
+## Getting Started
+
+Familiarize with APIs and environments with the scripts in [`examples/`](https://github.com/utiasDSL/safe-control-gym/tree/main/examples)
+
+### Systems Variables and 2D Quadrotor Lemniscate Trajectory Tracking
+
+```bash
+cd ./examples/   # Navigate to the examples folder
+python3 pid/pid_experiment.py --algo pid --task quadrotor --overrides ./pid/config_overrides/quadrotor_3D/quadrotor_3D_tracking.yaml   # PID trajectory tracking with the 3D quadcopter
+```
+
+<img src="figures/systems.png" alt="systems" width="450"> <img src="figures/figure8.gif" alt="trajectory" width="350">
+
+### Verbose API Example
+
+```bash
+cd ./examples/   # Navigate to the examples folder
+python3 no_controller/verbose_api.py --task cartpole --overrides no_controller/verbose_api.yaml   # Printout of the extended safe-control-gym APIs
+```
+
+<img src="figures/prints.png" al="prints" width="800">
+
+## List of Implemented Controllers
+
+- [PID](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/pid/pid.py)
+- [LQR](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/lqr/lqr.py)
+- [iLQR](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/lqr/ilqr.py)
+- [Linear MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/linear_mpc.py)
+- [GP-MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/gp_mpc.py)
+- [SAC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/sac/sac.py)
+- [PPO](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/ppo/ppo.py)
+- [DDPG](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/ddpg/ddpg.py)
+- [Safety Layer](https://github.com/utiasDSL/safe-control-gym/tree/main/safe_control_gym/controllers/safe_explorer)
+- [RARL](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/rarl/rarl.py)
+- [RAP](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/rarl/rap.py)
+
+## List of Implemented Safety Filters
+
+- [MPSC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/safety_filters/mpsc/linear_mpsc.py)
+- [CBF](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/safety_filters/cbf/cbf.py)
+- [Neural Network CBF](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/safety_filters/cbf/cbf_nn.py)
 
 ## Performance
 
@@ -129,44 +157,6 @@ Note that the Bullet engine frequency reported for `safe-control-gym` is typical
 
 [004]: https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/envs/gym_control/cartpole.py
 [005]: https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/envs/gym_pybullet_drones/quadrotor.py
-
-## Getting Started
-
-Familiarize with APIs and environments with the scripts in [`examples/`](https://github.com/utiasDSL/safe-control-gym/tree/main/examples)
-
-```bash
-cd ./examples/                                                                    # Navigate to the examples folder
-python3 pid/pid_experiment.py --algo pid --task quadrotor --overrides ./pid/config_overrides/quadrotor_3D/quadrotor_3D_tracking.yaml       # PID trajectory tracking with the 3D quadcopter
-python3 no_controller/verbose_api.py --task cartpole --overrides no_controller/verbose_api.yaml               #  Printout of the extended safe-control-gym APIs
-```
-
-## Systems Variables and 2D Quadrotor Lemniscate Trajectory Tracking
-
-<img src="figures/systems.png" alt="systems" width="450"> <img src="figures/figure8.gif" alt="trajectory" width="350">
-
-## Verbose API Example
-
-<img src="figures/prints.png" al="prints" width="800">
-
-## List of Implemented Controllers
-
-- [PID](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/pid/pid.py)
-- [LQR](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/lqr/lqr.py)
-- [iLQR](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/lqr/ilqr.py)
-- [Linear MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/linear_mpc.py)
-- [GP-MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/gp_mpc.py)
-- [SAC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/sac/sac.py)
-- [PPO](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/ppo/ppo.py)
-- [DDPG](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/ddpg/ddpg.py)
-- [Safety Layer](https://github.com/utiasDSL/safe-control-gym/tree/main/safe_control_gym/controllers/safe_explorer)
-- [RARL](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/rarl/rarl.py)
-- [RAP](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/rarl/rap.py)
-
-## List of Implemented Safety Filters
-
-- [MPSC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/safety_filters/mpsc/linear_mpsc.py)
-- [CBF](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/safety_filters/cbf/cbf.py)
-- [Neural Network CBF](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/safety_filters/cbf/cbf_nn.py)
 
 ## References
 
