@@ -95,7 +95,7 @@ python3 pid/pid_experiment.py \
     --algo pid \
     --task quadrotor \
     --overrides \
-        ./pid/config_overrides/quadrotor_3D/quadrotor_3D_tracking.yaml   # PID trajectory tracking with the 3D quadcopter
+        ./pid/config_overrides/quadrotor_3D/quadrotor_3D_tracking.yaml
 ```
 
 <img src="figures/systems.png" alt="systems" width="450"> <img src="figures/figure8.gif" alt="trajectory" width="350">
@@ -109,7 +109,7 @@ python3 lqr/lqr_experiment.py \
     --task cartpole \
     --overrides \
         ./lqr/config_overrides/cartpole/cartpole_stabilization.yaml \
-        ./lqr/config_overrides/cartpole/lqr_cartpole_stabilization.yaml  # LQR stabilization of a cartpole
+        ./lqr/config_overrides/cartpole/lqr_cartpole_stabilization.yaml
 ```
 
 ### 2D Quadrotor Trajectory Tracking with PPO
@@ -123,7 +123,7 @@ python3 rl_experiment.py \
         ./config_overrides/quadrotor_2D/quadrotor_2D_track.yaml \
         ./config_overrides/quadrotor_2D/ppo_quadrotor_2D.yaml \
     --kv_overrides \
-        algo_config.training=False # RL tracking of a 2D quadrotor
+        algo_config.training=False
 ```
 
 ### Verbose API Example
@@ -132,7 +132,7 @@ python3 rl_experiment.py \
 cd ./examples/   # Navigate to the examples folder
 python3 no_controller/verbose_api.py \
     --task cartpole \
-    --overrides no_controller/verbose_api.yaml   # Printout of the extended safe-control-gym APIs
+    --overrides no_controller/verbose_api.yaml
 ```
 
 <img src="figures/prints.png" al="prints" width="800">
