@@ -1,7 +1,7 @@
 '''SAC Utils.'''
 
-from copy import deepcopy
 from collections import defaultdict
+from copy import deepcopy
 
 import numpy as np
 import torch
@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from gymnasium.spaces import Box
 
-from safe_control_gym.math_and_models.distributions import Normal, Categorical
+from safe_control_gym.math_and_models.distributions import Categorical, Normal
 from safe_control_gym.math_and_models.neural_networks import MLP
 
 # -----------------------------------------------------------------------------------
@@ -275,8 +275,10 @@ class MLPActorCritic(nn.Module):
             low, high = act_space.low, act_space.high
             low = torch.FloatTensor(low)
             high = torch.FloatTensor(high)
-            # Rescale action from [-1, 1] to [low, high]
-            def unscale_fn(x): return low.to(x.device) + (0.5 * (x + 1.0) * (high.to(x.device) - low.to(x.device)))
+
+            def unscale_fn(x):  # Rescale action from [-1, 1] to [low, high]
+                return low.to(x.device) + (0.5 * (x + 1.0) * (high.to(x.device) - low.to(x.device)))
+
             self.actor = MLPActor(obs_dim, act_dim, hidden_dims, activation, postprocess_fn=unscale_fn)
 
         # Q functions

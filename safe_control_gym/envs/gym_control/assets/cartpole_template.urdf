@@ -49,7 +49,7 @@
   <link name="pole">
     <visual>
       <geometry>
-        <box size="0.05 0.05 1.0"/> 
+        <box size="0.05 0.05 1.0"/>
       </geometry>
       <origin rpy="0 0 0" xyz="0 0 0.5"/>
       <material name="white">
@@ -74,5 +74,5 @@
     <parent link="cart"/>
     <child link="pole"/>
   </joint>
-  
+
 </robot>

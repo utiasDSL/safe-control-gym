@@ -1,7 +1,8 @@
 '''Linear Quadratic Regulator (LQR).'''
 
 from safe_control_gym.controllers.base_controller import BaseController
-from safe_control_gym.controllers.lqr.lqr_utils import get_cost_weight_matrix, compute_lqr_gain
+from safe_control_gym.controllers.lqr.lqr_utils import (compute_lqr_gain,
+                                                        get_cost_weight_matrix)
 from safe_control_gym.envs.benchmark_env import Task
 
 

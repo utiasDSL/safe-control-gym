@@ -7,7 +7,8 @@ See also:
 
 from abc import ABC, abstractmethod
 
-from safe_control_gym.envs.env_wrappers.vectorized_env.vec_env_utils import tile_images
+from safe_control_gym.envs.env_wrappers.vectorized_env.vec_env_utils import \
+    tile_images
 
 
 class VecEnv(ABC):

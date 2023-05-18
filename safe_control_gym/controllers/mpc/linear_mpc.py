@@ -6,14 +6,16 @@ Based on:
     * https://github.com/AtsushiSakai/PythonRobotics/blob/master/PathTracking/model_predictive_speed_and_steer_control/model_predictive_speed_and_steer_control.py
 '''
 
-from sys import platform
 from copy import deepcopy
+from sys import platform
 
-import numpy as np
 import casadi as cs
+import numpy as np
 
+from safe_control_gym.controllers.lqr.lqr_utils import discretize_linear_system
 from safe_control_gym.controllers.mpc.mpc import MPC
-from safe_control_gym.controllers.mpc.mpc_utils import discretize_linear_system, compute_discrete_lqr_gain_from_cont_linear_system
+from safe_control_gym.controllers.mpc.mpc_utils import \
+    compute_discrete_lqr_gain_from_cont_linear_system
 from safe_control_gym.envs.benchmark_env import Task
 
 
@@ -72,8 +74,8 @@ class LinearMPC(MPC):
         )
 
         # TODO: setup environment equilibrium
-        #self.X_EQ = np.atleast_2d(self.env.X_GOAL)[0,:].T
-        #self.U_EQ = np.atleast_2d(self.env.U_GOAL)[0,:]
+        # self.X_EQ = np.atleast_2d(self.env.X_GOAL)[0,:].T
+        # self.U_EQ = np.atleast_2d(self.env.U_GOAL)[0,:]
 
         self.X_EQ = np.atleast_2d(self.model.X_EQ)[0, :].T
         self.U_EQ = np.atleast_2d(self.model.U_EQ)[0, :].T
@@ -88,7 +90,7 @@ class LinearMPC(MPC):
         dfdu = dfdxdfdu['dfdu'].toarray()
         delta_x = cs.MX.sym('delta_x', self.model.nx, 1)
         delta_u = cs.MX.sym('delta_u', self.model.nu, 1)
-        #x_dot_lin_vec = dfdx @ delta_x + dfdu @ delta_u
+        # x_dot_lin_vec = dfdx @ delta_x + dfdu @ delta_u
         # self.linear_dynamics_func = cs.integrator(
         #    'linear_discrete_dynamics', self.model.integration_algo,
         #    {

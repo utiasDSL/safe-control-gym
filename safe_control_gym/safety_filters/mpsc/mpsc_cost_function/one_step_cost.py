@@ -1,6 +1,7 @@
 '''Standard cost function for MPSC, minimizing change in the next step's input.'''
 
-from safe_control_gym.safety_filters.mpsc.mpsc_cost_function.abstract_cost import MPSC_COST
+from safe_control_gym.safety_filters.mpsc.mpsc_cost_function.abstract_cost import \
+    MPSC_COST
 
 
 class ONE_STEP_COST(MPSC_COST):

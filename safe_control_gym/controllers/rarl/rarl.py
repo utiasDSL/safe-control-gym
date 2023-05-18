@@ -16,17 +16,20 @@ import os
 import time
 from collections import defaultdict
 
-import torch
 import numpy as np
-
-from safe_control_gym.utils.logging import ExperimentLogger
-from safe_control_gym.utils.utils import get_random_state, set_random_state, is_wrapped
-from safe_control_gym.envs.env_wrappers.vectorized_env import make_vec_envs
-from safe_control_gym.envs.env_wrappers.record_episode_statistics import RecordEpisodeStatistics, VecRecordEpisodeStatistics
-from safe_control_gym.math_and_models.normalization import BaseNormalizer, MeanStdNormalizer, RewardStdNormalizer
+import torch
 
 from safe_control_gym.controllers.base_controller import BaseController
-from safe_control_gym.controllers.ppo.ppo_utils import PPOAgent, PPOBuffer, compute_returns_and_advantages
+from safe_control_gym.controllers.ppo.ppo_utils import (
+    PPOAgent, PPOBuffer, compute_returns_and_advantages)
+from safe_control_gym.envs.env_wrappers.record_episode_statistics import (
+    RecordEpisodeStatistics, VecRecordEpisodeStatistics)
+from safe_control_gym.envs.env_wrappers.vectorized_env import make_vec_envs
+from safe_control_gym.math_and_models.normalization import (
+    BaseNormalizer, MeanStdNormalizer, RewardStdNormalizer)
+from safe_control_gym.utils.logging import ExperimentLogger
+from safe_control_gym.utils.utils import (get_random_state, is_wrapped,
+                                          set_random_state)
 
 
 class RARL(BaseController):

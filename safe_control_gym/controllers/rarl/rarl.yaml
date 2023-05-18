@@ -23,9 +23,9 @@ max_grad_norm: 0.5
 agent_iterations: 10
 adversary_iterations: 10
 
-pretrained: null 
-train_protagonist: True 
-train_adversary: True 
+pretrained: null
+train_protagonist: True
+train_adversary: True
 
 # runner args
 max_env_steps: 1000000
@@ -40,5 +40,5 @@ log_interval: 0
 save_interval: 0
 num_checkpoints: 0
 eval_interval: 0
-eval_save_best: False 
+eval_save_best: False
 tensorboard: False

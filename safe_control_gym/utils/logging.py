@@ -1,11 +1,11 @@
 '''Logging utilities.'''
 
-from collections import defaultdict
 import logging
 import os
-import numpy as np
-import imageio
+from collections import defaultdict
 
+import imageio
+import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
 

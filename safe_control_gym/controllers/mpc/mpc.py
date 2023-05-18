@@ -2,13 +2,16 @@
 
 from copy import deepcopy
 
-import numpy as np
 import casadi as cs
+import numpy as np
 
 from safe_control_gym.controllers.base_controller import BaseController
-from safe_control_gym.controllers.mpc.mpc_utils import get_cost_weight_matrix, compute_discrete_lqr_gain_from_cont_linear_system, rk_discrete, compute_state_rmse, reset_constraints
+from safe_control_gym.controllers.mpc.mpc_utils import (
+    compute_discrete_lqr_gain_from_cont_linear_system, compute_state_rmse,
+    get_cost_weight_matrix, reset_constraints, rk_discrete)
 from safe_control_gym.envs.benchmark_env import Task
-from safe_control_gym.envs.constraints import GENERAL_CONSTRAINTS, create_constraint_list
+from safe_control_gym.envs.constraints import (GENERAL_CONSTRAINTS,
+                                               create_constraint_list)
 
 
 class MPC(BaseController):
@@ -72,16 +75,16 @@ class MPC(BaseController):
         self.T = horizon
         self.Q = get_cost_weight_matrix(self.q_mpc, self.model.nx)
         self.R = get_cost_weight_matrix(self.r_mpc, self.model.nu)
-        #self.prior_info = prior_info
+        # self.prior_info = prior_info
 
         self.soft_constraints = soft_constraints
         self.warmstart = warmstart
         self.terminate_run_on_done = terminate_run_on_done
 
-        #self.X_EQ = self.env.X_EQ
-        #self.U_EQ = self.env.U_EQ
+        # self.X_EQ = self.env.X_EQ
+        # self.U_EQ = self.env.U_EQ
         # logging
-        #self.logger = ExperimentLogger(output_dir)
+        # self.logger = ExperimentLogger(output_dir)
 
     def add_constraints(self,
                         constraints
@@ -235,7 +238,7 @@ class MPC(BaseController):
 
         opti.minimize(cost)
         # Create solver (IPOPT solver in this version)
-        #opts = {'ipopt.print_level': 0, 'ipopt.sb': 'yes', 'print_time': 0}
+        # opts = {'ipopt.print_level': 0, 'ipopt.sb': 'yes', 'print_time': 0}
         opts = {'expand': True}
         opti.solver('ipopt', opts)
         self.opti_dict = {
@@ -366,7 +369,7 @@ class MPC(BaseController):
         self.u_prev = None
         if not env.initial_reset:
             env.set_cost_function_param(self.Q, self.R)
-        #obs, info = env.reset()
+        # obs, info = env.reset()
         obs = env.reset()
         print('Init State:')
         print(obs)
@@ -405,7 +408,7 @@ class MPC(BaseController):
             self.results_dict['action'].append(action)
             self.results_dict['state'].append(env.state)
             self.results_dict['state_mse'].append(info['mse'])
-            #self.results_dict['state_error'].append(env.state - env.X_GOAL[i,:])
+            # self.results_dict['state_error'].append(env.state - env.X_GOAL[i,:])
 
             common_metric += info['mse']
             print(i, '-th step.')

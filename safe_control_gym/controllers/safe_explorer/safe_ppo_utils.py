@@ -5,9 +5,9 @@ import torch
 import torch.nn as nn
 from gymnasium.spaces import Box
 
-from safe_control_gym.math_and_models.neural_networks import MLP
-from safe_control_gym.math_and_models.distributions import Normal, Categorical
 import safe_control_gym.controllers.ppo.ppo_utils as ppo_utils
+from safe_control_gym.math_and_models.distributions import Categorical, Normal
+from safe_control_gym.math_and_models.neural_networks import MLP
 
 
 class SafePPOAgent(ppo_utils.PPOAgent):

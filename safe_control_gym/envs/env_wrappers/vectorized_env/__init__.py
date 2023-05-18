@@ -2,11 +2,13 @@
 
 import random
 
-import torch
 import numpy as np
+import torch
 
-from safe_control_gym.envs.env_wrappers.vectorized_env.dummy_vec_env import DummyVecEnv
-from safe_control_gym.envs.env_wrappers.vectorized_env.subproc_vec_env import SubprocVecEnv
+from safe_control_gym.envs.env_wrappers.vectorized_env.dummy_vec_env import \
+    DummyVecEnv
+from safe_control_gym.envs.env_wrappers.vectorized_env.subproc_vec_env import \
+    SubprocVecEnv
 
 
 def make_env_fn(env_func,

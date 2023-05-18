@@ -1,12 +1,13 @@
 import sys
+
 import pytest
 
 from examples.lqr.lqr_experiment import run
 
 
-@pytest.mark.parametrize('SYS', ['cartpole', 'quadrotor_2D', 'quadrotor_3D'])
-@pytest.mark.parametrize('TASK',['stabilization', 'tracking'])
-@pytest.mark.parametrize('ALGO',['lqr', 'ilqr'])
+@pytest.mark.parametrize('SYS',  ['cartpole', 'quadrotor_2D', 'quadrotor_3D'])
+@pytest.mark.parametrize('TASK', ['stabilization', 'tracking'])
+@pytest.mark.parametrize('ALGO', ['lqr', 'ilqr'])
 def test_lqr(SYS, TASK, ALGO):
     SYS_NAME = 'quadrotor' if 'quadrotor' in SYS else SYS
     sys.argv[1:] = ['--algo', ALGO,

@@ -52,7 +52,7 @@ task_config:
     trajectory_plane: 'xz'
     trajectory_position_offset: [0, 1]
     trajectory_scale: 1
-  
+
   inertial_prop:
     M: 0.027
     Iyy: 1.4e-05

@@ -8,8 +8,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from gymnasium.spaces import Box
 
-from safe_control_gym.math_and_models.neural_networks import MLP
 from safe_control_gym.controllers.ppo.ppo_utils import random_sample
+from safe_control_gym.math_and_models.neural_networks import MLP
 
 
 class SafetyLayer:

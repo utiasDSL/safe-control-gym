@@ -1,15 +1,15 @@
 '''PPO utilities.'''
 
-from copy import deepcopy
 from collections import defaultdict
+from copy import deepcopy
 
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
 from gymnasium.spaces import Box
 
+from safe_control_gym.math_and_models.distributions import Categorical, Normal
 from safe_control_gym.math_and_models.neural_networks import MLP
-from safe_control_gym.math_and_models.distributions import Normal, Categorical
 
 
 class PPOAgent:
