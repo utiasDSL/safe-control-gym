@@ -1,4 +1,4 @@
-name: Run Tests
+name: Test Package Quality
 
 on: push
 
@@ -21,6 +21,11 @@ jobs:
     - name: Install package
       run: |
         pip install -e .
+    - name: Run Linting
+      run: |
+        pre-commit install
+        pre-commit autoupdate
+        pre-commit run
     - name: Unit tests
       run: |
         python -m pytest tests/
