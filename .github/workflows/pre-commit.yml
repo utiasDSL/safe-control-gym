@@ -1,4 +1,4 @@
-name: pre-commit
+name: Run Linting
 
 on: push
 
