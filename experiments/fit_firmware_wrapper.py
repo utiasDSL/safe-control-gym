@@ -10,7 +10,7 @@ Look for instructions in `README.md` and `edit_this.py`.
 import time
 import sys
 LOG_TIME = time.time()
-LOG_NAME = "logs/sim2real_comparison"
+LOG_NAME = "logs/DEL"
 sys.stdout = open(f"{LOG_NAME}_{LOG_TIME}.txt", "a")
 import yaml
 import argparse
@@ -34,7 +34,7 @@ import pycffirmware
 
 
 
-def run_trial(config, controller, trajectory, return_traj=False):
+def run_trial(x, config, controller, trajectory):
     """The main function creating, running, and closing an environment over N episodes.
 
     """
@@ -65,8 +65,8 @@ def run_trial(config, controller, trajectory, return_traj=False):
     # not the firmware. 
     config.quadrotor_config['ctrl_freq'] = FIRMWARE_FREQ
     env_func = partial(make, 'quadrotor', **config.quadrotor_config)
-    firmware_wrapper = make('firmware',
-                env_func, FIRMWARE_FREQ, CTRL_FREQ, verbose=False
+    firmware_wrapper = make('firmware_tunable',
+                env_func, FIRMWARE_FREQ, CTRL_FREQ, x, verbose=False
                 ) 
     firmware_wrapper.env.GROUND_PLANE_Z = trajectory[0,3]
     obs, info = firmware_wrapper.reset()
@@ -183,15 +183,14 @@ def run_trial(config, controller, trajectory, return_traj=False):
     plt.show()
 
     # rmse = np.sqrt(np.square(np.subtract(trajectory[:,1:4],aligned_states[:,1:4])).mean())
-    if return_traj:
-        return np.mean(dist), trajectory[::15,1:4], aligned_states[::15,1:4]
     return np.mean(dist)
 
     
 trial_counter = 0
-def run(trajectories, controllers, export=False):
+def run(x, trajectories, controllers):
     global trial_counter
     ret = 0
+    print(f"[{trial_counter}] Running parameters", x, file=open(f"{LOG_NAME}_{LOG_TIME}.txt", "a"))
     start = time.time()
 
     for run in trajectories.keys():
@@ -199,13 +198,9 @@ def run(trajectories, controllers, export=False):
         # Load configuration.
         CONFIG_FACTORY = ConfigFactory()
         config = CONFIG_FACTORY.merge(config_override=[f"{run}/getting_started.yaml"])
-        dist, traj, sim_traj = run_trial(config, controllers[run], trajectories[run], return_traj=True)
+        dist = run_trial(x, config, controllers[run], trajectories[run])
         print(f"{run} with avg dist {dist}m")
         ret += dist
-
-        if export:
-            res = np.hstack([traj, sim_traj])
-            np.savetxt(f"logs/sim2real_comparison_{run}.csv", res, delimiter=',',header='real_x,real_y,real_z,sim_x,sim_y,sim_z')
 
     ret /= len(trajectories.keys())
 
@@ -241,4 +236,25 @@ if __name__ == "__main__":
         'zig_zag_fall': importlib.import_module('zig_zag_fall.edit_this'),
     }
 
-    run(trajectories, controllers, export=True)
+    x0 = [0, 0, 0.1, 0]
+    bounds = [
+        (0, 1),
+        (0, 1),
+        (0, 1),
+        (0, 1)
+    ]
+    run(x0, trajectories, controllers)
+    # res = basinhopping(run, x0, disp=True, minimizer_kwargs={"args":(trajectories, controllers), "bounds":bounds})
+    # res = differential_evolution(
+    #     run, 
+    #     x0=x0, 
+    #     disp=True, 
+    #     args=(trajectories, controllers), 
+    #     bounds=bounds, 
+    #     mutation=(0.001, 0.1), 
+    #     recombination=0.5,
+    #     # workers=-1
+    # )
+    # print(res.x)
+    # print(res.fun)
+    # print(res.message)

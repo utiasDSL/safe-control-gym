@@ -58,3 +58,7 @@ register(id="rap",
 register(id="firmware",
          entry_point="safe_control_gym.controllers.firmware.firmware_wrapper:FirmwareWrapper",
          config_entry_point="safe_control_gym.controllers.firmware:firmware.yaml")
+
+register(id="firmware_tunable",
+         entry_point="safe_control_gym.controllers.firmware_tunable.firmware_wrapper:FirmwareWrapper",
+         config_entry_point="safe_control_gym.controllers.firmware_tunable:firmware.yaml")
