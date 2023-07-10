@@ -16,11 +16,10 @@ Implementation details:
        and the inducing points are the previous MPC solution.
     3. Each dimension of the learned error dynamics is an independent Zero Mean SE Kernel GP.
 '''
-
 import time
 from copy import deepcopy
 from functools import partial
-
+import munch
 import scipy
 import numpy as np
 import casadi as cs
@@ -32,9 +31,9 @@ from sklearn.metrics import pairwise_distances_argmin_min
 
 from safe_control_gym.controllers.mpc.linear_mpc import LinearMPC, MPC
 from safe_control_gym.controllers.mpc.mpc_utils import discretize_linear_system
-from safe_control_gym.controllers.mpc.gp_utils import GaussianProcessCollection, ZeroMeanIndependentGPModel, covSEard, kmeans_centriods
+from safe_control_gym.controllers.mpc.gp_utils import GaussianProcessCollection, ZeroMeanIndependentGPModel, covSEard, covMatern52ard, kmeans_centriods
 from safe_control_gym.envs.benchmark_env import Task
-
+from safe_control_gym.envs.constraints import GENERAL_CONSTRAINTS
 
 class GPMPC(MPC):
     '''MPC with Gaussian Process as dynamics residual.'''
@@ -58,6 +57,7 @@ class GPMPC(MPC):
             normalize_training_data: bool = False,
             use_gpu: bool = False,
             gp_model_path: str = None,
+            kernel: str = 'Matern',
             prob: float = 0.955,
             initial_rollout_std: float = 0.005,
             input_mask: list = None,
@@ -91,6 +91,7 @@ class GPMPC(MPC):
             normalize_training_data (bool): Normalize the training data.
             use_gpu (bool): use GPU while training the gp.
             gp_model_path (str): path to a pretrained GP model. If None, will train a new one.
+            kernel (str): 'Matern' or 'RBF' kernel.
             output_dir (str): directory to store model and results.
             prob (float): desired probabilistic safety level.
             initial_rollout_std (float): the initial std (across all states) for the mean_eq rollout.
@@ -172,6 +173,7 @@ class GPMPC(MPC):
         self.optimization_iterations = optimization_iterations
         self.learning_rate = learning_rate
         self.gp_model_path = gp_model_path
+        self.kernel = kernel
         self.normalize_training_data = normalize_training_data
         self.prob = prob
         if input_mask is None:
@@ -234,12 +236,21 @@ class GPMPC(MPC):
         z2 = cs.SX.sym('z2', Nx)
         ell_s = cs.SX.sym('ell', Nx)
         sf2_s = cs.SX.sym('sf2')
-        z_ind = cs.SX.sym('z_ind', n_ind_points, Nx)
-        covSE = cs.Function('covSE', [z1, z2, ell_s, sf2_s],
-                            [covSEard(z1, z2, ell_s, sf2_s)])
+        z_ind  = cs.SX.sym('z_ind', n_ind_points, Nx)
         ks = cs.SX.zeros(1, n_ind_points)
-        for i in range(n_ind_points):
-            ks[i] = covSE(z1, z_ind[i, :], ell_s, sf2_s)
+        if self.kernel == 'Matern':
+            covMatern = cs.Function('covMatern', [z1, z2, ell_s, sf2_s],
+                                    [covMatern52ard(z1, z2, ell_s, sf2_s)])
+            for i in range(n_ind_points):
+                ks[i] = covMatern(z1, z_ind[i, :], ell_s, sf2_s)
+        elif self.kernel == 'RBF':
+            covSE = cs.Function('covSE', [z1, z2, ell_s, sf2_s],
+                                [covSEard(z1, z2, ell_s, sf2_s)])
+            for i in range(n_ind_points):
+                ks[i] = covSE(z1, z_ind[i, :], ell_s, sf2_s)
+        else: 
+            raise NotImplementedError('Kernel type not implemented.')
+         
         ks_func = cs.Function('K_s', [z1, z_ind, ell_s, sf2_s], [ks])
         K_z_zind = cs.SX.zeros(Ny, n_ind_points)
         for i in range(Ny):
@@ -772,16 +783,22 @@ class GPMPC(MPC):
         test_targets_tensor = torch.Tensor(test_targets).double()
 
         # Define likelihood.
-        likelihood = gpytorch.likelihoods.GaussianLikelihood(
-            noise_constraint=gpytorch.constraints.GreaterThan(1e-6),
-        ).double()
+        if self.parallel:
+            likelihood = gpytorch.likelihoods.GaussianLikelihood(batch_shape=torch.Size([len(self.target_mask)]),
+                                                                 noise_constraint=gpytorch.constraints.GreaterThan(1e-6)).double()
+        else:
+            likelihood = gpytorch.likelihoods.GaussianLikelihood(
+                noise_constraint=gpytorch.constraints.GreaterThan(1e-6),
+            ).double()
         self.gaussian_process = GaussianProcessCollection(ZeroMeanIndependentGPModel,
-                                                          likelihood,
-                                                          len(self.target_mask),
-                                                          input_mask=self.input_mask,
-                                                          target_mask=self.target_mask,
-                                                          normalize=self.normalize_training_data
-                                                          )
+                                                     likelihood,
+                                                     len(self.target_mask),
+                                                     input_mask=self.input_mask,
+                                                     target_mask=self.target_mask,
+                                                     normalize=self.normalize_training_data,
+                                                     kernel=self.kernel,
+                                                     parallel=self.parallel
+                                                     )
         if gp_model:
             self.gaussian_process.init_with_hyperparam(train_inputs_tensor,
                                                        train_targets_tensor,
@@ -815,6 +832,128 @@ class GPMPC(MPC):
         except UnboundLocalError:
             training_results['info'] = None
         return training_results
+    
+    def _learn(self):
+        '''Performs multiple epochs learning as an unified calling function for hyperparameter optimization.
+        '''
+
+        train_runs = {0: {}}
+        test_runs = {0: {}}
+
+        if self.same_train_initial_state:
+            train_envs = []
+            for epoch in range(self.num_epochs):
+                train_envs.append(self.env_func(randomized_init=True, seed=self.seed))
+                train_envs[epoch].action_space.seed(self.seed)
+        else:
+            train_env = self.env_func(randomized_init=True, seed=self.seed)
+            train_env.action_space.seed(self.seed)
+            train_envs = [train_env]*self.num_epochs
+        #init_test_states = get_random_init_states(env_func, num_test_episodes_per_epoch)
+        test_envs = []
+        if self.same_test_initial_state:
+            for epoch in range(self.num_epochs):
+                test_envs.append(self.env_func(randomized_init=True, seed=self.seed*222))
+                test_envs[epoch].action_space.seed(self.seed*222)
+        else:
+            test_env = self.env_func(randomized_init=True, seed=self.seed*222)
+            test_env.action_space.seed(self.seed*222)
+            test_envs = [test_env]*self.num_epochs
+
+
+        for episode in range(self.num_train_episodes_per_epoch):
+            run_results = self.prior_ctrl.run(env=train_envs[0],
+                                            terminate_run_on_done=self.terminate_train_on_done)
+            train_runs[0].update({episode: munch.munchify(run_results)})
+            self.reset()
+        for test_ep in range(self.num_test_episodes_per_epoch):
+            run_results = self.run(env=test_envs[0],
+                                terminate_run_on_done=self.terminate_test_on_done)
+            test_runs[0].update({test_ep: munch.munchify(run_results)})
+        self.reset()
+
+        for epoch in range(1, self.num_epochs):
+            # only take data from the last episode from the last epoch
+            if self.rand_data_selection:
+                x_seq, actions, x_next_seq = self.gather_training_samples(train_runs, epoch-1, self.num_samples, train_envs[epoch-1].np_random)
+            else:
+                x_seq, actions, x_next_seq = self.gather_training_samples(train_runs, epoch-1, self.num_samples)
+            train_inputs, train_outputs = self.preprocess_training_data(x_seq, actions, x_next_seq)
+            _ = self.learn(input_data=train_inputs, target_data=train_outputs)
+
+            # Test new policy.
+            test_runs[epoch] = {}
+            for test_ep in range(self.num_test_episodes_per_epoch):
+                self.x_prev = test_runs[epoch-1][episode]['obs'][:self.T+1,:].T
+                self.u_prev = test_runs[epoch-1][episode]['action'][:self.T,:].T
+                self.reset()
+                run_results = self.run(env=test_envs[epoch],
+                                    terminate_run_on_done=self.terminate_test_on_done)
+                test_runs[epoch].update({test_ep: munch.munchify(run_results)})
+            # gather training data
+            train_runs[epoch] = {}
+            for episode in range(self.num_train_episodes_per_epoch):
+                self.reset()
+                self.x_prev = train_runs[epoch-1][episode]['obs'][:self.T+1,:].T
+                self.u_prev = train_runs[epoch-1][episode]['action'][:self.T,:].T
+                run_results = self.run(env=train_envs[epoch],
+                                    terminate_run_on_done=self.terminate_train_on_done)
+                train_runs[epoch].update({episode: munch.munchify(run_results)})
+
+            lengthscale, outputscale, noise, kern = self.gaussian_process.get_hyperparameters(as_numpy=True)
+
+        # close environments
+        for env in train_envs:
+            env.close()
+        for env in test_envs:
+            env.close()
+
+        self.train_runs = train_runs
+        self.test_runs = test_runs
+
+        return train_runs, test_runs
+
+    def _run(self):
+        '''Runs evaluation as an unified calling function for hyperparameter optimization.
+           Here we assume _learn() has been called and self.test_runs is available.
+        '''
+
+        # get accumulated reward
+        rewards = []
+        for ep in range(len(self.test_runs[self.num_epochs-1])):
+            # to get bounded accumulated reward to achieve fair HPO across different algorithms
+            # take exp for reward in each step and sum them up
+            rewards.append(np.sum(np.exp(2*self.test_runs[self.num_epochs-1][ep]['reward'])))
+        
+        mean_reward = np.mean(rewards)
+
+        return mean_reward
+    
+    def gather_training_samples(self, all_runs, epoch_i, num_samples, rand_generator=None):
+        n_episodes = len(all_runs[epoch_i].keys())
+        num_samples_per_episode = int(num_samples/n_episodes)
+        x_seq_int = []
+        x_next_seq_int = []
+        actions_int = []
+        for episode_i in range(n_episodes):
+            run_results_int = all_runs[epoch_i][episode_i]
+            n = run_results_int['action'].shape[0]
+            if num_samples_per_episode < n:
+                if rand_generator is not None:
+                    rand_inds_int = rand_generator.choice(n-1, num_samples_per_episode, replace=False)
+                else:
+                    rand_inds_int = np.arange(num_samples_per_episode)
+            else:
+                rand_inds_int = np.arange(n-1)
+            next_inds_int = rand_inds_int + 1
+            x_seq_int.append(run_results_int.obs[rand_inds_int, :])
+            actions_int.append(run_results_int.action[rand_inds_int, :])
+            x_next_seq_int.append(run_results_int.obs[next_inds_int, :])
+        x_seq_int = np.vstack(x_seq_int)
+        actions_int = np.vstack(actions_int)
+        x_next_seq_int = np.vstack(x_next_seq_int)
+
+        return x_seq_int, actions_int, x_next_seq_int
 
     def select_action(self,
                       obs,

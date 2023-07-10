@@ -3,6 +3,7 @@
 import numpy as np
 import casadi as cs
 import scipy
+import scipy.linalg
 
 from safe_control_gym.envs.constraints import ConstraintList
 
