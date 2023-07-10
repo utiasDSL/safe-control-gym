@@ -43,14 +43,24 @@ python ./safe_control_gym/hyperparameters/database.py --func drop --tag gp_mpc_h
 # create database
 python ./safe_control_gym/hyperparameters/database.py --func create --tag gp_mpc_hpo
 
-python ./experiments/comparisons/gpmpc/gpmpc_experiment.py --overrides ./experiments/comparisons/gpmpc/config_overrides/cartpole/gpmpc_cartpole_150.yaml ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml ./experiments/comparisons/gpmpc/config_overrides/cartpole/gpmpc_cartpole_hpo.yaml --output_dir ./experiments/comparisons/gpmpc/hpo/prior --task cartpole --func hpo --tag prior_150 --seed $seed1 &
+python ./experiments/comparisons/gpmpc/gpmpc_experiment.py \
+         --overrides ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_150.yaml \
+                     ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml \
+                     ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_hpo.yaml \
+                     --output_dir ./experiments/comparisons/gpmpc/hpo/prior \
+                     --task cartpole --func hpo --tag prior_150 --seed $seed1 &
 pid1=$!
 
 # wait until the first study is created
 sleep 3
 
 # set load_study to True
-python ./experiments/comparisons/gpmpc/gpmpc_experiment.py --overrides ./experiments/comparisons/gpmpc/config_overrides/cartpole/gpmpc_cartpole_150.yaml ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml ./experiments/comparisons/gpmpc/config_overrides/cartpole/gpmpc_cartpole_hpo.yaml --output_dir ./experiments/comparisons/gpmpc/hpo/prior --task cartpole --func hpo --load_study True --tag prior_150 --seed $seed2 &
+python ./experiments/comparisons/gpmpc/gpmpc_experiment.py \
+         --overrides ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_150.yaml \
+                     ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml \
+                     ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_hpo.yaml \
+                     --output_dir ./experiments/comparisons/gpmpc/hpo/prior \
+                     --task cartpole --func hpo --load_study True --tag prior_150 --seed $seed2 &
 pid2=$!
 
 # move the database from . into output_dir after both commands finish
@@ -77,14 +87,24 @@ python ./safe_control_gym/hyperparameters/database.py --func drop --tag gp_mpc_h
 # create database
 python ./safe_control_gym/hyperparameters/database.py --func create --tag gp_mpc_hpo
 
-python ./experiments/comparisons/gpmpc/gpmpc_experiment.py --overrides ./experiments/comparisons/gpmpc/config_overrides/cartpole/gpmpc_cartpole_200.yaml ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml ./experiments/comparisons/gpmpc/config_overrides/cartpole/gpmpc_cartpole_hpo.yaml --output_dir ./experiments/comparisons/gpmpc/hpo/prior --task cartpole --func hpo --tag prior_200 --seed $seed1 &
+python ./experiments/comparisons/gpmpc/gpmpc_experiment.py \
+        --overrides ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_200.yaml \
+                    ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml \
+                    ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_hpo.yaml \
+                    --output_dir ./experiments/comparisons/gpmpc/hpo/prior \
+                    --task cartpole --func hpo --tag prior_200 --seed $seed1 &
 pid1=$!
 
 # wait until the first study is created
 sleep 3
 
 # set load_study to True
-python ./experiments/comparisons/gpmpc/gpmpc_experiment.py --overrides ./experiments/comparisons/gpmpc/config_overrides/cartpole/gpmpc_cartpole_200.yaml ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml ./experiments/comparisons/gpmpc/config_overrides/cartpole/gpmpc_cartpole_hpo.yaml --output_dir ./experiments/comparisons/gpmpc/hpo/prior --task cartpole --func hpo --load_study True --tag prior_200 --seed $seed2 &
+python ./experiments/comparisons/gpmpc/gpmpc_experiment.py \
+        --overrides ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_200.yaml \
+                    ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml \
+                    ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_hpo.yaml \
+                    --output_dir ./experiments/comparisons/gpmpc/hpo/prior \
+                    --task cartpole --func hpo --load_study True --tag prior_200 --seed $seed2 &
 pid2=$!
 
 # move the database from . into output_dir after both commands finish
@@ -111,14 +131,24 @@ python ./safe_control_gym/hyperparameters/database.py --func drop --tag gp_mpc_h
 # create database
 python ./safe_control_gym/hyperparameters/database.py --func create --tag gp_mpc_hpo
 
-python ./experiments/comparisons/gpmpc/gpmpc_experiment.py --overrides ./experiments/comparisons/gpmpc/config_overrides/cartpole/gpmpc_cartpole_250.yaml ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml ./experiments/comparisons/gpmpc/config_overrides/cartpole/gpmpc_cartpole_hpo.yaml --output_dir ./experiments/comparisons/gpmpc/hpo/prior --task cartpole --func hpo --tag prior_250 --seed $seed1 &
+python ./experiments/comparisons/gpmpc/gpmpc_experiment.py \
+        --overrides ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_250.yaml \
+                    ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml \
+                    ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_hpo.yaml \
+                    --output_dir ./experiments/comparisons/gpmpc/hpo/prior \
+                    --task cartpole --func hpo --tag prior_250 --seed $seed1 &
 pid1=$!
 
 # wait until the first study is created
 sleep 3
 
 # set load_study to True
-python ./experiments/comparisons/gpmpc/gpmpc_experiment.py --overrides ./experiments/comparisons/gpmpc/config_overrides/cartpole/gpmpc_cartpole_250.yaml ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml ./experiments/comparisons/gpmpc/config_overrides/cartpole/gpmpc_cartpole_hpo.yaml --output_dir ./experiments/comparisons/gpmpc/hpo/prior --task cartpole --func hpo --load_study True --tag prior_250 --seed $seed2 &
+python ./experiments/comparisons/gpmpc/gpmpc_experiment.py \
+        --overrides ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_250.yaml \
+                    ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml \
+                    ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_hpo.yaml \
+                    --output_dir ./experiments/comparisons/gpmpc/hpo/prior \
+                    --task cartpole --func hpo --load_study True --tag prior_250 --seed $seed2 &
 pid2=$!
 
 # move the database from . into output_dir after both commands finish
