@@ -1,7 +1,4 @@
 task_config:
-  # adversary_disturbance: null
-  # adversary_disturbance_scale: 0.01
-  # constraint_penalty: -1
   constraints:
     - constraint_form: default_constraint
       constrained_variable: input
