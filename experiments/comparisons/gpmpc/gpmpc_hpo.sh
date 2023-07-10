@@ -16,7 +16,7 @@
 # 5. If you want to kill them, run `pkill -f "python ./experiments/comparisons/gpmpc/gpmpc_experiment.py"`. 
 #####################
 
-cd ~/safe-control-gym
+cd ~/PRs/safe-control-gym
 
 experiment_name=$1
 seed1=$2
