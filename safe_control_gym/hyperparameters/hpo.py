@@ -95,18 +95,34 @@ class HPO(object):
                 self.logger.info("Sample hyperparameters: {}".format(sampled_hyperparams))
                 self.logger.info("Seeds: {}".format(seeds))
 
-                # using deepcopy(self.algo_config) prevent setting being overwritten
-                self.env_func = partial(make, self.task, output_dir=self.output_dir, **self.task_config)
-                self.agent = make(self.algo,
-                                    self.env_func,
-                                    training=True,
-                                    checkpoint_path=os.path.join(self.output_dir, "model_latest.pt"),
-                                    output_dir=os.path.join(self.output_dir, "hpo"),
-                                    use_gpu=self.hpo_config.use_gpu,
-                                    seed=seed,
-                                    **deepcopy(self.algo_config))
+                try:
+                    self.env_func = partial(make, self.task, output_dir=self.output_dir, **self.task_config)
+                    self.agent = make(self.algo,
+                                        self.env_func,
+                                        training=True,
+                                        checkpoint_path=os.path.join(self.output_dir, "model_latest.pt"),
+                                        output_dir=os.path.join(self.output_dir, "hpo"),
+                                        use_gpu=self.hpo_config.use_gpu,
+                                        seed=seed,
+                                        **deepcopy(self.algo_config))
 
-                self.agent.reset()
+                    self.agent.reset()
+                except Exception as e:
+                    # catch exception
+                    self.logger.info(f'Exception: {e}')
+
+                # # using deepcopy(self.algo_config) prevent setting being overwritten
+                # self.env_func = partial(make, self.task, output_dir=self.output_dir, **self.task_config)
+                # self.agent = make(self.algo,
+                #                     self.env_func,
+                #                     training=True,
+                #                     checkpoint_path=os.path.join(self.output_dir, "model_latest.pt"),
+                #                     output_dir=os.path.join(self.output_dir, "hpo"),
+                #                     use_gpu=self.hpo_config.use_gpu,
+                #                     seed=seed,
+                #                     **deepcopy(self.algo_config))
+
+                # self.agent.reset()
 
                 # return objective estimate
                 # TODO: report intermediate results to Optuna for pruning
@@ -119,7 +135,7 @@ class HPO(object):
                     self.agent.close()
                     del self.agent
                     del self.env_func
-                    self.logger.info(e)
+                    self.logger.info(f'Exception: {e}')
                     print(e)
                     print("Sampled hyperparameters:")
                     print(sampled_hyperparams)
