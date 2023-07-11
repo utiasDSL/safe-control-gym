@@ -57,7 +57,7 @@ def train(config):
         with open(config.opt_hps, "r") as f:
             opt_hps = yaml.load(f, Loader=yaml.FullLoader)
         for hp in opt_hps:
-            if isinstance(config.algo_config[hp], list):
+            if isinstance(config.algo_config[hp], list) and not isinstance(opt_hps[hp], list):
                 config.algo_config[hp] = [opt_hps[hp]] * len(config.algo_config[hp])
             else:
                 config.algo_config[hp] = opt_hps[hp]
@@ -80,7 +80,7 @@ def train(config):
     ctrl.reset()
 
     # Note that the following script is the same as train_runs, test_runs = ctrl._learn()
-    # but with some plotting
+    # but with some plotting along the way.
 
     num_epochs = config.algo_config.num_epochs
     num_train_episodes_per_epoch = config.algo_config.num_train_episodes_per_epoch
