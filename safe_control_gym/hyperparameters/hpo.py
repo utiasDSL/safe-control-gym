@@ -109,7 +109,7 @@ class HPO(object):
                     self.agent.reset()
                 except Exception as e:
                     # catch exception
-                    self.logger.info(f'Exception: {e}')
+                    self.logger.info(f'Exception occurs when constructing agent: {e}')
 
                 # # using deepcopy(self.algo_config) prevent setting being overwritten
                 # self.env_func = partial(make, self.task, output_dir=self.output_dir, **self.task_config)
@@ -135,7 +135,7 @@ class HPO(object):
                     self.agent.close()
                     del self.agent
                     del self.env_func
-                    self.logger.info(f'Exception: {e}')
+                    self.logger.info(f'Exception occurs during learning: {e}')
                     print(e)
                     print("Sampled hyperparameters:")
                     print(sampled_hyperparams)

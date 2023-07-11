@@ -62,7 +62,7 @@ task_config:
   task: stabilization
   task_info:
     stabilization_goal: [0]
-    stabilization_goal_tolerance: 0.05
+    stabilization_goal_tolerance: 0.005
   use_constraint_penalty: false
   verbose: false
   seed: 36
