@@ -61,7 +61,6 @@ algo_config:
   # misc
   log_interval: 72000
   save_interval: 72000
-  checkpoint_interval: 72000
   eval_interval: 72000
   num_checkpoints: 50
   eval_save_best: True
