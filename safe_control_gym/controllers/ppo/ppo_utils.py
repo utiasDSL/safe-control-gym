@@ -27,6 +27,7 @@ class PPOAgent:
                  critic_lr=0.001,
                  opt_epochs=10,
                  mini_batch_size=64,
+                 activation="tanh",
                  **kwargs
                  ):
         # Parameters.
@@ -42,7 +43,7 @@ class PPOAgent:
         self.ac = MLPActorCritic(obs_space,
                                  act_space,
                                  hidden_dims=[hidden_dim] * 2,
-                                 activation='tanh')
+                                 activation=activation)
         # Optimizers.
         self.actor_opt = torch.optim.Adam(self.ac.actor.parameters(), actor_lr)
         self.critic_opt = torch.optim.Adam(self.ac.critic.parameters(), critic_lr)
@@ -115,6 +116,8 @@ class PPOAgent:
         '''Updates model parameters based on current training batch.'''
         results = defaultdict(list)
         num_mini_batch = rollouts.max_length * rollouts.batch_size // self.mini_batch_size
+        # assert if num_mini_batch is 0
+        assert num_mini_batch is not 0, "num_mini_batch is 0"
         for _ in range(self.opt_epochs):
             p_loss_epoch, v_loss_epoch, e_loss_epoch, kl_epoch = 0, 0, 0, 0
             for batch in rollouts.sampler(self.mini_batch_size, device):
