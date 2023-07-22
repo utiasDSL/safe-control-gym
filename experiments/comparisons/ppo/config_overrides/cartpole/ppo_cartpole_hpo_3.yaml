@@ -1,3 +1,6 @@
+# startegy 3: multiple runs w/ CVaR with maximum allowed agent runs = 1600
+# 160 trials * 10 runs per trials = 1600 runs
+# hpo runs in two jobs, so 80 trials per job
 hpo_config:
   
   # do hyperparameter optimization
@@ -10,17 +13,18 @@ hpo_config:
   side_perturb_num: 2 # number of perturbed hps to yield. ex: lr = [x-2dx, x-dx, x, x+dx, x+2dx] if it is set to 2
   objective: [performance] # [performance, efficiency]
   direction: [maximize] # [maximize, maximize]
-  dynamical_runs: True # if True, dynamically increase runs
+  dynamical_runs: False # if True, dynamically increase runs
   warm_trials: 30 # number of trials to run before dyamical runs
   approximation_threshold: 5
-  repetitions: 3 # number of samples of performance for each objective query
-  alpha: 0.6 # significance level for CVaR
+  repetitions: 10 # number of samples of performance for each objective query
+  alpha: 0.5 # significance level for CVaR
   use_gpu: True
   dashboard: False
   seed: 24
   save_n_best_hps: 3
   # budget
   trials: 80
+  prior: False # false will not consider the prior hps (learning with prior args)
   
   # hyperparameters
   hps_config:
@@ -44,10 +48,4 @@ hpo_config:
 
     # runner args
     rollout_steps: 100
-    max_env_steps: 70000
-
-    # learning with prior args
-    discount_steps: 10
-    improving_factor: 1.3
-    breaking_steps: 10000
-    eval_every: 5
+    max_env_steps: 72000

@@ -1,0 +1,49 @@
+# startegy 4: dynamic runs w/ CVaR with maximum allowed agent runs = 1600
+hpo_config:
+  
+  # do hyperparameter optimization
+  hpo: True
+  load_if_exists: True
+  # yield perturbed hps as yaml files
+  perturb_hps: True
+  # if the perturbed hps are float, divide the interval by this number
+  divisor: 10
+  side_perturb_num: 2 # number of perturbed hps to yield. ex: lr = [x-2dx, x-dx, x, x+dx, x+2dx] if it is set to 2
+  objective: [performance] # [performance, efficiency]
+  direction: [maximize] # [maximize, maximize]
+  dynamical_runs: True # if True, dynamically increase runs
+  warm_trials: 10 # number of trials to run before dyamical runs
+  approximation_threshold: 3.5
+  repetitions: 4 # number of samples of performance for each objective query
+  alpha: 0.5 # significance level for CVaR
+  use_gpu: True
+  dashboard: False
+  seed: 24
+  save_n_best_hps: 3
+  # budget
+  trials: 80
+  prior: False # false will not consider the prior hps (learning with prior args)
+  
+  # hyperparameters
+  hps_config:
+    # model args
+    hidden_dim: 64
+    activation: "relu"
+
+    # loss args
+    gamma: 0.99
+    gae_lambda: 0.95
+    clip_param: 0.2
+    target_kl: 0.01
+    entropy_coef: 0.01
+
+    # optim args
+    opt_epochs: 10
+    mini_batch_size: 64
+    actor_lr: 0.0003
+    critic_lr: 0.001
+    # max_grad_norm: 0.5 (currently not implemented in PPO controller)
+
+    # runner args
+    rollout_steps: 100
+    max_env_steps: 72000

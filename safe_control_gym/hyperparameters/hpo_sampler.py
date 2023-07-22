@@ -49,7 +49,7 @@ GPMPC_dict = {
     }
 }
 
-def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]:
+def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, prior=False) -> Dict[str, Any]:
     """Sampler for PPO hyperparameters.
     
     args:
@@ -74,11 +74,14 @@ def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]
     # Entropy coefficient for the loss calculation
     entropy_coef = trial.suggest_float("entropy_coef", PPO_dict['float']['entropy_coef'][0], PPO_dict['float']['entropy_coef'][1], log=True)
 
-    # prior learning args
-    discount_steps = trial.suggest_categorical("discount_steps", PPO_dict['categorical']['discount_steps'])
-    improving_factor = trial.suggest_categorical("improving_factor", PPO_dict['categorical']['improving_factor'])
-    breaking_steps = trial.suggest_categorical("breaking_steps", PPO_dict['categorical']['breaking_steps'])
-    eval_every = trial.suggest_categorical("eval_every", PPO_dict['categorical']['eval_every'])
+    # check local variables 'prior' is true
+    if prior:
+        # prior learning args
+        discount_steps = trial.suggest_categorical("discount_steps", PPO_dict['categorical']['discount_steps'])
+        improving_factor = trial.suggest_categorical("improving_factor", PPO_dict['categorical']['improving_factor'])
+        breaking_steps = trial.suggest_categorical("breaking_steps", PPO_dict['categorical']['breaking_steps'])
+        eval_every = trial.suggest_categorical("eval_every", PPO_dict['categorical']['eval_every'])
+    
 
     # optim args
     opt_epochs = trial.suggest_categorical("opt_epochs", PPO_dict['categorical']['opt_epochs'])
@@ -100,34 +103,51 @@ def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]
     # Orthogonal initialization
     # ortho_init = False
     # ortho_init = trial.suggest_categorical('ortho_init', [False, True])
-
-    hps_suggestion = {
-                        "hidden_dim": hidden_dim,
-                        "activation": activation,
-                        "gamma": gamma,
-                        "gae_lambda": gae_lambda,
-                        "clip_param": clip_param,
-                        "target_kl": target_kl,
-                        "entropy_coef": entropy_coef,
-                        "opt_epochs": opt_epochs,
-                        "mini_batch_size": mini_batch_size,
-                        "actor_lr": actor_lr,
-                        "critic_lr": critic_lr,
-                        # "max_grad_norm": max_grad_norm, (currently not implemented in PPO controller)
-                        "max_env_steps": max_env_steps,
-                        "rollout_steps": rollout_steps,
-                        # below are learning with prior hps
-                        "discount_steps": discount_steps,
-                        "improving_factor": improving_factor,
-                        "breaking_steps": breaking_steps,
-                        "eval_every": eval_every,
-                    }
+    if prior:
+        hps_suggestion = {
+                            "hidden_dim": hidden_dim,
+                            "activation": activation,
+                            "gamma": gamma,
+                            "gae_lambda": gae_lambda,
+                            "clip_param": clip_param,
+                            "target_kl": target_kl,
+                            "entropy_coef": entropy_coef,
+                            "opt_epochs": opt_epochs,
+                            "mini_batch_size": mini_batch_size,
+                            "actor_lr": actor_lr,
+                            "critic_lr": critic_lr,
+                            # "max_grad_norm": max_grad_norm, (currently not implemented in PPO controller)
+                            "max_env_steps": max_env_steps,
+                            "rollout_steps": rollout_steps,
+                            # below are learning with prior hps
+                            "discount_steps": discount_steps,
+                            "improving_factor": improving_factor,
+                            "breaking_steps": breaking_steps,
+                            "eval_every": eval_every,
+                        }
+    else:
+        hps_suggestion = {
+                            "hidden_dim": hidden_dim,
+                            "activation": activation,
+                            "gamma": gamma,
+                            "gae_lambda": gae_lambda,
+                            "clip_param": clip_param,
+                            "target_kl": target_kl,
+                            "entropy_coef": entropy_coef,
+                            "opt_epochs": opt_epochs,
+                            "mini_batch_size": mini_batch_size,
+                            "actor_lr": actor_lr,
+                            "critic_lr": critic_lr,
+                            # "max_grad_norm": max_grad_norm, (currently not implemented in PPO controller)
+                            "max_env_steps": max_env_steps,
+                            "rollout_steps": rollout_steps,
+                        }
 
     assert len(hps_suggestion) == len(hps_dict), ValueError("We are optimizing over different number of HPs as you listed.")
     
     return hps_suggestion
 
-def gpmpc_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]:
+def gpmpc_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, **kwargs) -> Dict[str, Any]:
     """Sampler for PPO hyperparameters.
     
     args:

@@ -133,7 +133,7 @@ class PPO(BaseController):
             self.obs = self.obs_normalizer(obs)
             if self.encode_prior:
                 self.prior_eval_env.reset()
-                self.self._prior_eval_env.reset()
+                self._prior_eval_env.reset()
         else:
             # Add episodic stats to be tracked.
             self.env.add_tracker('constraint_violation', 0, mode='queue')
@@ -285,6 +285,10 @@ class PPO(BaseController):
         if self.encode_prior:
             self.learn_with_prior(env=env, **kwargs)
             return
+        
+        if self.max_env_steps <= self.num_checkpoints:
+            step_interval = np.linspace(0, self.max_env_steps, self.num_checkpoints)
+            interval_save = np.zeros_like(step_interval, dtype=bool)
         while self.total_steps < self.max_env_steps:
             results = self.train_step()
             # Checkpoint.
@@ -294,11 +298,13 @@ class PPO(BaseController):
                 self.logger.info(f'Checkpoint | {self.checkpoint_path}')
                 path = os.path.join(self.output_dir, "checkpoints", "model_{}.pt".format(self.total_steps))
                 self.save(path)
-            # TODO: implement another way as it may not be divisible
-            if self.num_checkpoints and self.total_steps % (self.max_env_steps // self.num_checkpoints) == 0:
-                # Intermediate checkpoint.
-                path = os.path.join(self.output_dir, 'checkpoints', f'model_{self.total_steps}.pt')
-                self.save(path)
+            if self.max_env_steps <= self.num_checkpoints:
+                interval_id = np.argmin(np.abs(np.array(step_interval) - self.total_steps))
+                if interval_save[interval_id] == False:
+                    # Intermediate checkpoint.
+                    path = os.path.join(self.output_dir, "checkpoints", f'model_{self.total_steps}.pt')
+                    self.save(path)
+                    interval_save[interval_id] = True
             # Evaluation.
             if self.eval_interval and self.total_steps % self.eval_interval == 0:
                 eval_results = self.run(env=self.eval_env, n_episodes=self.eval_batch_size)
