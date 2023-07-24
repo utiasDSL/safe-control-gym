@@ -56,6 +56,11 @@ class HPO(object):
         self.algo_config = algo_config
         self.logger = ExperimentLogger(output_dir, log_file_out=False)
         self.total_runs = 0
+        # check if config.hpo_config.prior is defined
+        if hasattr(self.hpo_config, 'prior'):
+            self.prior = self.hpo_config.prior
+        else:
+            self.prior = False
         assert len(hpo_config.objective) == len(hpo_config.direction), "objective and direction must have the same length"
     
     def objective(self, trial: optuna.Trial) -> float:
@@ -67,7 +72,7 @@ class HPO(object):
         """
 
         # sample candidate hyperparameters
-        sampled_hyperparams = HYPERPARAMS_SAMPLER[self.algo](self.hps_config, trial)
+        sampled_hyperparams = HYPERPARAMS_SAMPLER[self.algo](self.hps_config, trial, self.prior)
 
         # log trial number
         self.logger.info("Trial number: {}".format(trial.number))
@@ -84,8 +89,8 @@ class HPO(object):
                 Gs_rew = np.inf
                 Gs_eff = np.inf
             for i in range(self.hpo_config.repetitions):
-                # TODO: expand seed range
-                seed = np.random.randint(0, 100000000)
+
+                seed = np.random.randint(0, 10000)
                 # update the agent config with sample candidate hyperparameters
                 # new agent with the new hps
                 for hp in sampled_hyperparams:
@@ -97,6 +102,7 @@ class HPO(object):
 
                 try:
                     self.env_func = partial(make, self.task, output_dir=self.output_dir, **self.task_config)
+                    # using deepcopy(self.algo_config) prevent setting being overwritten
                     self.agent = make(self.algo,
                                         self.env_func,
                                         training=True,
@@ -110,19 +116,6 @@ class HPO(object):
                 except Exception as e:
                     # catch exception
                     self.logger.info(f'Exception occurs when constructing agent: {e}')
-
-                # # using deepcopy(self.algo_config) prevent setting being overwritten
-                # self.env_func = partial(make, self.task, output_dir=self.output_dir, **self.task_config)
-                # self.agent = make(self.algo,
-                #                     self.env_func,
-                #                     training=True,
-                #                     checkpoint_path=os.path.join(self.output_dir, "model_latest.pt"),
-                #                     output_dir=os.path.join(self.output_dir, "hpo"),
-                #                     use_gpu=self.hpo_config.use_gpu,
-                #                     seed=seed,
-                #                     **deepcopy(self.algo_config))
-
-                # self.agent.reset()
 
                 # return objective estimate
                 # TODO: report intermediate results to Optuna for pruning
@@ -220,9 +213,7 @@ class HPO(object):
                                                 )
             
         
-        self.study.optimize(self.objective, 
-                            n_trials=self.hpo_config.trials,
-                            callbacks=[MaxTrialsCallback(160, states=(TrialState.COMPLETE,))])
+        self.study.optimize(self.objective, n_trials=self.hpo_config.trials)
 
         output_dir = os.path.join(self.output_dir, "hpo")
         # save meta data
@@ -332,77 +323,119 @@ class HPO(object):
 
             # perturb each hyperparameter
             for key in hps_dict['categorical']:
-                mkdirs(f"{output_dir}/{key}")
-                tmp_hp = deepcopy(hp)
-                interval = sorted(hps_dict['categorical'][key])
-                try:
-                    if isinstance(hp[key], list):
-                        id = np.argwhere(np.array(interval) == hp[key][0])[0][0]
-                    else:
-                        id = np.argwhere(np.array(interval) == hp[key])[0][0]
-                except:
-                    if isinstance(hp[key], list):
-                        id = np.argmin(np.abs(np.array(interval) - hp[key][0]))
-                    else:
-                        id = np.argmin(np.abs(np.array(interval) - hp[key]))
-                if isinstance(hp[key], str): # real categorical type, e.g., activation function
-                    for perturbation in hps_dict['categorical'][key]:
-                        mkdirs(f"{output_dir}/{key}/{perturbation}")
-                        tmp_hp[key] = perturbation
-                        with open(f"{output_dir}/{key}/{perturbation}/{key}_{perturbation}.yaml", "w")as f:
-                            yaml.dump(tmp_hp, f, default_flow_style=False)
-                else:
-                    if isinstance(hp[key], float): # float
-                        if id < len(interval)-1 and id > 0:
-                            dx = (interval[id+1] - interval[id-1]) / self.hpo_config.divisor
-                        elif id == 0:
-                            dx = (interval[id+1] - interval[id]) / self.hpo_config.divisor * 2
-                        else: # id == len(interval)-1
-                            dx = (interval[id] - interval[id-1]) / self.hpo_config.divisor * 2
-                    elif isinstance(hp[key], int): # integer
-                        if key == 'max_env_steps': # special treatment for max_env_steps because of the vec env.
-                            dx = self.algo_config['rollout_batch_size']  * hp['rollout_steps']
+                if key in hp:
+                    mkdirs(f"{output_dir}/{key}")
+                    tmp_hp = deepcopy(hp)
+                    interval = sorted(hps_dict['categorical'][key])
+                    try:
+                        if isinstance(hp[key], list):
+                            id = np.argwhere(np.array(interval) == hp[key][0])[0][0]
                         else:
-                            dx = 1
-                    elif isinstance(hp[key], list): # list
-                        if isinstance(hp[key][0], float): # float
+                            id = np.argwhere(np.array(interval) == hp[key])[0][0]
+                    except:
+                        if isinstance(hp[key], list):
+                            id = np.argmin(np.abs(np.array(interval) - hp[key][0]))
+                        else:
+                            id = np.argmin(np.abs(np.array(interval) - hp[key]))
+                    if isinstance(hp[key], str): # real categorical type, e.g., activation function
+                        for perturbation in hps_dict['categorical'][key]:
+                            mkdirs(f"{output_dir}/{key}/{perturbation}")
+                            tmp_hp[key] = perturbation
+                            with open(f"{output_dir}/{key}/{perturbation}/{key}_{perturbation}.yaml", "w")as f:
+                                yaml.dump(tmp_hp, f, default_flow_style=False)
+                    else:
+                        if isinstance(hp[key], float): # float
                             if id < len(interval)-1 and id > 0:
                                 dx = (interval[id+1] - interval[id-1]) / self.hpo_config.divisor
                             elif id == 0:
                                 dx = (interval[id+1] - interval[id]) / self.hpo_config.divisor * 2
                             else: # id == len(interval)-1
                                 dx = (interval[id] - interval[id-1]) / self.hpo_config.divisor * 2
-                        elif isinstance(hp[key][0], int): # integer
+                        elif isinstance(hp[key], int): # integer
+                            if key == 'max_env_steps': # special treatment for max_env_steps because of the vec env.
+                                dx = self.algo_config['rollout_batch_size']  * hp['rollout_steps']
+                            else:
                                 dx = 1
-                    else:
-                        raise ValueError("Unknown hyperparameter type.")
-                    # pertub the hyperparameter by dx on right including the optimized one
-                    for i in range(self.hpo_config.side_perturb_num+1):
-                        perturbation = interval[id] + (i)*dx
-                        while perturbation > max(interval):
-                            if isinstance(hp[key], int):
-                                break
-                            elif isinstance(hp[key], list) and isinstance(hp[key][0], int):
-                                break
-                            dx = dx/10
-                            perturbation = interval[id] + (i)*dx
-                        mkdirs(f"{output_dir}/{key}/{perturbation}")
-                        if isinstance(hp[key], list):
-                            tmp_hp[key] = [perturbation]*len(hp[key])
+                        elif isinstance(hp[key], list): # list
+                            if isinstance(hp[key][0], float): # float
+                                if id < len(interval)-1 and id > 0:
+                                    dx = (interval[id+1] - interval[id-1]) / self.hpo_config.divisor
+                                elif id == 0:
+                                    dx = (interval[id+1] - interval[id]) / self.hpo_config.divisor * 2
+                                else: # id == len(interval)-1
+                                    dx = (interval[id] - interval[id-1]) / self.hpo_config.divisor * 2
+                            elif isinstance(hp[key][0], int): # integer
+                                    dx = 1
                         else:
-                            tmp_hp[key] = perturbation
+                            raise ValueError("Unknown hyperparameter type.")
+                        # pertub the hyperparameter by dx on right including the optimized one
+                        for i in range(self.hpo_config.side_perturb_num+1):
+                            perturbation = interval[id] + (i)*dx
+                            while perturbation > max(interval):
+                                if isinstance(hp[key], int):
+                                    break
+                                elif isinstance(hp[key], list) and isinstance(hp[key][0], int):
+                                    break
+                                dx = dx/10
+                                perturbation = interval[id] + (i)*dx
+                            mkdirs(f"{output_dir}/{key}/{perturbation}")
+                            if isinstance(hp[key], list):
+                                tmp_hp[key] = [perturbation]*len(hp[key])
+                            else:
+                                tmp_hp[key] = perturbation
+                            with open(f"{output_dir}/{key}/{perturbation}/{key}_{perturbation}.yaml", "w")as f:
+                                yaml.dump(tmp_hp, f, default_flow_style=False)
+                        # pertub the hyperparameter by dx on left
+                        for i in range(self.hpo_config.side_perturb_num):
+                            perturbation = interval[id] - (i+1)*dx
+                            while perturbation < min(interval):
+                                if isinstance(hp[key], int):
+                                    break
+                                elif isinstance(hp[key], list) and isinstance(hp[key][0], int):
+                                    break
+                                dx = dx/10
+                                perturbation = interval[id] - (i+1)*dx
+                            mkdirs(f"{output_dir}/{key}/{perturbation}")
+                            if isinstance(hp[key], list):
+                                tmp_hp[key] = [perturbation]*len(hp[key])
+                            else:
+                                tmp_hp[key] = perturbation
+                            with open(f"{output_dir}/{key}/{perturbation}/{key}_{perturbation}.yaml", "w")as f:
+                                yaml.dump(tmp_hp, f, default_flow_style=False)
+               
+            for key in hps_dict['float']:
+                if key in hp:
+                    mkdirs(f"{output_dir}/{key}")
+                    tmp_hp = deepcopy(hp)
+                    interval = sorted(hps_dict['float'][key])
+                    dx = (max(interval) - min(interval)) / self.hpo_config.divisor / 10
+
+                    # pertub the hyperparameter by dx on right
+                    for i in range(self.hpo_config.side_perturb_num+1):
+                        if isinstance(hp[key], list):
+                            perturbation = hp[key][0] + (i)*dx
+                        else:
+                            perturbation = hp[key] + (i)*dx
+                        while perturbation > max(interval):
+                            dx = dx/10
+                            perturbation = hp[key] + (i)*dx
+                        mkdirs(f"{output_dir}/{key}/{perturbation}")
+                        tmp_hp[key] = perturbation
                         with open(f"{output_dir}/{key}/{perturbation}/{key}_{perturbation}.yaml", "w")as f:
                             yaml.dump(tmp_hp, f, default_flow_style=False)
                     # pertub the hyperparameter by dx on left
                     for i in range(self.hpo_config.side_perturb_num):
-                        perturbation = interval[id] - (i+1)*dx
+                        if isinstance(hp[key], list):
+                            perturbation = hp[key][0] - (i+1)*dx
+                        else:
+                            perturbation = hp[key] - (i+1)*dx
+                        
                         while perturbation < min(interval):
-                            if isinstance(hp[key], int):
-                                break
-                            elif isinstance(hp[key], list) and isinstance(hp[key][0], int):
-                                break
                             dx = dx/10
-                            perturbation = interval[id] - (i+1)*dx
+                            if isinstance(hp[key], list):
+                                perturbation = hp[key][0] - (i+1)*dx
+                            else:
+                                perturbation = hp[key] - (i+1)*dx
                         mkdirs(f"{output_dir}/{key}/{perturbation}")
                         if isinstance(hp[key], list):
                             tmp_hp[key] = [perturbation]*len(hp[key])
@@ -410,46 +443,6 @@ class HPO(object):
                             tmp_hp[key] = perturbation
                         with open(f"{output_dir}/{key}/{perturbation}/{key}_{perturbation}.yaml", "w")as f:
                             yaml.dump(tmp_hp, f, default_flow_style=False)
-               
-            for key in hps_dict['float']:
-                mkdirs(f"{output_dir}/{key}")
-                tmp_hp = deepcopy(hp)
-                interval = sorted(hps_dict['float'][key])
-                dx = (max(interval) - min(interval)) / self.hpo_config.divisor / 10
-
-                # pertub the hyperparameter by dx on right
-                for i in range(self.hpo_config.side_perturb_num+1):
-                    if isinstance(hp[key], list):
-                        perturbation = hp[key][0] + (i)*dx
-                    else:
-                        perturbation = hp[key] + (i)*dx
-                    while perturbation > max(interval):
-                        dx = dx/10
-                        perturbation = hp[key] + (i)*dx
-                    mkdirs(f"{output_dir}/{key}/{perturbation}")
-                    tmp_hp[key] = perturbation
-                    with open(f"{output_dir}/{key}/{perturbation}/{key}_{perturbation}.yaml", "w")as f:
-                        yaml.dump(tmp_hp, f, default_flow_style=False)
-                # pertub the hyperparameter by dx on left
-                for i in range(self.hpo_config.side_perturb_num):
-                    if isinstance(hp[key], list):
-                        perturbation = hp[key][0] - (i+1)*dx
-                    else:
-                        perturbation = hp[key] - (i+1)*dx
-                    
-                    while perturbation < min(interval):
-                        dx = dx/10
-                        if isinstance(hp[key], list):
-                            perturbation = hp[key][0] - (i+1)*dx
-                        else:
-                            perturbation = hp[key] - (i+1)*dx
-                    mkdirs(f"{output_dir}/{key}/{perturbation}")
-                    if isinstance(hp[key], list):
-                        tmp_hp[key] = [perturbation]*len(hp[key])
-                    else:
-                        tmp_hp[key] = perturbation
-                    with open(f"{output_dir}/{key}/{perturbation}/{key}_{perturbation}.yaml", "w")as f:
-                        yaml.dump(tmp_hp, f, default_flow_style=False)
         else: # Without doing HPO, will enter here if perturb_hps is True
             # perturb each hyperparameter
             output_dir = hp_path.split(".yaml")[0]
@@ -457,60 +450,102 @@ class HPO(object):
             with open(hp_path, "r") as f:
                 hp = yaml.load(f, Loader=yaml.FullLoader)
             for key in hps_dict['categorical']:
-                mkdirs(f"{output_dir}/{key}")
-                tmp_hp = deepcopy(hp)
-                interval = sorted(hps_dict['categorical'][key])
-                try:
-                    if isinstance(hp[key], list):
-                        id = np.argwhere(np.array(interval) == hp[key][0])[0][0]
-                    else:
-                        id = np.argwhere(np.array(interval) == hp[key])[0][0]
-                except:
-                    if isinstance(hp[key], list):
-                        id = np.argmin(np.abs(np.array(interval) - hp[key][0]))
-                    else:
-                        id = np.argmin(np.abs(np.array(interval) - hp[key]))
-                if isinstance(hp[key], str): # real categorical type, e.g., activation function
-                    for perturbation in hps_dict['categorical'][key]:
-                        mkdirs(f"{output_dir}/{key}/{perturbation}")
-                        tmp_hp[key] = perturbation
-                        with open(f"{output_dir}/{key}/{perturbation}/{key}_{perturbation}.yaml", "w")as f:
-                            yaml.dump(tmp_hp, f, default_flow_style=False)
-                else:
-                    if isinstance(hp[key], float): # float
-                        if id < len(interval)-1 and id > 0:
-                            dx = (interval[id+1] - interval[id-1]) / self.hpo_config.divisor
-                        elif id == 0:
-                            dx = (interval[id+1] - interval[id]) / self.hpo_config.divisor * 2
-                        else: # id == len(interval)-1
-                            dx = (interval[id] - interval[id-1]) / self.hpo_config.divisor * 2
-                    elif isinstance(hp[key], int): # integer
-                        if key == 'max_env_steps': # special treatment for max_env_steps because of the vec env.
-                            dx = self.algo_config['rollout_batch_size'] * hp['rollout_steps']
+                if key in hp:
+                    mkdirs(f"{output_dir}/{key}")
+                    tmp_hp = deepcopy(hp)
+                    interval = sorted(hps_dict['categorical'][key])
+                    try:
+                        if isinstance(hp[key], list):
+                            id = np.argwhere(np.array(interval) == hp[key][0])[0][0]
                         else:
-                            dx = 1
-                    elif isinstance(hp[key], list): # list
-                        if isinstance(hp[key][0], float): # float
+                            id = np.argwhere(np.array(interval) == hp[key])[0][0]
+                    except:
+                        if isinstance(hp[key], list):
+                            id = np.argmin(np.abs(np.array(interval) - hp[key][0]))
+                        else:
+                            id = np.argmin(np.abs(np.array(interval) - hp[key]))
+                    if isinstance(hp[key], str): # real categorical type, e.g., activation function
+                        for perturbation in hps_dict['categorical'][key]:
+                            mkdirs(f"{output_dir}/{key}/{perturbation}")
+                            tmp_hp[key] = perturbation
+                            with open(f"{output_dir}/{key}/{perturbation}/{key}_{perturbation}.yaml", "w")as f:
+                                yaml.dump(tmp_hp, f, default_flow_style=False)
+                    else:
+                        if isinstance(hp[key], float): # float
                             if id < len(interval)-1 and id > 0:
                                 dx = (interval[id+1] - interval[id-1]) / self.hpo_config.divisor
                             elif id == 0:
                                 dx = (interval[id+1] - interval[id]) / self.hpo_config.divisor * 2
                             else: # id == len(interval)-1
                                 dx = (interval[id] - interval[id-1]) / self.hpo_config.divisor * 2
-                        elif isinstance(hp[key][0], int): # integer
+                        elif isinstance(hp[key], int): # integer
+                            if key == 'max_env_steps': # special treatment for max_env_steps because of the vec env.
+                                dx = self.algo_config['rollout_batch_size'] * hp['rollout_steps']
+                            else:
                                 dx = 1
-                    else:
-                        raise ValueError("Unknown hyperparameter type.")
-                    # pertub the hyperparameter by dx on right including the optimized one
-                    for i in range(self.hpo_config.side_perturb_num+1):
-                        perturbation = interval[id] + (i)*dx
-                        while perturbation > max(interval):
-                            if isinstance(hp[key], int):
-                                break
-                            elif isinstance(hp[key], list) and isinstance(hp[key][0], int):
-                                break
-                            dx = dx/10
+                        elif isinstance(hp[key], list): # list
+                            if isinstance(hp[key][0], float): # float
+                                if id < len(interval)-1 and id > 0:
+                                    dx = (interval[id+1] - interval[id-1]) / self.hpo_config.divisor
+                                elif id == 0:
+                                    dx = (interval[id+1] - interval[id]) / self.hpo_config.divisor * 2
+                                else: # id == len(interval)-1
+                                    dx = (interval[id] - interval[id-1]) / self.hpo_config.divisor * 2
+                            elif isinstance(hp[key][0], int): # integer
+                                    dx = 1
+                        else:
+                            raise ValueError("Unknown hyperparameter type.")
+                        # pertub the hyperparameter by dx on right including the optimized one
+                        for i in range(self.hpo_config.side_perturb_num+1):
                             perturbation = interval[id] + (i)*dx
+                            while perturbation > max(interval):
+                                if isinstance(hp[key], int):
+                                    break
+                                elif isinstance(hp[key], list) and isinstance(hp[key][0], int):
+                                    break
+                                dx = dx/10
+                                perturbation = interval[id] + (i)*dx
+                            mkdirs(f"{output_dir}/{key}/{perturbation}")
+                            if isinstance(hp[key], list):
+                                tmp_hp[key] = [perturbation]*len(hp[key])
+                            else:
+                                tmp_hp[key] = perturbation
+                            with open(f"{output_dir}/{key}/{perturbation}/{key}_{perturbation}.yaml", "w")as f:
+                                yaml.dump(tmp_hp, f, default_flow_style=False)
+                        # pertub the hyperparameter by dx on left
+                        for i in range(self.hpo_config.side_perturb_num):
+                            perturbation = interval[id] - (i+1)*dx
+                            while perturbation < min(interval):
+                                if isinstance(hp[key], int):
+                                    break
+                                elif isinstance(hp[key], list) and isinstance(hp[key][0], int):
+                                    break
+                                dx = dx/10
+                                perturbation = interval[id] - (i+1)*dx
+                            mkdirs(f"{output_dir}/{key}/{perturbation}")
+                            if isinstance(hp[key], list):
+                                tmp_hp[key] = [perturbation]*len(hp[key])
+                            else:
+                                tmp_hp[key] = perturbation
+                            with open(f"{output_dir}/{key}/{perturbation}/{key}_{perturbation}.yaml", "w")as f:
+                                yaml.dump(tmp_hp, f, default_flow_style=False)
+               
+            for key in hps_dict['float']:
+                if key in hp:
+                    mkdirs(f"{output_dir}/{key}")
+                    tmp_hp = deepcopy(hp)
+                    interval = sorted(hps_dict['float'][key])
+                    dx = (max(interval) - min(interval)) / self.hpo_config.divisor / 10
+
+                    # pertub the hyperparameter by dx on right
+                    for i in range(self.hpo_config.side_perturb_num+1):
+                        if isinstance(hp[key], list):
+                            perturbation = hp[key][0] + (i)*dx
+                        else:
+                            perturbation = hp[key] + (i)*dx
+                        while perturbation > max(interval):
+                            dx = dx/10
+                            perturbation = hp[key] + (i)*dx
                         mkdirs(f"{output_dir}/{key}/{perturbation}")
                         if isinstance(hp[key], list):
                             tmp_hp[key] = [perturbation]*len(hp[key])
@@ -520,14 +555,17 @@ class HPO(object):
                             yaml.dump(tmp_hp, f, default_flow_style=False)
                     # pertub the hyperparameter by dx on left
                     for i in range(self.hpo_config.side_perturb_num):
-                        perturbation = interval[id] - (i+1)*dx
+                        if isinstance(hp[key], list):
+                            perturbation = hp[key][0] - (i+1)*dx
+                        else:
+                            perturbation = hp[key] - (i+1)*dx
+                        
                         while perturbation < min(interval):
-                            if isinstance(hp[key], int):
-                                break
-                            elif isinstance(hp[key], list) and isinstance(hp[key][0], int):
-                                break
                             dx = dx/10
-                            perturbation = interval[id] - (i+1)*dx
+                            if isinstance(hp[key], list):
+                                perturbation = hp[key][0] - (i+1)*dx
+                            else:
+                                perturbation = hp[key] - (i+1)*dx
                         mkdirs(f"{output_dir}/{key}/{perturbation}")
                         if isinstance(hp[key], list):
                             tmp_hp[key] = [perturbation]*len(hp[key])
@@ -535,46 +573,3 @@ class HPO(object):
                             tmp_hp[key] = perturbation
                         with open(f"{output_dir}/{key}/{perturbation}/{key}_{perturbation}.yaml", "w")as f:
                             yaml.dump(tmp_hp, f, default_flow_style=False)
-               
-            for key in hps_dict['float']:
-                mkdirs(f"{output_dir}/{key}")
-                tmp_hp = deepcopy(hp)
-                interval = sorted(hps_dict['float'][key])
-                dx = (max(interval) - min(interval)) / self.hpo_config.divisor / 10
-
-                # pertub the hyperparameter by dx on right
-                for i in range(self.hpo_config.side_perturb_num+1):
-                    if isinstance(hp[key], list):
-                        perturbation = hp[key][0] + (i)*dx
-                    else:
-                        perturbation = hp[key] + (i)*dx
-                    while perturbation > max(interval):
-                        dx = dx/10
-                        perturbation = hp[key] + (i)*dx
-                    mkdirs(f"{output_dir}/{key}/{perturbation}")
-                    if isinstance(hp[key], list):
-                        tmp_hp[key] = [perturbation]*len(hp[key])
-                    else:
-                        tmp_hp[key] = perturbation
-                    with open(f"{output_dir}/{key}/{perturbation}/{key}_{perturbation}.yaml", "w")as f:
-                        yaml.dump(tmp_hp, f, default_flow_style=False)
-                # pertub the hyperparameter by dx on left
-                for i in range(self.hpo_config.side_perturb_num):
-                    if isinstance(hp[key], list):
-                        perturbation = hp[key][0] - (i+1)*dx
-                    else:
-                        perturbation = hp[key] - (i+1)*dx
-                    
-                    while perturbation < min(interval):
-                        dx = dx/10
-                        if isinstance(hp[key], list):
-                            perturbation = hp[key][0] - (i+1)*dx
-                        else:
-                            perturbation = hp[key] - (i+1)*dx
-                    mkdirs(f"{output_dir}/{key}/{perturbation}")
-                    if isinstance(hp[key], list):
-                        tmp_hp[key] = [perturbation]*len(hp[key])
-                    else:
-                        tmp_hp[key] = perturbation
-                    with open(f"{output_dir}/{key}/{perturbation}/{key}_{perturbation}.yaml", "w")as f:
-                        yaml.dump(tmp_hp, f, default_flow_style=False)
