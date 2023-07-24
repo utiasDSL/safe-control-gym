@@ -50,7 +50,7 @@ python ./experiments/comparisons/gpmpc/gpmpc_experiment.py \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_hpo.yaml \
                      --output_dir ./experiments/comparisons/gpmpc/hpo/prior \
-                     --task cartpole --func hpo --tag prior_150 --seed $seed1 > "log_file1.log" 2>&1 &
+                     --task cartpole --func hpo --tag prior_150 --seed $seed1 &
 pid1=$!
 
 # wait until the first study is created
@@ -62,7 +62,7 @@ python ./experiments/comparisons/gpmpc/gpmpc_experiment.py \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_hpo.yaml \
                      --output_dir ./experiments/comparisons/gpmpc/hpo/prior \
-                     --task cartpole --func hpo --load_study True --tag prior_150 --seed $seed2 > "log_file2.log" 2>&1 &
+                     --task cartpole --func hpo --load_study True --tag prior_150 --seed $seed2 &
 pid2=$!
 
 # move the database from . into output_dir after both commands finish
