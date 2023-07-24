@@ -147,7 +147,7 @@ def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, prior=False) -> D
     
     return hps_suggestion
 
-def gpmpc_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, **kwargs) -> Dict[str, Any]:
+def gpmpc_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, prior=False) -> Dict[str, Any]:
     """Sampler for PPO hyperparameters.
     
     args:
