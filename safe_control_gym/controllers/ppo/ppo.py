@@ -286,7 +286,7 @@ class PPO(BaseController):
             self.learn_with_prior(env=env, **kwargs)
             return
         
-        if self.max_env_steps <= self.num_checkpoints:
+        if self.num_checkpoints > 0:
             step_interval = np.linspace(0, self.max_env_steps, self.num_checkpoints)
             interval_save = np.zeros_like(step_interval, dtype=bool)
         while self.total_steps < self.max_env_steps:
@@ -298,7 +298,7 @@ class PPO(BaseController):
                 self.logger.info(f'Checkpoint | {self.checkpoint_path}')
                 path = os.path.join(self.output_dir, "checkpoints", "model_{}.pt".format(self.total_steps))
                 self.save(path)
-            if self.max_env_steps <= self.num_checkpoints:
+            if self.num_checkpoints > 0:
                 interval_id = np.argmin(np.abs(np.array(step_interval) - self.total_steps))
                 if interval_save[interval_id] == False:
                     # Intermediate checkpoint.

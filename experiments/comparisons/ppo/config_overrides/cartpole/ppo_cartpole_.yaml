@@ -36,6 +36,6 @@ algo_config:
   log_interval: 73000
   save_interval: 73000
   eval_interval: 73000
-  num_checkpoints: 0
+  num_checkpoints: 50
   eval_save_best: True
   tensorboard: False

@@ -75,7 +75,7 @@ def train(config):
     # Create the controller/control_agent.
     # Note:
     # eval_env will take config.seed * 111 as its seed
-    # env will take config.task_config.seed as its seed
+    # env will take config.seed as its seed
     control_agent = make(config.algo,
                          env_func,
                          training=True,
