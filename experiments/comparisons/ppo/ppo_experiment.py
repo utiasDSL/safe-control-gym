@@ -36,7 +36,14 @@ def hpo(config):
     # Put config.seed into config.hpo_config.seed
     config.hpo_config.seed = config.seed
     # HPO
-    hpo = HPO(config.algo, config.task, config.load_study, config.output_dir, config.task_config, config.hpo_config, **config.algo_config)
+    hpo = HPO(config.algo, 
+              config.task,
+              config.sampler,  
+              config.load_study, 
+              config.output_dir, 
+              config.task_config, 
+              config.hpo_config, 
+              **config.algo_config)
     if config.hpo_config.hpo:
         hpo.hyperparameter_optimization()
         print("Hyperparameter optimization done.")
@@ -180,6 +187,7 @@ if __name__ == "__main__":
     fac.add_argument("--func", type=str, default="train", help="main function to run.")
     fac.add_argument("--opt_hps", type=str, default="", help="yaml file as a result of HPO.")
     fac.add_argument("--load_study", type=bool, default=False, help="whether to load study from a previous HPO.")
+    fac.add_argument("--sampler", type=str, default="TPESampler", help="which sampler to use in HPO.")
     # merge config
     config = fac.merge()
 

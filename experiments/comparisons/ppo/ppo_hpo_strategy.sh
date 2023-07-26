@@ -24,7 +24,8 @@ seed1=$2
 seed2=$((seed1+1))
 seed3=$((seed1+2))
 seed4=$((seed1+3))
-localOrHost=$3
+sampler=$3 # RandomSampler or TPESampler
+localOrHost=$4
 
 # activate the environment
 if [ "$localOrHost" == 'local' ]; then
@@ -51,7 +52,8 @@ python ./experiments/comparisons/ppo/ppo_experiment.py \
             ./experiments/comparisons/ppo/config_overrides/cartpole/ppo_cartpole_.yaml \
             ./experiments/comparisons/ppo/config_overrides/cartpole/cartpole_stab.yaml \
             ./experiments/comparisons/ppo/config_overrides/cartpole/ppo_cartpole_hpo_1.yaml \
-            --output_dir ./experiments/comparisons/ppo/hpo/hpo_strategy_study \
+            --output_dir ./experiments/comparisons/ppo/hpo/hpo_strategy_study_${sampler} \
+            --sampler $sampler \
             --task cartpole --func hpo --tag run${experiment_name}_s1 --seed $seed1 --use_gpu True &
 pid1=$!
 
@@ -64,7 +66,8 @@ python ./experiments/comparisons/ppo/ppo_experiment.py \
             ./experiments/comparisons/ppo/config_overrides/cartpole/ppo_cartpole_.yaml \
             ./experiments/comparisons/ppo/config_overrides/cartpole/cartpole_stab.yaml \
             ./experiments/comparisons/ppo/config_overrides/cartpole/ppo_cartpole_hpo_1.yaml \
-            --output_dir ./experiments/comparisons/ppo/hpo/hpo_strategy_study \
+            --output_dir ./experiments/comparisons/ppo/hpo/hpo_strategy_study_${sampler} \
+            --sampler $sampler \
             --task cartpole --func hpo --tag run${experiment_name}_s1 --seed $seed2 --load_study True --use_gpu True &
 pid2=$!
 
@@ -84,7 +87,8 @@ python ./experiments/comparisons/ppo/ppo_experiment.py \
             ./experiments/comparisons/ppo/config_overrides/cartpole/ppo_cartpole_.yaml \
             ./experiments/comparisons/ppo/config_overrides/cartpole/cartpole_stab.yaml \
             ./experiments/comparisons/ppo/config_overrides/cartpole/ppo_cartpole_hpo_2.yaml \
-            --output_dir ./experiments/comparisons/ppo/hpo/hpo_strategy_study \
+            --output_dir ./experiments/comparisons/ppo/hpo/hpo_strategy_study_${sampler} \
+            --sampler $sampler \
             --task cartpole --func hpo --tag run${experiment_name}_s2 --seed $seed1 --use_gpu True &
 pid1=$!
 
@@ -97,7 +101,8 @@ python ./experiments/comparisons/ppo/ppo_experiment.py \
             ./experiments/comparisons/ppo/config_overrides/cartpole/ppo_cartpole_.yaml \
             ./experiments/comparisons/ppo/config_overrides/cartpole/cartpole_stab.yaml \
             ./experiments/comparisons/ppo/config_overrides/cartpole/ppo_cartpole_hpo_2.yaml \
-            --output_dir ./experiments/comparisons/ppo/hpo/hpo_strategy_study \
+            --output_dir ./experiments/comparisons/ppo/hpo/hpo_strategy_study_${sampler} \
+            --sampler $sampler \
             --task cartpole --func hpo --tag run${experiment_name}_s2 --seed $seed2 --load_study True --use_gpu True &
 pid2=$!
 
@@ -117,7 +122,8 @@ python ./experiments/comparisons/ppo/ppo_experiment.py \
             ./experiments/comparisons/ppo/config_overrides/cartpole/ppo_cartpole_.yaml \
             ./experiments/comparisons/ppo/config_overrides/cartpole/cartpole_stab.yaml \
             ./experiments/comparisons/ppo/config_overrides/cartpole/ppo_cartpole_hpo_3.yaml \
-            --output_dir ./experiments/comparisons/ppo/hpo/hpo_strategy_study \
+            --output_dir ./experiments/comparisons/ppo/hpo/hpo_strategy_study_${sampler} \
+            --sampler $sampler \
             --task cartpole --func hpo --tag run${experiment_name}_s3 --seed $seed1 --use_gpu True &
 pid1=$!
 
@@ -130,7 +136,8 @@ python ./experiments/comparisons/ppo/ppo_experiment.py \
             ./experiments/comparisons/ppo/config_overrides/cartpole/ppo_cartpole_.yaml \
             ./experiments/comparisons/ppo/config_overrides/cartpole/cartpole_stab.yaml \
             ./experiments/comparisons/ppo/config_overrides/cartpole/ppo_cartpole_hpo_3.yaml \
-            --output_dir ./experiments/comparisons/ppo/hpo/hpo_strategy_study \
+            --output_dir ./experiments/comparisons/ppo/hpo/hpo_strategy_study_${sampler} \
+            --sampler $sampler \
             --task cartpole --func hpo --tag run${experiment_name}_s3 --seed $seed2 --load_study True --use_gpu True &
 pid2=$!
 
@@ -150,7 +157,8 @@ python ./experiments/comparisons/ppo/ppo_experiment.py \
             ./experiments/comparisons/ppo/config_overrides/cartpole/ppo_cartpole_.yaml \
             ./experiments/comparisons/ppo/config_overrides/cartpole/cartpole_stab.yaml \
             ./experiments/comparisons/ppo/config_overrides/cartpole/ppo_cartpole_hpo_4.yaml \
-            --output_dir ./experiments/comparisons/ppo/hpo/hpo_strategy_study \
+            --output_dir ./experiments/comparisons/ppo/hpo/hpo_strategy_study_${sampler} \
+            --sampler $sampler \
             --task cartpole --func hpo --tag run${experiment_name}_s4 --seed $seed1 --use_gpu True &
 pid1=$!
 
@@ -163,7 +171,8 @@ python ./experiments/comparisons/ppo/ppo_experiment.py \
             ./experiments/comparisons/ppo/config_overrides/cartpole/ppo_cartpole_.yaml \
             ./experiments/comparisons/ppo/config_overrides/cartpole/cartpole_stab.yaml \
             ./experiments/comparisons/ppo/config_overrides/cartpole/ppo_cartpole_hpo_4.yaml \
-            --output_dir ./experiments/comparisons/ppo/hpo/hpo_strategy_study \
+            --output_dir ./experiments/comparisons/ppo/hpo/hpo_strategy_study_${sampler} \
+            --sampler $sampler \
             --task cartpole --func hpo --tag run${experiment_name}_s4 --seed $seed2 --load_study True --use_gpu True &
 pid2=$!
 
