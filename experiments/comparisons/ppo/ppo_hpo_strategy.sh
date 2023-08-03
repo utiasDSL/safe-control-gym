@@ -74,6 +74,11 @@ pid2=$!
 # move the database from . into output_dir after both commands finish
 wait $pid1
 wait $pid2
+echo "backing up the database"
+mysqldump --no-tablespaces -u optuna ppo_hpo > ppo_hpo.sql
+mv ppo_hpo.sql ./experiments/comparisons/ppo/hpo/hpo_strategy_study_${sampler}/run${experiment_name}_s1/ppo_hpo.sql
+# remove the database
+python ./safe_control_gym/hyperparameters/database.py --func drop --tag ppo_hpo
 echo "Strategy 1 done"
 
 ######## Strategy 2: naive multiple runs ########
@@ -109,6 +114,11 @@ pid2=$!
 # move the database from . into output_dir after both commands finish
 wait $pid1
 wait $pid2
+echo "backing up the database"
+mysqldump --no-tablespaces -u optuna ppo_hpo > ppo_hpo.sql
+mv ppo_hpo.sql ./experiments/comparisons/ppo/hpo/hpo_strategy_study_${sampler}/run${experiment_name}_s2/ppo_hpo.sql
+# remove the database
+python ./safe_control_gym/hyperparameters/database.py --func drop --tag ppo_hpo
 echo "Strategy 2 done"
 
 ######## Strategy 3: multiple runs w/ CVaR ########
@@ -144,6 +154,11 @@ pid2=$!
 # move the database from . into output_dir after both commands finish
 wait $pid1
 wait $pid2
+echo "backing up the database"
+mysqldump --no-tablespaces -u optuna ppo_hpo > ppo_hpo.sql
+mv ppo_hpo.sql ./experiments/comparisons/ppo/hpo/hpo_strategy_study_${sampler}/run${experiment_name}_s3/ppo_hpo.sql
+# remove the database
+python ./safe_control_gym/hyperparameters/database.py --func drop --tag ppo_hpo
 echo "Strategy 3 done"
 
 ######## Strategy 4: dynamic runs w/ CVaR ########
@@ -179,4 +194,49 @@ pid2=$!
 # move the database from . into output_dir after both commands finish
 wait $pid1
 wait $pid2
+echo "backing up the database"
+mysqldump --no-tablespaces -u optuna ppo_hpo > ppo_hpo.sql
+mv ppo_hpo.sql ./experiments/comparisons/ppo/hpo/hpo_strategy_study_${sampler}/run${experiment_name}_s4/ppo_hpo.sql
+# remove the database
+python ./safe_control_gym/hyperparameters/database.py --func drop --tag ppo_hpo
 echo "Strategy 4 done"
+
+######## Strategy 5: dynamic runs w/o CVaR ########
+# remove the database
+python ./safe_control_gym/hyperparameters/database.py --func drop --tag ppo_hpo
+# create database
+python ./safe_control_gym/hyperparameters/database.py --func create --tag ppo_hpo
+
+python ./experiments/comparisons/ppo/ppo_experiment.py \
+            --overrides \
+            ./experiments/comparisons/ppo/config_overrides/cartpole/ppo_cartpole_.yaml \
+            ./experiments/comparisons/ppo/config_overrides/cartpole/cartpole_stab.yaml \
+            ./experiments/comparisons/ppo/config_overrides/cartpole/ppo_cartpole_hpo_5.yaml \
+            --output_dir ./experiments/comparisons/ppo/hpo/hpo_strategy_study_${sampler} \
+            --sampler $sampler \
+            --task cartpole --func hpo --tag run${experiment_name}_s5 --seed $seed1 --use_gpu True &
+pid1=$!
+
+# wait until the first study is created
+sleep 2
+
+# set load_study to True
+python ./experiments/comparisons/ppo/ppo_experiment.py \
+            --overrides \
+            ./experiments/comparisons/ppo/config_overrides/cartpole/ppo_cartpole_.yaml \
+            ./experiments/comparisons/ppo/config_overrides/cartpole/cartpole_stab.yaml \
+            ./experiments/comparisons/ppo/config_overrides/cartpole/ppo_cartpole_hpo_5.yaml \
+            --output_dir ./experiments/comparisons/ppo/hpo/hpo_strategy_study_${sampler} \
+            --sampler $sampler \
+            --task cartpole --func hpo --tag run${experiment_name}_s5 --seed $seed2 --load_study True --use_gpu True &
+pid2=$!
+
+# move the database from . into output_dir after both commands finish
+wait $pid1
+wait $pid2
+echo "backing up the database"
+mysqldump --no-tablespaces -u optuna ppo_hpo > ppo_hpo.sql
+mv ppo_hpo.sql ./experiments/comparisons/ppo/hpo/hpo_strategy_study_${sampler}/run${experiment_name}_s5/ppo_hpo.sql
+# remove the database
+python ./safe_control_gym/hyperparameters/database.py --func drop --tag ppo_hpo
+echo "Strategy 5 done"

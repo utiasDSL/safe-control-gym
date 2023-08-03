@@ -16,7 +16,8 @@ FOLDER="./experiments/comparisons/ppo"
 EXP_NAME="hpo_strategy_study"
 experiment_name=$1
 localOrHost=$2
-OUTPUT_DIR=(${FOLDER}/${EXP_NAME})
+sampler=$3 # RandomSampler or TPESampler
+OUTPUT_DIR=(${FOLDER}/${EXP_NAME}_${sampler})
 
 # activate the environment
 if [ "$localOrHost" == 'local' ]; then
@@ -50,12 +51,12 @@ do
               ./experiments/comparisons/ppo/config_overrides/cartpole/cartpole_stab.yaml \
               --output_dir $OUTPUT_DIR \
               --tag run${experiment_name}_s1 \
-              --opt_hps ./experiments/comparisons/ppo/hpo/hpo_strategy_study/run1_s1/seed8_Jul-19-16-29-41_b40566c/hpo/hyperparameters_139.8787.yaml \
+              --opt_hps ./experiments/comparisons/ppo/hpo/hpo_strategy_study_RandomSampler/run3_s1/seed12_Jul-30-19-01-14_14ae2aa/hpo/hyperparameters_138.8556.yaml \
               --task cartpole --seed $seed --use_gpu True
 
 done
 
-algo_seed_dir=(./experiments/comparisons/ppo/${EXP_NAME}/run${experiment_name}_s1/seed*)
+algo_seed_dir=(./experiments/comparisons/ppo/${EXP_NAME}_${sampler}/run${experiment_name}_s1/seed*)
 
 for algo_seed_dir in "${algo_seed_dir[@]}"
 do
@@ -80,12 +81,12 @@ do
               ./experiments/comparisons/ppo/config_overrides/cartpole/cartpole_stab.yaml \
               --output_dir $OUTPUT_DIR \
               --tag run${experiment_name}_s2 \
-              --opt_hps ./experiments/comparisons/ppo/hpo/hpo_strategy_study/run1_s2/seed8_Jul-20-11-45-15_b40566c/hpo/hyperparameters_133.0447.yaml \
+              --opt_hps ./experiments/comparisons/ppo/hpo/hpo_strategy_study_RandomSampler/run3_s2/seed12_Jul-31-02-58-15_14ae2aa/hpo/hyperparameters_133.6558.yaml \
               --task cartpole --seed $seed --use_gpu True
 
 done
 
-algo_seed_dir=(./experiments/comparisons/ppo/${EXP_NAME}/run${experiment_name}_s2/seed*)
+algo_seed_dir=(./experiments/comparisons/ppo/${EXP_NAME}_${sampler}/run${experiment_name}_s2/seed*)
 
 for algo_seed_dir in "${algo_seed_dir[@]}"
 do
@@ -110,12 +111,12 @@ do
               ./experiments/comparisons/ppo/config_overrides/cartpole/cartpole_stab.yaml \
               --output_dir $OUTPUT_DIR \
               --tag run${experiment_name}_s3 \
-              --opt_hps ./experiments/comparisons/ppo/hpo/hpo_strategy_study/run1_s3/seed8_Jul-21-05-26-43_b40566c/hpo/hyperparameters_130.2418.yaml \
+              --opt_hps ./experiments/comparisons/ppo/hpo/hpo_strategy_study_RandomSampler/run3_s3/seed12_Jul-31-11-38-23_14ae2aa/hpo/hyperparameters_132.5965.yaml \
               --task cartpole --seed $seed --use_gpu True
 
 done
 
-algo_seed_dir=(./experiments/comparisons/ppo/${EXP_NAME}/run${experiment_name}_s3/seed*)
+algo_seed_dir=(./experiments/comparisons/ppo/${EXP_NAME}_${sampler}/run${experiment_name}_s3/seed*)
 
 for algo_seed_dir in "${algo_seed_dir[@]}"
 do
@@ -140,12 +141,42 @@ do
               ./experiments/comparisons/ppo/config_overrides/cartpole/cartpole_stab.yaml \
               --output_dir $OUTPUT_DIR \
               --tag run${experiment_name}_s4 \
-              --opt_hps ./experiments/comparisons/ppo/hpo/hpo_strategy_study/run1_s4/seed8_Jul-21-22-42-04_b40566c/hpo/hyperparameters_132.9955.yaml \
+              --opt_hps ./experiments/comparisons/ppo/hpo/hpo_strategy_study_RandomSampler/run3_s4/seed12_Jul-31-19-50-06_14ae2aa/hpo/hyperparameters_133.0253.yaml \
               --task cartpole --seed $seed --use_gpu True
 
 done
 
-algo_seed_dir=(./experiments/comparisons/ppo/${EXP_NAME}/run${experiment_name}_s4/seed*)
+algo_seed_dir=(./experiments/comparisons/ppo/${EXP_NAME}_${sampler}/run${experiment_name}_s4/seed*)
+
+for algo_seed_dir in "${algo_seed_dir[@]}"
+do
+
+       echo ${algo_seed_dir}
+       python ./experiments/comparisons/ppo/eval.py \
+              --func test_from_checkpoints \
+              --restore ${algo_seed_dir} \
+              --set_test_seed_as_training_eval \
+              --kv_overrides task_config.done_on_out_of_bound=False
+
+done
+
+######## Eval Strategy 5: dynamic runs w/o CVaR ########
+for seed in "${seeds[@]}" 
+do
+
+       echo "Training in default config with seed:" ${seed} " and outputting dir:" ${OUTPUT_DIR}
+       python ./experiments/comparisons/ppo/ppo_experiment.py \
+              --overrides \
+              ./experiments/comparisons/ppo/config_overrides/cartpole/ppo_cartpole_.yaml \
+              ./experiments/comparisons/ppo/config_overrides/cartpole/cartpole_stab.yaml \
+              --output_dir $OUTPUT_DIR \
+              --tag run${experiment_name}_s5 \
+              --opt_hps ./experiments/comparisons/ppo/hpo/hpo_strategy_study_TPESampler/run1_s5/seed8_Aug-02-13-06-09_14ae2aa/hpo/hyperparameters_136.2288.yaml \
+              --task cartpole --seed $seed --use_gpu True
+
+done
+
+algo_seed_dir=(./experiments/comparisons/ppo/${EXP_NAME}_${sampler}/run${experiment_name}_s5/seed*)
 
 for algo_seed_dir in "${algo_seed_dir[@]}"
 do
