@@ -534,29 +534,47 @@ def plot_robustness(config):
 
 def plot_hpo_eval(config):
     """Gets the plot and csv for performance (in RMSE)."""
+    SAMPLER = "TPESampler" # "RandomSampler" or "TPESampler"
+    TASK = "cartpole" # "cartpole" or "quadrotor_2D"
     legend_map_s1 = {
-        "hpo_strategy_study/run1_s1": "run1_s1"
+        f"hpo_strategy_study_{SAMPLER}/run1_s1": "run1_s1",
+        f"hpo_strategy_study_{SAMPLER}/run2_s1": "run2_s1",
+        f"hpo_strategy_study_{SAMPLER}/run3_s1": "run3_s1"
     }
     legend_map_s2 = {
-        "hpo_strategy_study/run1_s2": "run1_s2",
+        f"hpo_strategy_study_{SAMPLER}/run1_s2": "run1_s2",
+        f"hpo_strategy_study_{SAMPLER}/run2_s2": "run2_s2",
+        f"hpo_strategy_study_{SAMPLER}/run3_s2": "run3_s2",
     }
     legend_map_s3 = {
-        "hpo_strategy_study/run1_s3": "run1_s3",
+        f"hpo_strategy_study_{SAMPLER}/run1_s3": "run1_s3",
+        f"hpo_strategy_study_{SAMPLER}/run2_s3": "run2_s3",
+        f"hpo_strategy_study_{SAMPLER}/run3_s3": "run3_s3",
     }
     legend_map_s4 = {
-        "hpo_strategy_study/run1_s4": "run1_s4",
+        f"hpo_strategy_study_{SAMPLER}/run1_s4": "run1_s4",
+        f"hpo_strategy_study_{SAMPLER}/run2_s4": "run2_s4",
+        f"hpo_strategy_study_{SAMPLER}/run3_s4": "run3_s4",
     }
     algo_name_map_s1 = {
         "run1_s1": "run1_s1",
+        "run2_s1": "run2_s1",
+        "run3_s1": "run3_s1",
     }
     algo_name_map_s2 = {
         "run1_s2": "run1_s2",
+        "run2_s2": "run2_s2",
+        "run3_s2": "run3_s2",
     }
     algo_name_map_s3 = {
         "run1_s3": "run1_s3",
+        "run2_s3": "run2_s3",
+        "run3_s3": "run3_s3",
     }
     algo_name_map_s4 = {
         "run1_s4": "run1_s4",
+        "run2_s4": "run2_s4",
+        "run3_s4": "run3_s4",
     }
     scalar_name_map = {
         "checkpoint_eval/normalized_rmse": "Cost",
@@ -582,7 +600,8 @@ def plot_hpo_eval(config):
         # Get last step stats
         x_cat, last_step_stats = get_last_stats(scalar_stats)
         
-        data[x_cat[0]] = last_step_stats[0]
+        for i in range(len(x_cat)):
+            data[x_cat[i]] = last_step_stats[i]
     
     df = pd.DataFrame(data)
     melted_df = pd.melt(df, var_name='Category_Run', value_name='RMSE Cost')
@@ -590,13 +609,18 @@ def plot_hpo_eval(config):
     melted_df['Category'] = melted_df['Category_Run'].apply(lambda x: x.split('_')[1])
     melted_df['Run'] = melted_df['Category_Run'].apply(lambda x: x.split('_')[0])
 
+    # print the statistics of each category
+    print(melted_df.groupby(['Category_Run']).describe())
+    print(melted_df.groupby(['Category']).describe())
+
     plt.figure(figsize=(10, 6))
-    sns.boxplot(x='Category', y='RMSE Cost', hue='Run', data=melted_df)
+    # sns.boxplot(x='Category', y='RMSE Cost', hue='Run', data=melted_df)
+    # plt.legend(title='Run')
+    sns.boxplot(x='Category', y='RMSE Cost', data=melted_df)
     plt.xlabel('Category')
     plt.ylabel('RMSE Cost')
     plt.yscale('log')
     plt.title('HPO Strategy Evaluation')
-    plt.legend(title='Run')
     plt.show()
     plt.savefig(os.path.join(config.plot_dir, "HPO_comparison.jpg"))
     plt.close()
@@ -692,16 +716,15 @@ def plot_hp_sensitivity(config):
   
 def plot_hpo_effort(config):
     """Gets the wall clock time and agent runs during hpo."""
+    SAMPLER = "RandomSampler" # "RandomSampler" or "TPESampler"
+    TASK = "cartpole" # "cartpole" or "quadrotor_2D"
+    hpo_folder = f'./experiments/comparisons/ppo/hpo/hpo_strategy_study_{SAMPLER}'
+    hpo_strategy_runs = os.listdir(hpo_folder)
 
-    hpo_folder = './experiments/comparisons/ppo/hpo/hpo_strategy_study'
-    hpo_strategies = ['run1_s1',
-                      'run1_s2',
-                      'run1_s3',
-                      'run1_s4']
     # read std_out.txt to get total agent runs and duration time
     data_time = {}
     data_runs = {}
-    for s in hpo_strategies:
+    for s in hpo_strategy_runs:
         parallel_job_folders = os.listdir(os.path.join(hpo_folder, s))
         duration_time = 0
         total_runs = 0
@@ -729,7 +752,7 @@ def plot_hpo_effort(config):
                 # check if duration time is larger
                 if duration_time < duration_hours:
                     duration_time = duration_hours
-                    total_runs += int(total_runs_match.group(0).split(': ')[1])
+                total_runs += int(total_runs_match.group(0).split(': ')[1])
 
             data_time[s] = {'Duration Time (hours)': duration_time}
             data_runs[s] = {'Total Runs': total_runs}
@@ -740,13 +763,15 @@ def plot_hpo_effort(config):
     melted_df = pd.melt(df, var_name='Category_Run', value_name='Duration Time (hours)')
     melted_df['Category'] = melted_df['Category_Run'].apply(lambda x: x.split('_')[1])
     melted_df['Run'] = melted_df['Category_Run'].apply(lambda x: x.split('_')[0])
+    melted_df.sort_values(by=['Category'])
 
     plt.figure(figsize=(10, 6))
-    sns.barplot(x='Category', y='Duration Time (hours)', hue='Run', data=melted_df)
+    # sns.barplot(x='Category', y='Duration Time (hours)', hue='Run', data=melted_df)
+    # plt.legend(title='Run')
+    sns.barplot(x='Category', y='Duration Time (hours)', data=melted_df, order=['s1', 's2', 's3', 's4'])
     plt.xlabel('Category')
     plt.ylabel('Duration Time (hours)')
     plt.title('HPO Strategy Effort')
-    plt.legend(title='Run')
     plt.show()
     plt.savefig(os.path.join(config.plot_dir, "HPO_time_comparison.jpg"))
     plt.close()
@@ -759,17 +784,18 @@ def plot_hpo_effort(config):
     melted_df['Run'] = melted_df['Category_Run'].apply(lambda x: x.split('_')[0])
 
     plt.figure(figsize=(10, 6))
-    sns.barplot(x='Category', y='Total Runs', hue='Run', data=melted_df)
+    # sns.barplot(x='Category', y='Total Runs', hue='Run', data=melted_df)
+    # plt.legend(title='Run')
+    sns.barplot(x='Category', y='Total Runs', data=melted_df, order=['s1', 's2', 's3', 's4'])
     plt.xlabel('Category')
     plt.ylabel('Total Agent Runs')
     plt.yscale('log')
     plt.title('HPO Strategy Effort')
-    plt.legend(title='Run')
     plt.show()
     plt.savefig(os.path.join(config.plot_dir, "HPO_agent_runs_comparison.jpg"))
     plt.close()
 
-    print("Hyperparameter sensitivity plotting done.")
+    print("Hyperparameter optimization effort plotting done.")
 
 def plot_hp_sen_comparison(config):
     """Compare hp sensitivity on the same boxplot."""
