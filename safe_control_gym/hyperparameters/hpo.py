@@ -33,7 +33,7 @@ from safe_control_gym.utils.logging import ExperimentLogger
 
 class HPO(object):
 
-    def __init__(self, algo, task, load_study, output_dir, task_config, hpo_config, **algo_config):
+    def __init__(self, algo, task, sampler, load_study, output_dir, task_config, hpo_config, **algo_config):
         """ Hyperparameter optimization class
         
         args:
@@ -56,6 +56,13 @@ class HPO(object):
         self.algo_config = algo_config
         self.logger = ExperimentLogger(output_dir, log_file_out=False)
         self.total_runs = 0
+        # init sampler
+        if sampler == "RandomSampler":
+            self.sampler = RandomSampler(seed=self.hpo_config.seed)
+        elif sampler == "TPESampler":
+            self.sampler = TPESampler(seed=self.hpo_config.seed)
+        else:
+            raise ValueError("Unknown sampler.")
         # check if config.hpo_config.prior is defined
         if hasattr(self.hpo_config, 'prior'):
             self.prior = self.hpo_config.prior
@@ -195,7 +202,7 @@ class HPO(object):
             if len(self.hpo_config.direction) == 1:
                 self.study = optuna.create_study(
                                                 direction=self.hpo_config.direction[0],
-                                                sampler=optuna.samplers.TPESampler(seed=self.hpo_config.seed),
+                                                sampler=self.sampler,
                                                 pruner=optuna.pruners.MedianPruner(n_warmup_steps=10),
                                                 study_name=self.study_name,
                                                 storage="mysql+pymysql://optuna@localhost/{}".format(self.study_name),
@@ -205,7 +212,7 @@ class HPO(object):
             else:
                 self.study = optuna.create_study(
                                                 directions=self.hpo_config.direction,
-                                                sampler=optuna.samplers.TPESampler(seed=self.hpo_config.seed),
+                                                sampler=self.sampler,
                                                 pruner=optuna.pruners.MedianPruner(n_warmup_steps=10),
                                                 study_name=self.study_name,
                                                 storage="mysql+pymysql://optuna@localhost/{}".format(self.study_name),

@@ -25,5 +25,6 @@ setup(name='safe_control_gym',
           'optuna-dashboard',
           'mysql-connector-python',
           'pymysql',
+          'seaborn',
       ],
       )

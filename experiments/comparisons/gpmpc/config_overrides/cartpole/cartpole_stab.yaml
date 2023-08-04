@@ -47,6 +47,10 @@ task_config:
       distrib: 'uniform'
       low: -0.2
       high: 0.2
+    init_theta_dot:
+      distrib: 'uniform'
+      low: -0.1
+      high: 0.1
   normalized_rl_action_space: false
   prior_prop:
     cart_mass: 1.0

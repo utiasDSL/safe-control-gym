@@ -1,0 +1,44 @@
+# startegy 2: naive multiple runs with maximum allowed agent runs = 240
+# 60 trials * 4 runs per trials = 240 runs
+# hpo runs in two jobs, so 30 trials per job
+hpo_config:
+  
+  # do hyperparameter optimization
+  hpo: True
+  load_if_exists: True
+  # yield perturbed hps as yaml files
+  perturb_hps: True
+  # if the perturbed hps are float, divide the interval by this number
+  divisor: 10
+  side_perturb_num: 2 # number of perturbed hps to yield. ex: lr = [x-2dx, x-dx, x, x+dx, x+2dx] if it is set to 2
+  objective: [performance] # [performance, efficiency]
+  direction: [maximize] # [maximize, maximize]
+  dynamical_runs: False # if True, dynamically increase runs
+  warm_trials: 15 # number of trials to run before dyamical runs
+  approximation_threshold: 3.5
+  repetitions: 4 # number of samples of performance metric for each objective query
+  alpha: 1 # significance level for CVaR
+  use_gpu: True
+  dashboard: False
+  seed: 24
+  save_n_best_hps: 3
+  # budget
+  trials: 30
+  
+  # hyperparameters
+  hps_config:
+    horizon: 20
+    learning_rate:
+    - 0.01
+    - 0.01
+    - 0.01
+    - 0.01
+    optimization_iterations:
+    - 3000
+    - 3000
+    - 3000
+    - 3000
+    kernel: Matern
+    n_ind_points: 35
+    num_epochs: 5
+    num_samples: 75
