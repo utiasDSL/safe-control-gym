@@ -118,7 +118,7 @@ wait $pid3
 wait $pid4
 echo "backing up the database"
 mysqldump --no-tablespaces -u optuna ${algo}_hpo > ${algo}_hpo.sql
-mv ${algo}_hpo.sql ./experiments/comparisons/rl/${algo}/hpo/hpo_strategy_study_${sampler}_${task}/run${experiment_name}_s${strategy}/${algo}_hpo.sql
+mv ${algo}_hpo.sql ./experiments/comparisons/rl/${algo}/hpo/hpo_strategy_study_${sampler}_${sys}/run${experiment_name}_s${strategy}/${algo}_hpo.sql
 # remove the database
 python ./safe_control_gym/hyperparameters/database.py --func drop --tag ${algo}_hpo
 echo "Strategy ${strategy} done"

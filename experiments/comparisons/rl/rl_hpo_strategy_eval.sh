@@ -83,7 +83,7 @@ done
 for strategy in "${strategies[@]}"
 do
 
-algo_seed_dir=(./experiments/comparisons/rl/${algo}/${EXP_NAME}_${sampler}/run${experiment_name}_s${strategy}/seed*)
+algo_seed_dir=(./experiments/comparisons/rl/${algo}/${EXP_NAME}_${sampler}_${sys}/run${experiment_name}_s${strategy}/seed*)
 
 for algo_seed_dir in "${algo_seed_dir[@]}"
 do
