@@ -27,7 +27,8 @@ seed4=$((seed1+3))
 sampler=$3 # RandomSampler or TPESampler
 localOrHost=$4
 algo=$5 # ppo, sac, or ddpg
-task=$6 # cartpole, or quadrotor
+sys=$6 # cartpole, or quadrotor
+task=$7 # stab, or track
 
 
 # Strategy 1: naive single run
@@ -63,12 +64,12 @@ python ./safe_control_gym/hyperparameters/database.py --func create --tag ${algo
 python ./experiments/comparisons/rl/rl_experiment.py \
             --algo ${algo} \
             --overrides \
-            ./experiments/comparisons/${algo}/config_overrides/${task}/${algo}_${task}_.yaml \
-            ./experiments/comparisons/rl/config_overrides/${task}/${task}_stab.yaml \
-            ./experiments/comparisons/${algo}/config_overrides/${task}/${algo}_${task}_hpo_${strategy}.yaml \
-            --output_dir ./experiments/comparisons/${algo}/hpo/hpo_strategy_study_${sampler}_${task} \
+            ./experiments/comparisons/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_.yaml \
+            ./experiments/comparisons/rl/config_overrides/${sys}/${sys}_${task}.yaml \
+            ./experiments/comparisons/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_hpo_${strategy}.yaml \
+            --output_dir ./experiments/comparisons/rl/${algo}/hpo/hpo_strategy_study_${sampler}_${sys} \
             --sampler $sampler \
-            --task ${task} --func hpo --tag run${experiment_name}_s${strategy} --seed $seed1 --use_gpu True &
+            --task ${sys} --func hpo --tag run${experiment_name}_s${strategy} --seed $seed1 --use_gpu True &
 pid1=$!
 
 # wait until the first study is created
@@ -78,20 +79,46 @@ sleep 2
 python ./experiments/comparisons/rl/rl_experiment.py \
             --algo ${algo} \
             --overrides \
-            ./experiments/comparisons/${algo}/config_overrides/${task}/${algo}_${task}_.yaml \
-            ./experiments/comparisons/rl/config_overrides/${task}/${task}_stab.yaml \
-            ./experiments/comparisons/${algo}/config_overrides/${task}/${algo}_${task}_hpo_1.yaml \
-            --output_dir ./experiments/comparisons/${algo}/hpo/hpo_strategy_study_${sampler}_${task} \
+            ./experiments/comparisons/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_.yaml \
+            ./experiments/comparisons/rl/config_overrides/${sys}/${sys}_${task}.yaml \
+            ./experiments/comparisons/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_hpo_${strategy}.yaml \
+            --output_dir ./experiments/comparisons/rl/${algo}/hpo/hpo_strategy_study_${sampler}_${sys} \
             --sampler $sampler \
-            --task ${task} --func hpo --tag run${experiment_name}_s${strategy} --seed $seed2 --load_study True --use_gpu True &
+            --task ${sys} --func hpo --tag run${experiment_name}_s${strategy} --seed $seed2 --load_study True --use_gpu True &
 pid2=$!
+
+# set load_study to True
+python ./experiments/comparisons/rl/rl_experiment.py \
+            --algo ${algo} \
+            --overrides \
+            ./experiments/comparisons/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_.yaml \
+            ./experiments/comparisons/rl/config_overrides/${sys}/${sys}_${task}.yaml \
+            ./experiments/comparisons/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_hpo_${strategy}.yaml \
+            --output_dir ./experiments/comparisons/rl/${algo}/hpo/hpo_strategy_study_${sampler}_${sys} \
+            --sampler $sampler \
+            --task ${sys} --func hpo --tag run${experiment_name}_s${strategy} --seed $seed3 --load_study True --use_gpu True &
+pid3=$!
+
+# set load_study to True
+python ./experiments/comparisons/rl/rl_experiment.py \
+            --algo ${algo} \
+            --overrides \
+            ./experiments/comparisons/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_.yaml \
+            ./experiments/comparisons/rl/config_overrides/${sys}/${sys}_${task}.yaml \
+            ./experiments/comparisons/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_hpo_${strategy}.yaml \
+            --output_dir ./experiments/comparisons/rl/${algo}/hpo/hpo_strategy_study_${sampler}_${sys} \
+            --sampler $sampler \
+            --task ${sys} --func hpo --tag run${experiment_name}_s${strategy} --seed $seed4 --load_study True --use_gpu True &
+pid4=$!
 
 # move the database from . into output_dir after both commands finish
 wait $pid1
 wait $pid2
+wait $pid3
+wait $pid4
 echo "backing up the database"
 mysqldump --no-tablespaces -u optuna ${algo}_hpo > ${algo}_hpo.sql
-mv ${algo}_hpo.sql ./experiments/comparisons/${algo}/hpo/hpo_strategy_study_${sampler}_${task}/run${experiment_name}_s${strategy}/${algo}_hpo.sql
+mv ${algo}_hpo.sql ./experiments/comparisons/rl/${algo}/hpo/hpo_strategy_study_${sampler}_${task}/run${experiment_name}_s${strategy}/${algo}_hpo.sql
 # remove the database
 python ./safe_control_gym/hyperparameters/database.py --func drop --tag ${algo}_hpo
 echo "Strategy ${strategy} done"

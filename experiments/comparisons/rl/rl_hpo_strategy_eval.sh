@@ -16,10 +16,11 @@ experiment_name=$1
 localOrHost=$2
 sampler=$3 # RandomSampler or TPESampler
 algo=$4 # ppo, sac, or ddpg
-task=$5 # cartpole, or quadrotor
-FOLDER="./experiments/comparisons/${algo}"
+sys=$5 # cartpole, or quadrotor
+task=$6 # stab, or track
+FOLDER="./experiments/comparisons/rl/${algo}"
 EXP_NAME="hpo_strategy_study"
-OUTPUT_DIR=(${FOLDER}/${EXP_NAME}_${sampler}_${task})
+OUTPUT_DIR=(${FOLDER}/${EXP_NAME}_${sampler}_${sys})
 
 # Strategy 1: naive single run
 # Strategy 2: naive multiple runs
@@ -68,12 +69,12 @@ do
        python ./experiments/comparisons/rl/rl_experiment.py \
               --algo ${algo} \
               --overrides \
-              ./experiments/comparisons/${algo}/config_overrides/${task}/${algo}_${task}_.yaml \
-              ./experiments/comparisons/rl/config_overrides/${task}/${task}_stab.yaml \
+              ./experiments/comparisons/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_.yaml \
+              ./experiments/comparisons/rl/config_overrides/${sys}/${sys}_${task}.yaml \
               --output_dir $OUTPUT_DIR \
               --tag run${experiment_name}_s${strategy} \
               --opt_hps ${opt_hps[${strategy}]} \
-              --task ${task} --seed $seed --use_gpu True
+              --task ${sys} --seed $seed --use_gpu True
 
 done
 
@@ -82,7 +83,7 @@ done
 for strategy in "${strategies[@]}"
 do
 
-algo_seed_dir=(./experiments/comparisons/${algo}/${EXP_NAME}_${sampler}/run${experiment_name}_s${strategy}/seed*)
+algo_seed_dir=(./experiments/comparisons/rl/${algo}/${EXP_NAME}_${sampler}/run${experiment_name}_s${strategy}/seed*)
 
 for algo_seed_dir in "${algo_seed_dir[@]}"
 do

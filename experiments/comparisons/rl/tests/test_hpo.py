@@ -45,6 +45,7 @@ def test_hpo(SYS, TASK, ALGO, PRIOR, SAMPLER):
     fac.add_argument("--sampler", type=str, default="TPESampler", help="which sampler to use in HPO.")
     config = fac.merge()
     config.hpo_config.trials = 1
+    config.hpo_config.repetitions = 1
     config.sampler = SAMPLER
 
     hpo(config)
@@ -92,6 +93,7 @@ def test_hpo_stategy(SYS, TASK, ALGO, STRATEGY, SAMPLER):
     fac.add_argument("--sampler", type=str, default="TPESampler", help="which sampler to use in HPO.")
     config = fac.merge()
     config.hpo_config.trials = 1
+    config.hpo_config.repetitions = 1
     config.sampler = SAMPLER
 
     hpo(config)
@@ -136,6 +138,7 @@ def test_hpo_parallelism(SYS, TASK, ALGO, PRIOR, LOAD, SAMPLER):
         fac.add_argument("--sampler", type=str, default="TPESampler", help="which sampler to use in HPO.")
         config = fac.merge()
         config.hpo_config.trials = 1
+        config.hpo_config.repetitions = 1
         config.sampler = SAMPLER
 
         hpo(config)

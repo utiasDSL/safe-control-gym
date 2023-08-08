@@ -35,6 +35,22 @@ PPO_dict = {
         "critic_lr": [1e-5, 1],
     }
 }
+SAC_dict = {
+    "categorical": {
+        "hidden_dim": [32, 64, 128, 256, 512],
+        "activation": ['tanh', 'relu', 'leaky_relu'],
+        "gamma": [0.9, 0.95, 0.98, 0.99, 0.995, 0.999, 0.9999],
+        "train_interval": [10, 100, 1000], # should be divisible by max_env_steps
+        "train_batch_size": [32, 64, 128, 256, 512],
+        "max_env_steps": [30000, 54000, 72000], # to make sure having the same checkpoint at these steps [30000, 54000, 72000]
+        "warm_up_steps": [500, 1000, 2000, 4000],
+    },
+    "float": { # note that in float type, you must specify the upper and lower bound
+        "tau": [0.005, 1.0],
+        "actor_lr": [1e-5, 1],
+        "critic_lr": [1e-5, 1],
+    }
+}
 GPMPC_dict = {
     "categorical": {
         "horizon": [10, 15, 20, 25, 30, 35],
@@ -147,6 +163,54 @@ def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, prior=False) -> D
     
     return hps_suggestion
 
+def sac_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, prior=False) -> Dict[str, Any]:
+    """Sampler for SAC hyperparameters.
+    
+    args:
+        hps_dict: the dict of hyperparameters that will be optimized over
+        trial: budget variable
+
+    """
+    
+    assert not prior, ValueError("SAC does not have hyperparameters of learning with prior.")
+
+    # TODO: conditional hyperparameters
+
+    # model args
+    hidden_dim = trial.suggest_categorical("hidden_dim", SAC_dict['categorical']['hidden_dim'])
+    activation = trial.suggest_categorical('activation', SAC_dict['categorical']['activation'])
+
+    # loss args
+    gamma = trial.suggest_categorical("gamma", SAC_dict['categorical']['gamma'])
+    tau = trial.suggest_float("tau", SAC_dict['float']['tau'][0], SAC_dict['float']['tau'][1], log=False)
+    
+    # optim args
+    train_interval = trial.suggest_categorical("train_interval", SAC_dict['categorical']['train_interval'])
+    train_batch_size = trial.suggest_categorical("train_batch_size", SAC_dict['categorical']['train_batch_size'])
+    actor_lr = trial.suggest_float("actor_lr", SAC_dict['float']['actor_lr'][0], SAC_dict['float']['actor_lr'][1], log=True)
+    critic_lr = trial.suggest_float("critic_lr", SAC_dict['float']['critic_lr'][0], SAC_dict['float']['critic_lr'][1], log=True)
+
+    max_env_steps = trial.suggest_categorical("max_env_steps", SAC_dict['categorical']['max_env_steps'])
+    warm_up_steps = trial.suggest_categorical("warm_up_steps", SAC_dict['categorical']['warm_up_steps'])
+    
+    
+    hps_suggestion = {
+                        "hidden_dim": hidden_dim,
+                        "activation": activation,
+                        "gamma": gamma,
+                        "tau": tau,
+                        "train_interval": train_interval,
+                        "train_batch_size": train_batch_size,
+                        "actor_lr": actor_lr,
+                        "critic_lr": critic_lr,
+                        "max_env_steps": max_env_steps,
+                        "warm_up_steps": warm_up_steps,
+                    }
+
+    assert len(hps_suggestion) == len(hps_dict), ValueError("We are optimizing over different number of HPs as you listed.")
+    
+    return hps_suggestion
+
 def gpmpc_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, **kwargs) -> Dict[str, Any]:
     """Sampler for PPO hyperparameters.
     
@@ -189,10 +253,12 @@ def gpmpc_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, **kwargs) -> Di
 
 HYPERPARAMS_SAMPLER = {
     "ppo": ppo_sampler,
+    "sac": sac_sampler,
     "gp_mpc": gpmpc_sampler,
 }
 
 HYPERPARAMS_DICT = {
     "ppo": PPO_dict,
+    "sac": SAC_dict,
     "gp_mpc": GPMPC_dict,
 }

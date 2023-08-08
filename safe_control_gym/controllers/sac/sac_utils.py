@@ -32,6 +32,7 @@ class SACAgent:
                  actor_lr=0.001,
                  critic_lr=0.001,
                  entropy_lr=0.001,
+                 activation='relu',
                  **kwargs):
         # params
         self.obs_space = obs_space
@@ -42,7 +43,7 @@ class SACAgent:
         self.use_entropy_tuning = use_entropy_tuning
 
         # model
-        self.ac = MLPActorCritic(obs_space, act_space, hidden_dims=[hidden_dim] * 2, activation='relu')
+        self.ac = MLPActorCritic(obs_space, act_space, hidden_dims=[hidden_dim] * 2, activation=activation)
         self.log_alpha = torch.tensor(np.log(init_temperature))
 
         if self.use_entropy_tuning:
@@ -285,7 +286,7 @@ class MLPActorCritic(nn.Module):
 
     def act(self, obs, deterministic=False):
         a, _ = self.actor(obs, deterministic, False)
-        return a.numpy()
+        return a.cpu().numpy()
 
 
 # -----------------------------------------------------------------------------------
