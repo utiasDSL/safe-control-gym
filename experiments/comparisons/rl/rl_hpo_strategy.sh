@@ -87,35 +87,35 @@ python ./experiments/comparisons/rl/rl_experiment.py \
             --task ${sys} --func hpo --tag run${experiment_name}_s${strategy} --seed $seed2 --load_study True --use_gpu True &
 pid2=$!
 
-# set load_study to True
-python ./experiments/comparisons/rl/rl_experiment.py \
-            --algo ${algo} \
-            --overrides \
-            ./experiments/comparisons/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_.yaml \
-            ./experiments/comparisons/rl/config_overrides/${sys}/${sys}_${task}.yaml \
-            ./experiments/comparisons/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_hpo_${strategy}.yaml \
-            --output_dir ./experiments/comparisons/rl/${algo}/hpo/hpo_strategy_study_${sampler}_${sys} \
-            --sampler $sampler \
-            --task ${sys} --func hpo --tag run${experiment_name}_s${strategy} --seed $seed3 --load_study True --use_gpu True &
-pid3=$!
+# # set load_study to True
+# python ./experiments/comparisons/rl/rl_experiment.py \
+#             --algo ${algo} \
+#             --overrides \
+#             ./experiments/comparisons/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_.yaml \
+#             ./experiments/comparisons/rl/config_overrides/${sys}/${sys}_${task}.yaml \
+#             ./experiments/comparisons/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_hpo_${strategy}.yaml \
+#             --output_dir ./experiments/comparisons/rl/${algo}/hpo/hpo_strategy_study_${sampler}_${sys} \
+#             --sampler $sampler \
+#             --task ${sys} --func hpo --tag run${experiment_name}_s${strategy} --seed $seed3 --load_study True --use_gpu True &
+# pid3=$!
 
-# set load_study to True
-python ./experiments/comparisons/rl/rl_experiment.py \
-            --algo ${algo} \
-            --overrides \
-            ./experiments/comparisons/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_.yaml \
-            ./experiments/comparisons/rl/config_overrides/${sys}/${sys}_${task}.yaml \
-            ./experiments/comparisons/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_hpo_${strategy}.yaml \
-            --output_dir ./experiments/comparisons/rl/${algo}/hpo/hpo_strategy_study_${sampler}_${sys} \
-            --sampler $sampler \
-            --task ${sys} --func hpo --tag run${experiment_name}_s${strategy} --seed $seed4 --load_study True --use_gpu True &
-pid4=$!
+# # set load_study to True
+# python ./experiments/comparisons/rl/rl_experiment.py \
+#             --algo ${algo} \
+#             --overrides \
+#             ./experiments/comparisons/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_.yaml \
+#             ./experiments/comparisons/rl/config_overrides/${sys}/${sys}_${task}.yaml \
+#             ./experiments/comparisons/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_hpo_${strategy}.yaml \
+#             --output_dir ./experiments/comparisons/rl/${algo}/hpo/hpo_strategy_study_${sampler}_${sys} \
+#             --sampler $sampler \
+#             --task ${sys} --func hpo --tag run${experiment_name}_s${strategy} --seed $seed4 --load_study True --use_gpu True &
+# pid4=$!
 
 # move the database from . into output_dir after both commands finish
 wait $pid1
 wait $pid2
-wait $pid3
-wait $pid4
+# wait $pid3
+# wait $pid4
 echo "backing up the database"
 mysqldump --no-tablespaces -u optuna ${algo}_hpo > ${algo}_hpo.sql
 mv ${algo}_hpo.sql ./experiments/comparisons/rl/${algo}/hpo/hpo_strategy_study_${sampler}_${sys}/run${experiment_name}_s${strategy}/${algo}_hpo.sql
