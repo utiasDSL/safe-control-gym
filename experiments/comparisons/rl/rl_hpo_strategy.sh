@@ -21,9 +21,9 @@ cd ~/safe-control-gym
 
 experiment_name=$1
 seed1=$2
-seed2=$((seed1+1))
-seed3=$((seed1+2))
-seed4=$((seed1+3))
+seed2=$((seed1+100))
+seed3=$((seed1+200))
+seed4=$((seed1+300))
 sampler=$3 # RandomSampler or TPESampler
 localOrHost=$4
 algo=$5 # ppo, sac, or ddpg

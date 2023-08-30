@@ -7,7 +7,7 @@ hpo_runs=(1 2 3 4 5)
 for run in "${hpo_runs[@]}"
 do
 
-bash experiments/comparisons/rl/rl_hpo_strategy.sh ${run} $((run+6)) TPESampler hostx ppo cartpole stab
+bash experiments/comparisons/rl/rl_hpo_strategy.sh ${run} $((run+6)) TPESampler hostx sac cartpole stab
 
 done
 # eval the strategy

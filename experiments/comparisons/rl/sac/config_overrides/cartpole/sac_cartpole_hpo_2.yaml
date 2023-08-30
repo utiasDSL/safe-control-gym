@@ -1,6 +1,6 @@
-# startegy 2: naive multiple runs with maximum allowed agent runs = 400
-# 40 trials * 10 runs per trials = 400 runs
-# hpo runs in 2 jobs, so 20 trials per job
+# startegy 2: naive multiple runs with maximum allowed trials = 80
+# 80 trials * 5 runs per trials = 400 runs
+# hpo runs in two jobs, so 40 trials per job
 hpo_config:
   
   # do hyperparameter optimization
@@ -16,14 +16,14 @@ hpo_config:
   dynamical_runs: False # if True, dynamically increase runs
   warm_trials: 30 # number of trials to run before dyamical runs
   approximation_threshold: 5
-  repetitions: 10 # number of samples of performance for each objective query
+  repetitions: 5 # number of samples of performance for each objective query
   alpha: 1 # significance level for CVaR
   use_gpu: True
   dashboard: False
   seed: 24
   save_n_best_hps: 3
   # budget
-  trials: 20
+  trials: 40
   prior: False # false will not consider the prior hps (learning with prior args)
   
   # hyperparameters

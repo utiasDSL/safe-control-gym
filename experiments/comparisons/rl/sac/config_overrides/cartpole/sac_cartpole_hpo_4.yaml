@@ -1,4 +1,4 @@
-# startegy 4: dynamic runs w/ CVaR with maximum allowed agent runs = 400
+# startegy 4: dynamic runs w/ CVaR with maximum allowed trials = 80
 hpo_config:
   
   # do hyperparameter optimization
@@ -13,15 +13,15 @@ hpo_config:
   direction: [maximize] # [maximize, maximize]
   dynamical_runs: True # if True, dynamically increase runs
   warm_trials: 10 # number of trials to run before dyamical runs
-  approximation_threshold: 3.5
+  approximation_threshold: 1
   repetitions: 5 # number of samples of performance for each objective query
-  alpha: 0.5 # significance level for CVaR
+  alpha: 0.2 # significance level for CVaR
   use_gpu: True
   dashboard: False
   seed: 24
   save_n_best_hps: 3
   # budget
-  trials: 20
+  trials: 40
   prior: False # false will not consider the prior hps (learning with prior args)
   
   # hyperparameters
