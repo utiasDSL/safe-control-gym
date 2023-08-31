@@ -220,7 +220,10 @@ class HPO(object):
                                                 )
             
         
-        self.study.optimize(self.objective, n_trials=self.hpo_config.trials)
+        self.study.optimize(self.objective,
+                            catch=(RuntimeError,),
+                            callbacks=[MaxTrialsCallback(self.hpo_config.trials, states=(TrialState.COMPLETE,))],
+                            )
 
         output_dir = os.path.join(self.output_dir, "hpo")
         # save meta data
