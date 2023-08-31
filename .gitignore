@@ -11,9 +11,10 @@ z_docstring.py
 TODOs.md
 # 
 hpo/
-hpo_strategy_study_RandomSampler/
-hpo_strategy_study_TPESampler/
+hpo_strategy_study*/
+hpo_strategy_study*/
 *.jpg
+*.pickle
 
 
 # macOS users

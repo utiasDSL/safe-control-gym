@@ -35,6 +35,22 @@ PPO_dict = {
         "critic_lr": [1e-5, 1],
     }
 }
+SAC_dict = {
+    "categorical": {
+        "hidden_dim": [32, 64, 128, 256, 512],
+        "activation": ['tanh', 'relu', 'leaky_relu'],
+        "gamma": [0.9, 0.95, 0.98, 0.99, 0.995, 0.999, 0.9999],
+        "train_interval": [10, 100, 1000], # should be divisible by max_env_steps
+        "train_batch_size": [32, 64, 128, 256, 512],
+        "max_env_steps": [30000, 54000, 72000], # to make sure having the same checkpoint at these steps [30000, 54000, 72000]
+        "warm_up_steps": [500, 1000, 2000, 4000],
+    },
+    "float": { # note that in float type, you must specify the upper and lower bound
+        "tau": [0.005, 1.0],
+        "actor_lr": [1e-5, 1],
+        "critic_lr": [1e-5, 1],
+    }
+}
 GPMPC_dict = {
     "categorical": {
         "horizon": [10, 15, 20, 25, 30, 35],
@@ -147,7 +163,7 @@ def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, prior=False) -> D
     
     return hps_suggestion
 
-def gpmpc_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, prior=False) -> Dict[str, Any]:
+def gpmpc_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]:
     """Sampler for PPO hyperparameters.
     
     args:
@@ -189,10 +205,12 @@ def gpmpc_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, prior=False) ->
 
 HYPERPARAMS_SAMPLER = {
     "ppo": ppo_sampler,
+    "sac": sac_sampler,
     "gp_mpc": gpmpc_sampler,
 }
 
 HYPERPARAMS_DICT = {
     "ppo": PPO_dict,
+    "sac": SAC_dict,
     "gp_mpc": GPMPC_dict,
 }

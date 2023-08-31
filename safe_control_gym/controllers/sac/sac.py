@@ -66,7 +66,8 @@ class SAC(BaseController):
                               target_entropy=self.target_entropy,
                               actor_lr=self.actor_lr,
                               critic_lr=self.critic_lr,
-                              entropy_lr=self.entropy_lr)
+                              entropy_lr=self.entropy_lr,
+                              activation=self.activation)
         self.agent.to(self.device)
 
         # pre-/post-processing
@@ -159,6 +160,9 @@ class SAC(BaseController):
 
     def learn(self, env=None, **kwargs):
         '''Performs learning (pre-training, training, fine-tuning, etc).'''
+        if self.num_checkpoints > 0:
+            step_interval = np.linspace(0, self.max_env_steps, self.num_checkpoints)
+            interval_save = np.zeros_like(step_interval, dtype=bool)
         while self.total_steps < self.max_env_steps:
             results = self.train_step()
 
@@ -167,10 +171,15 @@ class SAC(BaseController):
                 # latest/final checkpoint
                 self.save(self.checkpoint_path)
                 self.logger.info(f'Checkpoint | {self.checkpoint_path}')
-            if self.num_checkpoints and self.total_steps % (self.max_env_steps // self.num_checkpoints) == 0:
-                # intermediate checkpoint
-                path = os.path.join(self.output_dir, 'checkpoints', f'model_{self.total_steps}.pt')
-                self.save(path, save_buffer=False)
+                path = os.path.join(self.output_dir, "checkpoints", "model_{}.pt".format(self.total_steps))
+                self.save(path)
+            if self.num_checkpoints > 0:
+                interval_id = np.argmin(np.abs(np.array(step_interval) - self.total_steps))
+                if interval_save[interval_id] == False:
+                    # Intermediate checkpoint.
+                    path = os.path.join(self.output_dir, "checkpoints", f'model_{self.total_steps}.pt')
+                    self.save(path, save_buffer=False)
+                    interval_save[interval_id] = True
 
             # eval
             if self.eval_interval and self.total_steps % self.eval_interval == 0:
@@ -190,6 +199,16 @@ class SAC(BaseController):
             # logging
             if self.log_interval and self.total_steps % self.log_interval == 0:
                 self.log_step(results)
+    
+    def _learn(self,
+               env=None,
+               **kwargs
+               ):
+        '''Performs learning as an unified calling function for hyperparameter optimization.
+        Args:
+            env (BenchmarkEnv): The environment to be used for training.
+        '''
+        return self.learn(env=env, **kwargs)
 
     def select_action(self, obs, info=None):
         '''Determine the action to take at the current timestep.
@@ -207,6 +226,14 @@ class SAC(BaseController):
             action = self.agent.ac.act(obs, deterministic=True)
 
         return action
+
+    def _run(self, **kwargs):
+        '''Runs evaluation as an unified calling function for hyperparameter optimization.
+        '''
+        results = self.run(env=self.eval_env, render=False, n_episodes=self.eval_batch_size, verbose=False, **kwargs)
+        mean_cost = np.mean(results["ep_returns"])
+
+        return mean_cost
 
     def run(self, env=None, render=False, n_episodes=10, verbose=False, **kwargs):
         '''Runs evaluation with current policy.'''
@@ -335,9 +362,7 @@ class SAC(BaseController):
                 'progress': step / self.max_env_steps,
             },
             step,
-            prefix='time',
-            write=False,
-            write_tb=False)
+            prefix='time')
 
         # learning stats
         if 'policy_loss' in results:
