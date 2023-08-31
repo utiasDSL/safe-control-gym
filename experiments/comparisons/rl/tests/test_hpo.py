@@ -11,7 +11,7 @@ from safe_control_gym.hyperparameters.database import create, drop
 
 @pytest.mark.parametrize('SYS', ['cartpole', 'quadrotor'])
 @pytest.mark.parametrize('TASK',['stab'])
-@pytest.mark.parametrize('ALGO',['ppo', 'sac'])
+@pytest.mark.parametrize('ALGO',['ppo', 'sac', 'ddpg'])
 @pytest.mark.parametrize('PRIOR',[''])
 @pytest.mark.parametrize('SAMPLER',['TPESampler', 'RandomSampler'])
 def test_hpo(SYS, TASK, ALGO, PRIOR, SAMPLER):
@@ -59,7 +59,7 @@ def test_hpo(SYS, TASK, ALGO, PRIOR, SAMPLER):
 
 @pytest.mark.parametrize('SYS', ['cartpole'])
 @pytest.mark.parametrize('TASK',['stab'])
-@pytest.mark.parametrize('ALGO',['ppo', 'sac'])
+@pytest.mark.parametrize('ALGO',['ppo', 'sac', 'ddpg'])
 @pytest.mark.parametrize('STRATEGY',['1', '2', '3', '4', '5'])
 @pytest.mark.parametrize('SAMPLER',['TPESampler', 'RandomSampler'])
 def test_hpo_stategy(SYS, TASK, ALGO, STRATEGY, SAMPLER):
@@ -107,7 +107,7 @@ def test_hpo_stategy(SYS, TASK, ALGO, STRATEGY, SAMPLER):
 
 @pytest.mark.parametrize('SYS', ['cartpole'])
 @pytest.mark.parametrize('TASK',['stab'])
-@pytest.mark.parametrize('ALGO',['ppo', 'sac'])
+@pytest.mark.parametrize('ALGO',['ppo', 'sac', 'ddpg'])
 @pytest.mark.parametrize('PRIOR',[''])
 @pytest.mark.parametrize('LOAD', [False, True])
 @pytest.mark.parametrize('SAMPLER',['TPESampler', 'RandomSampler'])
@@ -177,7 +177,7 @@ def test_hpo_parallelism(SYS, TASK, ALGO, PRIOR, LOAD, SAMPLER):
 
 @pytest.mark.parametrize('SYS', ['cartpole'])
 @pytest.mark.parametrize('TASK',['stab'])
-@pytest.mark.parametrize('ALGO',['ppo', 'sac'])
+@pytest.mark.parametrize('ALGO',['ppo', 'sac', 'ddpg'])
 @pytest.mark.parametrize('PRIOR',[''])
 def test_hp_perturbation(SYS, TASK, ALGO, PRIOR):
     '''Test Hyperparameter perturbation.
