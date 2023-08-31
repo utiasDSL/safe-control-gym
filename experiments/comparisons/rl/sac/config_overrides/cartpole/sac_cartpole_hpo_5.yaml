@@ -13,7 +13,7 @@ hpo_config:
   direction: [maximize] # [maximize, maximize]
   dynamical_runs: True # if True, dynamically increase runs
   warm_trials: 5 # number of trials to run before dyamical runs
-  approximation_threshold: 1.5
+  approximation_threshold: 2.5
   repetitions: 3 # number of samples of performance for each objective query
   alpha: 1 # significance level for CVaR
   use_gpu: True
