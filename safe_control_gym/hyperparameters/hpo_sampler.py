@@ -163,6 +163,54 @@ def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, prior=False) -> D
     
     return hps_suggestion
 
+def sac_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, prior=False) -> Dict[str, Any]:
+    """Sampler for SAC hyperparameters.
+    
+    args:
+        hps_dict: the dict of hyperparameters that will be optimized over
+        trial: budget variable
+
+    """
+    
+    assert not prior, ValueError("SAC does not have hyperparameters of learning with prior.")
+
+    # TODO: conditional hyperparameters
+
+    # model args
+    hidden_dim = trial.suggest_categorical("hidden_dim", SAC_dict['categorical']['hidden_dim'])
+    activation = trial.suggest_categorical('activation', SAC_dict['categorical']['activation'])
+
+    # loss args
+    gamma = trial.suggest_categorical("gamma", SAC_dict['categorical']['gamma'])
+    tau = trial.suggest_float("tau", SAC_dict['float']['tau'][0], SAC_dict['float']['tau'][1], log=False)
+    
+    # optim args
+    train_interval = trial.suggest_categorical("train_interval", SAC_dict['categorical']['train_interval'])
+    train_batch_size = trial.suggest_categorical("train_batch_size", SAC_dict['categorical']['train_batch_size'])
+    actor_lr = trial.suggest_float("actor_lr", SAC_dict['float']['actor_lr'][0], SAC_dict['float']['actor_lr'][1], log=True)
+    critic_lr = trial.suggest_float("critic_lr", SAC_dict['float']['critic_lr'][0], SAC_dict['float']['critic_lr'][1], log=True)
+
+    max_env_steps = trial.suggest_categorical("max_env_steps", SAC_dict['categorical']['max_env_steps'])
+    warm_up_steps = trial.suggest_categorical("warm_up_steps", SAC_dict['categorical']['warm_up_steps'])
+    
+    
+    hps_suggestion = {
+                        "hidden_dim": hidden_dim,
+                        "activation": activation,
+                        "gamma": gamma,
+                        "tau": tau,
+                        "train_interval": train_interval,
+                        "train_batch_size": train_batch_size,
+                        "actor_lr": actor_lr,
+                        "critic_lr": critic_lr,
+                        "max_env_steps": max_env_steps,
+                        "warm_up_steps": warm_up_steps,
+                    }
+
+    assert len(hps_suggestion) == len(hps_dict), ValueError("We are optimizing over different number of HPs as you listed.")
+    
+    return hps_suggestion
+
 def gpmpc_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]:
     """Sampler for PPO hyperparameters.
     
