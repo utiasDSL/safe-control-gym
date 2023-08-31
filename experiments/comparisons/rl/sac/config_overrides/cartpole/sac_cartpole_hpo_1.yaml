@@ -1,6 +1,6 @@
-# startegy 1: naive single run with maximum allowed agent runs = 1600
-# 1600 trials * 1 runs per trials = 1600 runs
-# hpo runs in 2 jobs, so 800 trials per job
+# startegy 1: naive single run with maximum allowed trials = 80
+# 80 trials * 1 runs per trials = 80 runs
+# hpo runs in two jobs, so 40 trials per job
 hpo_config:
   
   # do hyperparameter optimization
@@ -23,7 +23,7 @@ hpo_config:
   seed: 24
   save_n_best_hps: 3
   # budget
-  trials: 800
+  trials: 40
   prior: False # false will not consider the prior hps (learning with prior args)
   
   # hyperparameters
