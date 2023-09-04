@@ -12,12 +12,11 @@
 
 cd ~/safe-control-gym
 
-experiment_name=$1
-localOrHost=$2
-sampler=$3 # RandomSampler or TPESampler
-algo=$4 # ppo, sac, or ddpg
-sys=$5 # cartpole, or quadrotor
-task=$6 # stab, or track
+localOrHost=$1
+sampler=$2 # RandomSampler or TPESampler
+algo=$3 # ppo, sac, or ddpg
+sys=$4 # cartpole, or quadrotor
+task=$5 # stab, or track
 FOLDER="./experiments/comparisons/rl/${algo}"
 EXP_NAME="hpo_strategy_study"
 OUTPUT_DIR=(${FOLDER}/${EXP_NAME}_${sampler}_${sys})
@@ -50,52 +49,56 @@ seeds=(22403 84244 98825 40417 58454 47838 56715 77833 19880 59009
        89353 93490 92286 94057 32920 34437 29695 80638 84519 12407 
        47722 81354 63825 13296 10779 98122 86221 89144 35192 24759)
 
-# optimized hyperparameters from each strategy
-opt_hps=(
-./experiments/comparisons/ppo/hpo/hpo_strategy_study_RandomSampler/run3_s1/seed12_Jul-30-19-01-14_14ae2aa/hpo/hyperparameters_138.8556.yaml 
-./experiments/comparisons/ppo/hpo/hpo_strategy_study_RandomSampler/run3_s2/seed12_Jul-31-02-58-15_14ae2aa/hpo/hyperparameters_133.6558.yaml 
-./experiments/comparisons/ppo/hpo/hpo_strategy_study_RandomSampler/run3_s3/seed12_Jul-31-11-38-23_14ae2aa/hpo/hyperparameters_132.5965.yaml 
-./experiments/comparisons/ppo/hpo/hpo_strategy_study_RandomSampler/run3_s4/seed12_Jul-31-19-50-06_14ae2aa/hpo/hyperparameters_133.0253.yaml 
-./experiments/comparisons/ppo/hpo/hpo_strategy_study_TPESampler/run1_s5/seed8_Aug-02-13-06-09_14ae2aa/hpo/hyperparameters_136.2288.yaml
-)
+# Initialize the strategy_runs array
+strategy_runs=()
 
-for seed in "${seeds[@]}" 
-do
+# Loop through the strategy directories
+for strat_dir in ${FOLDER}/hpo/hpo_strategy_study_${sampler}/; do
 
-for strategy in "${strategies[@]}"
-do
+    # Loop through the run directories
+    for run_dir in ${strat_dir}run*/; do
+        run_name=$(basename $run_dir)
 
-       echo "Training in default config with seed:" ${seed} " and outputting dir:" ${OUTPUT_DIR}
-       python ./experiments/comparisons/rl/rl_experiment.py \
-              --algo ${algo} \
-              --overrides \
-              ./experiments/comparisons/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_.yaml \
-              ./experiments/comparisons/rl/config_overrides/${sys}/${sys}_${task}.yaml \
-              --output_dir $OUTPUT_DIR \
-              --tag run${experiment_name}_s${strategy} \
-              --opt_hps ${opt_hps[${strategy}]} \
-              --task ${sys} --seed $seed --use_gpu True
+        # Find the largest hyperparameters_ file among all seed directories within the run directory
+        best_hp_file=$(find ${run_dir}seed*/ -name "hyperparameters_*.yaml" | sort -t_ -k2,2n | tail -n 1)
 
+        for seed in "${seeds[@]}"
+        do
+            echo "Training in default config with seed:" ${seed} " and outputting dir:" ${OUTPUT_DIR}
+            python ./experiments/comparisons/rl/rl_experiment.py \
+                    --algo ${algo} \
+                    --overrides \
+                    ./experiments/comparisons/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_.yaml \
+                    ./experiments/comparisons/rl/config_overrides/${sys}/${sys}_${task}.yaml \
+                    --output_dir $OUTPUT_DIR \
+                    --tag ${run_name} \
+                    --opt_hps ${best_hp_file} \
+                    --task ${sys} --seed $seed --use_gpu True
+        done
+
+        print the best hyperparameter file
+        echo $best_hp_file
+        strategy_runs+=( "$run_name" )
+    done
 done
 
-done
 
-for strategy in "${strategies[@]}"
+for strategy_run in "${strategy_runs[@]}"
 do
 
-algo_seed_dir=(./experiments/comparisons/rl/${algo}/${EXP_NAME}_${sampler}_${sys}/run${experiment_name}_s${strategy}/seed*)
+    algo_seed_dir=(./experiments/comparisons/rl/${algo}/${EXP_NAME}_${sampler}_${sys}/${strategy_run}/seed*)
 
-for algo_seed_dir in "${algo_seed_dir[@]}"
-do
+    for algo_seed_dir in "${algo_seed_dir[@]}"
+    do
 
-       echo ${algo_seed_dir}
-       python ./experiments/comparisons/rl/eval.py \
-              --algo ${algo} \
-              --func test_from_checkpoints \
-              --restore ${algo_seed_dir} \
-              --set_test_seed_as_training_eval \
-              --kv_overrides task_config.done_on_out_of_bound=False
+        echo ${algo_seed_dir}
+        python ./experiments/comparisons/rl/eval.py \
+                --algo ${algo} \
+                --func test_from_checkpoints \
+                --restore ${algo_seed_dir} \
+                --set_test_seed_as_training_eval \
+                --kv_overrides task_config.done_on_out_of_bound=False
 
-done
+    done
 
 done
