@@ -3,11 +3,7 @@
 ######## NOTE ########
 # 00. Perform HPO (remember to adjust hpo config). 
 #     ex: python ./experiments/comparisons/ppo/ppo_experiment.py --func hpo --overrides ./experiments/comparisons/ppo/config_overrides/cartpole/ppo_cartpole.yaml ./experiments/comparisons/ppo/config_overrides/cartpole/cartpole_stab.yaml ./experiments/comparisons/ppo/config_overrides/cartpole/ppo_cartpole_hpo.yaml --output_dir ./experiments/comparisons/ppo/hpo --task cartpole --seed 2 --use_gpu True
-# 1. Specify the EXP_NAME.
-# 2. Specify the CONFIG_PATH. ex: ./experiments/.../hpo/hyperparameters_127.2329.yaml
-# 3. Change the num_checkpoints as it will be used for evaluation.
-# 4. Change the saving folder.
-# 5. Change the --fun in ppo_experiment.py.
+# 1. Change the args if needed.
 #####################
 
 cd ~/safe-control-gym
@@ -64,7 +60,7 @@ for strat_dir in ${FOLDER}/hpo/hpo_strategy_study_${sampler}/; do
             echo "Training in default config with seed:" ${seed} " and outputting dir:" ${OUTPUT_DIR}
             python ./experiments/comparisons/gpmpc/gpmpc_experiment.py --algo gp_mpc \
                 --task ${sys} \
-                --overrides ./experiments/comparisons/gpmpc/config_overrides/cartpole/gpmpc_cartpole_150.yaml \
+                --overrides ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_150.yaml \
                 ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml \
                 --output_dir ${OUTPUT_DIR} \
                 --opt_hps ${best_hp_file} \
