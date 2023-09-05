@@ -242,7 +242,7 @@ python ./experiments/comparisons/gpmpc/gpmpc_experiment.py \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_hpo_5.yaml \
                      --output_dir ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler}_${sys} \
                      --sampler $sampler \
-                     --task cartpole --func hpo --tag run${experiment_name}_s4 --seed $seed1 &
+                     --task cartpole --func hpo --tag run${experiment_name}_s5 --seed $seed1 &
 pid1=$!
 
 # wait until the first study is created
