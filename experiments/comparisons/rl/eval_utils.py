@@ -333,8 +333,8 @@ def load_stats(legend_dir_specs,
                 _, x, _, y = load_from_log_file(path)
                 x, y = np.asarray(x), np.asarray(y)
                 # quick hack to convert reward to cost (consistent with other control methods)
-                if "return" in scalar_name.lower() or "reward" in scalar_name.lower():
-                    y = reward_to_cost(y)
+                # if "return" in scalar_name.lower() or "reward" in scalar_name.lower():
+                #     y = reward_to_cost(y)
                 # rescale the x-axis, e.g. convert to training step to time 
                 if x_rescale_factor is not None:
                     x *= x_rescale_factor

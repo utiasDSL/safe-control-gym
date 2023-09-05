@@ -18,6 +18,10 @@ from datetime import datetime
 from dict_deep import deep_set
 import pandas as pd
 import seaborn as sns
+import yaml
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.manifold import TSNE
+from matplotlib.colors import Normalize
 
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.plotting import plot_from_logs, window_func, load_from_log_file, COLORS, LINE_STYLES
@@ -535,26 +539,32 @@ def plot_robustness(config):
 def plot_hpo_eval(config):
     """Gets the plot and csv for performance (in RMSE)."""
     SAMPLER = "TPESampler" # "RandomSampler" or "TPESampler"
-    TASK = "cartpole" # "cartpole" or "quadrotor_2D"
+    SYS = "cartpole" # "cartpole" or "quadrotor_2D"
+    visualize_hp_vectors = False
     legend_map_s1 = {
-        f"hpo_strategy_study_{SAMPLER}/run1_s1": "run1_s1",
-        f"hpo_strategy_study_{SAMPLER}/run2_s1": "run2_s1",
-        f"hpo_strategy_study_{SAMPLER}/run3_s1": "run3_s1"
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run1_s1": "run1_s1",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run2_s1": "run2_s1",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run3_s1": "run3_s1"
     }
     legend_map_s2 = {
-        f"hpo_strategy_study_{SAMPLER}/run1_s2": "run1_s2",
-        f"hpo_strategy_study_{SAMPLER}/run2_s2": "run2_s2",
-        f"hpo_strategy_study_{SAMPLER}/run3_s2": "run3_s2",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run1_s2": "run1_s2",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run2_s2": "run2_s2",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run3_s2": "run3_s2",
     }
     legend_map_s3 = {
-        f"hpo_strategy_study_{SAMPLER}/run1_s3": "run1_s3",
-        f"hpo_strategy_study_{SAMPLER}/run2_s3": "run2_s3",
-        f"hpo_strategy_study_{SAMPLER}/run3_s3": "run3_s3",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run1_s3": "run1_s3",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run2_s3": "run2_s3",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run3_s3": "run3_s3",
     }
     legend_map_s4 = {
-        f"hpo_strategy_study_{SAMPLER}/run1_s4": "run1_s4",
-        f"hpo_strategy_study_{SAMPLER}/run2_s4": "run2_s4",
-        f"hpo_strategy_study_{SAMPLER}/run3_s4": "run3_s4",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run1_s4": "run1_s4",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run2_s4": "run2_s4",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run3_s4": "run3_s4",
+    }
+    legend_map_s5 = {
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run1_s5": "run1_s5",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run2_s5": "run2_s5",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run3_s5": "run3_s5",
     }
     algo_name_map_s1 = {
         "run1_s1": "run1_s1",
@@ -576,20 +586,47 @@ def plot_hpo_eval(config):
         "run2_s4": "run2_s4",
         "run3_s4": "run3_s4",
     }
+    algo_name_map_s5 = {
+        "run1_s5": "run1_s5",
+        "run2_s5": "run2_s5",
+        "run3_s5": "run3_s5",
+    }
     scalar_name_map = {
-        "checkpoint_eval/normalized_rmse": "Cost",
+        # "checkpoint_eval/ep_returns": "Reward",
+        "checkpoint_eval/normalized_rmse": "RMSE Cost",
     }
 
-    legend_map_list = [legend_map_s1, legend_map_s2, legend_map_s3, legend_map_s4]
-    algo_name_map_list = [algo_name_map_s1, algo_name_map_s2, algo_name_map_s3, algo_name_map_s4]
+    legend_map_list = [legend_map_s1, legend_map_s2, legend_map_s3, legend_map_s4, legend_map_s5]
+    algo_name_map_list = [algo_name_map_s1, algo_name_map_s2, algo_name_map_s3, algo_name_map_s4, algo_name_map_s5]
 
     data = {}
+    estimates = {}
+    hp_vectors = []
     for index, (legend_map, algo_name_map) in enumerate(zip(legend_map_list, algo_name_map_list)):
         # Collect results.
         spec = {}
         for d, legend in legend_map.items():
             seed_dirs = os.listdir(os.path.join(config.plot_dir, d))
             spec[legend] = [os.path.join(config.plot_dir, d, sd) for sd in seed_dirs]
+            # read yaml path
+            yaml_path = os.path.join(config.plot_dir, d, seed_dirs[0], "config.yaml")
+            with open(yaml_path, "r") as f:
+                configs = yaml.load(f, Loader=yaml.FullLoader)
+
+            pattern = r'[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?'
+            matches = re.findall(pattern, configs['opt_hps'])
+            estimates[legend] = np.array([float(matches[-1])])
+
+            # read hp vector
+            if visualize_hp_vectors:
+                if 'rl' not in configs['opt_hps']:
+                    configs['opt_hps'] = configs['opt_hps'].replace('/ppo/', '/rl/ppo/')
+                if SAMPLER not in configs['opt_hps']:
+                    configs['opt_hps'] = configs['opt_hps'].replace('hpo_strategy_study', f'hpo_strategy_study_{SAMPLER}')
+                with open(configs['opt_hps'], "r") as f:
+                    hp_vector = yaml.load(f, Loader=yaml.FullLoader)
+                hp_vector['s'] = legend
+                hp_vectors.append(hp_vector)
 
         # Get all stats.
         scalar_stats = load_stats(spec, 
@@ -601,10 +638,66 @@ def plot_hpo_eval(config):
         x_cat, last_step_stats = get_last_stats(scalar_stats)
         
         for i in range(len(x_cat)):
+            # data[x_cat[i]] = np.array([last_step_stats[i].mean()])
             data[x_cat[i]] = last_step_stats[i]
+            if visualize_hp_vectors:
+                for j in hp_vectors:
+                    if j['s'] == x_cat[i]:
+                        j['r'] = last_step_stats[i].mean()
     
+    if visualize_hp_vectors:
+        # hp vectors clustering
+        # extract features
+        numeric_features = [[value for key, value in v.items() if isinstance(value, (int, float)) and key != 'r'] for v in hp_vectors]
+        categorical_features = [[value for key, value in v.items() if isinstance(value, str) and key != 's'] for v in hp_vectors]
+        heatmap_feature = [v["r"] for v in hp_vectors]
+
+        norm = Normalize(vmin=min(heatmap_feature), vmax=max(heatmap_feature))
+        heatmap_colors = plt.cm.viridis(norm(heatmap_feature))
+
+        # One-hot encode categorical features
+        encoder = OneHotEncoder()
+        one_hot_encoded = encoder.fit_transform(categorical_features).toarray()
+
+        # Scale the numeric features
+        scaler = StandardScaler()
+        scaled_numeric_features = scaler.fit_transform(numeric_features)
+
+        # Combine one-hot encoded and numeric features
+        features = np.hstack((one_hot_encoded, scaled_numeric_features))
+
+        # Apply t-SNE
+        tsne = TSNE(n_components=2, perplexity=5, random_state=0)
+        tsne_result = tsne.fit_transform(features)
+
+        # Create a colormap for labels
+        unique_labels = np.unique([item['s'].split('_')[1] for item in hp_vectors])
+        label_to_color = {label: idx / len(unique_labels) for idx, label in enumerate(unique_labels)}
+
+        # Visualize the results
+        plt.figure(figsize=(10, 6))
+
+        for i, label in enumerate(hp_vectors):
+            inner_color = plt.cm.viridis(label_to_color[label["s"].split('_')[1]])
+            outer_color = heatmap_colors[i]
+            plt.scatter(tsne_result[i, 0], tsne_result[i, 1], color=inner_color, label=label["s"])
+            plt.scatter(tsne_result[i, 0], tsne_result[i, 1], facecolors='none', edgecolors=outer_color, s=80) 
+
+        heatmap_cbar = plt.colorbar(plt.cm.ScalarMappable(cmap=plt.cm.viridis, norm=norm))
+        heatmap_cbar.set_label("Heatmap Feature Value")
+        plt.xlabel('t-SNE Dimension 1')
+        plt.ylabel('t-SNE Dimension 2')
+        plt.title('t-SNE Visualization with Labeled Data Points')
+        plt.legend(bbox_to_anchor=(1.3, 1), loc="upper left")
+        plt.tight_layout()
+        plt.show()
+        plt.savefig(os.path.join(config.plot_dir, f"HP Visualization_{SAMPLER}.jpg"))
+        plt.close()
+
+
+    # hpo evaluation
     df = pd.DataFrame(data)
-    melted_df = pd.melt(df, var_name='Category_Run', value_name='RMSE Cost')
+    melted_df = pd.melt(df, var_name='Category_Run', value_name='Reward')
 
     melted_df['Category'] = melted_df['Category_Run'].apply(lambda x: x.split('_')[1])
     melted_df['Run'] = melted_df['Category_Run'].apply(lambda x: x.split('_')[0])
@@ -613,16 +706,26 @@ def plot_hpo_eval(config):
     print(melted_df.groupby(['Category_Run']).describe())
     print(melted_df.groupby(['Category']).describe())
 
+    # hpo estimation
+    estimate_df = pd.DataFrame(estimates)
+    estimate_melted_df = pd.melt(estimate_df, var_name='Category_Run', value_name='Estimated Reward')
+
+    estimate_melted_df['Category'] = estimate_melted_df['Category_Run'].apply(lambda x: x.split('_')[1])
+    estimate_melted_df['Run'] = estimate_melted_df['Category_Run'].apply(lambda x: x.split('_')[0])
+
+    # print the statistics of each category
+    print(estimate_melted_df.groupby(['Category']).describe())
+
     plt.figure(figsize=(10, 6))
     # sns.boxplot(x='Category', y='RMSE Cost', hue='Run', data=melted_df)
     # plt.legend(title='Run')
-    sns.boxplot(x='Category', y='RMSE Cost', data=melted_df)
+    sns.boxplot(x='Category', y='Reward', data=melted_df)
     plt.xlabel('Category')
-    plt.ylabel('RMSE Cost')
+    plt.ylabel('Reward')
     plt.yscale('log')
     plt.title('HPO Strategy Evaluation')
     plt.show()
-    plt.savefig(os.path.join(config.plot_dir, "HPO_comparison.jpg"))
+    plt.savefig(os.path.join(config.plot_dir, f"HPO_comparison_{SAMPLER}.jpg"))
     plt.close()
     
     print("HPO evaluation plotting done.")
@@ -716,9 +819,9 @@ def plot_hp_sensitivity(config):
   
 def plot_hpo_effort(config):
     """Gets the wall clock time and agent runs during hpo."""
-    SAMPLER = "RandomSampler" # "RandomSampler" or "TPESampler"
-    TASK = "cartpole" # "cartpole" or "quadrotor_2D"
-    hpo_folder = f'./experiments/comparisons/ppo/hpo/hpo_strategy_study_{SAMPLER}'
+    SAMPLER = "TPESampler" # "RandomSampler" or "TPESampler"
+    SYS = "cartpole" # "cartpole" or "quadrotor_2D"
+    hpo_folder = f'./experiments/comparisons/rl/ddpg/old_exp/hpo/hpo_strategy_study_{SAMPLER}_{SYS}'
     hpo_strategy_runs = os.listdir(hpo_folder)
 
     # read std_out.txt to get total agent runs and duration time
@@ -729,33 +832,34 @@ def plot_hpo_effort(config):
         duration_time = 0
         total_runs = 0
         for job_folder in parallel_job_folders:
-            with open(os.path.join(hpo_folder, s, job_folder, 'std_out.txt'), 'r') as file:
-                first_line = file.readline()
-                last_line = file.readlines()[-1]
-                
-                first_timestamp_match = re.search(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}', first_line)
-                last_timestamp_match = re.search(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}', last_line)
-                total_runs_match = re.search(r'Total runs: \d+', last_line)
+            # check the folder is not ended with .sql
+            if not job_folder.endswith('.sql'):
+                with open(os.path.join(hpo_folder, s, job_folder, 'std_out.txt'), 'r') as file:
+                    first_line = file.readline()
+                    last_line = file.readlines()[-1]
+                    
+                    first_timestamp_match = re.search(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}', first_line)
+                    last_timestamp_match = re.search(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}', last_line)
+                    total_runs_match = re.search(r'Total runs: \d+', last_line)
 
-                first_timestamp = first_timestamp_match.group(0)
-                last_timestamp = last_timestamp_match.group(0)
-                total_runs = int(total_runs_match.group(0).split(': ')[1])
+                    first_timestamp = first_timestamp_match.group(0)
+                    last_timestamp = last_timestamp_match.group(0)
+                    total_runs = int(total_runs_match.group(0).split(': ')[1])
 
-                # Convert timestamps to datetime objects
-                start = datetime.strptime(first_timestamp, '%Y-%m-%d %H:%M:%S,%f')
-                end = datetime.strptime(last_timestamp, '%Y-%m-%d %H:%M:%S,%f')
+                    # Convert timestamps to datetime objects
+                    start = datetime.strptime(first_timestamp, '%Y-%m-%d %H:%M:%S,%f')
+                    end = datetime.strptime(last_timestamp, '%Y-%m-%d %H:%M:%S,%f')
 
-                # Calculate the duration time in hours
-                duration_hours = (end - start).total_seconds() / 3600
-                
+                    # Calculate the duration time in hours
+                    duration_hours = (end - start).total_seconds() / 3600
+                    
 
-                # check if duration time is larger
-                if duration_time < duration_hours:
-                    duration_time = duration_hours
-                total_runs += int(total_runs_match.group(0).split(': ')[1])
+                    # check if duration time is larger
+                    if duration_time < duration_hours:
+                        duration_time = duration_hours
 
-            data_time[s] = {'Duration Time (hours)': duration_time}
-            data_runs[s] = {'Total Runs': total_runs}
+                data_time[s] = {'Duration Time (hours)': duration_time}
+                data_runs[s] = {'Total Runs': total_runs}
         
     # add to pandas dataframe
     df = pd.DataFrame(data_time)
@@ -768,7 +872,7 @@ def plot_hpo_effort(config):
     plt.figure(figsize=(10, 6))
     # sns.barplot(x='Category', y='Duration Time (hours)', hue='Run', data=melted_df)
     # plt.legend(title='Run')
-    sns.barplot(x='Category', y='Duration Time (hours)', data=melted_df, order=['s1', 's2', 's3', 's4'])
+    sns.barplot(x='Category', y='Duration Time (hours)', data=melted_df, order=['s1', 's2', 's3', 's4', 's5'])
     plt.xlabel('Category')
     plt.ylabel('Duration Time (hours)')
     plt.title('HPO Strategy Effort')
@@ -786,7 +890,7 @@ def plot_hpo_effort(config):
     plt.figure(figsize=(10, 6))
     # sns.barplot(x='Category', y='Total Runs', hue='Run', data=melted_df)
     # plt.legend(title='Run')
-    sns.barplot(x='Category', y='Total Runs', data=melted_df, order=['s1', 's2', 's3', 's4'])
+    sns.barplot(x='Category', y='Total Runs', data=melted_df, order=['s1', 's2', 's3', 's4', 's5'])
     plt.xlabel('Category')
     plt.ylabel('Total Agent Runs')
     plt.yscale('log')
