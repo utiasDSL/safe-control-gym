@@ -20,11 +20,13 @@ cd ~/safe-control-gym
 
 experiment_name=$1
 seed1=$2
-seed2=$((seed1+1))
-seed3=$((seed1+2))
-seed4=$((seed1+3))
+seed2=$((seed1+100))
+seed3=$((seed1+200))
+seed4=$((seed1+300))
 sampler=$3 # RandomSampler or TPESampler
 localOrHost=$4
+sys=$5 # cartpole, or quadrotor
+task=$6 # stab, or track
 
 # activate the environment
 if [ "$localOrHost" == 'local' ]; then
@@ -50,7 +52,7 @@ python ./experiments/comparisons/gpmpc/gpmpc_experiment.py \
          --overrides ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_150.yaml \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_hpo_1.yaml \
-                     --output_dir ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler} \
+                     --output_dir ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler}_${sys} \
                      --sampler $sampler \
                      --task cartpole --func hpo --tag run${experiment_name}_s1 --seed $seed1 &
 pid1=$!
@@ -63,7 +65,7 @@ python ./experiments/comparisons/gpmpc/gpmpc_experiment.py \
          --overrides ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_150.yaml \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_hpo_1.yaml \
-                     --output_dir ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler} \
+                     --output_dir ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler}_${sys} \
                      --sampler $sampler \
                      --task cartpole --func hpo --load_study True --tag run${experiment_name}_s1 --seed $seed2 &
 pid2=$!
@@ -82,7 +84,7 @@ echo "Strategy 1 done"
 # back up first
 echo "backing up the database"
 mysqldump --no-tablespaces -u optuna gp_mpc_hpo > gp_mpc_hpo.sql
-mv gp_mpc_hpo.sql ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler}/run${experiment_name}_s1/gp_mpc_hpo.sql
+mv gp_mpc_hpo.sql ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler}_${sys}/run${experiment_name}_s1/gp_mpc_hpo.sql
 # remove the database
 python ./safe_control_gym/hyperparameters/database.py --func drop --tag gp_mpc_hpo
 
@@ -97,7 +99,7 @@ python ./experiments/comparisons/gpmpc/gpmpc_experiment.py \
          --overrides ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_150.yaml \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_hpo_2.yaml \
-                     --output_dir ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler} \
+                     --output_dir ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler}_${sys} \
                      --sampler $sampler \
                      --task cartpole --func hpo --tag run${experiment_name}_s2 --seed $seed1 &
 pid1=$!
@@ -110,7 +112,7 @@ python ./experiments/comparisons/gpmpc/gpmpc_experiment.py \
          --overrides ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_150.yaml \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_hpo_2.yaml \
-                     --output_dir ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler} \
+                     --output_dir ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler}_${sys} \
                      --sampler $sampler \
                      --task cartpole --func hpo --load_study True --tag run${experiment_name}_s2 --seed $seed2 &
 pid2=$!
@@ -129,7 +131,7 @@ echo "Strategy 2 done"
 # back up first
 echo "backing up the database"
 mysqldump --no-tablespaces -u optuna gp_mpc_hpo > gp_mpc_hpo.sql
-mv gp_mpc_hpo.sql ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler}/run${experiment_name}_s2/gp_mpc_hpo.sql
+mv gp_mpc_hpo.sql ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler}_${sys}/run${experiment_name}_s2/gp_mpc_hpo.sql
 # remove the database
 python ./safe_control_gym/hyperparameters/database.py --func drop --tag gp_mpc_hpo
 
@@ -144,7 +146,7 @@ python ./experiments/comparisons/gpmpc/gpmpc_experiment.py \
          --overrides ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_150.yaml \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_hpo_3.yaml \
-                     --output_dir ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler} \
+                     --output_dir ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler}_${sys} \
                      --sampler $sampler \
                      --task cartpole --func hpo --tag run${experiment_name}_s3 --seed $seed1 &
 pid1=$!
@@ -157,7 +159,7 @@ python ./experiments/comparisons/gpmpc/gpmpc_experiment.py \
          --overrides ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_150.yaml \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_hpo_3.yaml \
-                     --output_dir ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler} \
+                     --output_dir ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler}_${sys} \
                      --sampler $sampler \
                      --task cartpole --func hpo --load_study True --tag run${experiment_name}_s3 --seed $seed2 &
 pid2=$!
@@ -176,7 +178,7 @@ echo "Strategy 3 done"
 # back up first
 echo "backing up the database"
 mysqldump --no-tablespaces -u optuna gp_mpc_hpo > gp_mpc_hpo.sql
-mv gp_mpc_hpo.sql ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler}/run${experiment_name}_s3/gp_mpc_hpo.sql
+mv gp_mpc_hpo.sql ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler}_${sys}/run${experiment_name}_s3/gp_mpc_hpo.sql
 # remove the database
 python ./safe_control_gym/hyperparameters/database.py --func drop --tag gp_mpc_hpo
 
@@ -191,7 +193,7 @@ python ./experiments/comparisons/gpmpc/gpmpc_experiment.py \
          --overrides ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_150.yaml \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_hpo_4.yaml \
-                     --output_dir ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler} \
+                     --output_dir ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler}_${sys} \
                      --sampler $sampler \
                      --task cartpole --func hpo --tag run${experiment_name}_s4 --seed $seed1 &
 pid1=$!
@@ -204,7 +206,7 @@ python ./experiments/comparisons/gpmpc/gpmpc_experiment.py \
          --overrides ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_150.yaml \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_hpo_4.yaml \
-                     --output_dir ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler} \
+                     --output_dir ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler}_${sys} \
                      --sampler $sampler \
                      --task cartpole --func hpo --load_study True --tag run${experiment_name}_s4 --seed $seed2 &
 pid2=$!
@@ -223,7 +225,7 @@ echo "Strategy 4 done"
 # back up first
 echo "backing up the database"
 mysqldump --no-tablespaces -u optuna gp_mpc_hpo > gp_mpc_hpo.sql
-mv gp_mpc_hpo.sql ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler}/run${experiment_name}_s4/gp_mpc_hpo.sql
+mv gp_mpc_hpo.sql ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler}_${sys}/run${experiment_name}_s4/gp_mpc_hpo.sql
 # remove the database
 python ./safe_control_gym/hyperparameters/database.py --func drop --tag gp_mpc_hpo
 
@@ -238,7 +240,7 @@ python ./experiments/comparisons/gpmpc/gpmpc_experiment.py \
          --overrides ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_150.yaml \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_hpo_5.yaml \
-                     --output_dir ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler} \
+                     --output_dir ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler}_${sys} \
                      --sampler $sampler \
                      --task cartpole --func hpo --tag run${experiment_name}_s4 --seed $seed1 &
 pid1=$!
@@ -251,7 +253,7 @@ python ./experiments/comparisons/gpmpc/gpmpc_experiment.py \
          --overrides ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_150.yaml \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/cartpole_stab.yaml \
                      ./experiments/comparisons/gpmpc/config_overrides/cartpole/gp_mpc_cartpole_hpo_5.yaml \
-                     --output_dir ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler} \
+                     --output_dir ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler}_${sys} \
                      --sampler $sampler \
                      --task cartpole --func hpo --load_study True --tag run${experiment_name}_s5 --seed $seed2 &
 pid2=$!
@@ -270,6 +272,6 @@ echo "Strategy 5 done"
 # back up first
 echo "backing up the database"
 mysqldump --no-tablespaces -u optuna gp_mpc_hpo > gp_mpc_hpo.sql
-mv gp_mpc_hpo.sql ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler}/run${experiment_name}_s5/gp_mpc_hpo.sql
+mv gp_mpc_hpo.sql ./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_${sampler}_${sys}/run${experiment_name}_s5/gp_mpc_hpo.sql
 # remove the database
 python ./safe_control_gym/hyperparameters/database.py --func drop --tag gp_mpc_hpo
