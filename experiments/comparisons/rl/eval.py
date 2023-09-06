@@ -540,7 +540,10 @@ def plot_hpo_eval(config):
     """Gets the plot and csv for performance (in RMSE)."""
     SAMPLER = "TPESampler" # "RandomSampler" or "TPESampler"
     SYS = "cartpole" # "cartpole" or "quadrotor_2D"
+    ALGO = "sac" # "ppo", "sac", "ddpg"
     visualize_hp_vectors = False
+    # append the algo name to the plot dir
+    config.plot_dir = os.path.join(config.plot_dir, ALGO)
     legend_map_s1 = {
         f"hpo_strategy_study_{SAMPLER}_{SYS}/run1_s1": "run1_s1",
         f"hpo_strategy_study_{SAMPLER}_{SYS}/run2_s1": "run2_s1",
@@ -592,8 +595,8 @@ def plot_hpo_eval(config):
         "run3_s5": "run3_s5",
     }
     scalar_name_map = {
-        # "checkpoint_eval/ep_returns": "Reward",
-        "checkpoint_eval/normalized_rmse": "RMSE Cost",
+        "checkpoint_eval/ep_returns": "Reward",
+        # "checkpoint_eval/normalized_rmse": "RMSE Cost",
     }
 
     legend_map_list = [legend_map_s1, legend_map_s2, legend_map_s3, legend_map_s4, legend_map_s5]
@@ -630,7 +633,7 @@ def plot_hpo_eval(config):
 
         # Get all stats.
         scalar_stats = load_stats(spec, 
-                                scalar_names=["checkpoint_eval/normalized_rmse"], 
+                                scalar_names=["checkpoint_eval/ep_returns"], 
                                 window=None, 
                                 x_num_max=None,
                                 x_rescale_factor=dt)
@@ -821,7 +824,10 @@ def plot_hpo_effort(config):
     """Gets the wall clock time and agent runs during hpo."""
     SAMPLER = "TPESampler" # "RandomSampler" or "TPESampler"
     SYS = "cartpole" # "cartpole" or "quadrotor_2D"
-    hpo_folder = f'./experiments/comparisons/rl/ddpg/old_exp/hpo/hpo_strategy_study_{SAMPLER}_{SYS}'
+    ALGO = "sac" # "ppo", "sac", "ddpg"
+    hpo_folder = f'./experiments/comparisons/rl/{ALGO}/hpo/hpo_strategy_study_{SAMPLER}_{SYS}'
+    # append the algo name to the plot dir
+    config.plot_dir = os.path.join(config.plot_dir, ALGO)
     hpo_strategy_runs = os.listdir(hpo_folder)
 
     # read std_out.txt to get total agent runs and duration time
