@@ -53,7 +53,7 @@ for strat_dir in ${FOLDER}/hpo/hpo_strategy_study_${sampler}/; do
         run_name=$(basename $run_dir)
 
         # Find the largest hyperparameters_ file among all seed directories within the run directory
-        best_hp_file=$(find ${run_dir}seed*/ -name "hyperparameters_*.yaml" | sort -t_ -k2,2n | tail -n 1)
+        best_hp_file=$(find ${run_dir}seed*/ -name "hyperparameters_*.yaml" | awk -F_ '{print $NF,$0}' | sort -n -k1,1 | cut -d' ' -f2- | tail -n 1)
 
         for seed in "${seeds[@]}"
         do
