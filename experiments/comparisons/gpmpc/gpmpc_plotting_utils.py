@@ -34,7 +34,7 @@ def get_reward(test_runs):
     rewards = np.zeros((num_epochs, num_episodes))
     for epoch in range(num_epochs):
         for episode in range(num_episodes):
-            reward = np.sum(test_runs[epoch][episode]['reward'])
+            reward = np.sum(np.exp(2*test_runs[epoch][episode]['reward']))
             rewards[epoch, episode] = reward
     mean_reward = np.mean(rewards, axis=1)
     return mean_reward 
