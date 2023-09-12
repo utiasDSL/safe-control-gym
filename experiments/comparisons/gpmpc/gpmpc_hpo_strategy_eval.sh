@@ -46,7 +46,7 @@ seeds=(22403 84244 98825 40417 58454 47838 56715 77833 19880 59009
 strategy_runs=()
 
 # Loop through the strategy directories
-for strat_dir in ${FOLDER}/hpo/hpo_strategy_study_${sampler}/; do
+for strat_dir in ${FOLDER}/hpo/hpo_strategy_study_${sampler}_${sys}/; do
 
     # Loop through the run directories
     for run_dir in ${strat_dir}run*/; do
@@ -69,7 +69,6 @@ for strat_dir in ${FOLDER}/hpo/hpo_strategy_study_${sampler}/; do
                 --use_gpu True
         done
 
-        print the best hyperparameter file
         echo $best_hp_file
         strategy_runs+=( "$run_name" )
     done
