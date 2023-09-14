@@ -27,7 +27,7 @@ sampler=$3 # RandomSampler or TPESampler
 localOrHost=$4
 sys=$5 # cartpole, or quadrotor
 task=$6 # stab, or track
-resume=$8 # True or False
+resume=$7 # True or False
 
 
 # Strategy 1: naive single run
@@ -120,7 +120,7 @@ wait $pid1
 echo "job1 finished"
 wait $pid2
 echo "job2 finished"
-echo "Strategy 1 done"
+echo "Strategy ${strategy} done"
 
 # old code for sqlite database which having performance issue
 # mv gp_mpc_hpo.db ./experiments/comparisons/gpmpc/hpo/${experiment_name}/gp_mpc_hpo.db
