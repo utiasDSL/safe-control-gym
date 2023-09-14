@@ -49,7 +49,7 @@ MAIN_FUNCS = {"drop": drop, "create": create}
 if __name__ == "__main__":
 
     fac = ConfigFactory()
-    fac.add_argument("--func", type=str, default="train", help="main function to run.")
+    fac.add_argument("--func", type=str, default="create", help="main function to run.")
     config = fac.merge()
 
     func = MAIN_FUNCS.get(config.func, None)
