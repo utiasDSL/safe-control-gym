@@ -139,6 +139,9 @@ class HPO(object):
                     print(e)
                     print("Sampled hyperparameters:")
                     print(sampled_hyperparams)
+                    returns.append(0.0)
+                    efficiencies.append(0.0)
+                    break
 
                 # TODO: multiple evaluation
                 avg_return = self.agent._run()
