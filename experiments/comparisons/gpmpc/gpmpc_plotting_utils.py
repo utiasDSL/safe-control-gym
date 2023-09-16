@@ -346,55 +346,56 @@ def plot_hpo_eval(config):
     legend_map_s1 = {
         f"hpo_strategy_study_{SAMPLER}_{SYS}/run1_s1": "run1_s1",
         f"hpo_strategy_study_{SAMPLER}_{SYS}/run2_s1": "run2_s1",
-        # f"hpo_strategy_study_{SAMPLER}_{SYS}/run3_s1": "run3_s1"
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run3_s1": "run3_s1"
     }
     legend_map_s2 = {
         f"hpo_strategy_study_{SAMPLER}_{SYS}/run1_s2": "run1_s2",
         f"hpo_strategy_study_{SAMPLER}_{SYS}/run2_s2": "run2_s2",
-        # f"hpo_strategy_study_{SAMPLER}_{SYS}/run3_s2": "run3_s2",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run3_s2": "run3_s2",
     }
     legend_map_s3 = {
         f"hpo_strategy_study_{SAMPLER}_{SYS}/run1_s3": "run1_s3",
         f"hpo_strategy_study_{SAMPLER}_{SYS}/run2_s3": "run2_s3",
-        # f"hpo_strategy_study_{SAMPLER}_{SYS}/run3_s3": "run3_s3",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run3_s3": "run3_s3",
     }
     legend_map_s4 = {
         f"hpo_strategy_study_{SAMPLER}_{SYS}/run1_s4": "run1_s4",
         f"hpo_strategy_study_{SAMPLER}_{SYS}/run2_s4": "run2_s4",
-        # f"hpo_strategy_study_{SAMPLER}_{SYS}/run3_s4": "run3_s4",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run3_s4": "run3_s4",
     }
     legend_map_s5 = {
         f"hpo_strategy_study_{SAMPLER}_{SYS}/run1_s5": "run1_s5",
         f"hpo_strategy_study_{SAMPLER}_{SYS}/run2_s5": "run2_s5",
-        # f"hpo_strategy_study_{SAMPLER}_{SYS}/run3_s5": "run3_s5",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run3_s5": "run3_s5",
     }
     algo_name_map_s1 = {
         "run1_s1": "run1_s1",
         "run2_s1": "run2_s1",
-        # "run3_s1": "run3_s1",
+        "run3_s1": "run3_s1",
     }
     algo_name_map_s2 = {
         "run1_s2": "run1_s2",
         "run2_s2": "run2_s2",
-        # "run3_s2": "run3_s2",
+        "run3_s2": "run3_s2",
     }
     algo_name_map_s3 = {
         "run1_s3": "run1_s3",
         "run2_s3": "run2_s3",
-        # "run3_s3": "run3_s3",
+        "run3_s3": "run3_s3",
     }
     algo_name_map_s4 = {
         "run1_s4": "run1_s4",
         "run2_s4": "run2_s4",
-        # "run3_s4": "run3_s4",
+        "run3_s4": "run3_s4",
     }
     algo_name_map_s5 = {
         "run1_s5": "run1_s5",
         "run2_s5": "run2_s5",
-        # "run3_s5": "run3_s5",
+        "run3_s5": "run3_s5",
     }
     scalar_name_map = {
-        "figs/avg_rmse_cost_learning_curve": "Cost",
+        # "figs/avg_rmse_cost_learning_curve": "Cost",
+        "figs/avg_reward_learning_curve": "Cost",
     }
 
     legend_map_list = [legend_map_s1, legend_map_s2, legend_map_s3, legend_map_s4, legend_map_s5]
