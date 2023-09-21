@@ -265,8 +265,6 @@ def plot_hpo_effort(config):
         parallel_job_folders = os.listdir(os.path.join(hpo_folder, s))
         duration_time = 0
         total_runs = 0
-        if s == 'run1_s5':
-            continue
         for job_folder in parallel_job_folders:
             # check the folder is not ended with .sql
             if not job_folder.endswith('.sql'):
@@ -316,6 +314,9 @@ def plot_hpo_effort(config):
     plt.show()
     plt.savefig(os.path.join(config.plot_dir, "HPO_time_comparison.jpg"))
     plt.close()
+    
+    # pickle melted_df
+    melted_df.to_pickle(os.path.join(config.plot_dir, "gpmpc_hpo_effort.pkl"))
 
     # add to pandas dataframe
     df = pd.DataFrame(data_runs)
@@ -395,7 +396,7 @@ def plot_hpo_eval(config):
     }
     scalar_name_map = {
         # "figs/avg_rmse_cost_learning_curve": "Cost",
-        "figs/avg_reward_learning_curve": "Cost",
+        "figs/avg_reward_learning_curve": "Reward",
     }
 
     legend_map_list = [legend_map_s1, legend_map_s2, legend_map_s3, legend_map_s4, legend_map_s5]
@@ -442,6 +443,9 @@ def plot_hpo_eval(config):
     plt.show()
     plt.savefig(os.path.join(config.plot_dir, f"HPO_comparison_{SAMPLER}.jpg"))
     plt.close()
+
+    # pickle melted_df
+    melted_df.to_pickle(os.path.join(config.plot_dir, "gpmpc_hpo_eval.pkl"))
     
     print("HPO evaluation plotting done.")
 
