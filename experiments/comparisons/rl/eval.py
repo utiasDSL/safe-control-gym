@@ -540,7 +540,7 @@ def plot_hpo_eval(config):
     """Gets the plot and csv for performance (in RMSE)."""
     SAMPLER = "TPESampler" # "RandomSampler" or "TPESampler"
     SYS = "cartpole" # "cartpole" or "quadrotor_2D"
-    ALGO = "sac" # "ppo", "sac", "ddpg"
+    ALGO = "ddpg" # "ppo", "sac", "ddpg"
     visualize_hp_vectors = False
     # append the algo name to the plot dir
     config.plot_dir = os.path.join(config.plot_dir, ALGO)
@@ -722,14 +722,17 @@ def plot_hpo_eval(config):
     plt.figure(figsize=(10, 6))
     # sns.boxplot(x='Category', y='RMSE Cost', hue='Run', data=melted_df)
     # plt.legend(title='Run')
-    sns.boxplot(x='Category', y='Reward', data=melted_df)
+    sns.boxenplot(x='Category', y='Reward', data=melted_df, k_depth='proportion')
     plt.xlabel('Category')
     plt.ylabel('Reward')
-    plt.yscale('log')
+    # plt.yscale('log')
     plt.title('HPO Strategy Evaluation')
     plt.show()
     plt.savefig(os.path.join(config.plot_dir, f"HPO_comparison_{SAMPLER}.jpg"))
     plt.close()
+
+    # pickle melted_df
+    melted_df.to_pickle(os.path.join(config.plot_dir, f"{ALGO}_hpo_eval.pkl"))
     
     print("HPO evaluation plotting done.")
 
@@ -824,7 +827,7 @@ def plot_hpo_effort(config):
     """Gets the wall clock time and agent runs during hpo."""
     SAMPLER = "TPESampler" # "RandomSampler" or "TPESampler"
     SYS = "cartpole" # "cartpole" or "quadrotor_2D"
-    ALGO = "sac" # "ppo", "sac", "ddpg"
+    ALGO = "ddpg" # "ppo", "sac", "ddpg"
     hpo_folder = f'./experiments/comparisons/rl/{ALGO}/hpo/hpo_strategy_study_{SAMPLER}_{SYS}'
     # append the algo name to the plot dir
     config.plot_dir = os.path.join(config.plot_dir, ALGO)
@@ -846,11 +849,11 @@ def plot_hpo_effort(config):
                     
                     first_timestamp_match = re.search(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}', first_line)
                     last_timestamp_match = re.search(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}', last_line)
-                    total_runs_match = re.search(r'Total runs: \d+', last_line)
+                    # total_runs_match = re.search(r'Total runs: \d+', last_line)
 
                     first_timestamp = first_timestamp_match.group(0)
                     last_timestamp = last_timestamp_match.group(0)
-                    total_runs = int(total_runs_match.group(0).split(': ')[1])
+                    # total_runs = int(total_runs_match.group(0).split(': ')[1])
 
                     # Convert timestamps to datetime objects
                     start = datetime.strptime(first_timestamp, '%Y-%m-%d %H:%M:%S,%f')
@@ -865,7 +868,7 @@ def plot_hpo_effort(config):
                         duration_time = duration_hours
 
                 data_time[s] = {'Duration Time (hours)': duration_time}
-                data_runs[s] = {'Total Runs': total_runs}
+                # data_runs[s] = {'Total Runs': total_runs}
         
     # add to pandas dataframe
     df = pd.DataFrame(data_time)
@@ -886,24 +889,27 @@ def plot_hpo_effort(config):
     plt.savefig(os.path.join(config.plot_dir, "HPO_time_comparison.jpg"))
     plt.close()
 
-    # add to pandas dataframe
-    df = pd.DataFrame(data_runs)
+    # # add to pandas dataframe
+    # df = pd.DataFrame(data_runs)
 
-    melted_df = pd.melt(df, var_name='Category_Run', value_name='Total Runs')
-    melted_df['Category'] = melted_df['Category_Run'].apply(lambda x: x.split('_')[1])
-    melted_df['Run'] = melted_df['Category_Run'].apply(lambda x: x.split('_')[0])
+    # melted_df = pd.melt(df, var_name='Category_Run', value_name='Total Runs')
+    # melted_df['Category'] = melted_df['Category_Run'].apply(lambda x: x.split('_')[1])
+    # melted_df['Run'] = melted_df['Category_Run'].apply(lambda x: x.split('_')[0])
 
-    plt.figure(figsize=(10, 6))
-    # sns.barplot(x='Category', y='Total Runs', hue='Run', data=melted_df)
-    # plt.legend(title='Run')
-    sns.barplot(x='Category', y='Total Runs', data=melted_df, order=['s1', 's2', 's3', 's4', 's5'])
-    plt.xlabel('Category')
-    plt.ylabel('Total Agent Runs')
-    plt.yscale('log')
-    plt.title('HPO Strategy Effort')
-    plt.show()
-    plt.savefig(os.path.join(config.plot_dir, "HPO_agent_runs_comparison.jpg"))
-    plt.close()
+    # plt.figure(figsize=(10, 6))
+    # # sns.barplot(x='Category', y='Total Runs', hue='Run', data=melted_df)
+    # # plt.legend(title='Run')
+    # sns.barplot(x='Category', y='Total Runs', data=melted_df, order=['s1', 's2', 's3', 's4', 's5'])
+    # plt.xlabel('Category')
+    # plt.ylabel('Total Agent Runs')
+    # plt.yscale('log')
+    # plt.title('HPO Strategy Effort')
+    # plt.show()
+    # plt.savefig(os.path.join(config.plot_dir, "HPO_agent_runs_comparison.jpg"))
+    # plt.close()
+
+    # pickle melted_df
+    melted_df.to_pickle(os.path.join(config.plot_dir, f"{ALGO}_hpo_effort.pkl"))
 
     print("Hyperparameter optimization effort plotting done.")
 
