@@ -6,7 +6,7 @@ import munch
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.hyperparameters.database import create, drop
 
-@pytest.mark.parametrize('ALGO',['ppo', 'sac'])
+@pytest.mark.parametrize('ALGO',['ppo', 'sac', 'ddpg'])
 def test_hpo_database(ALGO):
 
     # create database

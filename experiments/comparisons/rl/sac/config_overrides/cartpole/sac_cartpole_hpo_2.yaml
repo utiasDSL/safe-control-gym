@@ -1,4 +1,4 @@
-# startegy 2: naive multiple runs with maximum allowed trials = 80
+# startegy 2: naive multiple runs with maximum allowed agent runs = 400
 # 80 trials * 5 runs per trials = 400 runs
 # hpo runs in two jobs, so 40 trials per job
 hpo_config:
