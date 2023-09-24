@@ -12,16 +12,16 @@ hpo_config:
   objective: [performance] # [performance, efficiency]
   direction: [maximize] # [maximize, maximize]
   dynamical_runs: True # if True, dynamically increase runs
-  warm_trials: 3 # number of trials to run before dyamical runs
-  approximation_threshold: 3.5
-  repetitions: 2 # number of samples of performance metric for each objective query
-  alpha: 0.5 # significance level for CVaR
+  warm_trials: 10 # number of trials to run before dyamical runs
+  approximation_threshold: 3
+  repetitions: 1 # number of samples of performance metric for each objective query
+  alpha: 0.3 # significance level for CVaR
   use_gpu: True
   dashboard: False
   seed: 24
   save_n_best_hps: 3
   # budget
-  trials: 30
+  trials: 79
   
   # hyperparameters
   hps_config:

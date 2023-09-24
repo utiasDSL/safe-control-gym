@@ -13,7 +13,7 @@ from safe_control_gym.hyperparameters.hpo import HPO
 # To set relative pathing of experiment imports.
 import sys
 import os.path as path
-from experiments.comparisons.gpmpc.gpmpc_plotting_utils import make_plots, gather_training_samples, plot_data_eff_from_csv, plot_hpo_eval
+from experiments.comparisons.gpmpc.gpmpc_plotting_utils import make_plots, gather_training_samples, plot_data_eff_from_csv, plot_hpo_eval, plot_hpo_effort
 
 def hpo(config):
     """Hyperparameter optimization.
@@ -187,6 +187,7 @@ def train(config):
 def plot(config):
 
     plot_hpo_eval(config)
+    plot_hpo_effort(config)
 
 
 MAIN_FUNCS = {"hpo": hpo, "train": train, "plot": plot}

@@ -3,8 +3,12 @@ import os
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 import numpy as np
+import pandas as pd
+import seaborn as sns
 from collections import defaultdict
 from copy import deepcopy
+import re
+from datetime import datetime
 
 from safe_control_gym.utils.utils import mkdirs
 from safe_control_gym.utils.plotting import plot_from_logs, window_func, load_from_log_file, COLORS, LINE_STYLES
@@ -23,6 +27,17 @@ def get_cost(test_runs):
             costs[epoch, episode] = cost
     mean_cost = np.mean(costs, axis=1)
     return mean_cost
+
+def get_reward(test_runs):
+    num_epochs = len(test_runs)
+    num_episodes = len(test_runs[0])
+    rewards = np.zeros((num_epochs, num_episodes))
+    for epoch in range(num_epochs):
+        for episode in range(num_episodes):
+            reward = np.sum(np.exp(2*test_runs[epoch][episode]['reward']))
+            rewards[epoch, episode] = reward
+    mean_reward = np.mean(rewards, axis=1)
+    return mean_reward 
 
 def get_average_rmse_error(runs):
     num_epochs = len(runs)
@@ -236,75 +251,203 @@ def plot_boxplot_from_stats(stats,
     # fig.tight_layout()
     plt.savefig(os.path.join(out_path, file_name))
 
+def plot_hpo_effort(config):
+    """Gets the wall clock time and agent runs during hpo."""
+    SAMPLER = "TPESampler" # "RandomSampler" or "TPESampler"
+    SYS = "cartpole" # "cartpole" or "quadrotor_2D"
+    hpo_folder = f'./experiments/comparisons/gpmpc/hpo/hpo_strategy_study_{SAMPLER}_{SYS}'
+    hpo_strategy_runs = os.listdir(hpo_folder)
+
+    # read std_out.txt to get total agent runs and duration time
+    data_time = {}
+    data_runs = {}
+    for s in hpo_strategy_runs:
+        parallel_job_folders = os.listdir(os.path.join(hpo_folder, s))
+        duration_time = 0
+        total_runs = 0
+        for job_folder in parallel_job_folders:
+            # check the folder is not ended with .sql
+            if not job_folder.endswith('.sql'):
+                with open(os.path.join(hpo_folder, s, job_folder, 'std_out.txt'), 'r') as file:
+                    first_line = file.readline()
+                    last_line = file.readlines()[-1]
+                    
+                    first_timestamp_match = re.search(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}', first_line)
+                    last_timestamp_match = re.search(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}', last_line)
+                    total_runs_match = re.search(r'Total runs: \d+', last_line)
+
+                    first_timestamp = first_timestamp_match.group(0)
+                    last_timestamp = last_timestamp_match.group(0)
+                    total_runs = int(total_runs_match.group(0).split(': ')[1])
+
+                    # Convert timestamps to datetime objects
+                    start = datetime.strptime(first_timestamp, '%Y-%m-%d %H:%M:%S,%f')
+                    end = datetime.strptime(last_timestamp, '%Y-%m-%d %H:%M:%S,%f')
+
+                    # Calculate the duration time in hours
+                    duration_hours = (end - start).total_seconds() / 3600
+                    
+
+                    # check if duration time is larger
+                    if duration_time < duration_hours:
+                        duration_time = duration_hours
+                    total_runs += int(total_runs_match.group(0).split(': ')[1])
+
+                data_time[s] = {'Duration Time (hours)': duration_time}
+                data_runs[s] = {'Total Runs': total_runs}
+        
+    # add to pandas dataframe
+    df = pd.DataFrame(data_time)
+
+    melted_df = pd.melt(df, var_name='Category_Run', value_name='Duration Time (hours)')
+    melted_df['Category'] = melted_df['Category_Run'].apply(lambda x: x.split('_')[1])
+    melted_df['Run'] = melted_df['Category_Run'].apply(lambda x: x.split('_')[0])
+    melted_df.sort_values(by=['Category'])
+
+    plt.figure(figsize=(10, 6))
+    # sns.barplot(x='Category', y='Duration Time (hours)', hue='Run', data=melted_df)
+    # plt.legend(title='Run')
+    sns.barplot(x='Category', y='Duration Time (hours)', data=melted_df, order=['s1', 's2', 's3', 's4', 's5'])
+    plt.xlabel('Category')
+    plt.ylabel('Duration Time (hours)')
+    plt.title('HPO Strategy Effort')
+    plt.show()
+    plt.savefig(os.path.join(config.plot_dir, "HPO_time_comparison.jpg"))
+    plt.close()
+    
+    # pickle melted_df
+    melted_df.to_pickle(os.path.join(config.plot_dir, "gpmpc_hpo_effort.pkl"))
+
+    # add to pandas dataframe
+    df = pd.DataFrame(data_runs)
+
+    melted_df = pd.melt(df, var_name='Category_Run', value_name='Total Runs')
+    melted_df['Category'] = melted_df['Category_Run'].apply(lambda x: x.split('_')[1])
+    melted_df['Run'] = melted_df['Category_Run'].apply(lambda x: x.split('_')[0])
+
+    plt.figure(figsize=(10, 6))
+    # sns.barplot(x='Category', y='Total Runs', hue='Run', data=melted_df)
+    # plt.legend(title='Run')
+    sns.barplot(x='Category', y='Total Runs', data=melted_df, order=['s1', 's2', 's3', 's4', 's5'])
+    plt.xlabel('Category')
+    plt.ylabel('Total Agent Runs')
+    plt.yscale('log')
+    plt.title('HPO Strategy Effort')
+    plt.show()
+    plt.savefig(os.path.join(config.plot_dir, "HPO_agent_runs_comparison.jpg"))
+    plt.close()
+
+    print("Hyperparameter optimization effort plotting done.")
+
 def plot_hpo_eval(config):
     """Gets the plot and csv for performance (in RMSE)."""
-    legend_map_fixed_runs = {
-        "CVaR_0.6/temp": "CVaR_0.6",
-        "CVaR_1/temp": "CVaR_1",
-        "CVaR_0.3/temp": "CVaR_0.3",
+    SAMPLER = "TPESampler" # "RandomSampler" or "TPESampler"
+    SYS = "cartpole" # "cartpole" or "quadrotor_2D"
+    visualize_hp_vectors = False
+    legend_map_s1 = {
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run1_s1": "run1_s1",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run2_s1": "run2_s1",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run3_s1": "run3_s1"
     }
-    legend_map_dyn_runs = {
-        "CVaR_0.6_dyn/temp": "CVaR_0.6_dyn",
-        "CVaR_1_dyn/temp": "CVaR_1_dyn",
-        "CVaR_0.3_dyn/temp": "CVaR_0.3_dyn",
+    legend_map_s2 = {
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run1_s2": "run1_s2",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run2_s2": "run2_s2",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run3_s2": "run3_s2",
     }
-    algo_name_map_fixed_runs = {
-        "CVaR_0.6": "CVaR_0.6",
-        "CVaR_1": "CVaR_1",
-        "CVaR_0.3": "CVaR_0.3",
+    legend_map_s3 = {
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run1_s3": "run1_s3",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run2_s3": "run2_s3",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run3_s3": "run3_s3",
     }
-    algo_name_map_dyn_runs = {
-        "CVaR_0.6_dyn": "CVaR_0.6_dyn",
-        "CVaR_1_dyn": "CVaR_1_dyn",
-        "CVaR_0.3_dyn": "CVaR_0.3_dyn",
+    legend_map_s4 = {
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run1_s4": "run1_s4",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run2_s4": "run2_s4",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run3_s4": "run3_s4",
+    }
+    legend_map_s5 = {
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run1_s5": "run1_s5",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run2_s5": "run2_s5",
+        f"hpo_strategy_study_{SAMPLER}_{SYS}/run3_s5": "run3_s5",
+    }
+    algo_name_map_s1 = {
+        "run1_s1": "run1_s1",
+        "run2_s1": "run2_s1",
+        "run3_s1": "run3_s1",
+    }
+    algo_name_map_s2 = {
+        "run1_s2": "run1_s2",
+        "run2_s2": "run2_s2",
+        "run3_s2": "run3_s2",
+    }
+    algo_name_map_s3 = {
+        "run1_s3": "run1_s3",
+        "run2_s3": "run2_s3",
+        "run3_s3": "run3_s3",
+    }
+    algo_name_map_s4 = {
+        "run1_s4": "run1_s4",
+        "run2_s4": "run2_s4",
+        "run3_s4": "run3_s4",
+    }
+    algo_name_map_s5 = {
+        "run1_s5": "run1_s5",
+        "run2_s5": "run2_s5",
+        "run3_s5": "run3_s5",
     }
     scalar_name_map = {
-        "figs/avg_rmse_cost_learning_curve": "Cost",
+        # "figs/avg_rmse_cost_learning_curve": "Cost",
+        "figs/avg_reward_learning_curve": "Reward",
     }
 
-    x_cat = ['Fixed Runs', 'Dynamic Runs']
-    legend_map_list = [legend_map_fixed_runs, legend_map_dyn_runs]
-    algo_name_map_list = [algo_name_map_fixed_runs, algo_name_map_dyn_runs]
+    legend_map_list = [legend_map_s1, legend_map_s2, legend_map_s3, legend_map_s4, legend_map_s5]
+    algo_name_map_list = [algo_name_map_s1, algo_name_map_s2, algo_name_map_s3, algo_name_map_s4, algo_name_map_s5]
 
-    stats = []
-    cats = []
+    data = {}
     for index, (legend_map, algo_name_map) in enumerate(zip(legend_map_list, algo_name_map_list)):
         # Collect results.
         spec = {}
         for d, legend in legend_map.items():
             seed_dirs = os.listdir(os.path.join(config.plot_dir, d))
             spec[legend] = [os.path.join(config.plot_dir, d, sd) for sd in seed_dirs]
-        
-        scalar_stats = load_stats(spec, scalar_names=scalar_name_map, x_rescale_factor=dt)
+
+        # Get all stats.
+        scalar_stats = load_stats(spec, 
+                                scalar_names=scalar_name_map, 
+                                x_rescale_factor=dt) 
 
         # Get last step stats
-        x_sub_cat, last_step_stats = get_last_stats(scalar_stats)
+        x_cat, last_step_stats = get_last_stats(scalar_stats)
+        for i in range(len(x_cat)):
+            # data[x_cat[i]] = np.array([last_step_stats[i].mean()])
+            data[x_cat[i]] = last_step_stats[i]
 
-        stats.append(last_step_stats)
-        cats.append(x_sub_cat)
+    # hpo evaluation
+    df = pd.DataFrame(data)
+    melted_df = pd.melt(df, var_name='Category_Run', value_name='Reward')
 
-    # compare strategies
-    fixed_runs_stats = np.array(stats[0]).mean(axis=0)
-    dyn_runs_stats = np.array(stats[1]).mean(axis=0)
-    stats_list = [fixed_runs_stats, dyn_runs_stats]
-    # Make plots.
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(9, 4))
+    melted_df['Category'] = melted_df['Category_Run'].apply(lambda x: x.split('_')[1])
+    melted_df['Run'] = melted_df['Category_Run'].apply(lambda x: x.split('_')[0])
 
-    bplot = ax.boxplot(stats_list,
-                        vert=True,
-                        patch_artist=True,
-                        labels=x_cat)
-    
-    ax.set_title('HPO Comparison')
-    ax.set_yscale('log')
-    ax.set_ylim([0, 1])
-    ax.set_xlabel('Startegy')
-    ax.set_ylabel('Cost')
-    plt.savefig(os.path.join(config.plot_dir, "HPO_comparison.jpg"))
+    # print the statistics of each category
+    print(melted_df.groupby(['Category_Run']).describe())
+    print(melted_df.groupby(['Category']).describe())
+
+    plt.figure(figsize=(10, 6))
+    # sns.boxplot(x='Category', y='RMSE Cost', hue='Run', data=melted_df)
+    # plt.legend(title='Run')
+    sns.boxenplot(x='Category', y='Reward', data=melted_df, k_depth="proportion")
+    plt.xlabel('Category')
+    plt.ylabel('Reward')
+    # plt.yscale('log')
+    plt.title('HPO Strategy Evaluation')
+    plt.show()
+    plt.savefig(os.path.join(config.plot_dir, f"HPO_comparison_{SAMPLER}.jpg"))
     plt.close()
 
-    # side-by-side box plot
-    plot_boxplot_from_stats(stats, cats, x_cat, config.plot_dir)
+    # pickle melted_df
+    melted_df.to_pickle(os.path.join(config.plot_dir, "gpmpc_hpo_eval.pkl"))
+    
+    print("HPO evaluation plotting done.")
 
 def filter_sequences(x_seq, actions, x_next_seq, threshold):
     # Find where the difference in step is greater than the filter threshold
@@ -387,6 +530,10 @@ def make_plots(test_runs, train_runs, num_inds, dir):
     plot_learning_curve(avg_rmse_error, num_points_per_epoch, 'avg_rmse_cost_learning_curve', fig_dir)
     common_costs = get_cost(test_runs)
     plot_learning_curve(common_costs, num_points_per_epoch, 'common_cost_learning_curve', fig_dir)
+
+    # Plot average reward
+    avg_reward = get_reward(test_runs)
+    plot_learning_curve(avg_reward, num_points_per_epoch, 'avg_reward_learning_curve', fig_dir)
 
 
 def make_quad_plots(test_runs, train_runs, trajectory, num_inds, dir):
