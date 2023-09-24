@@ -23,7 +23,7 @@ hpo_config:
   seed: 24
   save_n_best_hps: 3
   # budget
-  trials: 40
+  trials: 79
   prior: False # false will not consider the prior hps (learning with prior args)
   
   # hyperparameters
