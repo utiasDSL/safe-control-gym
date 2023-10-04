@@ -31,7 +31,7 @@ repos:
         name: isort
 
 -   repo: https://github.com/pre-commit/mirrors-autopep8
-    rev: v2.0.2
+    rev: v2.0.4
     hooks:
     -   id: autopep8
         name: autopep8-default
@@ -43,7 +43,7 @@ repos:
         files: (^tests/|^safe_control_gym/math_and_models/transformations.py)
 
 -   repo: https://github.com/PyCQA/flake8
-    rev: 6.0.0
+    rev: 6.1.0
     hooks:
     -   id: flake8
         name: flake8_default

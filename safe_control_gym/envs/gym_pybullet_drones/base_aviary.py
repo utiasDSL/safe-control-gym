@@ -93,7 +93,7 @@ class BaseAviary(BenchmarkEnv):
             self.J_INV, \
             self.KF, \
             self.KM, \
-            self.COLLISION_H,\
+            self.COLLISION_H, \
             self.COLLISION_R, \
             self.COLLISION_Z_OFFSET, \
             self.MAX_SPEED_KMH, \

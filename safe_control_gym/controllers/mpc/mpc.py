@@ -106,7 +106,7 @@ class MPC(BaseController):
         '''
         old_constraints_list = self.constraints.constraints
         for constraint in constraints:
-            assert constraint in self.constraints.constraints,\
+            assert constraint in self.constraints.constraints, \
                 ValueError('This constraint is not in the current list of constraints')
             old_constraints_list.remove(constraint)
         self.constraints, self.state_constraints_sym, self.input_constraints_sym = reset_constraints(old_constraints_list)
