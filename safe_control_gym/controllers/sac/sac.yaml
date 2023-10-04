@@ -1,5 +1,6 @@
 # model args
 hidden_dim: 256
+activation: 'relu'
 norm_obs: False
 norm_reward: False
 clip_obs: 10.

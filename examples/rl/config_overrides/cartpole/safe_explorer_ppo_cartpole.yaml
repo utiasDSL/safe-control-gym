@@ -1,4 +1,4 @@
-algo: ppo
+algo: safe_explorer_ppo
 algo_config:
   # model args
   hidden_dim: 32
@@ -7,6 +7,12 @@ algo_config:
   norm_reward: False
   clip_obs: 10.0
   clip_reward: 10.0
+
+  # Safety layer args
+  pretraining: False
+  pretrained: null
+  constraint_slack: [0.01, 0.01, 0.01, 0.05, 0.01, 0.01, 0.01, 0.05]
+  constraint_hidden_dim: 100
 
   # loss args
   gamma: 0.98

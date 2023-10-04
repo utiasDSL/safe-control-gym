@@ -9,6 +9,7 @@ TASK='stab'
 
 ALGO='ppo'
 # ALGO='sac'
+# ALGO='safe_explorer_ppo'
 
 if [ "$SYS" == 'cartpole' ]; then
     SYS_NAME=$SYS
@@ -19,8 +20,29 @@ fi
 # Removed the temporary data used to train the new unsafe model.
 rm -r -f ./unsafe_rl_temp_data/
 
+if [ "$ALGO" == 'safe_explorer_ppo' ]; then
+    # Pretrain the unsafe controller/agent.
+    python3 ../../safe_control_gym/experiments/train_rl_controller.py \
+        --algo ${ALGO} \
+        --task ${SYS_NAME} \
+        --overrides \
+            ./config_overrides/${SYS}/${ALGO}_${SYS}_pretrain.yaml \
+            ./config_overrides/${SYS}/${SYS}_${TASK}.yaml \
+        --output_dir ./ \
+        --tag unsafe_rl_temp_data/ \
+        --seed 2 \
+        --kv_overrides \
+            task_config.init_state=None
+
+    # Move the newly trained unsafe model.
+    mv ./unsafe_rl_temp_data/seed2_*/model_latest.pt ./models/${ALGO}/${ALGO}_pretrain_${SYS}_${TASK}.pt
+
+    # Removed the temporary data used to train the new unsafe model.
+    rm -r -f ./unsafe_rl_temp_data/
+fi
+
 # Train the unsafe controller/agent.
-python3 ../../safe_control_gym/experiments/execute_rl_controller.py \
+python3 ../../safe_control_gym/experiments/train_rl_controller.py \
     --algo ${ALGO} \
     --task ${SYS_NAME} \
     --overrides \
@@ -28,10 +50,14 @@ python3 ../../safe_control_gym/experiments/execute_rl_controller.py \
         ./config_overrides/${SYS}/${SYS}_${TASK}.yaml \
     --output_dir ./ \
     --tag unsafe_rl_temp_data/ \
-    --seed 2
+    --seed 2 \
+    --kv_overrides \
+        task_config.init_state=None \
+        task_config.randomized_init=True \
+        algo_config.pretrained=./models/${ALGO}/${ALGO}_pretrain_${SYS}_${TASK}.pt
 
 # Move the newly trained unsafe model.
-mv ./unsafe_rl_temp_data/seed2_*/model_latest.pt ./models/${ALGO}/${ALGO}_model_${SYS}_${TASK}.pt
+mv ./unsafe_rl_temp_data/seed2_*/model_best.pt ./models/${ALGO}/${ALGO}_model_${SYS}_${TASK}.pt
 
 # Removed the temporary data used to train the new unsafe model.
 rm -r -f ./unsafe_rl_temp_data/

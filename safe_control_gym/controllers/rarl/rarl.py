@@ -6,10 +6,6 @@ References papers & code:
     * [robust-adversarial-rl](https://github.com/jerinphilip/robust-adversarial-rl)
     * [rllab-adv](https://github.com/lerrel/rllab-adv)
     * [Robust Reinforcement Learning via adversary pools](https://github.com/eugenevinitsky/robust_RL_multi_adversary)
-
-Example:
-    train on cartpole with disturbance:
-        $ python safe_control_gym/experiments/execute_rl_controller.py --algo rarl --task cartpole --overrides benchmark/configs/overrides/rarl_cartpole.yaml
 '''
 
 import os

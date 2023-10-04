@@ -1,4 +1,4 @@
-algo: ppo
+algo: safe_explorer_ppo
 algo_config:
   # model args
   hidden_dim: 32
@@ -7,6 +7,19 @@ algo_config:
   norm_reward: False
   clip_obs: 10.0
   clip_reward: 10.0
+
+  # Safety layer args
+  pretraining: True
+  pretrained: null
+  constraint_hidden_dim: 100
+  constraint_lr: 0.0001
+  constraint_batch_size: 256
+  constraint_steps_per_epoch: 3000
+  constraint_epochs: 200
+  constraint_eval_steps: 1500
+  constraint_eval_interval: 5
+  constraint_buffer_size: 1000000
+  constraint_slack: [0.01, 0.01, 0.01, 0.05, 0.01, 0.01, 0.01, 0.05]
 
   # loss args
   gamma: 0.98
@@ -25,7 +38,7 @@ algo_config:
   max_grad_norm: 0.5
 
   # runner args
-  max_env_steps: 300000
+  max_env_steps: 100000
   num_workers: 1
   rollout_batch_size: 4
   rollout_steps: 150
@@ -33,9 +46,9 @@ algo_config:
   eval_batch_size: 10
 
   # misc
-  log_interval: 6000
+  log_interval: 100
   save_interval: 0
   num_checkpoints: 0
-  eval_interval: 6000
+  eval_interval: 100
   eval_save_best: True
   tensorboard: False

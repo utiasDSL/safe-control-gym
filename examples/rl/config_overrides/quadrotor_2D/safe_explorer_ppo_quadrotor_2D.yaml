@@ -1,4 +1,4 @@
-algo: ppo
+algo: safe_explorer_ppo
 algo_config:
   # model args
   hidden_dim: 128
@@ -7,16 +7,22 @@ algo_config:
   use_gae: True
   entropy_coef: 0.01
 
+  # Safety layer args
+  pretraining: False
+  pretrained: null
+  constraint_slack: [0.05, 0.05, 0.05, 0.05, 0.01, 0.01, 0.05, 0.05, 0.05, 0.05, 0.01, 0.01]
+  constraint_hidden_dim: 150
+
   # optim args
   opt_epochs: 20
-  mini_batch_size: 256
+  mini_batch_size: 250
   actor_lr: 0.001
   critic_lr: 0.001
 
   # runner args
   max_env_steps: 500000
   rollout_batch_size: 4
-  rollout_steps: 1000
+  rollout_steps: 250
 
   # misc
   log_interval: 10000

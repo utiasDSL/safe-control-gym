@@ -161,9 +161,8 @@ class BaseExperiment:
         if self.safety_filter is not None:
             physical_action = self.env.denormalize_action(action)
             unextended_obs = obs[:self.env.symbolic.nx]
-            certified_action, success = self.safety_filter.certify_action(unextended_obs, physical_action, info)
-            if success:
-                action = self.env.normalize_action(certified_action)
+            certified_action, _ = self.safety_filter.certify_action(unextended_obs, physical_action, info)
+            action = self.env.normalize_action(certified_action)
 
         return action
 

@@ -44,12 +44,12 @@ class SafeExplorerPPO(BaseController):
             self.env = VecRecordEpisodeStatistics(self.env, self.deque_size)
             self.eval_env = env_func(seed=seed * 111)
             self.eval_env = RecordEpisodeStatistics(self.eval_env, self.deque_size)
-            self.num_constraints = self.env.envs[0].num_constraints
+            self.num_constraints = self.eval_env.constraints.num_state_constraints
         else:
             # Testing only.
             self.env = env_func()
             self.env = RecordEpisodeStatistics(self.env)
-            self.num_constraints = self.env.num_constraints
+            self.num_constraints = self.env.constraints.num_state_constraints
         # Safety layer.
         self.safety_layer = SafetyLayer(self.env.observation_space,
                                         self.env.action_space,
@@ -111,7 +111,7 @@ class SafeExplorerPPO(BaseController):
             self.total_steps = 0
             obs, info = self.env.reset()
             self.obs = self.obs_normalizer(obs)
-            self.c = np.array([inf['constraint_values'] for inf in info['n']])
+            self.c = np.array([inf['constraint_values'][:self.num_constraints] for inf in info['n']])
         else:
             # Add episodic stats to be tracked.
             self.env.add_tracker('constraint_violation', 0, mode='queue')
@@ -126,7 +126,8 @@ class SafeExplorerPPO(BaseController):
         self.logger.close()
 
     def save(self,
-             path
+             path,
+             save_buffer=False
              ):
         '''Saves model params and experiment state to checkpoint path.'''
         path_dir = os.path.dirname(path)
@@ -137,7 +138,7 @@ class SafeExplorerPPO(BaseController):
             'obs_normalizer': self.obs_normalizer.state_dict(),
             'reward_normalizer': self.reward_normalizer.state_dict(),
         }
-        if self.training:
+        if self.training and save_buffer:
             exp_state = {
                 'total_steps': self.total_steps,
                 'obs': self.obs,
@@ -187,12 +188,12 @@ class SafeExplorerPPO(BaseController):
             # Checkpoint.
             if self.total_steps >= final_step or (self.save_interval and self.total_steps % self.save_interval == 0):
                 # Latest/final checkpoint.
-                self.save(self.checkpoint_path)
+                self.save(self.checkpoint_path, save_buffer=False)
                 self.logger.info(f'Checkpoint | {self.checkpoint_path}')
             if self.num_checkpoints and self.total_steps % (final_step // self.num_checkpoints) == 0:
                 # Intermediate checkpoint.
                 path = os.path.join(self.output_dir, 'checkpoints', f'model_{self.total_steps}.pt')
-                self.save(path)
+                self.save(path, save_buffer=True)
             # Evaluation.
             if self.eval_interval and self.total_steps % self.eval_interval == 0:
                 if self.pretraining:
@@ -210,7 +211,7 @@ class SafeExplorerPPO(BaseController):
                     eval_best_score = getattr(self, 'eval_best_score', -np.infty)
                     if self.eval_save_best and eval_best_score < eval_score:
                         self.eval_best_score = eval_score
-                        self.save(os.path.join(self.output_dir, 'model_best.pt'))
+                        self.save(os.path.join(self.output_dir, 'model_best.pt'), save_buffer=False)
             # Logging.
             if self.log_interval and self.total_steps % self.log_interval == 0:
                 self.log_step(results)
@@ -340,7 +341,7 @@ class SafeExplorerPPO(BaseController):
                 'c': c,
             })
             obs = next_obs
-            c = np.array([inf['constraint_values'] for inf in info['n']])
+            c = np.array([inf['constraint_values'][:self.num_constraints] for inf in info['n']])
         self.obs = obs
         self.c = c
         self.total_steps += self.rollout_batch_size * self.rollout_steps
@@ -435,7 +436,7 @@ class SafeExplorerPPO(BaseController):
         step = 0
         obs, info = self.env.reset()
         obs = self.obs_normalizer(obs)
-        c = np.array([inf['constraint_values'] for inf in info['n']])
+        c = np.array([inf['constraint_values'][:self.num_constraints] for inf in info['n']])
         while step < num_steps:
             action_spaces = self.env.get_attr('action_space')
             action = np.array([space.sample() for space in action_spaces])
@@ -444,19 +445,19 @@ class SafeExplorerPPO(BaseController):
             c_next = []
             for i, d in enumerate(done):
                 if d:
-                    c_next_i = info['n'][i]['terminal_info']['constraint_values']
+                    c_next_i = info['n'][i]['terminal_info']['constraint_values'][:self.num_constraints]
                 else:
-                    c_next_i = info['n'][i]['constraint_values']
+                    c_next_i = info['n'][i]['constraint_values'][:self.num_constraints]
                 c_next.append(c_next_i)
             c_next = np.array(c_next)
             self.constraint_buffer.push({'act': action, 'obs': obs, 'c': c, 'c_next': c_next})
             obs = obs_next
-            c = np.array([inf['constraint_values'] for inf in info['n']])
+            c = np.array([inf['constraint_values'][:self.num_constraints] for inf in info['n']])
             step += self.rollout_batch_size
 
     def eval_constraint_models(self):
         '''Runs evaluation for the constraint models.'''
-        eval_resutls = defaultdict(list)
+        eval_results = defaultdict(list)
         self.safety_layer.eval()
         self.obs_normalizer.set_read_only()
         # Collect evaluation data.
@@ -464,7 +465,7 @@ class SafeExplorerPPO(BaseController):
         for batch in self.constraint_buffer.sampler(self.constraint_batch_size):
             losses = self.safety_layer.compute_loss(batch)
             for i, loss in enumerate(losses):
-                eval_resutls[f'constraint_{i}_loss'].append(loss.item())
+                eval_results[f'constraint_{i}_loss'].append(loss.item())
         self.constraint_buffer.reset()
-        eval_resutls = {k: sum(v) / len(v) for k, v in eval_resutls.items()}
-        return eval_resutls
+        eval_results = {k: sum(v) / len(v) for k, v in eval_results.items()}
+        return eval_results

@@ -35,7 +35,7 @@ class MPSC(BaseSafetyFilter, ABC):
                  warmstart: bool = True,
                  additional_constraints: list = None,
                  use_terminal_set: bool = True,
-                 cost_function: str = Cost_Function.ONE_STEP_COST,
+                 cost_function: Cost_Function = Cost_Function.ONE_STEP_COST,
                  **kwargs
                  ):
         '''Initialize the MPSC.
@@ -49,7 +49,7 @@ class MPSC(BaseSafetyFilter, ABC):
             warmstart (bool): If the previous MPC soln should be used to warmstart the next mpc step.
             additional_constraints (list): List of additional constraints to consider.
             use_terminal_set (bool): Whether to use a terminal set constraint or not.
-            cost_function (str): A string (from Cost_Function) representing the cost function to be used.
+            cost_function (Cost_Function): A string (from Cost_Function) representing the cost function to be used.
         '''
 
         # Store all params/args.
@@ -59,8 +59,10 @@ class MPSC(BaseSafetyFilter, ABC):
 
         super().__init__(env_func, **kwargs)
 
+        np.random.seed(self.seed)
+
         # Setup the Environments.
-        self.env = env_func(randomized_init=False)
+        self.env = env_func(normalized_rl_action_space=False)
         self.training_env = env_func(randomized_init=True,
                                      init_state=None,
                                      cost='quadratic',
@@ -163,7 +165,7 @@ class MPSC(BaseSafetyFilter, ABC):
             self.prev_action = next_u_val
             feasible = True
         except Exception as e:
-            print('Error Return Status: ', opti.debug.return_status())
+            print('Error Return Status:', opti.debug.return_status())
             print(e)
             feasible = False
             action = None
@@ -185,7 +187,7 @@ class MPSC(BaseSafetyFilter, ABC):
             certified_action (ndarray): The certified action
             success (bool): Whether the safety filtering was successful or not.
         '''
-
+        uncertified_action = np.clip(uncertified_action, self.env.physical_action_bounds[0], self.env.physical_action_bounds[1])
         self.results_dict['uncertified_action'].append(uncertified_action)
         success = True
 
@@ -219,6 +221,7 @@ class MPSC(BaseSafetyFilter, ABC):
                 success = False
                 certified_action = clipped_action
 
+        certified_action = np.squeeze(np.array(certified_action))
         self.results_dict['kinf'].append(self.kinf)
         self.results_dict['certified_action'].append(certified_action)
         self.results_dict['correction'].append(np.linalg.norm(certified_action - uncertified_action))
