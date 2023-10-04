@@ -15,6 +15,7 @@ repos:
     -   id: check-yaml
     -   id: check-toml
     -   id: check-added-large-files
+        args: ['--maxkb=10000']
     -   id: check-docstring-first
     -   id: check-executables-have-shebangs
     -   id: check-shebang-scripts-are-executable
