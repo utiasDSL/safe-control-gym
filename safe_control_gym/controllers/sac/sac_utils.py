@@ -32,6 +32,7 @@ class SACAgent:
                  actor_lr=0.001,
                  critic_lr=0.001,
                  entropy_lr=0.001,
+                 activation='relu',
                  **kwargs):
         # params
         self.obs_space = obs_space
@@ -41,8 +42,10 @@ class SACAgent:
         self.tau = tau
         self.use_entropy_tuning = use_entropy_tuning
 
+        self.activation = activation
+
         # model
-        self.ac = MLPActorCritic(obs_space, act_space, hidden_dims=[hidden_dim] * 2, activation='relu')
+        self.ac = MLPActorCritic(obs_space, act_space, hidden_dims=[hidden_dim] * 2, activation=self.activation)
         self.log_alpha = torch.tensor(np.log(init_temperature))
 
         if self.use_entropy_tuning:
@@ -139,7 +142,7 @@ class SACAgent:
 
     def update(self, batch):
         '''Updates model parameters based on current training batch.'''
-        resutls = defaultdict(list)
+        results = defaultdict(list)
 
         # actor update
         policy_loss, entropy_loss = self.compute_policy_loss(batch)
@@ -161,10 +164,10 @@ class SACAgent:
         # update target networks
         soft_update(self.ac, self.ac_targ, self.tau)
 
-        resutls['policy_loss'] = policy_loss.item()
-        resutls['critic_loss'] = critic_loss.item()
-        resutls['entropy_loss'] = entropy_loss.item()
-        return resutls
+        results['policy_loss'] = policy_loss.item()
+        results['critic_loss'] = critic_loss.item()
+        results['entropy_loss'] = entropy_loss.item()
+        return results
 
 
 # -----------------------------------------------------------------------------------
@@ -287,7 +290,7 @@ class MLPActorCritic(nn.Module):
 
     def act(self, obs, deterministic=False):
         a, _ = self.actor(obs, deterministic, False)
-        return a.numpy()
+        return a.cpu().numpy()
 
 
 # -----------------------------------------------------------------------------------

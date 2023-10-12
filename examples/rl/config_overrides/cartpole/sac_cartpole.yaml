@@ -1,19 +1,26 @@
 algo: sac
 algo_config:
   # model args
-  hidden_dim: 64
+  hidden_dim: 256
+  activation: 'relu'
+
+  # loss args
+  gamma: 0.98
+  tau: 0.12145208815621376
+  init_temperature: 0.2
   use_entropy_tuning: False
+  target_entropy: null
 
   # optim args
   train_interval: 100
-  train_batch_size: 64
-  actor_lr: 0.001
-  critic_lr: 0.001
+  train_batch_size: 512
+  actor_lr: 0.00045196308120485273
+  critic_lr: 0.022547326782152065
   entropy_lr: 0.001
 
   # runner args
-  max_env_steps: 100000
-  warm_up_steps: 1000
+  max_env_steps: 150000
+  warm_up_steps: 100
   rollout_batch_size: 4
   num_workers: 1
   max_buffer_size: 1000000
@@ -21,9 +28,9 @@ algo_config:
   eval_batch_size: 10
 
   # misc
-  log_interval: 1000
-  save_interval: 1000
-  num_checkpoints: 100
-  eval_interval: 1000
+  log_interval: 3000
+  save_interval: 0
+  num_checkpoints: 0
+  eval_interval: 3000
   eval_save_best: True
-  tensorboard: True
+  tensorboard: False

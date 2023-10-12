@@ -182,7 +182,8 @@ def plot_from_logs(src_dir, out_dir, window=None, keys=None):
         src_dir (str): folder to read logs.
         out_dir (str): folder to save figures.
         window (int): window size for smoothing.
-        keys (list): specify name of stats to plot, None means plot all.'''
+        keys (list): specify name of stats to plot, None means plot all.
+    '''
     # Find all logs.
     log_files = []
     for r, _, f in os.walk(src_dir):

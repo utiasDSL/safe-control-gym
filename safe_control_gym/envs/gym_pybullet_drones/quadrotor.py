@@ -862,19 +862,10 @@ class Quadrotor(BaseAviary):
             done (bool): Whether an episode is over.
         '''
         # Done if goal reached for stabilization task with quadratic cost.
-        if self.TASK == Task.STABILIZATION and self.COST == Cost.QUADRATIC:
+        if self.TASK == Task.STABILIZATION:
             self.goal_reached = bool(np.linalg.norm(self.state - self.X_GOAL) < self.TASK_INFO['stabilization_goal_tolerance'])
             if self.goal_reached:
                 return True
-
-        # # Done if the episode length is exceeded.
-        # if (self.ctrl_step_counter + 1) / self.CTRL_FREQ >= self.EPISODE_LEN_SEC:
-        #     return True
-
-        # # Done if a constraint is violated.
-        # if self.constraints is not None:
-        #     if self.DONE_ON_VIOLATION and self.constraints.is_violated(self):
-        #         return True
 
         # Done if state is out-of-bounds.
         if self.done_on_out_of_bound:

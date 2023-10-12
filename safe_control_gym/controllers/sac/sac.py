@@ -67,7 +67,8 @@ class SAC(BaseController):
                               target_entropy=self.target_entropy,
                               actor_lr=self.actor_lr,
                               critic_lr=self.critic_lr,
-                              entropy_lr=self.entropy_lr)
+                              entropy_lr=self.entropy_lr,
+                              activation=self.activation)
         self.agent.to(self.device)
 
         # pre-/post-processing
@@ -115,7 +116,7 @@ class SAC(BaseController):
             self.eval_env.close()
         self.logger.close()
 
-    def save(self, path, save_buffer=True):
+    def save(self, path, save_buffer=False):
         '''Saves model params and experiment state to checkpoint path.'''
         path_dir = os.path.dirname(path)
         os.makedirs(path_dir, exist_ok=True)
@@ -166,12 +167,12 @@ class SAC(BaseController):
             # checkpoint
             if self.total_steps >= self.max_env_steps or (self.save_interval and self.total_steps % self.save_interval == 0):
                 # latest/final checkpoint
-                self.save(self.checkpoint_path)
+                self.save(self.checkpoint_path, save_buffer=False)
                 self.logger.info(f'Checkpoint | {self.checkpoint_path}')
             if self.num_checkpoints and self.total_steps % (self.max_env_steps // self.num_checkpoints) == 0:
                 # intermediate checkpoint
                 path = os.path.join(self.output_dir, 'checkpoints', f'model_{self.total_steps}.pt')
-                self.save(path, save_buffer=False)
+                self.save(path, save_buffer=True)
 
             # eval
             if self.eval_interval and self.total_steps % self.eval_interval == 0:
@@ -186,7 +187,7 @@ class SAC(BaseController):
                 eval_best_score = getattr(self, 'eval_best_score', -np.infty)
                 if self.eval_save_best and eval_best_score < eval_score:
                     self.eval_best_score = eval_score
-                    self.save(os.path.join(self.output_dir, 'model_best.pt'))
+                    self.save(os.path.join(self.output_dir, 'model_best.pt'), save_buffer=False)
 
             # logging
             if self.log_interval and self.total_steps % self.log_interval == 0:
@@ -265,11 +266,11 @@ class SAC(BaseController):
         start = time.time()
 
         if self.total_steps < self.warm_up_steps:
-            act = np.stack([self.env.action_space.sample() for _ in range(self.rollout_batch_size)])
+            action = np.stack([self.env.action_space.sample() for _ in range(self.rollout_batch_size)])
         else:
             with torch.no_grad():
-                act = self.agent.ac.act(torch.FloatTensor(obs).to(self.device), deterministic=False)
-        next_obs, rew, done, info = self.env.step(act)
+                action = self.agent.ac.act(torch.FloatTensor(obs).to(self.device), deterministic=False)
+        next_obs, rew, done, info = self.env.step(action)
 
         next_obs = self.obs_normalizer(next_obs)
         rew = self.reward_normalizer(rew, done)
@@ -297,7 +298,7 @@ class SAC(BaseController):
 
         self.buffer.push({
             'obs': obs,
-            'act': act,
+            'act': action,
             'rew': rew,
             # 'next_obs': next_obs,
             # 'mask': mask,

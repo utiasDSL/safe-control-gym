@@ -1,0 +1,47 @@
+algo: safe_explorer_ppo
+algo_config:
+  # model args
+  hidden_dim: 32
+  activation: 'leaky_relu'
+  norm_obs: False
+  norm_reward: False
+  clip_obs: 10.0
+  clip_reward: 10.0
+
+  # Safety layer args
+  pretraining: False
+  pretrained: null
+  constraint_slack: [0.01, 0.01, 0.01, 0.05, 0.01, 0.01, 0.01, 0.05]
+  constraint_hidden_dim: 100
+
+  # loss args
+  gamma: 0.98
+  use_gae: False
+  gae_lambda: 0.8
+  use_clipped_value: False
+  clip_param: 0.1
+  target_kl: 1.587713889686473e-07
+  entropy_coef: 0.00010753631441212628
+
+  # optim args
+  opt_epochs: 5
+  mini_batch_size: 128
+  actor_lr: 0.0007948148615930024
+  critic_lr: 0.007497368468753617
+  max_grad_norm: 0.5
+
+  # runner args
+  max_env_steps: 300000
+  num_workers: 1
+  rollout_batch_size: 4
+  rollout_steps: 150
+  deque_size: 10
+  eval_batch_size: 10
+
+  # misc
+  log_interval: 6000
+  save_interval: 0
+  num_checkpoints: 0
+  eval_interval: 6000
+  eval_save_best: True
+  tensorboard: False

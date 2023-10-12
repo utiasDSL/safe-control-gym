@@ -63,7 +63,8 @@ class PPO(BaseController):
                               actor_lr=self.actor_lr,
                               critic_lr=self.critic_lr,
                               opt_epochs=self.opt_epochs,
-                              mini_batch_size=self.mini_batch_size)
+                              mini_batch_size=self.mini_batch_size,
+                              activation=self.activation)
         self.agent.to(self.device)
         # Pre-/post-processing.
         self.obs_normalizer = BaseNormalizer()

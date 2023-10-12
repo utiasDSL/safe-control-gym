@@ -27,6 +27,7 @@ class PPOAgent:
                  critic_lr=0.001,
                  opt_epochs=10,
                  mini_batch_size=64,
+                 activation='tanh',
                  **kwargs
                  ):
         # Parameters.
@@ -38,11 +39,12 @@ class PPOAgent:
         self.entropy_coef = entropy_coef
         self.opt_epochs = opt_epochs
         self.mini_batch_size = mini_batch_size
+        self.activation = activation
         # Model.
         self.ac = MLPActorCritic(obs_space,
                                  act_space,
                                  hidden_dims=[hidden_dim] * 2,
-                                 activation='tanh')
+                                 activation=self.activation)
         # Optimizers.
         self.actor_opt = torch.optim.Adam(self.ac.actor.parameters(), actor_lr)
         self.critic_opt = torch.optim.Adam(self.ac.critic.parameters(), critic_lr)
