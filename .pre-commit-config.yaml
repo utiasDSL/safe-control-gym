@@ -1,0 +1,57 @@
+# Install the pre-commit hooks below with
+# 'pre-commit install'
+
+# Auto-update the version of the hooks with
+# 'pre-commit autoupdate'
+
+# Run the hooks on all files with
+# 'pre-commit run --all'
+
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+    -   id: check-ast
+    -   id: check-yaml
+    -   id: check-toml
+    -   id: check-added-large-files
+    -   id: check-docstring-first
+    -   id: check-executables-have-shebangs
+    -   id: check-shebang-scripts-are-executable
+    -   id: check-merge-conflict
+    -   id: debug-statements
+    -   id: trailing-whitespace
+    -   id: end-of-file-fixer
+    -   id: double-quote-string-fixer
+
+-   repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        name: isort
+        args: ['--line-length=110']
+
+-   repo: https://github.com/pre-commit/mirrors-autopep8
+    rev: v2.0.4
+    hooks:
+    -   id: autopep8
+        name: autopep8-default
+        args: ['-i', '--ignore=C0301', '--max-line-length=1000']
+        exclude: (^tests/|^safe_control_gym/math_and_models/transformations.py)
+    -   id: autopep8
+        name: autopep8-tests
+        args: ['-i', '--ignore=C0301,E501,E201,E241,E127', '--max-line-length=1000']
+        files: (^tests/|^safe_control_gym/math_and_models/transformations.py)
+
+-   repo: https://github.com/PyCQA/flake8
+    rev: 6.1.0
+    hooks:
+    -   id: flake8
+        name: flake8_default
+        args: ['--ignore=E501']
+        exclude: (^safe_control_gym/__init__.py|^tests/|^safe_control_gym/math_and_models/transformations.py)
+    -   id: flake8
+        name: flake8_tests
+        args: ['--ignore=E501,E201,E241,E127']
+        files: (^tests/|^safe_control_gym/math_and_models/transformations.py)
+        exclude: ^tests/test_build.py

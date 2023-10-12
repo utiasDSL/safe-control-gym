@@ -7,13 +7,13 @@ Reference:
 import os
 from typing import Tuple
 
-import torch
-import numpy as np
 import casadi as cs
+import numpy as np
+import torch
 
+from safe_control_gym.math_and_models.neural_networks import MLP
 from safe_control_gym.safety_filters.cbf.cbf import CBF
 from safe_control_gym.safety_filters.cbf.cbf_utils import CBFBuffer
-from safe_control_gym.math_and_models.neural_networks import MLP
 
 
 class CBF_NN(CBF):
@@ -121,8 +121,7 @@ class CBF_NN(CBF):
             cost = 0.5 * cs.norm_2(uncertified_action_var - u_var) ** 2
 
         # CBF constraint
-        opti.subject_to(-self.linear_func(x=barrier_at_x)['y'] - lie_derivative_at_x - learned_residual <=
-                        right_hand_side)
+        opti.subject_to(-self.linear_func(x=barrier_at_x)['y'] - lie_derivative_at_x - learned_residual <= right_hand_side)
 
         # Input constraints
         for input_constraint in self.input_constraints_sym:

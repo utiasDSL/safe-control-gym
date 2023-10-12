@@ -8,16 +8,16 @@ import math
 from copy import deepcopy
 
 import casadi as cs
-from gymnasium import spaces
 import numpy as np
 import pybullet as p
+from gymnasium import spaces
 
 from safe_control_gym.envs.benchmark_env import Cost, Task
 from safe_control_gym.envs.constraints import GENERAL_CONSTRAINTS
-from safe_control_gym.math_and_models.symbolic_systems import SymbolicModel
 from safe_control_gym.envs.gym_pybullet_drones.base_aviary import BaseAviary
 from safe_control_gym.envs.gym_pybullet_drones.quadrotor_utils import QuadType, cmd2pwm, pwm2rpm
-from safe_control_gym.math_and_models.transformations import transform_trajectory, csRotXYZ
+from safe_control_gym.math_and_models.symbolic_systems import SymbolicModel
+from safe_control_gym.math_and_models.transformations import csRotXYZ, transform_trajectory
 
 
 class Quadrotor(BaseAviary):
@@ -472,7 +472,7 @@ class Quadrotor(BaseAviary):
         '''
         m = prior_prop.get('M', self.MASS)
         Iyy = prior_prop.get('Iyy', self.J[1, 1])
-        g, l = self.GRAVITY_ACC, self.L
+        g, length = self.GRAVITY_ACC, self.L
         dt = self.CTRL_TIMESTEP
         # Define states.
         z = cs.MX.sym('z')
@@ -505,7 +505,7 @@ class Quadrotor(BaseAviary):
             X_dot = cs.vertcat(x_dot,
                                cs.sin(theta) * (T1 + T2) / m, z_dot,
                                cs.cos(theta) * (T1 + T2) / m - g, theta_dot,
-                               l * (T2 - T1) / Iyy / np.sqrt(2))
+                               length * (T2 - T1) / Iyy / np.sqrt(2))
             # Define observation.
             Y = cs.vertcat(x, x_dot, z, z_dot, theta, theta_dot)
         elif self.QUAD_TYPE == QuadType.THREE_D:
@@ -551,8 +551,8 @@ class Quadrotor(BaseAviary):
             oVdot_cg_o = Rob @ cs.vertcat(0, 0, f1 + f2 + f3 + f4) / m - cs.vertcat(0, 0, g)
             pos_ddot = oVdot_cg_o
             pos_dot = cs.vertcat(x_dot, y_dot, z_dot)
-            Mb = cs.vertcat(l / cs.sqrt(2.0) * (f1 + f2 - f3 - f4),
-                            l / cs.sqrt(2.0) * (-f1 + f2 + f3 - f4),
+            Mb = cs.vertcat(length / cs.sqrt(2.0) * (f1 + f2 - f3 - f4),
+                            length / cs.sqrt(2.0) * (-f1 + f2 + f3 - f4),
                             gamma * (-f1 + f2 - f3 + f4))
             rate_dot = Jinv @ (Mb - (cs.skew(cs.vertcat(p_body, q_body, r_body)) @ J @ cs.vertcat(p_body, q_body, r_body)))
             ang_dot = cs.blockcat([[1, cs.sin(phi) * cs.tan(theta), cs.cos(phi) * cs.tan(theta)],

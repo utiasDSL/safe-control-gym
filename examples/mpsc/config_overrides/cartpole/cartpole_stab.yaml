@@ -4,13 +4,13 @@ task_config:
   ctrl_freq: 15
   pyb_freq: 750
   physics: pyb
-  
+
   # state initialization
   init_state:
     init_x: 0.1
     init_x_dot: -1.5
     init_theta: -0.175
-    init_theta_dot: 0.5  
+    init_theta_dot: 0.5
   randomized_init: True
   randomized_inertial_prop: False
   normalized_rl_action_space: True

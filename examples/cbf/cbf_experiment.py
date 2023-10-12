@@ -4,12 +4,12 @@ import os
 import shutil
 from functools import partial
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
 from safe_control_gym.experiments.base_experiment import BaseExperiment
-from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.configuration import ConfigFactory
+from safe_control_gym.utils.registration import make
 
 
 def run(plot=True, training=True, n_episodes=1, n_steps=None, curr_path='.', save_data=False):

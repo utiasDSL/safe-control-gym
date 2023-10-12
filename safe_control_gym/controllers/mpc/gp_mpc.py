@@ -21,18 +21,19 @@ import time
 from copy import deepcopy
 from functools import partial
 
-import scipy
-import numpy as np
 import casadi as cs
-import torch
 import gpytorch
-from skopt.sampler import Lhs
-from sklearn.model_selection import train_test_split
+import numpy as np
+import scipy
+import torch
 from sklearn.metrics import pairwise_distances_argmin_min
+from sklearn.model_selection import train_test_split
+from skopt.sampler import Lhs
 
-from safe_control_gym.controllers.mpc.linear_mpc import LinearMPC, MPC
-from safe_control_gym.controllers.mpc.mpc_utils import discretize_linear_system
-from safe_control_gym.controllers.mpc.gp_utils import GaussianProcessCollection, ZeroMeanIndependentGPModel, covSEard, kmeans_centriods
+from safe_control_gym.controllers.lqr.lqr_utils import discretize_linear_system
+from safe_control_gym.controllers.mpc.gp_utils import (GaussianProcessCollection, ZeroMeanIndependentGPModel,
+                                                       covSEard, kmeans_centriods)
+from safe_control_gym.controllers.mpc.linear_mpc import MPC, LinearMPC
 from safe_control_gym.envs.benchmark_env import Task
 
 
@@ -69,7 +70,7 @@ class GPMPC(MPC):
             recalc_inducing_points_at_every_step: bool = False,
             online_learning: bool = False,
             prior_info: dict = None,
-            #inertial_prop: list = [1.0],
+            # inertial_prop: list = [1.0],
             prior_param_coeff: float = 1.0,
             terminate_run_on_done: bool = True,
             output_dir: str = 'results/temp',
@@ -291,7 +292,7 @@ class GPMPC(MPC):
         for input_constraint in self.constraints.input_constraints:
             input_constraint_set.append(np.zeros((input_constraint.num_constraints, T)))
         if self.x_prev is not None and self.u_prev is not None:
-            #cov_x = np.zeros((nx, nx))
+            # cov_x = np.zeros((nx, nx))
             cov_x = np.diag([self.initial_rollout_std**2] * nx)
             for i in range(T):
                 state_covariances[i] = cov_x
@@ -374,7 +375,7 @@ class GPMPC(MPC):
             z_prev = np.hstack((self.x_prev[:, :-1].T, self.u_prev.T))
             z_prev = z_prev[:, self.input_mask]
             inds = self.env.np_random.choice(range(n_data_points), size=n_ind_points - self.T, replace=False)
-            #z_ind = self.data_inputs[inds][:, self.input_mask]
+            # z_ind = self.data_inputs[inds][:, self.input_mask]
             z_ind = np.vstack((z_prev, inputs[inds][:, self.input_mask]))
         else:
             # If there is no previous solution. Choose T random training set points.
@@ -392,18 +393,18 @@ class GPMPC(MPC):
         K_zind_zind_inv = self.gaussian_process.kernel_inv(torch.Tensor(z_ind).double())
         K_x_zind = self.gaussian_process.kernel(torch.from_numpy(inputs[:, self.input_mask]).double(),
                                                 torch.tensor(z_ind).double())
-        #Q_X_X = K_x_zind @ K_zind_zind_inv @ K_x_zind.transpose(1,2)
+        # Q_X_X = K_x_zind @ K_zind_zind_inv @ K_x_zind.transpose(1,2)
         Q_X_X = K_x_zind @ torch.linalg.solve(K_zind_zind, K_x_zind.transpose(1, 2))
         Gamma = torch.diagonal(self.gaussian_process.K_plus_noise - Q_X_X, 0, 1, 2)
         Gamma_inv = torch.diag_embed(1 / Gamma)
         # TODO: Should inverse be used here instead? pinverse was more stable previsouly.
         Sigma_inv = K_zind_zind + K_x_zind.transpose(1, 2) @ Gamma_inv @ K_x_zind
-        Sigma = torch.pinverse(K_zind_zind + K_x_zind.transpose(1, 2) @ Gamma_inv @ K_x_zind)  # For debugging
+        # Sigma = torch.pinverse(K_zind_zind + K_x_zind.transpose(1, 2) @ Gamma_inv @ K_x_zind)  # For debugging
         mean_post_factor = torch.zeros((dim_gp_outputs, n_ind_points))
         for i in range(dim_gp_outputs):
             mean_post_factor[i] = torch.linalg.solve(Sigma_inv[i], K_x_zind[i].T @ Gamma_inv[i] @
                                                      torch.from_numpy(targets[:, self.target_mask[i]]).double())
-            #mean_post_factor[i] = Sigma[i] @ K_x_zind[i].T @ Gamma_inv[i] @ torch.from_numpy(targets[:, self.target_mask[i]]).double()
+            # mean_post_factor[i] = Sigma[i] @ K_x_zind[i].T @ Gamma_inv[i] @ torch.from_numpy(targets[:, self.target_mask[i]]).double()
         return mean_post_factor.detach().numpy(), Sigma_inv.detach().numpy(), K_zind_zind_inv.detach().numpy(), z_ind
         # return mean_post_factor.detach().numpy(), Sigma.detach().numpy(), K_zind_zind_inv.detach().numpy(), z_ind
 
@@ -702,7 +703,7 @@ class GPMPC(MPC):
                 delta_neg = np.array([0.1, 0.1, 0.1, 0.1, 0.03, 0.3])
                 eq_limits = [(self.prior_ctrl.env.X_GOAL[eq] - delta_neg[eq], self.prior_ctrl.env.X_GOAL[eq] + delta_plus[eq]) for eq in range(self.model.nx)]
                 eq_samples = lhs_sampler.generate(eq_limits, num_eq_samples, random_state=self.seed)
-                #samples = samples.append(eq_samples)
+                # samples = samples.append(eq_samples)
                 init_state_samples = np.array(samples + eq_samples)
             else:
                 init_state_samples = np.array(samples)
@@ -715,7 +716,7 @@ class GPMPC(MPC):
             seeds = self.env.np_random.integers(0, 99999, size=self.train_iterations + validation_iterations)
             for i in range(self.train_iterations + validation_iterations):
                 # For random initial state training.
-                #init_state = init_state_samples[i,:]
+                # init_state = init_state_samples[i,:]
                 init_state = dict(zip(self.env.INIT_STATE_RAND_INFO.keys(), init_state_samples[i, :]))
                 # Collect data with prior controller.
                 run_env = self.env_func(init_state=init_state, randomized_init=False, seed=int(seeds[i]))

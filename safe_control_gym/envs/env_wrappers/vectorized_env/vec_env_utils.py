@@ -1,5 +1,6 @@
-import os
 import contextlib
+import os
+
 import numpy as np
 
 
@@ -90,8 +91,8 @@ def _unflatten_obs(obs):
         return split_batch(obs)
 
 
-def _flatten_list(l):
-    assert isinstance(l, (list, tuple))
-    assert len(l) > 0
-    assert all([len(l_) > 0 for l_ in l])
-    return [l__ for l_ in l for l__ in l_]
+def _flatten_list(list_to_flatten):
+    assert isinstance(list_to_flatten, (list, tuple))
+    assert len(list_to_flatten) > 0
+    assert all([len(l_) > 0 for l_ in list_to_flatten])
+    return [l__ for l_ in list_to_flatten for l__ in l_]

@@ -3,15 +3,16 @@
 import os.path
 from copy import deepcopy
 
-import numpy as np
-import gpytorch
-import torch
-import matplotlib.pyplot as plt
 import casadi as ca
+import gpytorch
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
 from sklearn import preprocessing
 from sklearn.cluster import KMeans
 
 from safe_control_gym.utils.utils import mkdirs
+
 torch.manual_seed(0)
 
 

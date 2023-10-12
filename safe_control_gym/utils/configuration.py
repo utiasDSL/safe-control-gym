@@ -1,14 +1,14 @@
 '''Configuration utilities.'''
 
-import os
 import argparse
+import os
 import warnings
 
 import munch
 from dict_deep import deep_set
 
 from safe_control_gym.utils.registration import get_config
-from safe_control_gym.utils.utils import read_file, merge_dict
+from safe_control_gym.utils.utils import merge_dict, read_file
 
 
 class ConfigFactory:

@@ -2,7 +2,7 @@
 
 <robot name="gate">
 
-  <link name="base_link"> 
+  <link name="base_link">
 
     <inertial>
       <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -14,10 +14,10 @@
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
         <mesh filename="./gate.obj" scale=" .06 .06 .06"/>
-      </geometry> 
+      </geometry>
       <material name="grey">
         <color rgba="1. 0. 0. 1"/>
-      </material> 
+      </material>
     </visual>
 
 <!--     <collision>
@@ -25,7 +25,7 @@
       <geometry>
         <mesh filename="./gate.obj" scale=" .06 .06 .06"/>
       </geometry>
-    </collision>  --> 
+    </collision>  -->
 
   </link>
 

@@ -1,12 +1,13 @@
 import sys
+
 import pytest
 
 from examples.rl.rl_experiment import run
 
 
-@pytest.mark.parametrize('SYS', ['cartpole', 'quadrotor_2D', 'quadrotor_3D'])
-@pytest.mark.parametrize('TASK',['stab', 'track'])
-@pytest.mark.parametrize('ALGO',['ppo', 'sac'])
+@pytest.mark.parametrize('SYS',  ['cartpole', 'quadrotor_2D', 'quadrotor_3D'])
+@pytest.mark.parametrize('TASK', ['stab', 'track'])
+@pytest.mark.parametrize('ALGO', ['ppo', 'sac'])
 def test_rl(SYS, TASK, ALGO):
     SYS_NAME = 'quadrotor' if 'quadrotor' in SYS else SYS
     sys.argv[1:] = ['--algo', ALGO,

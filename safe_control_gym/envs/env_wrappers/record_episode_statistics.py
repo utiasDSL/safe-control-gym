@@ -1,8 +1,8 @@
 '''Record Episode Statistics.'''
 
 import time
-from copy import deepcopy
 from collections import deque
+from copy import deepcopy
 
 import gymnasium as gym
 import numpy as np

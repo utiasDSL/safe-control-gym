@@ -1,9 +1,9 @@
 '''Utils for CBF and CBF_NN safety filters.'''
 
-import torch
-import numpy as np
 import casadi as cs
-from gymnasium.spaces import box, Box
+import numpy as np
+import torch
+from gymnasium.spaces import Box, box
 
 
 def cbf_cartpole(X: cs.MX,

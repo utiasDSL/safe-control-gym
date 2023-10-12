@@ -1,9 +1,4 @@
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-
-name: Test package quality
+name: Test Package Quality
 
 on: push
 
@@ -26,6 +21,11 @@ jobs:
     - name: Install package
       run: |
         pip install -e .
+    - name: Run Linting
+      run: |
+        pre-commit install
+        pre-commit autoupdate
+        pre-commit run
     - name: Unit tests
       run: |
         python -m pytest tests/

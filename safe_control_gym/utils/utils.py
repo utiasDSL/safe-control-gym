@@ -9,11 +9,11 @@ import subprocess
 import sys
 
 import gymnasium as gym
-import munch
-import yaml
 import imageio
+import munch
 import numpy as np
 import torch
+import yaml
 
 
 def mkdirs(*paths):

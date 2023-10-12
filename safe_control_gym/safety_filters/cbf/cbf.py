@@ -6,11 +6,11 @@ Reference:
 
 from typing import Tuple
 
-import numpy as np
 import casadi as cs
+import numpy as np
 
 from safe_control_gym.safety_filters.base_safety_filter import BaseSafetyFilter
-from safe_control_gym.safety_filters.cbf.cbf_utils import linear_function, cbf_cartpole, cartesian_product
+from safe_control_gym.safety_filters.cbf.cbf_utils import cartesian_product, cbf_cartpole, linear_function
 
 
 class CBF(BaseSafetyFilter):
@@ -138,8 +138,7 @@ class CBF(BaseSafetyFilter):
             cost = 0.5 * cs.norm_2(uncertified_action_var - u_var) ** 2
 
         # CBF constraint
-        opti.subject_to(-self.linear_func(x=barrier_at_x)['y'] - lie_derivative_at_x <=
-                        right_hand_side)
+        opti.subject_to(-self.linear_func(x=barrier_at_x)['y'] - lie_derivative_at_x <= right_hand_side)
 
         # Input constraints
         for input_constraint in self.input_constraints_sym:

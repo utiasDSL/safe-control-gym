@@ -5,6 +5,7 @@ Based on https://github.com/openai/gym/blob/master/gym/envs/registration.py
 
 import copy
 import importlib
+
 try:
     import importlib.resources as pkg_resources
 except ImportError:
