@@ -31,9 +31,8 @@ from sklearn.model_selection import train_test_split
 from skopt.sampler import Lhs
 
 from safe_control_gym.controllers.lqr.lqr_utils import discretize_linear_system
-from safe_control_gym.controllers.mpc.gp_utils import (
-    GaussianProcessCollection, ZeroMeanIndependentGPModel, covSEard,
-    kmeans_centriods)
+from safe_control_gym.controllers.mpc.gp_utils import (GaussianProcessCollection, ZeroMeanIndependentGPModel,
+                                                       covSEard, kmeans_centriods)
 from safe_control_gym.controllers.mpc.linear_mpc import MPC, LinearMPC
 from safe_control_gym.envs.benchmark_env import Task
 

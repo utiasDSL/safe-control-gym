@@ -9,8 +9,7 @@ import numpy as np
 import pytope as pt
 
 from safe_control_gym.envs.benchmark_env import Task
-from safe_control_gym.envs.constraints import (BoundedConstraint,
-                                               LinearConstraint)
+from safe_control_gym.envs.constraints import BoundedConstraint, LinearConstraint
 
 
 class Cost_Function(str, Enum):

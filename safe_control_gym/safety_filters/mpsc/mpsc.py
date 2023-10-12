@@ -14,13 +14,10 @@ from copy import deepcopy
 import numpy as np
 
 from safe_control_gym.controllers.lqr.lqr_utils import compute_lqr_gain
-from safe_control_gym.controllers.mpc.mpc_utils import (get_cost_weight_matrix,
-                                                        reset_constraints)
+from safe_control_gym.controllers.mpc.mpc_utils import get_cost_weight_matrix, reset_constraints
 from safe_control_gym.safety_filters.base_safety_filter import BaseSafetyFilter
-from safe_control_gym.safety_filters.mpsc.mpsc_cost_function.one_step_cost import \
-    ONE_STEP_COST
-from safe_control_gym.safety_filters.mpsc.mpsc_utils import (
-    Cost_Function, get_trajectory_on_horizon)
+from safe_control_gym.safety_filters.mpsc.mpsc_cost_function.one_step_cost import ONE_STEP_COST
+from safe_control_gym.safety_filters.mpsc.mpsc_utils import Cost_Function, get_trajectory_on_horizon
 
 
 class MPSC(BaseSafetyFilter, ABC):
