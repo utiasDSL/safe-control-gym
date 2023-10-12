@@ -713,7 +713,7 @@ class GPMPC(MPC):
                                                  self.train_iterations + validation_iterations,
                                                  random_state=self.seed)
             input_samples = np.array(input_samples)  # not being used currently
-            seeds = self.env.np_random.randint(0, 99999, size=self.train_iterations + validation_iterations)
+            seeds = self.env.np_random.integers(0, 99999, size=self.train_iterations + validation_iterations)
             for i in range(self.train_iterations + validation_iterations):
                 # For random initial state training.
                 # init_state = init_state_samples[i,:]
