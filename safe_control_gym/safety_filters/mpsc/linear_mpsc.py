@@ -18,13 +18,10 @@ from pytope import Polytope
 from safe_control_gym.controllers.lqr.lqr_utils import discretize_linear_system
 from safe_control_gym.controllers.mpc.mpc_utils import rk_discrete
 from safe_control_gym.envs.benchmark_env import Environment, Task
-from safe_control_gym.envs.constraints import (ConstrainedVariableType,
-                                               LinearConstraint,
-                                               QuadraticContstraint)
+from safe_control_gym.envs.constraints import ConstrainedVariableType, LinearConstraint, QuadraticContstraint
 from safe_control_gym.safety_filters.mpsc.mpsc import MPSC
-from safe_control_gym.safety_filters.mpsc.mpsc_utils import (
-    Cost_Function, compute_RPI_set, ellipse_bounding_box,
-    pontryagin_difference_AABB)
+from safe_control_gym.safety_filters.mpsc.mpsc_utils import (Cost_Function, compute_RPI_set,
+                                                             ellipse_bounding_box, pontryagin_difference_AABB)
 
 
 class LINEAR_MPSC(MPSC):

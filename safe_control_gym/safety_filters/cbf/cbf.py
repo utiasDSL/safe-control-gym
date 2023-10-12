@@ -10,9 +10,7 @@ import casadi as cs
 import numpy as np
 
 from safe_control_gym.safety_filters.base_safety_filter import BaseSafetyFilter
-from safe_control_gym.safety_filters.cbf.cbf_utils import (cartesian_product,
-                                                           cbf_cartpole,
-                                                           linear_function)
+from safe_control_gym.safety_filters.cbf.cbf_utils import cartesian_product, cbf_cartpole, linear_function
 
 
 class CBF(BaseSafetyFilter):

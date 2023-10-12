@@ -11,8 +11,9 @@ import multiprocessing as mp
 import numpy as np
 
 from safe_control_gym.envs.env_wrappers.vectorized_env.vec_env import VecEnv
-from safe_control_gym.envs.env_wrappers.vectorized_env.vec_env_utils import (
-    CloudpickleWrapper, _flatten_list, _flatten_obs, clear_mpi_env_vars)
+from safe_control_gym.envs.env_wrappers.vectorized_env.vec_env_utils import (CloudpickleWrapper,
+                                                                             _flatten_list, _flatten_obs,
+                                                                             clear_mpi_env_vars)
 from safe_control_gym.utils.utils import get_random_state, set_random_state
 
 

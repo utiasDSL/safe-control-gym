@@ -31,9 +31,8 @@ from sklearn.model_selection import train_test_split
 from skopt.sampler import Lhs
 
 from safe_control_gym.controllers.lqr.lqr_utils import discretize_linear_system
-from safe_control_gym.controllers.mpc.gp_utils import (
-    GaussianProcessCollection, ZeroMeanIndependentGPModel, covSEard,
-    kmeans_centriods)
+from safe_control_gym.controllers.mpc.gp_utils import (GaussianProcessCollection, ZeroMeanIndependentGPModel,
+                                                       covSEard, kmeans_centriods)
 from safe_control_gym.controllers.mpc.linear_mpc import MPC, LinearMPC
 from safe_control_gym.envs.benchmark_env import Task
 
@@ -714,7 +713,7 @@ class GPMPC(MPC):
                                                  self.train_iterations + validation_iterations,
                                                  random_state=self.seed)
             input_samples = np.array(input_samples)  # not being used currently
-            seeds = self.env.np_random.randint(0, 99999, size=self.train_iterations + validation_iterations)
+            seeds = self.env.np_random.integers(0, 99999, size=self.train_iterations + validation_iterations)
             for i in range(self.train_iterations + validation_iterations):
                 # For random initial state training.
                 # init_state = init_state_samples[i,:]

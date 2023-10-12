@@ -14,8 +14,7 @@ import numpy as np
 
 from safe_control_gym.controllers.lqr.lqr_utils import discretize_linear_system
 from safe_control_gym.controllers.mpc.mpc import MPC
-from safe_control_gym.controllers.mpc.mpc_utils import \
-    compute_discrete_lqr_gain_from_cont_linear_system
+from safe_control_gym.controllers.mpc.mpc_utils import compute_discrete_lqr_gain_from_cont_linear_system
 from safe_control_gym.envs.benchmark_env import Task
 
 

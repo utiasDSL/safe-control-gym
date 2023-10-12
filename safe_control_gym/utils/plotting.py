@@ -7,8 +7,7 @@ from collections import defaultdict
 
 import matplotlib.pyplot as plt
 import numpy as np
-from tensorboard.backend.event_processing.event_accumulator import \
-    EventAccumulator
+from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
 DIV_LINE_WIDTH = 50
 

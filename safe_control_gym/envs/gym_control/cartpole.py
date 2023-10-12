@@ -20,8 +20,7 @@ import pybullet_data
 from gymnasium import spaces
 
 from safe_control_gym.envs.benchmark_env import BenchmarkEnv, Cost, Task
-from safe_control_gym.envs.constraints import (GENERAL_CONSTRAINTS,
-                                               SymmetricStateConstraint)
+from safe_control_gym.envs.constraints import GENERAL_CONSTRAINTS, SymmetricStateConstraint
 from safe_control_gym.math_and_models.normalization import normalize_angle
 from safe_control_gym.math_and_models.symbolic_systems import SymbolicModel
 
