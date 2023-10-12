@@ -100,7 +100,7 @@ class ImpulseDisturbance(Disturbance):
               env
               ):
         if self.step_offset is None:
-            self.current_step_offset = self.np_random.randint(self.max_step)
+            self.current_step_offset = self.np_random.integers(self.max_step)
         else:
             self.current_step_offset = self.step_offset
         self.current_peak_step = int(self.current_step_offset + self.duration / 2)
@@ -146,7 +146,7 @@ class StepDisturbance(Disturbance):
               env
               ):
         if self.step_offset is None:
-            self.current_step_offset = self.np_random.randint(self.max_step)
+            self.current_step_offset = self.np_random.integers(self.max_step)
         else:
             self.current_step_offset = self.step_offset
 
