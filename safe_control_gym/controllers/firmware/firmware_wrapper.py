@@ -219,7 +219,8 @@ class FirmwareWrapper(BaseController):
         '''
         self._process_command_queue(sim_time)
         
-        
+        total_reward=0
+        break_violation_nums=0
         # Draws setpoint for debugging purposes 
         if self.verbose:
             if self.last_visualized_setpoint is not None:
@@ -230,11 +231,14 @@ class FirmwareWrapper(BaseController):
                     [self.setpoint.position.x, self.setpoint.position.y, self.setpoint.position.z],
                     p.getQuaternionFromEuler([0,0,0]),
                     physicsClientId=self.pyb_client)
-
+        i=1
+        # 500Hz 17-18
         while self.tick / self.firmware_freq < sim_time + self.ctrl_dt:
+            
             # Step the environment and print all returned information.
             obs, reward, done, info = self.env.step(action)
-            
+            total_reward+=reward
+            break_violation_nums += info['constraint_violation']
             # Get state values from pybullet
             cur_pos=np.array([obs[0], obs[2], obs[4]]) # global coord, m
             cur_vel=np.array([obs[1], obs[3], obs[5]]) # global coord, m/s
@@ -292,7 +296,9 @@ class FirmwareWrapper(BaseController):
                 done = True
 
             self.action = action 
-        return obs, reward, done, info, action
+            i+=1
+        # info['constraint_violation']=break_violation_nums
+        return obs, total_reward, done, info, action
 
 
     def _update_initial_state(self, obs):
@@ -494,6 +500,7 @@ class FirmwareWrapper(BaseController):
             rpy_rate (list): roll, pitch, yaw rates (rad/s)
             timestep (float): simulation time when command is sent (s)
         """
+        
         self.command_queue += [['_sendFullStateCmd', [pos, vel, acc, yaw, rpy_rate, timestep]]]
 
 
@@ -631,7 +638,7 @@ class FirmwareWrapper(BaseController):
         """
         self.command_queue += [['_sendStopCmd', []]]
     def _sendStopCmd(self):
-        print(f"INFO_{self.tick}: Stop command sent.")
+        # print(f"INFO_{self.tick}: Stop command sent.")
         firm.crtpCommanderHighLevelStop()
         self.full_state_cmd_override = False
         
@@ -647,7 +654,7 @@ class FirmwareWrapper(BaseController):
         """
         self.command_queue += [['_sendGotoCmd', [pos, yaw, duration_s, relative]]]
     def _sendGotoCmd(self, pos, yaw, duration_s, relative):
-        print(f"INFO_{self.tick}: Go to command sent.")
+        # print(f"INFO_{self.tick}: Go to command sent.")
         firm.crtpCommanderHighLevelGoTo(*pos, yaw, duration_s, relative)
         self.full_state_cmd_override = False
 

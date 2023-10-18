@@ -149,3 +149,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+competition/logs/
+competition/results/
+*.png
+competition/pretrain_models/
+*.npy
+competition/models/

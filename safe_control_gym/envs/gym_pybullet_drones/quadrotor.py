@@ -353,6 +353,10 @@ class Quadrotor(BaseAviary):
         else:
             self.DONE_ON_COMPLETION = False
 
+
+        ## 
+        self.last_state=None
+
     def reset(self):
         """(Re-)initializes the environment to start an episode.
 

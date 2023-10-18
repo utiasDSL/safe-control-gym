@@ -259,7 +259,8 @@ def timing_step(function):
         args[0].interstep_learning_time += elapsed
         args[0].interstep_learning_occurrences += 1
         if elapsed >= args[0].CTRL_TIMESTEP:
-            print('\n[WARNING] Function "{}" took: {} sec (too slow)'.format(function.__name__, elapsed))
+            # print('\n[WARNING] Function "{}" took: {} sec (too slow)'.format(function.__name__, elapsed))
+            pass
         if args[0].VERBOSE and args[0].interstep_counter%int(args[0].CTRL_FREQ/2) == 0:
             print('\n{}-th call to function "{}" took: {} sec'.format(args[0].interstep_counter, function.__name__, elapsed))
         return result
