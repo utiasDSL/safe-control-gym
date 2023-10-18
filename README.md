@@ -274,7 +274,7 @@ Congratulations to the winning teams!
 ## A Discussion on the Competition
 
 ```bibtex
-@article{brunke2021safe,
+@article{teetaert2023irosslc,
          title={A Remote Sim2real Aerial Competition: Fostering Reproducibility and Solutions’ Diversity in Robotics Challenges},
          author={Teetaert, Spencer and Zhao, Wenda and Xinyuan, Niu and Zahir, Hashir and Leong, Huiyu and Hidalgo, Michel and Puga, Gerardo and Lorente, Tomas and Espinosa, Nahuel and Carrasco, John Alejandro Duarte and Zhang, Kaizheng and Di, Jian and Jin, Tao and Li, Xiaohan and Zhou, Yijia and Liang, Xiuhua and Zhang, Chenxu and Loquercio, Antonio and Zhou, Siqi and Brunke, Lukas and Greeff, Melissa and Hönig, Wolfgang and Panerati, Jacopo and Schoellig, Angela P.},
          journal={arXiv preprint arXiv:2308.16743},
