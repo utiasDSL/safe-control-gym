@@ -271,6 +271,10 @@ Congratulations to the winning teams!
 
 [![video](https://img.youtube.com/vi/C6PZYJ5R1MI/maxresdefault.jpg)](https://www.youtube.com/watch?v=C6PZYJ5R1MI)
 
+## Competition Discussion
+
+"A Remote Sim2real Aerial Competition: Fostering Reproducibility and Solutions’ Diversity in Robotics Challenges" https://arxiv.org/pdf/2308.16743.pdf
+
 ## Organizers
 
 - Angela Schoellig (Technische Universität München, University of Toronto, Vector Institute)
