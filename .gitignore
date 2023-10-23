@@ -16,6 +16,7 @@ hpo_strategy_study*/
 *.jpg
 *.pickle
 *.pkl
+fig/
 
 
 # macOS users
