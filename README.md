@@ -60,12 +60,6 @@ The results for toy examples in the paper can be reproduced in [`toy_example.ipy
 
 ### Reinforcement Learning
 
-To run hyperparameter optimization (HPO) for GP-MPC, run:
-
-```bash
-bash experiments/comparisons/rl/main.sh hostx TPESampler gp_mpc cartpole stab False
-```
-
 To run hyperparameter optimization (HPO) for DDPG, run:
 
 ```bash
@@ -82,6 +76,14 @@ To run hyperparameter optimization (HPO) for SAC, run:
 
 ```bash
 bash experiments/comparisons/rl/main.sh hostx TPESampler sac cartpole stab False
+```
+
+### Learning-Based Control
+
+To run hyperparameter optimization (HPO) for GP-MPC, run:
+
+```bash
+bash experiments/comparisons/rl/main.sh hostx TPESampler gp_mpc cartpole stab False
 ```
 
 #### Note
