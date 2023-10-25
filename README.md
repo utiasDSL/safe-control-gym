@@ -83,7 +83,7 @@ bash experiments/comparisons/rl/main.sh hostx TPESampler sac cartpole stab False
 To run hyperparameter optimization (HPO) for GP-MPC, run:
 
 ```bash
-bash experiments/comparisons/rl/main.sh hostx TPESampler gp_mpc cartpole stab False
+bash experiments/comparisons/gpmpc/main.sh hostx TPESampler cartpole stab False
 ```
 
 #### Note
