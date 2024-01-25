@@ -1,4 +1,4 @@
-'''A LQR and iLQR example.'''
+'''An MPC and Linear MPC example.'''
 
 import os
 import pickle
@@ -16,7 +16,7 @@ from safe_control_gym.utils.registration import make
 
 
 def run(gui=True, n_episodes=1, n_steps=None, save_data=False):
-    '''The main function running LQR and iLQR experiments.
+    '''The main function running MPC and Linear MPC experiments.
 
     Args:
         gui (bool): Whether to display the gui and plot graphs.

@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# LQR Experiment.
+# MPC and Linear MPC Experiment.
 
-SYS='cartpole'
+#SYS='cartpole'
 #SYS='quadrotor_2D'
-#SYS='quadrotor_3D'
+SYS='quadrotor_3D'
 
 #TASK='stabilization'
 TASK='tracking'
