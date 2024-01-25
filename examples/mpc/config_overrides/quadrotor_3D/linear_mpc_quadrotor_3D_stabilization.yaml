@@ -25,4 +25,4 @@ algo_config:
     randomize_prior_prop: False
     prior_prop_rand_info: null
   warmstart: True
-  solver: qrqp 
+  solver: qrqp

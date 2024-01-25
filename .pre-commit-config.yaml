@@ -26,7 +26,7 @@ repos:
     -   id: double-quote-string-fixer
 
 -   repo: https://github.com/pycqa/isort
-    rev: 5.12.0
+    rev: 5.13.2
     hooks:
       - id: isort
         name: isort
@@ -45,7 +45,7 @@ repos:
         files: (^tests/|^safe_control_gym/math_and_models/transformations.py)
 
 -   repo: https://github.com/PyCQA/flake8
-    rev: 6.1.0
+    rev: 7.0.0
     hooks:
     -   id: flake8
         name: flake8_default
