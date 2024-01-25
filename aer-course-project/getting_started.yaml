@@ -7,7 +7,7 @@ verbose: False # Boolean passed to the Controller class, can be used to turn on 
 # Thus, only scenarios that meet these constraints are suitable for sim2real experiments
 
 # Environment
-quadrotor_config:
+quadrotor_config:git config --global user.name "Your Name"
   seed: 1337 # Random seed
   reseed_on_reset: True # Whether to re-seed the random number generator between episodes
   gui: True # Whether to spawn PyBullet's GUI
@@ -32,9 +32,9 @@ quadrotor_config:
 
   # Nominal (pre-randomization) initial state
   init_state:
-    init_x: -1.0
+    init_x: -2.0 #-1.0
     init_x_dot: 0
-    init_y: -3.0
+    init_y: -2.0
     init_y_dot: 0
     init_z: 0.03
     init_z_dot: 0
