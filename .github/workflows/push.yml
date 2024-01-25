@@ -25,7 +25,7 @@ jobs:
       run: |
         pre-commit install
         pre-commit autoupdate
-        pre-commit run
+        pre-commit run --all
     - name: Unit tests
       run: |
         python -m pytest tests/
