@@ -1,0 +1,186 @@
+# Configuration
+num_episodes: 1 # Customizable number of episodes (NOTE: solutions that require fewer episode will receive higher scores)
+use_firmware: False # Whether to use pycffirmware or not (NOTE: only set to False for debugging purposes)
+verbose: False # Boolean passed to the Controller class, can be used to turn on and off additional printouts
+
+# Note: DSL's flyable/usable space in Toronto extends from -3 to +3 meters in x and y and 0 and 2 meters in z
+# Thus, only scenarios that meet these constraints are suitable for sim2real experiments
+
+# Environment
+quadrotor_config:
+  seed: 1337 # Random seed
+  reseed_on_reset: True # Whether to re-seed the random number generator between episodes
+  gui: True # Whether to spawn PyBullet's GUI
+  camera_view: [8, 0, -89, 0.0, 0.0, 0.0] # Distance, yaw, pitch, x, y, z target position 
+
+  # top-down camera view [5, 0, 275, 0.5, -1, 0.5]
+
+  ctrl_freq: 100 # Frequency of the controller's decision making
+  pyb_freq: 500 # If `use_firmware` == True, must be multiple of 500, otherwise it must be multiple of ctrl_freq
+  episode_len_sec: 100  # Maximum episode duration, in seconds
+
+  done_on_violation: False # Whether `done` becomes True when a constraint is violated
+  done_on_completion: False # Whether `done` becomes True when the task is completed (traveled all gates and 2'' hover at stabilization_goal)
+  done_on_collision: True # Whether `done` becomes True when a collision happens
+  cost: competition  # Sparse reward function, if you desire, re-implement it in Quadrotor._get_reward()
+                     # github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/safe_control_gym/envs/gym_pybullet_drones/quadrotor.py
+  
+  task: stabilization
+  task_info:
+    stabilization_goal: [1.0, 1.0, 1.0]  # Final goal (target position in x-y-z)
+    stabilization_goal_tolerance: 0.3
+
+  # Nominal (pre-randomization) initial state
+  # Tips for lab2: 
+  # (1) init_x specifies the drone's initial x-axis position as well as the radius of the circle
+  # init_y_dot specifies the drone's initial velocoty as well as the reference speed to track the circle
+  # You can set it to a smaller value at the beginning to facilitate the PD tunning, but you should change it back later
+  init_state:
+    init_x: 3.0 # radius
+    init_x_dot: 0
+    init_y: 0.0
+    init_y_dot: 4.0 # speed
+    init_z: 1.0
+    init_z_dot: 0
+    init_phi: 0
+    init_theta: 0
+    init_psi: 0
+    init_p: 0
+    init_q: 0
+    init_r: 0
+
+  # Nominal (pre-randomization) positions of gates and obstacles
+  # yaw: 1.57 rad --> 90 degree
+  # type (0: `tall` obstacle, 1: `low` obstacle)
+  # NOTE: please do not modify the sequence of the original gates and obstacles defined below
+  gates:
+    [  # x, y, z, r, p, y, type 
+      # [ 0.5, -2.5, 0, 0, 0, -1.57, 0],      # gate 1
+      # [ 2.0, -1.5, 0, 0, 0, 0,     0],      # gate 2
+      # [ 0.0,  0.2, 0, 0, 0, 1.57,  0],      # gate 3
+      # [-0.5,  1.5, 0, 0, 0, 0,     0]       # gate 4
+    ]
+  obstacles:
+    [  # x, y, z, r, p, y
+      # [ 1.5, -2.5, 0, 0, 0, 0],             # obstacle 1
+      # [ 0.5, -1.0, 0, 0, 0, 0],             # obstacle 2
+      # [ 1.5,    0, 0, 0, 0, 0],             # obstacle 3
+      # [-1.0,    0, 0, 0, 0, 0]              # obstacle 4
+    ]
+
+  # Randomization of the initial state
+  randomized_init: False
+  init_state_randomization_info:
+    init_x: 
+      distrib: "uniform"
+      low: -0.1
+      high: 0.1
+    init_y: 
+      distrib: "uniform"
+      low: -0.1
+      high: 0.1
+    init_z:
+      distrib: "uniform"
+      low: 0.0
+      high: 0.02
+    init_phi:
+      distrib: "uniform"
+      low: -0.1
+      high: 0.1
+    init_theta:
+      distrib: "uniform"
+      low: -0.1
+      high: 0.1
+    init_psi:
+      distrib: "uniform"
+      low: -0.1
+      high: 0.1
+
+  # Randomization of the quadrotor inertial properties
+  randomized_inertial_prop: False
+  inertial_prop_randomization_info:
+    M:
+      distrib: "uniform"
+      low: -0.01
+      high: 0.01
+    Ixx:
+      distrib: "uniform"
+      low: -0.000001
+      high: 0.000001
+    Iyy:
+      distrib: "uniform"
+      low: -0.000001
+      high: 0.000001
+    Izz:
+      distrib: "uniform"
+      low: -0.000001
+      high: 0.000001
+
+  # Randomization of the gates and obstacles positions
+  randomized_gates_and_obstacles: True
+  gates_and_obstacles_randomization_info:
+    gates:
+      distrib: "uniform"
+      low: -0.0
+      high: 0.0
+    obstacles:
+      distrib: "uniform"
+      low: -0.2
+      high: 0.2
+
+  # Constraints in x,y,z dimension
+  constraints:
+    # Input constraints
+    - constraint_form: default_constraint
+      constrained_variable: input
+    # State constraints
+    - constraint_form: bounded_constraint
+      constrained_variable: state
+      active_dims: [0, 2, 4] # The uncommented entries in the upper_bounds/lower_bounds vectors below
+      upper_bounds:
+      - 10.0     # x
+      # - 100 # x_dot
+      - 10.0     # y
+      # - 100 # y_dot
+      - 2     # z
+      # - 100 # z_dot
+      # - 3   # phi
+      # - 3   # theta
+      # - 3   # psi
+      # - 10  # p
+      # - 10  # q
+      # - 10  # r
+      lower_bounds:
+      - -10.0     # x
+      # - -100 # x_dot
+      - -10.0     # y
+      # - -100 # y_dot
+      - -0.1   # z
+      # - -100 # z_dot
+      # - -3   # phi
+      # - -3   # theta
+      # - -3   # psi
+      # - -10  # p
+      # - -10  # q
+      # - -10  # r
+
+  # Disturbances
+  disturbances:
+    # Additive noise on the commanded input action
+    action:
+      - disturbance_func: white_noise
+        std: 0.001
+    # Random external force applied to the quadrotor (e.g. a push or wind)
+    dynamics:
+      - disturbance_func: uniform
+        low: [-0.1, -0.1, -0.1]
+        high: [0.1, 0.1, 0.1]
+
+
+
+  # Do NOT edit
+  quad_type: 3  # 3D quadrotor
+  info_in_reset: True # Info dictionary as second return value (after the initial observation) of env.reset()
+  normalized_rl_action_space: False
+  done_on_out_of_bound: False
+
