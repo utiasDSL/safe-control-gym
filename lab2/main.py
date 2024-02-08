@@ -145,7 +145,7 @@ def run(test=False):
         # Get reference pos, vel, acc from the circle trajectory
         target_pos, target_vel, target_acc = ctrl.getRef(curr_time, obs, reward, done, info)
         # TODO: implement the geometric controller in the computeAction function
-        action = ctrl.computeAction(obs, target_pos, target_vel, target_acc)
+        action, pos_e = ctrl.computeAction(obs, target_pos, target_vel, target_acc)
         # Get new observation after taking the computed actions
         obs, reward, done, info = env.step(action)
 
