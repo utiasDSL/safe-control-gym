@@ -153,3 +153,6 @@ dmypy.json
 aer-course-project/edit_this_original.py
 
 aer-course-project/PlanningAlgorithm/
+
+# Local settings
+.idea/
