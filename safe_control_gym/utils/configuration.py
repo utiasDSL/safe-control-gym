@@ -16,8 +16,8 @@ class ConfigFactory:
 
     """
 
-    def __init__(self):
-        self.parser = argparse.ArgumentParser(description="Benchmark")
+    def __init__(self, run_file='main.py'):
+        self.parser = argparse.ArgumentParser(description="Benchmark", prog=run_file)
         self.add_arguments()
         self.base_dict = dict(
             tag="temp",
@@ -55,12 +55,12 @@ class ConfigFactory:
                           type=str,
                           help="override key-value pairs")
 
-    def merge(self, config_override=None):
+    def merge(self, args=['--overrides', './lab2.yaml'], config_override=None):
         """Creates experiment config object from command line and config files.
 
         """
         config_dict = self.base_dict
-        args, _ = self.parser.parse_known_args()
+        args, _ = self.parser.parse_known_args(args=args)
         if config_override is not None:
             args.overrides = config_override
 
@@ -84,7 +84,7 @@ class ConfigFactory:
             kv_dict = {}
             for kv in args.kv_overrides:
                 k, v = kv.split("=")
-                try:   
+                try:
                     v = eval(v)  # String as a python expression.
                 except:
                     pass  # Normal python string.
