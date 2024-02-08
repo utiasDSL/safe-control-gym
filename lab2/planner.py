@@ -61,14 +61,14 @@ class Controller():
                 [x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p, q, r].
             initial_info (dict): The a priori information as a dictionary with keys
                 'symbolic_model', 'nominal_physical_parameters', 'nominal_gates_pos_and_type', etc.
-            use_firmware (bool, optional): Choice between the on-board controll in `pycffirmware`
+            use_firmware (bool, optional): Choice between the on-board control in `pycffirmware`
                 or simplified software-only alternative.
             buffer_size (int, optional): Size of the data buffers used in method `learn()`.
             verbose (bool, optional): Turn on and off additional printouts and plots.
 
         """
         # [initial_info["x_reference"][0], initial_info["x_reference"][2], initial_info["x_reference"][4]]
-        self.tolerance =  initial_info["tracking_tolerance"]
+        self.tolerance = 0.1
         self.radius = circle_radius
         # Save environment and control parameters.
         self.CTRL_TIMESTEP = initial_info["ctrl_timestep"]
