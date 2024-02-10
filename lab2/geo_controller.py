@@ -9,8 +9,6 @@ from scipy.spatial.transform import Rotation
 from enum import Enum
 from functools import wraps
 
-K_p = 10
-K_d = 5
 small_g = 9.8078
 
 
@@ -27,7 +25,9 @@ class GeoController:
                  pwm2rpm_scale: float = 0.2685,
                  pwm2rpm_const: float = 4070.3,
                  min_pwm: float = 20000,
-                 max_pwm: float = 65535
+                 max_pwm: float = 65535,
+                 k_p: float = 1.0,
+                 k_d: float = 1.0,
                  ):
         """Common control classes __init__ method.
 
@@ -60,6 +60,8 @@ class GeoController:
         self.last_rpy = np.zeros(3)
         self.last_pos_e = np.zeros(3)
         self.control_counter = 0
+        self.k_p = k_p
+        self.k_d = k_d
 
     def reset(self):
         """Resets the control classes.
@@ -140,7 +142,7 @@ class GeoController:
         vel_e = target_vel - cur_vel
 
         # ---------Compute the desired acceleration command--------#
-        feedback_acc = K_p * pos_e + K_d * vel_e
+        feedback_acc = self.k_p * pos_e + self.k_d * vel_e
         gravity_counter_acc = np.array([0, 0, small_g])
         desired_acc = feedback_acc + target_acc + gravity_counter_acc
 

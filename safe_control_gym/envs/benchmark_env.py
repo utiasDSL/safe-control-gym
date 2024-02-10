@@ -75,6 +75,8 @@ class BenchmarkEnv(gym.Env):
                  ctrl_freq: int = 50,
                  episode_len_sec: int = 5,
                  position_tolerance: float = 0.1,
+                 k_p: float = 1.0,
+                 k_d: float = 1.0,
                  # Initialization.
                  init_state=None,
                  randomized_init: bool = True,
@@ -152,6 +154,8 @@ class BenchmarkEnv(gym.Env):
         # Set timing constants.
         self.CTRL_FREQ = ctrl_freq
         self.POSITION_TOLERANCE = position_tolerance
+        self.K_P = k_p
+        self.K_D = k_d
         self.PYB_FREQ = pyb_freq
         if self.PYB_FREQ % self.CTRL_FREQ != 0:
             raise ValueError("[ERROR] in BenchmarkEnv.__init__(), pyb_freq is not divisible by env_freq.")
