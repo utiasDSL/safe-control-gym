@@ -9,7 +9,7 @@ from experiments.comparisons.rl.rl_experiment import hpo, train
 from safe_control_gym.hyperparameters.database import create, drop
 
 @pytest.mark.parametrize('SYS', ['cartpole', 'quadrotor'])
-@pytest.mark.parametrize('TASK',['stab'])
+@pytest.mark.parametrize('TASK',['stab', 'track'])
 @pytest.mark.parametrize('ALGO',['ppo', 'sac'])
 @pytest.mark.parametrize('PRIOR',[''])
 def test_train(SYS, TASK, ALGO, PRIOR):
@@ -33,8 +33,9 @@ def test_train(SYS, TASK, ALGO, PRIOR):
                         f'./experiments/comparisons/rl/{ALGO}/config_overrides/{SYS}/{ALGO}_{SYS}_{PRIOR}.yaml',
                     '--output_dir', output_dir,
                     '--tag', 's1',
-                    '--opt_hps',
-                    './experiments/comparisons/rl/ppo/hpo/hpo_strategy_study_TPESampler/run1_s1/seed8_Jul-19-16-29-41_b40566c/hpo/hyperparameters_139.8787.yaml',
+                    # uncomment the following two lines to use the result of HPO
+                    # '--opt_hps',
+                    # './experiments/comparisons/rl/ppo/hpo/hpo_strategy_study_TPESampler/run1_s1/seed8_Jul-19-16-29-41_b40566c/hpo/hyperparameters_139.8787.yaml',
                     '--seed', '6',
                     '--use_gpu', 'True'
                     ]
