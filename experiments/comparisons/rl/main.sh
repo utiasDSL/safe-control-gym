@@ -4,9 +4,9 @@ cd ~/safe-control-gym
 
 localOrHost=$1 # hostx or host0
 sampler=$2 # RandomSampler or TPESampler
-algo=$3 # ppo, sac, or ddpg
-sys=$4 # cartpole, or quadrotor
-task=$5 # stab, or track
+algo=$3 # ppo, sac
+sys=$4 # cartpole
+task=$5 # stab
 resume=$6 # True or False
 
 hpo_runs=(1 2 3)

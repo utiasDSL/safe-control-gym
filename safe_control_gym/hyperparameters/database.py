@@ -1,5 +1,5 @@
 """
-  This script already assumes that mysql server is up and hard coded user without password was added.
+  This script already assumes that mysql server is up and hard coded user 'optuna' without password was added.
   Requirement:
     * pip install mysql-connector-python
 

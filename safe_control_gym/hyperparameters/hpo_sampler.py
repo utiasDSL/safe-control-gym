@@ -21,12 +21,7 @@ PPO_dict = {
         "opt_epochs": [1, 5, 10, 20],
         "mini_batch_size": [32, 64, 128],
         "rollout_steps": [50, 100, 150, 200],
-        "max_env_steps": [30000, 54000, 72000], # to make sure having the same checkpoint at these steps [30000, 54000, 72000]
-        # below are hps for learning with prior
-        "discount_steps": [10, 20, 40],
-        "improving_factor": [1.1, 1.2, 1.3, 1.4],
-        "breaking_steps": [9000, 10000, 11000],
-        "eval_every": [3, 5, 7]
+        "max_env_steps": [30000, 72000, 216000], # to make sure having the checkpoint at these steps [30000, 72000, 216000]
     },
     "float": { # note that in float type, you must specify the upper and lower bound
         "target_kl": [0.00000001, 0.8],
@@ -42,46 +37,17 @@ SAC_dict = {
         "gamma": [0.9, 0.95, 0.98, 0.99, 0.995, 0.999, 0.9999],
         "train_interval": [10, 100, 1000], # should be divisible by max_env_steps
         "train_batch_size": [32, 64, 128, 256, 512],
-        "max_env_steps": [30000, 54000, 72000], # to make sure having the same checkpoint at these steps [30000, 54000, 72000]
+        "max_env_steps": [30000, 72000, 216000], # to make sure having the checkpoint at these steps [30000, 72000, 216000]
         "warm_up_steps": [500, 1000, 2000, 4000],
     },
     "float": { # note that in float type, you must specify the upper and lower bound
         "tau": [0.005, 1.0],
         "actor_lr": [1e-5, 1],
         "critic_lr": [1e-5, 1],
-    }
-}
-DDPG_dict = {
-    "categorical": {
-        "hidden_dim": [32, 64, 128, 256, 512],
-        "activation": ['tanh', 'relu', 'leaky_relu'],
-        "gamma": [0.9, 0.95, 0.98, 0.99, 0.995, 0.999, 0.9999],
-        "train_interval": [10, 100, 1000], # should be divisible by max_env_steps
-        "train_batch_size": [32, 64, 128, 256, 512],
-        "max_env_steps": [30000, 54000, 72000], # to make sure having the same checkpoint at these steps [30000, 54000, 72000]
-        "warm_up_steps": [500, 1000, 2000, 4000],
-    },
-    "float": { # note that in float type, you must specify the upper and lower bound
-        "tau": [0.005, 1.0],
-        "actor_lr": [1e-5, 1],
-        "critic_lr": [1e-5, 1],
-    }
-}
-GPMPC_dict = {
-    "categorical": {
-        "horizon": [10, 15, 20, 25, 30, 35],
-        "kernel": ['Matern', 'RBF'],
-        "n_ind_points": [30, 40, 50], # number should lower 0.8 * MIN(num_samples) if 0,2 is test_data_ratio
-        "num_epochs": [4, 5, 6, 7, 8],
-        "num_samples": [70, 75, 80, 85],
-        "optimization_iterations": [2800, 3000, 3200], # to make sure having the same checkpoint at these steps [30000, 54000, 72000]
-    },
-    "float": { # note that in float type, you must specify the upper and lower bound
-        "learning_rate": [5e-4, 0.5],
     }
 }
 
-def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, prior=False) -> Dict[str, Any]:
+def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]:
     """Sampler for PPO hyperparameters.
     
     args:
@@ -105,16 +71,7 @@ def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, prior=False) -> D
     target_kl = trial.suggest_float("target_kl", PPO_dict['float']['target_kl'][0], PPO_dict['float']['target_kl'][1], log=True)
     # Entropy coefficient for the loss calculation
     entropy_coef = trial.suggest_float("entropy_coef", PPO_dict['float']['entropy_coef'][0], PPO_dict['float']['entropy_coef'][1], log=True)
-
-    # check local variables 'prior' is true
-    if prior:
-        # prior learning args
-        discount_steps = trial.suggest_categorical("discount_steps", PPO_dict['categorical']['discount_steps'])
-        improving_factor = trial.suggest_categorical("improving_factor", PPO_dict['categorical']['improving_factor'])
-        breaking_steps = trial.suggest_categorical("breaking_steps", PPO_dict['categorical']['breaking_steps'])
-        eval_every = trial.suggest_categorical("eval_every", PPO_dict['categorical']['eval_every'])
     
-
     # optim args
     opt_epochs = trial.suggest_categorical("opt_epochs", PPO_dict['categorical']['opt_epochs'])
     mini_batch_size = trial.suggest_categorical("mini_batch_size", PPO_dict['categorical']['mini_batch_size'])
@@ -135,51 +92,29 @@ def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, prior=False) -> D
     # Orthogonal initialization
     # ortho_init = False
     # ortho_init = trial.suggest_categorical('ortho_init', [False, True])
-    if prior:
-        hps_suggestion = {
-                            "hidden_dim": hidden_dim,
-                            "activation": activation,
-                            "gamma": gamma,
-                            "gae_lambda": gae_lambda,
-                            "clip_param": clip_param,
-                            "target_kl": target_kl,
-                            "entropy_coef": entropy_coef,
-                            "opt_epochs": opt_epochs,
-                            "mini_batch_size": mini_batch_size,
-                            "actor_lr": actor_lr,
-                            "critic_lr": critic_lr,
-                            # "max_grad_norm": max_grad_norm, (currently not implemented in PPO controller)
-                            "max_env_steps": max_env_steps,
-                            "rollout_steps": rollout_steps,
-                            # below are learning with prior hps
-                            "discount_steps": discount_steps,
-                            "improving_factor": improving_factor,
-                            "breaking_steps": breaking_steps,
-                            "eval_every": eval_every,
-                        }
-    else:
-        hps_suggestion = {
-                            "hidden_dim": hidden_dim,
-                            "activation": activation,
-                            "gamma": gamma,
-                            "gae_lambda": gae_lambda,
-                            "clip_param": clip_param,
-                            "target_kl": target_kl,
-                            "entropy_coef": entropy_coef,
-                            "opt_epochs": opt_epochs,
-                            "mini_batch_size": mini_batch_size,
-                            "actor_lr": actor_lr,
-                            "critic_lr": critic_lr,
-                            # "max_grad_norm": max_grad_norm, (currently not implemented in PPO controller)
-                            "max_env_steps": max_env_steps,
-                            "rollout_steps": rollout_steps,
-                        }
+
+    hps_suggestion = {
+                        "hidden_dim": hidden_dim,
+                        "activation": activation,
+                        "gamma": gamma,
+                        "gae_lambda": gae_lambda,
+                        "clip_param": clip_param,
+                        "target_kl": target_kl,
+                        "entropy_coef": entropy_coef,
+                        "opt_epochs": opt_epochs,
+                        "mini_batch_size": mini_batch_size,
+                        "actor_lr": actor_lr,
+                        "critic_lr": critic_lr,
+                        # "max_grad_norm": max_grad_norm, (currently not implemented in PPO controller)
+                        "max_env_steps": max_env_steps,
+                        "rollout_steps": rollout_steps,
+                    }
 
     assert len(hps_suggestion) == len(hps_dict), ValueError("We are optimizing over different number of HPs as you listed.")
     
     return hps_suggestion
 
-def sac_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, prior=False) -> Dict[str, Any]:
+def sac_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]:
     """Sampler for SAC hyperparameters.
     
     args:
@@ -187,8 +122,6 @@ def sac_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, prior=False) -> D
         trial: budget variable
 
     """
-    
-    assert not prior, ValueError("SAC does not have hyperparameters of learning with prior.")
 
     # TODO: conditional hyperparameters
 
@@ -227,104 +160,13 @@ def sac_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, prior=False) -> D
     
     return hps_suggestion
 
-def ddpg_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, prior=False) -> Dict[str, Any]:
-    """Sampler for DDPG hyperparameters.
-    
-    args:
-        hps_dict: the dict of hyperparameters that will be optimized over
-        trial: budget variable
-
-    """
-    
-    assert not prior, ValueError("DDPG does not have hyperparameters of learning with prior.")
-
-    # TODO: conditional hyperparameters
-
-    # model args
-    hidden_dim = trial.suggest_categorical("hidden_dim", DDPG_dict['categorical']['hidden_dim'])
-    activation = trial.suggest_categorical('activation', DDPG_dict['categorical']['activation'])
-
-    # loss args
-    gamma = trial.suggest_categorical("gamma", DDPG_dict['categorical']['gamma'])
-    tau = trial.suggest_float("tau", DDPG_dict['float']['tau'][0], DDPG_dict['float']['tau'][1], log=False)
-    
-    # optim args
-    train_interval = trial.suggest_categorical("train_interval", DDPG_dict['categorical']['train_interval'])
-    train_batch_size = trial.suggest_categorical("train_batch_size", DDPG_dict['categorical']['train_batch_size'])
-    actor_lr = trial.suggest_float("actor_lr", DDPG_dict['float']['actor_lr'][0], DDPG_dict['float']['actor_lr'][1], log=True)
-    critic_lr = trial.suggest_float("critic_lr", DDPG_dict['float']['critic_lr'][0], DDPG_dict['float']['critic_lr'][1], log=True)
-
-    max_env_steps = trial.suggest_categorical("max_env_steps", DDPG_dict['categorical']['max_env_steps'])
-    warm_up_steps = trial.suggest_categorical("warm_up_steps", DDPG_dict['categorical']['warm_up_steps'])
-    
-    
-    hps_suggestion = {
-                        "hidden_dim": hidden_dim,
-                        "activation": activation,
-                        "gamma": gamma,
-                        "tau": tau,
-                        "train_interval": train_interval,
-                        "train_batch_size": train_batch_size,
-                        "actor_lr": actor_lr,
-                        "critic_lr": critic_lr,
-                        "max_env_steps": max_env_steps,
-                        "warm_up_steps": warm_up_steps,
-                    }
-
-    assert len(hps_suggestion) == len(hps_dict), ValueError("We are optimizing over different number of HPs as you listed.")
-    
-    return hps_suggestion
-
-def gpmpc_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, prior=False) -> Dict[str, Any]:
-    """Sampler for PPO hyperparameters.
-    
-    args:
-        hps_dict: the dict of hyperparameters that will be optimized over
-        trial: budget variable
-
-    """
-
-    horizon = trial.suggest_categorical("horizon", GPMPC_dict['categorical']['horizon'])
-    kernel = trial.suggest_categorical('kernel', GPMPC_dict['categorical']['kernel'])
-    n_ind_points = trial.suggest_categorical("n_ind_points", GPMPC_dict['categorical']['n_ind_points'])
-    num_epochs = trial.suggest_categorical("num_epochs", GPMPC_dict['categorical']['num_epochs'])
-    num_samples = trial.suggest_categorical("num_samples", GPMPC_dict['categorical']['num_samples'])
-
-    # get dimensions of the dynamics
-    d = len(hps_dict['learning_rate'])
-    assert d == len(hps_dict['optimization_iterations']), 'The number of optimization iterations must be the same as the number of learning rates.'
-    
-    # use same setting for all dimensions for simplicity
-    optimization_iterations, learning_rate = [], []
-
-    optimization_iterations = d*[trial.suggest_categorical("optimization_iterations", GPMPC_dict['categorical']['optimization_iterations'])]
-    learning_rate = d*[trial.suggest_float("learning_rate", GPMPC_dict['float']['learning_rate'][0], GPMPC_dict['float']['learning_rate'][1], log=True)]
-
-    hps_suggestion = {
-                        "horizon": horizon,
-                        "kernel": kernel,
-                        "n_ind_points": n_ind_points,
-                        "num_epochs": num_epochs,
-                        "num_samples": num_samples,
-                        "optimization_iterations": optimization_iterations,
-                        "learning_rate": learning_rate,
-                    }
-
-    assert len(hps_suggestion) == len(hps_dict), ValueError("We are optimizing over different number of HPs as you listed.")
-    
-    return hps_suggestion
-
 
 HYPERPARAMS_SAMPLER = {
     "ppo": ppo_sampler,
     "sac": sac_sampler,
-    "ddpg": ddpg_sampler,
-    "gp_mpc": gpmpc_sampler,
 }
 
 HYPERPARAMS_DICT = {
     "ppo": PPO_dict,
     "sac": SAC_dict,
-    "ddpg": DDPG_dict,
-    "gp_mpc": GPMPC_dict,
 }

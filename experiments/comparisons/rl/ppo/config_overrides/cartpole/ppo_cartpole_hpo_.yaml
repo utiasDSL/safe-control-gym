@@ -1,27 +1,20 @@
 hpo_config:
   
-  # do hyperparameter optimization
-  hpo: True
-  load_if_exists: True
-  # yield perturbed hps as yaml files
-  perturb_hps: True
-  # if the perturbed hps are float, divide the interval by this number
-  divisor: 10
-  side_perturb_num: 2 # number of perturbed hps to yield. ex: lr = [x-2dx, x-dx, x, x+dx, x+2dx] if it is set to 2
-  objective: [performance] # [performance, efficiency]
+  hpo: True # do hyperparameter optimization
+  load_if_exists: True # this should set to True if hpo is run in parallel
+  objective: [performance] # [performance, another metric]
   direction: [maximize] # [maximize, maximize]
-  dynamical_runs: True # if True, dynamically increase runs
-  warm_trials: 30 # number of trials to run before dyamical runs
-  approximation_threshold: 5
-  repetitions: 3 # number of samples of performance for each objective query
-  alpha: 0.5 # significance level for CVaR
+  dynamical_runs: False # if True, dynamically increase runs
+  warm_trials: 20 # number of trials to run before dyamical runs
+  approximation_threshold: 5 # this is only used when dynamical_runs is True
+  repetitions: 5 # number of samples of performance for each objective query
+  alpha: 1 # significance level for CVaR
   use_gpu: True
   dashboard: False
   seed: 24
   save_n_best_hps: 3
   # budget
   trials: 80
-  prior: False # false will not consider the prior hps (learning with prior args)
   
   # hyperparameters
   hps_config:
