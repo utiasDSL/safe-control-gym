@@ -38,6 +38,25 @@ You may replace `{algo}` with `ppo` or `sac` in order to run the scripts.
 
 ### Usages
 
+#### Perform hyperparameter optimization
+
+Execute the following command for optimizing hyperparameters
+
+```bash
+python ./experiments/comparisons/rl/rl_experiment.py \
+                    '--algo', {algo}, \
+                    '--task', {sys}, \
+                    '--overrides', \
+                    ./experiments/comparisons/rl/config_overrides/{sys}/{sys}_{task}.yaml, \
+                    ./experiments/comparisons/rl/{algo}/config_overrides/{sys}/{algo}_{sys}_.yaml, \
+                    ./experiments/comparisons/rl/{algo}/config_overrides/{sys}/{algo}_{sys}_hpo_.yaml, \
+                    --output_dir, {output_dir}, \
+                    --seed, 7, \
+                    --use_gpu, True
+```
+
+You may replace `{sys}` with `carpole` in order to run the script.
+
 #### Train policy using optimized hyperparameters
 
 Execute the following command if optimized hyperparameters are given
@@ -54,35 +73,4 @@ python ./experiments/comparisons/rl/rl_experiment.py \
                     --task {sys} --seed 2 --use_gpu True
 ```
 
-You may replace `{sys}` with `carpole` in order to run the scripts. As an example, `{best_hp_file}` can be replaced with `experiments/comparisons/rl/sac/config_overrides/cartpole/hyperparameters_134.4275.yaml` for `sac`.
-
-### Reinforcement Learning
-
-To run hyperparameter optimization (HPO) for DDPG, run:
-
-```bash
-bash experiments/comparisons/rl/main.sh hostx TPESampler ddpg cartpole stab False
-```
-
-To run hyperparameter optimization (HPO) for PPO, run:
-
-```bash
-bash experiments/comparisons/rl/main.sh hostx TPESampler ppo cartpole stab False
-```
-
-To run hyperparameter optimization (HPO) for SAC, run:
-
-```bash
-bash experiments/comparisons/rl/main.sh hostx TPESampler sac cartpole stab False
-```
-
-### Learning-Based Control
-
-To run hyperparameter optimization (HPO) for GP-MPC, run:
-
-```bash
-bash experiments/comparisons/gpmpc/main.sh hostx TPESampler cartpole stab False
-```
-
-#### Note
-You may need to adjust the `path` of `conda.sh` in the sub-scripts called by `main.sh` such as `rl_hpo_strategy_eval.sh`.
+You may replace `{sys}` with `carpole` in order to run the script. As an example, `{best_hp_file}` can be replaced with `experiments/comparisons/rl/sac/config_overrides/cartpole/hyperparameters_134.4275.yaml` for `sac`.

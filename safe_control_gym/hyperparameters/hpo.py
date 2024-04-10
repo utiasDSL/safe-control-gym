@@ -174,6 +174,23 @@ class HPO(object):
         
         if self.load_study:
             self.study = optuna.load_study(study_name=self.study_name, storage="mysql+pymysql://optuna@localhost/{}".format(self.study_name))
+        elif self.hpo_config.use_database == False:
+            # single-objective optimization
+            if len(self.hpo_config.direction) == 1:
+                self.study = optuna.create_study(
+                                                direction=self.hpo_config.direction[0],
+                                                sampler=self.sampler,
+                                                pruner=optuna.pruners.MedianPruner(n_warmup_steps=10),
+                                                study_name=self.study_name,
+                                                )
+            # multi-objective optimization
+            else:
+                self.study = optuna.create_study(
+                                                directions=self.hpo_config.direction,
+                                                sampler=self.sampler,
+                                                pruner=optuna.pruners.MedianPruner(n_warmup_steps=10),
+                                                study_name=self.study_name,
+                                                )
         else:
             # single-objective optimization
             if len(self.hpo_config.direction) == 1:
@@ -217,20 +234,16 @@ class HPO(object):
                 params = trials[i].params
                 with open(f"{output_dir}/hyperparameters_{trials[i].value:.4f}.yaml", "w")as f:
                     yaml.dump(params, f, default_flow_style=False)
-                if self.hpo_config.perturb_hps:
-                    self._perturb_hps(params, f"{output_dir}/hyperparameters_{trials[i].value:.4f}")
         else:
             best_trials = self.study.best_trials
             for i in range(len(self.study.best_trials)):
                 params = best_trials[i].params
                 with open(f"{output_dir}/best_hyperparameters_[{best_trials[i].values[0]:.4f},{best_trials[i].values[1]:.4f}].yaml", "w")as f:
                     yaml.dump(params, f, default_flow_style=False)
-                if self.hpo_config.perturb_hps:
-                    self._perturb_hps(params, f"{output_dir}/best_hyperparameters_[{best_trials[i].values[0]:.4f},{best_trials[i].values[1]:.4f}]")
 
         # dashboard
-        if self.hpo_config.dashboard:
-            run_server("sqlite:///{}.db".format(self.study_name))
+        if self.hpo_config.dashboard and self.hpo_config.use_database:
+            run_server("mysql+pymysql://optuna@localhost/{}".format(self.study_name))
 
         # save plot
         try:
