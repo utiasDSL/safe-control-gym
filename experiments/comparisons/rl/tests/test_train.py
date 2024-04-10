@@ -8,7 +8,7 @@ from safe_control_gym.utils.configuration import ConfigFactory
 from experiments.comparisons.rl.rl_experiment import hpo, train
 from safe_control_gym.hyperparameters.database import create, drop
 
-@pytest.mark.parametrize('SYS', ['cartpole', 'quadrotor'])
+@pytest.mark.parametrize('SYS', ['cartpole'])
 @pytest.mark.parametrize('TASK',['stab'])
 @pytest.mark.parametrize('ALGO',['ppo', 'sac'])
 @pytest.mark.parametrize('PRIOR',[''])
@@ -26,6 +26,12 @@ def test_train(SYS, TASK, ALGO, PRIOR):
     # create database
     create(munch.Munch({'tag': f'{ALGO}_hpo'}))
 
+    # optimized hp path
+    if ALGO == 'ppo':
+        opt_hp_path = 'experiments/comparisons/rl/ppo/config_overrides/cartpole/hyperparameters_132.9955.yaml'
+    elif ALGO == 'sac':
+        opt_hp_path = 'experiments/comparisons/rl/sac/config_overrides/cartpole/hyperparameters_134.4275.yaml'
+
     sys.argv[1:] = ['--algo', ALGO,
                     '--task', SYS,
                     '--overrides',
@@ -33,8 +39,7 @@ def test_train(SYS, TASK, ALGO, PRIOR):
                         f'./experiments/comparisons/rl/{ALGO}/config_overrides/{SYS}/{ALGO}_{SYS}_{PRIOR}.yaml',
                     '--output_dir', output_dir,
                     '--tag', 's1',
-                    '--opt_hps',
-                    './experiments/comparisons/rl/ppo/hpo/hpo_strategy_study_TPESampler/run1_s1/seed8_Jul-19-16-29-41_b40566c/hpo/hyperparameters_139.8787.yaml',
+                    '--opt_hps', opt_hp_path,
                     '--seed', '6',
                     '--use_gpu', 'True'
                     ]

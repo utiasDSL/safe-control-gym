@@ -34,12 +34,27 @@ pip install optuna-dashboard
 ```
 
 
- You may replace `{algo}` with `gp_mpc`, `ppo`, `sac`, or `ddpg` in order to run the scripts.
+You may replace `{algo}` with `ppo` or `sac` in order to run the scripts.
 
-### Toy Examples
+### Usages
 
-The results for toy examples in the paper can be reproduced in [`toy_example.ipynb`](experiments/comparisons/rl/toy_example.ipynb)
+#### Train policy using optimized hyperparameters
 
+Execute the following command if optimized hyperparameters are given
+
+```bash
+python ./experiments/comparisons/rl/rl_experiment.py \
+                    --algo {algo} \
+                    --overrides \
+                    ./experiments/comparisons/rl/{algo}/config_overrides/cartpole/{algo}_{sys}_.yaml \
+                    ./experiments/comparisons/rl/config_overrides/{sys}/{sys}_{task}.yaml \
+                    --output_dir {output_dir} \
+                    --tag {run_name} \
+                    --opt_hps {best_hp_file} \
+                    --task {sys} --seed 2 --use_gpu True
+```
+
+You may replace `{sys}` with `carpole` in order to run the scripts. As an example, `{best_hp_file}` can be replaced with `experiments/comparisons/rl/sac/config_overrides/cartpole/hyperparameters_134.4275.yaml` for `sac`.
 
 ### Reinforcement Learning
 

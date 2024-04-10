@@ -1,0 +1,13 @@
+activation: leaky_relu
+actor_lr: 0.0007948148615930024
+clip_param: 0.1
+critic_lr: 0.007497368468753617
+entropy_coef: 0.00010753631441212628
+gae_lambda: 0.8
+gamma: 0.98
+hidden_dim: 32
+max_env_steps: 72000
+mini_batch_size: 128
+opt_epochs: 5
+rollout_steps: 150
+target_kl: 1.587713889686473e-07
