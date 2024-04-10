@@ -8,7 +8,7 @@ Create the environment by following the steps presented in the main
 [`README.md`](README.md)
 
 
-To perform hyperparmeter optimization, you may need `MySQL` database:
+To perform hyperparmeter optimization, you may need `MySQL` database (optional):
 
 ```bash
 sudo apt-get install mysql-server # MySQL server starts automatically after the installation
@@ -24,11 +24,16 @@ GRANT ALL ON {algo}_hpo.* TO optuna@"%";
 exit
 ```
 
-Addtionally, install the following packages:
+If `MySQL` database is used, install
 
 ```bash
 pip install mysql-connector-python
 pip install pymysql
+```
+
+For HPO, `optuna` is used, install the following packages:
+
+```bash
 pip install optuna
 pip install optuna-dashboard
 ```
@@ -44,9 +49,9 @@ Execute the following command for optimizing hyperparameters
 
 ```bash
 python ./experiments/comparisons/rl/rl_experiment.py \
-                    '--algo', {algo}, \
-                    '--task', {sys}, \
-                    '--overrides', \
+                    --algo, {algo}, \
+                    --task, {sys}, \
+                    --overrides, \
                     ./experiments/comparisons/rl/config_overrides/{sys}/{sys}_{task}.yaml, \
                     ./experiments/comparisons/rl/{algo}/config_overrides/{sys}/{algo}_{sys}_.yaml, \
                     ./experiments/comparisons/rl/{algo}/config_overrides/{sys}/{algo}_{sys}_hpo_.yaml, \
