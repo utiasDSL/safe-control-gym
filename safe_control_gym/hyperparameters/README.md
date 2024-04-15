@@ -48,13 +48,13 @@ You may replace `{algo}` with `ppo` or `sac` in order to run the scripts.
 Execute the following command for optimizing hyperparameters
 
 ```bash
-python ./experiments/comparisons/rl/rl_experiment.py \
+python ./examples/hpo/rl/rl_experiment.py \
                     --algo, {algo}, \
                     --task, {sys}, \
                     --overrides, \
-                    ./experiments/comparisons/rl/config_overrides/{sys}/{sys}_{task}.yaml, \
-                    ./experiments/comparisons/rl/{algo}/config_overrides/{sys}/{algo}_{sys}_.yaml, \
-                    ./experiments/comparisons/rl/{algo}/config_overrides/{sys}/{algo}_{sys}_hpo_.yaml, \
+                    ./examples/hpo/rl/config_overrides/{sys}/{sys}_{task}.yaml, \
+                    ./examples/hpo/rl/{algo}/config_overrides/{sys}/{algo}_{sys}_.yaml, \
+                    ./examples/hpo/rl/{algo}/config_overrides/{sys}/{algo}_{sys}_hpo_.yaml, \
                     --output_dir, {output_dir}, \
                     --seed, 7, \
                     --use_gpu, True
@@ -67,15 +67,15 @@ You may replace `{sys}` with `carpole` in order to run the script.
 Execute the following command if optimized hyperparameters are given
 
 ```bash
-python ./experiments/comparisons/rl/rl_experiment.py \
+python ./examples/hpo/rl/rl_experiment.py \
                     --algo {algo} \
                     --overrides \
-                    ./experiments/comparisons/rl/{algo}/config_overrides/cartpole/{algo}_{sys}_.yaml \
-                    ./experiments/comparisons/rl/config_overrides/{sys}/{sys}_{task}.yaml \
+                    ./examples/hpo/rl/{algo}/config_overrides/cartpole/{algo}_{sys}_.yaml \
+                    ./examples/hpo/rl/config_overrides/{sys}/{sys}_{task}.yaml \
                     --output_dir {output_dir} \
                     --tag {run_name} \
                     --opt_hps {best_hp_file} \
                     --task {sys} --seed 2 --use_gpu True
 ```
 
-You may replace `{sys}` with `carpole` in order to run the script. As an example, `{best_hp_file}` can be replaced with `experiments/comparisons/rl/sac/config_overrides/cartpole/hyperparameters_134.4275.yaml` for `sac`.
+You may replace `{sys}` with `carpole` in order to run the script. As an example, `{best_hp_file}` can be replaced with `examples/hpo/rl/sac/config_overrides/cartpole/optimized_hyperparameters.yaml` for `sac`.

@@ -153,7 +153,16 @@ class ZeroMeanIndependentGPModel(gpytorch.models.ExactGP):
         return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
 
 class BatchIndependentMultitaskGPModel(gpytorch.models.ExactGP):
+    '''Multidimensional Gaussian Process model with zero mean function.
+    '''
     def __init__(self, train_x, train_y, likelihood, kernel='RBF'):
+        '''Initialize a multidimensional Gaussian Process model with zero mean function.
+        
+        Args:
+            train_x (torch.Tensor): input training data (input_dim X N samples).
+            train_y (torch.Tensor): output training data (output dim x N samples).
+            likelihood (gpytorch.likelihood): Likelihood function (gpytorch.likelihoods.GaussianLikelihood with batch).
+        '''
         super().__init__(train_x, train_y, likelihood)
         self.mean_module = gpytorch.means.ZeroMean(batch_shape=torch.Size([train_y.shape[0]]))
         if kernel == 'RBF':
