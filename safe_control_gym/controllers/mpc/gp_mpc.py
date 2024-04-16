@@ -35,7 +35,6 @@ from safe_control_gym.controllers.mpc.gp_utils import (GaussianProcessCollection
 from safe_control_gym.controllers.mpc.linear_mpc import MPC, LinearMPC
 from safe_control_gym.controllers.mpc.mpc_utils import discretize_linear_system
 from safe_control_gym.envs.benchmark_env import Task
-from safe_control_gym.envs.constraints import GENERAL_CONSTRAINTS
 
 
 class GPMPC(MPC):
@@ -412,7 +411,8 @@ class GPMPC(MPC):
         Gamma_inv = torch.diag_embed(1 / Gamma)
         # TODO: Should inverse be used here instead? pinverse was more stable previsouly.
         Sigma_inv = K_zind_zind + K_x_zind.transpose(1, 2) @ Gamma_inv @ K_x_zind
-        Sigma = torch.pinverse(K_zind_zind + K_x_zind.transpose(1, 2) @ Gamma_inv @ K_x_zind)  # For debugging
+        # uncomment the following line for debugging
+        # Sigma = torch.pinverse(K_zind_zind + K_x_zind.transpose(1, 2) @ Gamma_inv @ K_x_zind)  # For debugging
         mean_post_factor = torch.zeros((dim_gp_outputs, n_ind_points))
         for i in range(dim_gp_outputs):
             mean_post_factor[i] = torch.linalg.solve(Sigma_inv[i], K_x_zind[i].T @ Gamma_inv[i] @

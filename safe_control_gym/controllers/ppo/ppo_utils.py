@@ -117,7 +117,7 @@ class PPOAgent:
         results = defaultdict(list)
         num_mini_batch = rollouts.max_length * rollouts.batch_size // self.mini_batch_size
         # assert if num_mini_batch is 0
-        assert num_mini_batch is not 0, 'num_mini_batch is 0'
+        assert num_mini_batch != 0, 'num_mini_batch is 0'
         for _ in range(self.opt_epochs):
             p_loss_epoch, v_loss_epoch, e_loss_epoch, kl_epoch = 0, 0, 0, 0
             for batch in rollouts.sampler(self.mini_batch_size, device):

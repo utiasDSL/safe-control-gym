@@ -149,8 +149,8 @@ def load_from_log_file(path):
     xk, yk = [k.strip() for k in lines[0].strip().split(',')]
     # Values.
     x, y = [], []
-    for l in lines[1:]:
-        data = l.strip().split(',')
+    for line in lines[1:]:
+        data = line.strip().split(',')
         x.append(float(data[0].strip()))
         y.append(float(data[1].strip()))
     x = np.array(x)
@@ -278,7 +278,7 @@ def plot_from_experiments(legend_dir_specs,
     assert scalar_name is not None, 'Must provide a scalar name to plot'
     # Get all stats.
     stats = defaultdict(list)
-    for l, dirs in legend_dir_specs.items():
+    for legend, dirs in legend_dir_specs.items():
         for d in dirs:
             # Pick from either log source (tensorboard or log text files).
             if use_tb_log:
@@ -293,7 +293,7 @@ def plot_from_experiments(legend_dir_specs,
             x, y = np.asarray(x), np.asarray(y)
             if window:
                 x, y = window_func(x, y, window, np.mean)
-            stats[l].append([x, y])
+            stats[legend].append([x, y])
     # Post-processing.
     x_max = float('inf')
     for _, runs in stats.items():
@@ -352,7 +352,9 @@ def get_log_dirs(all_logdirs,
             logdirs += [logdir]
         else:
             basedir = osp.dirname(logdir)
-            def fulldir(x): return osp.join(basedir, x)
+
+            def fulldir(x):
+                return osp.join(basedir, x)
             prefix = logdir.split(os.sep)[-1]
             listdir = os.listdir(basedir)
             logdirs += sorted([fulldir(x) for x in listdir if prefix in x])

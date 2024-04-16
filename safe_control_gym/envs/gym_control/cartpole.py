@@ -383,10 +383,10 @@ class CartPole(BenchmarkEnv):
         Args:
             prior_prop (dict): specify the prior inertial prop to use in the symbolic model.
         '''
-        l = prior_prop.get('pole_length', self.EFFECTIVE_POLE_LENGTH)
+        length = prior_prop.get('pole_length', self.EFFECTIVE_POLE_LENGTH)
         m = prior_prop.get('pole_mass', self.POLE_MASS)
         M = prior_prop.get('cart_mass', self.CART_MASS)
-        Mm, ml = m + M, m * l
+        Mm, ml = m + M, m * length
         g = self.GRAVITY_ACC
         dt = self.CTRL_TIMESTEP
         # Input variables.
@@ -400,7 +400,7 @@ class CartPole(BenchmarkEnv):
         nu = 1
         # Dynamics.
         temp_factor = (U + ml * theta_dot**2 * cs.sin(theta)) / Mm
-        theta_dot_dot = ((g * cs.sin(theta) - cs.cos(theta) * temp_factor) / (l * (4.0 / 3.0 - m * cs.cos(theta)**2 / Mm)))
+        theta_dot_dot = ((g * cs.sin(theta) - cs.cos(theta) * temp_factor) / (length * (4.0 / 3.0 - m * cs.cos(theta)**2 / Mm)))
         X_dot = cs.vertcat(x_dot, temp_factor - ml * theta_dot_dot * cs.cos(theta) / Mm, theta_dot, theta_dot_dot)
         # Observation.
         Y = cs.vertcat(x, x_dot, theta, theta_dot)
@@ -416,7 +416,7 @@ class CartPole(BenchmarkEnv):
         # Additional params to cache
         params = {
             # prior inertial properties
-            'pole_length': l,
+            'pole_length': length,
             'pole_mass': m,
             'cart_mass': M,
             # equilibrium point for linearization

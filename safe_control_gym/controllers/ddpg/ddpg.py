@@ -181,7 +181,7 @@ class DDPG(BaseController):
                 self.save(path)
             if self.num_checkpoints > 0:
                 interval_id = np.argmin(np.abs(np.array(step_interval) - self.total_steps))
-                if interval_save[interval_id] == False:
+                if not interval_save[interval_id]:
                     # Intermediate checkpoint.
                     path = os.path.join(self.output_dir, 'checkpoints', f'model_{self.total_steps}.pt')
                     self.save(path, save_buffer=False)

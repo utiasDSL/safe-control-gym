@@ -259,7 +259,7 @@ class GaussianProcessCollection:
             train_inputs, train_targets (torch.tensors): Input and target training data.
             path_to_statedicts (str): Path to where the state dicts are saved.
         '''
-        assert self.parallel == False, ValueError('Parallel GP not supported yet.')
+        assert self.parallel is False, ValueError('Parallel GP not supported yet.')
 
         self._init_properties(train_inputs, train_targets)
         gp_K_plus_noise_list = []
@@ -289,7 +289,7 @@ class GaussianProcessCollection:
         lengthscale_list = []
         output_scale_list = []
         noise_list = []
-        if self.parallel == False:
+        if self.parallel is False:
             for gp in self.gp_list:
                 lengthscale_list.append(gp.model.covar_module.base_kernel.lengthscale.detach())
                 output_scale_list.append(gp.model.covar_module.outputscale.detach())
@@ -327,7 +327,7 @@ class GaussianProcessCollection:
         self.model_paths = []
         mkdirs(output_dir)
 
-        if self.parallel == False:
+        if self.parallel is False:
             gp_K_plus_noise_inv_list = []
             gp_K_plus_noise_list = []
             for gp_ind, gp in enumerate(self.gp_list):
@@ -388,7 +388,7 @@ class GaussianProcessCollection:
                 lower : torch.tensor (nx X N_samples).
                 upper : torch.tensor (nx X N_samples).
         '''
-        if self.parallel == False:
+        if self.parallel is False:
             means_list = []
             cov_list = []
             pred_list = []
@@ -419,7 +419,7 @@ class GaussianProcessCollection:
         z = ca.SX.sym('z1', Nz)
         y = ca.SX.zeros(Ny)
 
-        if self.parallel == False:
+        if self.parallel is False:
             for gp_ind, gp in enumerate(self.gp_list):
                 y[gp_ind] = gp.casadi_predict(z=z)['mean']
         else:
@@ -445,7 +445,7 @@ class GaussianProcessCollection:
                         fig_count=0
                         ):
         '''Plot the trained GP given the input and target data.'''
-        assert self.parallel == False, ValueError('Parallel GP not supported yet.')
+        assert self.parallel is False, ValueError('Parallel GP not supported yet.')
         for gp_ind, gp in enumerate(self.gp_list):
             fig_count = gp.plot_trained_gp(inputs,
                                            targets[:, self.target_mask[gp_ind], None],
@@ -473,7 +473,7 @@ class GaussianProcessCollection:
         #    x1 = torch.from_numpy(self.gp_list[0].scaler.transform(x1.numpy()))
         #    x2 = torch.from_numpy(self.gp_list[0].scaler.transform(x2.numpy()))
         k_list = []
-        if self.parallel == False:
+        if self.parallel is False:
             for gp in self.gp_list:
                 k_list.append(gp.model.covar_module(x1, x2))
         else:
@@ -552,7 +552,7 @@ class GaussianProcesses:
         self.input_mask = input_mask
         self.target_mask = target_mask
         self.kernel = kernel
-        assert normalize == False, NotImplementedError('Normalization not implemented yet.')
+        assert normalize is False, NotImplementedError('Normalization not implemented yet.')
 
     def _init_model(self,
                     train_inputs,
@@ -792,21 +792,6 @@ class GaussianProcesses:
                         fig_count=0
                         ):
         raise NotImplementedError
-
-
-def kmeans_centriods(n_cent, data, rand_state=0):
-    '''kmeans clustering. Useful for finding reasonable inducing points.
-
-    Args:
-        n_cent (int): Number of centriods.
-        data (np.array): Data to find the centroids of n_samples X n_features.
-
-    Return:
-        centriods (np.array): Array of centriods (n_cent X n_features).
-
-    '''
-    kmeans = KMeans(n_clusters=n_cent, random_state=rand_state).fit(data)
-    return kmeans.cluster_centers_
 
 
 class GaussianProcess:

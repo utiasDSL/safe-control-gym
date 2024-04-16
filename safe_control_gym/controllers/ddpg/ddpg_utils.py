@@ -7,8 +7,6 @@ import torch.nn as nn
 
 from safe_control_gym.controllers.sac.sac_utils import SACBuffer, soft_update
 from safe_control_gym.math_and_models.neural_networks import MLP
-from safe_control_gym.math_and_models.random_processes import *
-from safe_control_gym.math_and_models.schedule import *
 
 # -----------------------------------------------------------------------------------
 #                   Agent
@@ -164,7 +162,9 @@ class MLPActorCritic(nn.Module):
         low = torch.FloatTensor(low)
         high = torch.FloatTensor(high)
         # Rescale action from [-1, 1] to [low, high]
-        def unscale_fn(x): return low.to(x.device) + (0.5 * (x + 1.0) * (high.to(x.device) - low.to(x.device)))
+
+        def unscale_fn(x):
+            return low.to(x.device) + (0.5 * (x + 1.0) * (high.to(x.device) - low.to(x.device)))
         self.actor = MLPActor(obs_dim, act_dim, hidden_dims, activation, postprocess_fn=unscale_fn)
 
         # Q functions

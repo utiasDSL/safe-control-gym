@@ -436,8 +436,8 @@ class SymmetricStateConstraint(BoundedConstraint):
                          strict=strict,
                          active_dims=active_dims,
                          tolerance=tolerance,
-                         decimals=decimals
-                         ** kwrags)
+                         decimals=decimals,
+                         **kwrags)
         assert (env.NAME == 'cartpole'), '[ERROR] SymmetricStateConstraint is meant for CartPole environments'
         assert (env.COST == 'rl_reward'), '[ERROR] SymmetricStateConstraint is meant for RL environments'
         self.num_constraints = self.bound.shape[0]

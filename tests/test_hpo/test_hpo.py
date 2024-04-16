@@ -137,7 +137,7 @@ def test_hpo_parallelism(SYS, TASK, ALGO, PRIOR, LOAD, SAMPLER):
 @pytest.mark.parametrize('ALGO', ['ppo', 'sac'])
 @pytest.mark.parametrize('PRIOR', [''])
 @pytest.mark.parametrize('SAMPLER', ['TPESampler', 'RandomSampler'])
-def test_hpo(SYS, TASK, ALGO, PRIOR, SAMPLER):
+def test_hpo_without_database(SYS, TASK, ALGO, PRIOR, SAMPLER):
     '''Test HPO for one single trial without using MySQL database.
         (create a study from scratch)
     '''

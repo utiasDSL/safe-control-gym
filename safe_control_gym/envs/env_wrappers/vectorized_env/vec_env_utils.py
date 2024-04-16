@@ -91,8 +91,8 @@ def _unflatten_obs(obs):
         return split_batch(obs)
 
 
-def _flatten_list(l):
-    assert isinstance(l, (list, tuple))
-    assert len(l) > 0
-    assert all([len(l_) > 0 for l_ in l])
-    return [l__ for l_ in l for l__ in l_]
+def _flatten_list(input_list):
+    assert isinstance(input_list, (list, tuple))
+    assert len(input_list) > 0
+    assert all([len(l_) > 0 for l_ in input_list])
+    return [l__ for l_ in input_list for l__ in l_]

@@ -16,17 +16,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import optuna
 import yaml
-from optuna.pruners import BasePruner, MedianPruner, NopPruner, SuccessiveHalvingPruner
-from optuna.samplers import BaseSampler, RandomSampler, TPESampler
+from optuna.samplers import RandomSampler, TPESampler
 from optuna.study import MaxTrialsCallback
 from optuna.trial import FrozenTrial, TrialState
 from optuna.visualization.matplotlib import plot_optimization_history, plot_param_importances
 from optuna_dashboard import run_server
 
-from safe_control_gym.hyperparameters.hpo_sampler import HYPERPARAMS_DICT, HYPERPARAMS_SAMPLER
+from safe_control_gym.hyperparameters.hpo_sampler import HYPERPARAMS_SAMPLER
 from safe_control_gym.utils.logging import ExperimentLogger
 from safe_control_gym.utils.registration import make
-from safe_control_gym.utils.utils import mkdirs, save_video
 
 
 class HPO(object):
@@ -149,7 +147,7 @@ class HPO(object):
 
             # if the current objective is better than the best objective, trigger more runs to avoid maximization bias
             if self.hpo_config.warm_trials < len(self.study.trials) and self.hpo_config.dynamical_runs:
-                if Gss_rew > self.study.best_value or first_iteration == False:
+                if Gss_rew > self.study.best_value or first_iteration is False:
                     if abs(Gs_rew - Gss_rew) > self.hpo_config.approximation_threshold:
                         increase_runs = True
                         first_iteration = False
@@ -171,7 +169,7 @@ class HPO(object):
 
         if self.load_study:
             self.study = optuna.load_study(study_name=self.study_name, storage='mysql+pymysql://optuna@localhost/{}'.format(self.study_name))
-        elif self.hpo_config.use_database == False:
+        elif self.hpo_config.use_database is False:
             # single-objective optimization
             if len(self.hpo_config.direction) == 1:
                 self.study = optuna.create_study(

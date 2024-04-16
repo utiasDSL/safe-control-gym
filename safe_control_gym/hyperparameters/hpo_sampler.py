@@ -7,9 +7,7 @@ Reference:
 
 from typing import Any, Dict
 
-import numpy as np
 import optuna
-from torch import nn as nn
 
 # define the categorical choice or real interval for each hyperparameter
 PPO_dict = {

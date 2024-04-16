@@ -1,11 +1,10 @@
 import os
 import sys
-import time
 
 import munch
 import pytest
 
-from examples.hpo.rl.rl_experiment import hpo, train
+from examples.hpo.rl.rl_experiment import train
 from safe_control_gym.hyperparameters.database import create, drop
 from safe_control_gym.utils.configuration import ConfigFactory
 

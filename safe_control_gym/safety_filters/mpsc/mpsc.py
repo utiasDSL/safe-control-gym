@@ -81,8 +81,7 @@ class MPSC(BaseSafetyFilter, ABC):
         if self.additional_constraints is None:
             additional_constraints = []
         self.constraints, self.state_constraints_sym, self.input_constraints_sym = reset_constraints(
-            self.env.constraints.constraints +
-            additional_constraints)
+            self.env.constraints.constraints + additional_constraints)
 
         if cost_function == Cost_Function.ONE_STEP_COST:
             self.cost_function = ONE_STEP_COST()
@@ -140,9 +139,7 @@ class MPSC(BaseSafetyFilter, ABC):
         self.cost_function.prepare_cost_variables(opti_dict, obs, iteration)
 
         # Initial guess for optimization problem.
-        if (self.warmstart and
-                self.z_prev is not None and
-                self.v_prev is not None):
+        if (self.warmstart and self.z_prev is not None and self.v_prev is not None):
             # Shift previous solutions by 1 step.
             z_guess = deepcopy(self.z_prev)
             v_guess = deepcopy(self.v_prev)
