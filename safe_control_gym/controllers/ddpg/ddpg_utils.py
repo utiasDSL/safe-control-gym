@@ -1,19 +1,19 @@
-from copy import deepcopy
 from collections import defaultdict
+from copy import deepcopy
 
 import numpy as np
 import torch
 import torch.nn as nn
 
-from safe_control_gym.math_and_models.neural_networks import MLP
 from safe_control_gym.controllers.sac.sac_utils import SACBuffer, soft_update
+from safe_control_gym.math_and_models.neural_networks import MLP
+from safe_control_gym.math_and_models.random_processes import *
 from safe_control_gym.math_and_models.schedule import *
-from safe_control_gym.math_and_models.random_processes import * 
-
 
 # -----------------------------------------------------------------------------------
 #                   Agent
 # -----------------------------------------------------------------------------------
+
 
 class DDPGAgent:
     '''A DDPG class that encapsulates model, optimizer and update functions.'''

@@ -9,7 +9,7 @@ examples/pid/*data/
 results/
 z_docstring.py
 TODOs.md
-# 
+#
 hpo_strategy_study*/
 *.jpg
 *.pickle

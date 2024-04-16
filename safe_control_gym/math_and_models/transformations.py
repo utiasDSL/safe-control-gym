@@ -4,8 +4,9 @@ Based on github.com/bulletphysics/bullet3/blob/master/examples/pybullet/gym/pybu
 '''
 
 import math
-import numpy as np
+
 import casadi as cs
+import numpy as np
 
 
 def unit_vector(data, axis=None, out=None):

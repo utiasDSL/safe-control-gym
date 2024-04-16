@@ -19,7 +19,7 @@ To set up, run the following commands sequencially:
 ```bash
 sudo mysql
 CREATE USER optuna@"%"; # this creates the user name 'optuna' accessible by any host
-CREATE DATABASE {algo}_hpo; 
+CREATE DATABASE {algo}_hpo;
 GRANT ALL ON {algo}_hpo.* TO optuna@"%";
 exit
 ```

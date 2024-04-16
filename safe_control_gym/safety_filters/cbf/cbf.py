@@ -6,11 +6,11 @@ Reference:
 
 from typing import Tuple
 
-import numpy as np
 import casadi as cs
+import numpy as np
 
 from safe_control_gym.safety_filters.base_safety_filter import BaseSafetyFilter
-from safe_control_gym.safety_filters.cbf.cbf_utils import linear_function, cbf_cartpole, cartesian_product
+from safe_control_gym.safety_filters.cbf.cbf_utils import cartesian_product, cbf_cartpole, linear_function
 
 
 class CBF(BaseSafetyFilter):

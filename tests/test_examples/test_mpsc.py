@@ -1,4 +1,5 @@
 import sys
+
 import pytest
 
 from examples.mpsc.mpsc_experiment import run
@@ -18,9 +19,9 @@ def test_mpsc(SYS, TASK, ALGO, SAFETY_FILTER, MPSC_COST):
         '--algo', ALGO,
         '--safety_filter', SAFETY_FILTER,
         '--overrides',
-            f'./examples/mpsc/config_overrides/{SYS}/{SYS}_{TASK}.yaml',
-            f'./examples/mpsc/config_overrides/{SYS}/{ALGO}_{SYS}.yaml',
-            f'./examples/mpsc/config_overrides/{SYS}/{SAFETY_FILTER}_{SYS}.yaml',
+        f'./examples/mpsc/config_overrides/{SYS}/{SYS}_{TASK}.yaml',
+        f'./examples/mpsc/config_overrides/{SYS}/{ALGO}_{SYS}.yaml',
+        f'./examples/mpsc/config_overrides/{SYS}/{SAFETY_FILTER}_{SYS}.yaml',
         '--kv_overrides', f'sf_config.cost_function={MPSC_COST}'
-        ]
+    ]
     run(plot=False, training=False, n_episodes=None, n_steps=5, curr_path='./examples/mpsc')

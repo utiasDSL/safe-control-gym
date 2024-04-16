@@ -379,13 +379,13 @@ class DefaultConstraint(BoundedConstraint):
             upper_bounds = default_constraint_space.high
         else:
             upper_bounds = np.array(upper_bounds, ndmin=1)
-            assert len(upper_bounds) == default_constraint_space.shape[0],\
+            assert len(upper_bounds) == default_constraint_space.shape[0], \
                 ValueError('[ERROR]: Upper bound must have length equal to space dimension.')
         if lower_bounds is None:
             lower_bounds = default_constraint_space.low
         else:
             lower_bounds = np.array(lower_bounds, ndmin=1)
-            assert len(lower_bounds) == default_constraint_space.shape[0],\
+            assert len(lower_bounds) == default_constraint_space.shape[0], \
                 ValueError('[ERROR]: Lower bound must have length equal to space dimension.')
         super().__init__(env,
                          lower_bounds=lower_bounds.astype(np.float64),
@@ -656,7 +656,7 @@ def create_constraint_list(constraint_specs, available_constraints, env):
     constraint_list = []
     for constraint in constraint_specs:
         assert isinstance(constraint, dict), '[ERROR]: Each constraint must be specified as a dict.'
-        assert 'constraint_form' in constraint.keys(),\
+        assert 'constraint_form' in constraint.keys(), \
             '[ERROR]: Each constraint must have a key \'constraint_form\''
         con_form = constraint['constraint_form']
         assert con_form in available_constraints, '[ERROR]. constraint not in list of available constraints'

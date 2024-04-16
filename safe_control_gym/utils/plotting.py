@@ -1,15 +1,13 @@
 '''Plotting utilities.'''
 
-import re
 import os
 import os.path as osp
+import re
 from collections import defaultdict
 
-import numpy as np
 import matplotlib.pyplot as plt
-
+import numpy as np
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
-
 
 DIV_LINE_WIDTH = 50
 

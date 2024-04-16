@@ -1,5 +1,6 @@
-import os
 import contextlib
+import os
+
 import numpy as np
 
 

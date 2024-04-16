@@ -1,12 +1,14 @@
-import sys, os
-import pytest
+import os
+import sys
+
 import munch
+import pytest
 
-
-from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.hyperparameters.database import create, drop
+from safe_control_gym.utils.configuration import ConfigFactory
 
-@pytest.mark.parametrize('ALGO',['ppo', 'sac'])
+
+@pytest.mark.parametrize('ALGO', ['ppo', 'sac'])
 def test_hpo_database(ALGO):
 
     # create database

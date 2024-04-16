@@ -1,21 +1,23 @@
-import sys, os
-import pytest
-import munch
+import os
+import sys
 import time
 
+import munch
+import pytest
 
-from safe_control_gym.utils.configuration import ConfigFactory
 from examples.hpo.rl.rl_experiment import hpo, train
 from safe_control_gym.hyperparameters.database import create, drop
+from safe_control_gym.utils.configuration import ConfigFactory
+
 
 @pytest.mark.parametrize('SYS', ['cartpole'])
-@pytest.mark.parametrize('TASK',['stab'])
-@pytest.mark.parametrize('ALGO',['ppo', 'sac'])
-@pytest.mark.parametrize('PRIOR',[''])
+@pytest.mark.parametrize('TASK', ['stab'])
+@pytest.mark.parametrize('ALGO', ['ppo', 'sac'])
+@pytest.mark.parametrize('PRIOR', [''])
 def test_train(SYS, TASK, ALGO, PRIOR):
     '''Test training given a set of hyperparameters.
     '''
-    
+
     # output_dir
     output_dir = f'./examples/hpo/rl/{ALGO}/results'
     # delete output_dir if exists
@@ -43,9 +45,9 @@ def test_train(SYS, TASK, ALGO, PRIOR):
                     '--seed', '6',
                     '--use_gpu', 'True'
                     ]
-    
+
     fac = ConfigFactory()
-    fac.add_argument("--opt_hps", type=str, default="", help="yaml file as a result of HPO.")
+    fac.add_argument('--opt_hps', type=str, default='', help='yaml file as a result of HPO.')
     config = fac.merge()
 
     train(config)

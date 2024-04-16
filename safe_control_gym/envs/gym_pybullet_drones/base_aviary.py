@@ -8,11 +8,12 @@ image types captured by PyBullet's camera rendering.
 '''
 
 import os
-import time
 import pkgutil
+import time
 import xml.etree.ElementTree as etxml
 from datetime import datetime
 from enum import Enum
+
 import numpy as np
 import pybullet as p
 import pybullet_data
@@ -92,7 +93,7 @@ class BaseAviary(BenchmarkEnv):
             self.J_INV, \
             self.KF, \
             self.KM, \
-            self.COLLISION_H,\
+            self.COLLISION_H, \
             self.COLLISION_R, \
             self.COLLISION_Z_OFFSET, \
             self.MAX_SPEED_KMH, \

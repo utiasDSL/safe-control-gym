@@ -33,5 +33,5 @@ log_interval: 0
 save_interval: 0
 num_checkpoints: 0
 eval_interval: 0
-eval_save_best: False 
+eval_save_best: False
 tensorboard: False

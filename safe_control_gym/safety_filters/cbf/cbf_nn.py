@@ -7,13 +7,13 @@ Reference:
 import os
 from typing import Tuple
 
-import torch
-import numpy as np
 import casadi as cs
+import numpy as np
+import torch
 
+from safe_control_gym.math_and_models.neural_networks import MLP
 from safe_control_gym.safety_filters.cbf.cbf import CBF
 from safe_control_gym.safety_filters.cbf.cbf_utils import CBFBuffer
-from safe_control_gym.math_and_models.neural_networks import MLP
 
 
 class CBF_NN(CBF):

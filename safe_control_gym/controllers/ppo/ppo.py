@@ -14,17 +14,19 @@ Additional references:
 
 import os
 import time
+
 import numpy as np
 import torch
 
-from safe_control_gym.utils.logging import ExperimentLogger
-from safe_control_gym.utils.utils import get_random_state, set_random_state, is_wrapped
-from safe_control_gym.envs.env_wrappers.vectorized_env import make_vec_envs
-from safe_control_gym.envs.env_wrappers.record_episode_statistics import RecordEpisodeStatistics, VecRecordEpisodeStatistics
-from safe_control_gym.math_and_models.normalization import BaseNormalizer, MeanStdNormalizer, RewardStdNormalizer
-
 from safe_control_gym.controllers.base_controller import BaseController
 from safe_control_gym.controllers.ppo.ppo_utils import PPOAgent, PPOBuffer, compute_returns_and_advantages
+from safe_control_gym.envs.env_wrappers.record_episode_statistics import (RecordEpisodeStatistics,
+                                                                          VecRecordEpisodeStatistics)
+from safe_control_gym.envs.env_wrappers.vectorized_env import make_vec_envs
+from safe_control_gym.math_and_models.normalization import (BaseNormalizer, MeanStdNormalizer,
+                                                            RewardStdNormalizer)
+from safe_control_gym.utils.logging import ExperimentLogger
+from safe_control_gym.utils.utils import get_random_state, is_wrapped, set_random_state
 
 
 class PPO(BaseController):
@@ -150,7 +152,7 @@ class PPO(BaseController):
               **kwargs
               ):
         '''Performs learning (pre-training, training, fine-tuning, etc).'''
-        
+
         if self.num_checkpoints > 0:
             step_interval = np.linspace(0, self.max_env_steps, self.num_checkpoints)
             interval_save = np.zeros_like(step_interval, dtype=bool)
@@ -161,13 +163,13 @@ class PPO(BaseController):
                 # Latest/final checkpoint.
                 self.save(self.checkpoint_path)
                 self.logger.info(f'Checkpoint | {self.checkpoint_path}')
-                path = os.path.join(self.output_dir, "checkpoints", "model_{}.pt".format(self.total_steps))
+                path = os.path.join(self.output_dir, 'checkpoints', 'model_{}.pt'.format(self.total_steps))
                 self.save(path)
             if self.num_checkpoints > 0:
                 interval_id = np.argmin(np.abs(np.array(step_interval) - self.total_steps))
                 if interval_save[interval_id] == False:
                     # Intermediate checkpoint.
-                    path = os.path.join(self.output_dir, "checkpoints", f'model_{self.total_steps}.pt')
+                    path = os.path.join(self.output_dir, 'checkpoints', f'model_{self.total_steps}.pt')
                     self.save(path)
                     interval_save[interval_id] = True
             # Evaluation.
@@ -187,7 +189,7 @@ class PPO(BaseController):
             # Logging.
             if self.log_interval and self.total_steps % self.log_interval == 0:
                 self.log_step(results)
-    
+
     def _learn(self,
                env=None,
                **kwargs
@@ -264,12 +266,12 @@ class PPO(BaseController):
             queued_stats = {k: np.asarray(v) for k, v in env.queued_stats.items()}
             eval_results.update(queued_stats)
         return eval_results
-    
+
     def _run(self, **kwargs):
         '''Runs evaluation as an unified calling function for hyperparameter optimization.
         '''
         results = self.run(env=self.eval_env, render=False, n_episodes=self.eval_batch_size, verbose=False, **kwargs)
-        mean_cost = np.mean(results["ep_returns"])
+        mean_cost = np.mean(results['ep_returns'])
 
         return mean_cost
 

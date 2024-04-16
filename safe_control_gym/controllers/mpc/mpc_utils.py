@@ -1,7 +1,7 @@
 '''General MPC utility functions.'''
 
-import numpy as np
 import casadi as cs
+import numpy as np
 import scipy
 import scipy.linalg
 

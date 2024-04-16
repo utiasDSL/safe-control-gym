@@ -3,7 +3,7 @@ task_config:
   ctrl_freq: 15
   pyb_freq: 750
   physics: pyb
-  
+
   # state initialization
   init_state:
     init_x: 0.1

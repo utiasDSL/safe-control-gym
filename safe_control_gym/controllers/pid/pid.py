@@ -3,15 +3,15 @@
 Based on work conducted at UTIAS' DSL by SiQi Zhou and James Xu.
 '''
 
-import os
 import math
+import os
 
 import numpy as np
 import pybullet as p
 from scipy.spatial.transform import Rotation
 
 from safe_control_gym.controllers.base_controller import BaseController
-from safe_control_gym.envs.benchmark_env import Task, Environment
+from safe_control_gym.envs.benchmark_env import Environment, Task
 
 
 class PID(BaseController):

@@ -1,6 +1,6 @@
 """ The implementation of HPO class
 
-Reference: 
+Reference:
     * stable baselines3 https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/rl_zoo3/hyperparams_opt.py
     * Optuna: https://optuna.org
 
@@ -9,33 +9,31 @@ Reruirement:
 
 """
 import os
-import yaml
-import numpy as np
-import matplotlib.pyplot as plt
-from functools import partial
 from copy import deepcopy
+from functools import partial
 
+import matplotlib.pyplot as plt
+import numpy as np
 import optuna
+import yaml
 from optuna.pruners import BasePruner, MedianPruner, NopPruner, SuccessiveHalvingPruner
 from optuna.samplers import BaseSampler, RandomSampler, TPESampler
 from optuna.study import MaxTrialsCallback
-from optuna.trial import TrialState
+from optuna.trial import FrozenTrial, TrialState
 from optuna.visualization.matplotlib import plot_optimization_history, plot_param_importances
 from optuna_dashboard import run_server
-from optuna.trial import FrozenTrial
 
-from safe_control_gym.hyperparameters.hpo_sampler import HYPERPARAMS_SAMPLER, HYPERPARAMS_DICT
-from safe_control_gym.utils.registration import make
-from safe_control_gym.utils.utils import save_video, mkdirs
+from safe_control_gym.hyperparameters.hpo_sampler import HYPERPARAMS_DICT, HYPERPARAMS_SAMPLER
 from safe_control_gym.utils.logging import ExperimentLogger
-
+from safe_control_gym.utils.registration import make
+from safe_control_gym.utils.utils import mkdirs, save_video
 
 
 class HPO(object):
 
     def __init__(self, algo, task, sampler, load_study, output_dir, task_config, hpo_config, **algo_config):
         """ Hyperparameter optimization class
-        
+
         args:
             algo: algo name
             env_func: environment that the agent will interact with
@@ -46,7 +44,7 @@ class HPO(object):
         """
 
         self.algo = algo
-        self.study_name = algo + "_hpo"
+        self.study_name = algo + '_hpo'
         self.task = task
         self.load_study = load_study
         self.task_config = task_config
@@ -57,18 +55,18 @@ class HPO(object):
         self.logger = ExperimentLogger(output_dir, log_file_out=False)
         self.total_runs = 0
         # init sampler
-        if sampler == "RandomSampler":
+        if sampler == 'RandomSampler':
             self.sampler = RandomSampler(seed=self.hpo_config.seed)
-        elif sampler == "TPESampler":
+        elif sampler == 'TPESampler':
             self.sampler = TPESampler(seed=self.hpo_config.seed)
         else:
-            raise ValueError("Unknown sampler.")
+            raise ValueError('Unknown sampler.')
 
-        assert len(hpo_config.objective) == len(hpo_config.direction), "objective and direction must have the same length"
-    
+        assert len(hpo_config.objective) == len(hpo_config.direction), 'objective and direction must have the same length'
+
     def objective(self, trial: optuna.Trial) -> float:
         """ The stochastic objective function for a HPO tool to optimize over
-        
+
         args:
             trial: A single trial object that contains the hyperparameters to be evaluated
 
@@ -78,7 +76,7 @@ class HPO(object):
         sampled_hyperparams = HYPERPARAMS_SAMPLER[self.algo](self.hps_config, trial)
 
         # log trial number
-        self.logger.info("Trial number: {}".format(trial.number))
+        self.logger.info('Trial number: {}'.format(trial.number))
 
         # flag for increasing runs
         increase_runs = True
@@ -99,20 +97,20 @@ class HPO(object):
                     self.algo_config[hp] = sampled_hyperparams[hp]
 
                 seeds.append(seed)
-                self.logger.info("Sample hyperparameters: {}".format(sampled_hyperparams))
-                self.logger.info("Seeds: {}".format(seeds))
+                self.logger.info('Sample hyperparameters: {}'.format(sampled_hyperparams))
+                self.logger.info('Seeds: {}'.format(seeds))
 
                 try:
                     self.env_func = partial(make, self.task, output_dir=self.output_dir, **self.task_config)
                     # using deepcopy(self.algo_config) prevent setting being overwritten
                     self.agent = make(self.algo,
-                                        self.env_func,
-                                        training=True,
-                                        checkpoint_path=os.path.join(self.output_dir, "model_latest.pt"),
-                                        output_dir=os.path.join(self.output_dir, "hpo"),
-                                        use_gpu=self.hpo_config.use_gpu,
-                                        seed=seed,
-                                        **deepcopy(self.algo_config))
+                                      self.env_func,
+                                      training=True,
+                                      checkpoint_path=os.path.join(self.output_dir, 'model_latest.pt'),
+                                      output_dir=os.path.join(self.output_dir, 'hpo'),
+                                      use_gpu=self.hpo_config.use_gpu,
+                                      seed=seed,
+                                      **deepcopy(self.algo_config))
 
                     self.agent.reset()
                 except Exception as e:
@@ -132,7 +130,7 @@ class HPO(object):
                     del self.env_func
                     self.logger.info(f'Exception occurs during learning: {e}')
                     print(e)
-                    print("Sampled hyperparameters:")
+                    print('Sampled hyperparameters:')
                     print(sampled_hyperparams)
                     returns.append(0.0)
                     break
@@ -140,7 +138,7 @@ class HPO(object):
                 avg_return = self.agent._run()
 
                 returns.append(avg_return)
-                self.logger.info("Sampled rewards: {}".format(returns))
+                self.logger.info('Sampled rewards: {}'.format(returns))
 
                 self.agent.close()
                 # delete instances
@@ -156,152 +154,151 @@ class HPO(object):
                         increase_runs = True
                         first_iteration = False
                         Gs_rew = Gss_rew
-                        self.logger.info("Trigger more runs")
+                        self.logger.info('Trigger more runs')
                     else:
                         increase_runs = False
-        
+
         return_cvar = Gss_rew
 
-        self.logger.info("CVaR of returns: {}".format(return_cvar))
+        self.logger.info('CVaR of returns: {}'.format(return_cvar))
 
         if 'performance' in self.hpo_config.objective:
             return return_cvar
         else:
-            raise ValueError("Objective must be performance.")
+            raise ValueError('Objective must be performance.')
 
-    
     def hyperparameter_optimization(self) -> None:
-        
+
         if self.load_study:
-            self.study = optuna.load_study(study_name=self.study_name, storage="mysql+pymysql://optuna@localhost/{}".format(self.study_name))
+            self.study = optuna.load_study(study_name=self.study_name, storage='mysql+pymysql://optuna@localhost/{}'.format(self.study_name))
         elif self.hpo_config.use_database == False:
             # single-objective optimization
             if len(self.hpo_config.direction) == 1:
                 self.study = optuna.create_study(
-                                                direction=self.hpo_config.direction[0],
-                                                sampler=self.sampler,
-                                                pruner=optuna.pruners.MedianPruner(n_warmup_steps=10),
-                                                study_name=self.study_name,
-                                                )
+                    direction=self.hpo_config.direction[0],
+                    sampler=self.sampler,
+                    pruner=optuna.pruners.MedianPruner(n_warmup_steps=10),
+                    study_name=self.study_name,
+                )
             # multi-objective optimization
             else:
                 self.study = optuna.create_study(
-                                                directions=self.hpo_config.direction,
-                                                sampler=self.sampler,
-                                                pruner=optuna.pruners.MedianPruner(n_warmup_steps=10),
-                                                study_name=self.study_name,
-                                                )
+                    directions=self.hpo_config.direction,
+                    sampler=self.sampler,
+                    pruner=optuna.pruners.MedianPruner(n_warmup_steps=10),
+                    study_name=self.study_name,
+                )
         else:
             # single-objective optimization
             if len(self.hpo_config.direction) == 1:
                 self.study = optuna.create_study(
-                                                direction=self.hpo_config.direction[0],
-                                                sampler=self.sampler,
-                                                pruner=optuna.pruners.MedianPruner(n_warmup_steps=10),
-                                                study_name=self.study_name,
-                                                storage="mysql+pymysql://optuna@localhost/{}".format(self.study_name),
-                                                load_if_exists=self.hpo_config.load_if_exists
-                                                )
+                    direction=self.hpo_config.direction[0],
+                    sampler=self.sampler,
+                    pruner=optuna.pruners.MedianPruner(n_warmup_steps=10),
+                    study_name=self.study_name,
+                    storage='mysql+pymysql://optuna@localhost/{}'.format(self.study_name),
+                    load_if_exists=self.hpo_config.load_if_exists
+                )
             # multi-objective optimization
             else:
                 self.study = optuna.create_study(
-                                                directions=self.hpo_config.direction,
-                                                sampler=self.sampler,
-                                                pruner=optuna.pruners.MedianPruner(n_warmup_steps=10),
-                                                study_name=self.study_name,
-                                                storage="mysql+pymysql://optuna@localhost/{}".format(self.study_name),
-                                                load_if_exists=self.hpo_config.load_if_exists
-                                                )
-            
-        
+                    directions=self.hpo_config.direction,
+                    sampler=self.sampler,
+                    pruner=optuna.pruners.MedianPruner(n_warmup_steps=10),
+                    study_name=self.study_name,
+                    storage='mysql+pymysql://optuna@localhost/{}'.format(self.study_name),
+                    load_if_exists=self.hpo_config.load_if_exists
+                )
+
         self.study.optimize(self.objective,
                             catch=(RuntimeError,),
                             callbacks=[MaxTrialsCallback(self.hpo_config.trials, states=(TrialState.COMPLETE,))],
                             )
 
-        output_dir = os.path.join(self.output_dir, "hpo")
+        output_dir = os.path.join(self.output_dir, 'hpo')
         # save meta data
-        self.study.trials_dataframe().to_csv(output_dir+"/trials.csv")
+        self.study.trials_dataframe().to_csv(output_dir + '/trials.csv')
 
         # save top-n best hyperparameters
         if len(self.hpo_config.direction) == 1:
             trials = self.study.trials
-            if self.hpo_config.direction[0] == "minimize":
+            if self.hpo_config.direction[0] == 'minimize':
                 trials.sort(key=self._value_key)
             else:
                 trials.sort(key=self._value_key, reverse=True)
             for i in range(min(self.hpo_config.save_n_best_hps, len(self.study.trials))):
                 params = trials[i].params
-                with open(f"{output_dir}/hyperparameters_{trials[i].value:.4f}.yaml", "w")as f:
+                with open(f'{output_dir}/hyperparameters_{trials[i].value:.4f}.yaml', 'w')as f:
                     yaml.dump(params, f, default_flow_style=False)
         else:
             best_trials = self.study.best_trials
             for i in range(len(self.study.best_trials)):
                 params = best_trials[i].params
-                with open(f"{output_dir}/best_hyperparameters_[{best_trials[i].values[0]:.4f},{best_trials[i].values[1]:.4f}].yaml", "w")as f:
+                with open(f'{output_dir}/best_hyperparameters_[{best_trials[i].values[0]:.4f},{best_trials[i].values[1]:.4f}].yaml', 'w')as f:
                     yaml.dump(params, f, default_flow_style=False)
 
         # dashboard
         if self.hpo_config.dashboard and self.hpo_config.use_database:
-            run_server("mysql+pymysql://optuna@localhost/{}".format(self.study_name))
+            run_server('mysql+pymysql://optuna@localhost/{}'.format(self.study_name))
 
         # save plot
         try:
             if len(self.hpo_config.objective) == 1:
                 plot_param_importances(self.study)
                 plt.tight_layout()
-                plt.savefig(output_dir+"/param_importances.png")
-                #plt.show()
+                plt.savefig(output_dir + '/param_importances.png')
+                # plt.show()
                 plt.close()
                 plot_optimization_history(self.study)
                 plt.tight_layout()
-                plt.savefig(output_dir+"/optimization_history.png")
-                #plt.show()
+                plt.savefig(output_dir + '/optimization_history.png')
+                # plt.show()
                 plt.close()
             else:
                 for i in range(len(self.hpo_config.objective)):
                     plot_param_importances(self.study, target=lambda t: t.values[i])
                     plt.tight_layout()
-                    plt.savefig(output_dir+"/param_importances_{}.png".format(self.hpo_config.objective[i]))
-                    #plt.show()
+                    plt.savefig(output_dir + '/param_importances_{}.png'.format(self.hpo_config.objective[i]))
+                    # plt.show()
                     plt.close()
                     plot_optimization_history(self.study, target=lambda t: t.values[i])
                     plt.tight_layout()
-                    plt.savefig(output_dir+"/optimization_history_{}.png".format(self.hpo_config.objective[i]))
-                    #plt.show()
+                    plt.savefig(output_dir + '/optimization_history_{}.png'.format(self.hpo_config.objective[i]))
+                    # plt.show()
                     plt.close()
         except Exception as e:
             print(e)
-            print("Plotting failed.")
+            print('Plotting failed.')
 
-        self.logger.info("Total runs: {}".format(self.total_runs))
+        self.logger.info('Total runs: {}'.format(self.total_runs))
         self.logger.close()
 
         return
-    
+
     def _value_key(self, trial: FrozenTrial) -> float:
         """ Returns value of trial object for sorting
 
         """
         if trial.value is None:
-            if self.hpo_config.direction[0] == "minimize":
-                return float("inf")
+            if self.hpo_config.direction[0] == 'minimize':
+                return float('inf')
             else:
-                return float("-inf")
+                return float('-inf')
         else:
             return trial.value
+
     def _compute_cvar(self, returns: np.ndarray, alpha: float = 0.2) -> float:
         """ Compute CVaR
 
         """
-        assert returns.ndim == 1, "returns must be 1D array"
+        assert returns.ndim == 1, 'returns must be 1D array'
         sorted_returns = np.sort(returns)
         n = len(sorted_returns)
         VaR_idx = int(alpha * n)
         if VaR_idx == 0:
             VaR_idx = 1
-        
-        if self.hpo_config.direction[0] == "minimize":
+
+        if self.hpo_config.direction[0] == 'minimize':
             CVaR = sorted_returns[-VaR_idx:].mean()
         else:
             CVaR = sorted_returns[:VaR_idx].mean()
