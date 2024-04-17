@@ -201,16 +201,6 @@ class SAC(BaseController):
             if self.log_interval and self.total_steps % self.log_interval == 0:
                 self.log_step(results)
 
-    def _learn(self,
-               env=None,
-               **kwargs
-               ):
-        '''Performs learning as an unified calling function for hyperparameter optimization.
-        Args:
-            env (BenchmarkEnv): The environment to be used for training.
-        '''
-        return self.learn(env=env, **kwargs)
-
     def select_action(self, obs, info=None):
         '''Determine the action to take at the current timestep.
 

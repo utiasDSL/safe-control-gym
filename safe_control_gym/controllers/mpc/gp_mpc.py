@@ -665,7 +665,7 @@ class GPMPC(MPC):
         self.prev_action = action,
         return action
 
-    def learn(self,
+    def train_gp(self,
               input_data=None,
               target_data=None,
               gp_model=None,
@@ -836,8 +836,8 @@ class GPMPC(MPC):
             training_results['info'] = None
         return training_results
 
-    def _learn(self):
-        '''Performs multiple epochs learning as an unified calling function for hyperparameter optimization.
+    def learn(self, env=None):
+        '''Performs multiple epochs learning.
         '''
 
         train_runs = {0: {}}
@@ -856,11 +856,11 @@ class GPMPC(MPC):
         test_envs = []
         if self.same_test_initial_state:
             for epoch in range(self.num_epochs):
-                test_envs.append(self.env_func(randomized_init=True, seed=self.seed * 222))
-                test_envs[epoch].action_space.seed(self.seed * 222)
+                test_envs.append(self.env_func(randomized_init=True, seed=self.seed * 111))
+                test_envs[epoch].action_space.seed(self.seed * 111)
         else:
-            test_env = self.env_func(randomized_init=True, seed=self.seed * 222)
-            test_env.action_space.seed(self.seed * 222)
+            test_env = self.env_func(randomized_init=True, seed=self.seed * 111)
+            test_env.action_space.seed(self.seed * 111)
             test_envs = [test_env] * self.num_epochs
 
         for episode in range(self.num_train_episodes_per_epoch):
@@ -881,7 +881,7 @@ class GPMPC(MPC):
             else:
                 x_seq, actions, x_next_seq = self.gather_training_samples(train_runs, epoch - 1, self.num_samples)
             train_inputs, train_outputs = self.preprocess_training_data(x_seq, actions, x_next_seq)
-            _ = self.learn(input_data=train_inputs, target_data=train_outputs)
+            _ = self.train_gp(input_data=train_inputs, target_data=train_outputs)
 
             # Test new policy.
             test_runs[epoch] = {}

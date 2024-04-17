@@ -1,4 +1,4 @@
-"""Template training/plotting/testing script.
+"""Template hyperparameter optimization/hyperparameter evaluation script.
 
 """
 import os
@@ -7,6 +7,7 @@ from functools import partial
 import yaml
 
 from safe_control_gym.hyperparameters.hpo import HPO
+from safe_control_gym.experiments.base_experiment import BaseExperiment
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.utils import set_device_from_config, set_dir_from_config, set_seed_from_config
@@ -21,13 +22,11 @@ def hpo(config):
     """
 
     # Experiment setup.
-    if not config.restore and config.hpo_config.hpo:
+    if config.hpo_config.hpo:
         set_dir_from_config(config)
     set_seed_from_config(config)
     set_device_from_config(config)
 
-    # Put config.seed into config.hpo_config.seed
-    config.hpo_config.seed = config.seed
     # HPO
     hpo = HPO(config.algo,
               config.task,
@@ -37,23 +36,17 @@ def hpo(config):
               config.task_config,
               config.hpo_config,
               **config.algo_config)
+    
     if config.hpo_config.hpo:
         hpo.hyperparameter_optimization()
         print('Hyperparameter optimization done.')
-    elif config.hpo_config.perturb_hps and config.opt_hps != '':
-        hpo._perturb_hps(hp_path=config.opt_hps)
-        print('Perturbed hyperparameter files have been produced.')
-    else:
-        raise ValueError('hpo or perturb_hps must be set to True.')
 
 
 def train(config):
-    """Training template.
+    """Training for a given set of hyperparameters.
 
     Usage:
         * to start training, use with `--func train`.
-        * to restore from a previous training, additionally use `--restore {dir_path}`
-            where `dir_path` is the output folder from previous training.
 
     """
     # Override algo_config with given yaml file
@@ -65,10 +58,12 @@ def train(config):
         with open(config.opt_hps, 'r') as f:
             opt_hps = yaml.load(f, Loader=yaml.FullLoader)
         for hp in opt_hps:
-            config.algo_config[hp] = opt_hps[hp]
+            if isinstance(config.algo_config[hp], list) and not isinstance(opt_hps[hp], list):
+                config.algo_config[hp] = [opt_hps[hp]] * len(config.algo_config[hp])
+            else:
+                config.algo_config[hp] = opt_hps[hp]
     # Experiment setup.
-    if not config.restore:
-        set_dir_from_config(config)
+    set_dir_from_config(config)
     set_seed_from_config(config)
     set_device_from_config(config)
     # Define function to create task/env.
@@ -86,9 +81,7 @@ def train(config):
                          seed=config.seed,
                          **config.algo_config)
     control_agent.reset()
-    if config.restore:
-        control_agent.load(os.path.join(config.restore, 'model_latest.pt'))
-
+    
     # Training.
     control_agent.learn()
     control_agent.close()

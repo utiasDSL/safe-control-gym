@@ -4,7 +4,7 @@ import pytest
 from safe_control_gym.hyperparameters.database import create, drop
 
 
-@pytest.mark.parametrize('ALGO', ['ppo', 'sac'])
+@pytest.mark.parametrize('ALGO', ['ppo', 'sac', 'gp_mpc'])
 def test_hpo_database(ALGO):
 
     # create database

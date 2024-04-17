@@ -118,7 +118,7 @@ class HPO(object):
                 # return objective estimate
                 # TODO: report intermediate results to Optuna for pruning
                 try:
-                    self.agent._learn()
+                    self.agent.learn()
                     self.total_runs += 1
 
                 except Exception as e:
