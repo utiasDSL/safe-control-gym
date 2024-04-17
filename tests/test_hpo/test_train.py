@@ -8,6 +8,7 @@ from examples.hpo.hpo_experiment import train
 from safe_control_gym.hyperparameters.database import create, drop
 from safe_control_gym.utils.configuration import ConfigFactory
 
+
 @pytest.mark.parametrize('SYS', ['cartpole'])
 @pytest.mark.parametrize('TASK', ['stab'])
 @pytest.mark.parametrize('ALGO', ['ppo', 'sac', 'gp_mpc'])
@@ -18,7 +19,7 @@ def test_train(SYS, TASK, ALGO, PRIOR, HYPERPARAMETER):
     '''
 
     # output_dir
-    output_dir = f'./examples/hpo/results'
+    output_dir = './examples/hpo/results'
     # delete output_dir if exists
     if os.path.exists(output_dir):
         os.system(f'rm -rf {output_dir}')

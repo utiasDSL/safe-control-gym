@@ -666,11 +666,11 @@ class GPMPC(MPC):
         return action
 
     def train_gp(self,
-              input_data=None,
-              target_data=None,
-              gp_model=None,
-              overwrite_saved_data: bool = None,
-              ):
+                 input_data=None,
+                 target_data=None,
+                 gp_model=None,
+                 overwrite_saved_data: bool = None,
+                 ):
         '''Performs GP training.
 
         Args:

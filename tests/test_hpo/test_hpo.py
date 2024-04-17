@@ -21,7 +21,7 @@ def test_hpo(SYS, TASK, ALGO, PRIOR, SAMPLER):
     '''
 
     # output_dir
-    output_dir = f'./examples/hpo/results'
+    output_dir = './examples/hpo/results'
     # delete output_dir
     if os.path.exists(output_dir):
         os.system(f'rm -rf {output_dir}')

@@ -7,7 +7,6 @@ from functools import partial
 import yaml
 
 from safe_control_gym.hyperparameters.hpo import HPO
-from safe_control_gym.experiments.base_experiment import BaseExperiment
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.utils import set_device_from_config, set_dir_from_config, set_seed_from_config
@@ -36,7 +35,7 @@ def hpo(config):
               config.task_config,
               config.hpo_config,
               **config.algo_config)
-    
+
     if config.hpo_config.hpo:
         hpo.hyperparameter_optimization()
         print('Hyperparameter optimization done.')
@@ -81,7 +80,7 @@ def train(config):
                          seed=config.seed,
                          **config.algo_config)
     control_agent.reset()
-    
+
     # Training.
     control_agent.learn()
     control_agent.close()

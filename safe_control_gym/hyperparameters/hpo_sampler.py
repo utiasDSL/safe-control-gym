@@ -47,16 +47,16 @@ SAC_dict = {
 }
 
 GPMPC_dict = {
-    "categorical": {
-        "horizon": [10, 15, 20, 25, 30, 35],
-        "kernel": ['Matern', 'RBF'],
-        "n_ind_points": [30, 40, 50], # number should lower 0.8 * MIN(num_samples) if 0,2 is test_data_ratio
-        "num_epochs": [4, 5, 6, 7, 8],
-        "num_samples": [70, 75, 80, 85],
-        "optimization_iterations": [2800, 3000, 3200], # to make sure having the same checkpoint at these steps [30000, 54000, 72000]
+    'categorical': {
+        'horizon': [10, 15, 20, 25, 30, 35],
+        'kernel': ['Matern', 'RBF'],
+        'n_ind_points': [30, 40, 50],  # number should lower 0.8 * MIN(num_samples) if 0,2 is test_data_ratio
+        'num_epochs': [4, 5, 6, 7, 8],
+        'num_samples': [70, 75, 80, 85],
+        'optimization_iterations': [2800, 3000, 3200],  # to make sure having the same checkpoint at these steps [30000, 54000, 72000]
     },
-    "float": { # note that in float type, you must specify the upper and lower bound
-        "learning_rate": [5e-4, 0.5],
+    'float': {  # note that in float type, you must specify the upper and lower bound
+        'learning_rate': [5e-4, 0.5],
     }
 }
 
@@ -173,43 +173,44 @@ def sac_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]
 
     return hps_suggestion
 
+
 def gpmpc_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]:
     """Sampler for PPO hyperparameters.
-    
+
     args:
         hps_dict: the dict of hyperparameters that will be optimized over
         trial: budget variable
 
     """
 
-    horizon = trial.suggest_categorical("horizon", GPMPC_dict['categorical']['horizon'])
+    horizon = trial.suggest_categorical('horizon', GPMPC_dict['categorical']['horizon'])
     kernel = trial.suggest_categorical('kernel', GPMPC_dict['categorical']['kernel'])
-    n_ind_points = trial.suggest_categorical("n_ind_points", GPMPC_dict['categorical']['n_ind_points'])
-    num_epochs = trial.suggest_categorical("num_epochs", GPMPC_dict['categorical']['num_epochs'])
-    num_samples = trial.suggest_categorical("num_samples", GPMPC_dict['categorical']['num_samples'])
+    n_ind_points = trial.suggest_categorical('n_ind_points', GPMPC_dict['categorical']['n_ind_points'])
+    num_epochs = trial.suggest_categorical('num_epochs', GPMPC_dict['categorical']['num_epochs'])
+    num_samples = trial.suggest_categorical('num_samples', GPMPC_dict['categorical']['num_samples'])
 
     # get dimensions of the dynamics
     d = len(hps_dict['learning_rate'])
     assert d == len(hps_dict['optimization_iterations']), 'The number of optimization iterations must be the same as the number of learning rates.'
-    
+
     # use same setting for all dimensions for simplicity
     optimization_iterations, learning_rate = [], []
 
-    optimization_iterations = d*[trial.suggest_categorical("optimization_iterations", GPMPC_dict['categorical']['optimization_iterations'])]
-    learning_rate = d*[trial.suggest_float("learning_rate", GPMPC_dict['float']['learning_rate'][0], GPMPC_dict['float']['learning_rate'][1], log=True)]
+    optimization_iterations = d * [trial.suggest_categorical('optimization_iterations', GPMPC_dict['categorical']['optimization_iterations'])]
+    learning_rate = d * [trial.suggest_float('learning_rate', GPMPC_dict['float']['learning_rate'][0], GPMPC_dict['float']['learning_rate'][1], log=True)]
 
     hps_suggestion = {
-                        "horizon": horizon,
-                        "kernel": kernel,
-                        "n_ind_points": n_ind_points,
-                        "num_epochs": num_epochs,
-                        "num_samples": num_samples,
-                        "optimization_iterations": optimization_iterations,
-                        "learning_rate": learning_rate,
-                    }
+        'horizon': horizon,
+        'kernel': kernel,
+        'n_ind_points': n_ind_points,
+        'num_epochs': num_epochs,
+        'num_samples': num_samples,
+        'optimization_iterations': optimization_iterations,
+        'learning_rate': learning_rate,
+    }
 
-    assert len(hps_suggestion) == len(hps_dict), ValueError("We are optimizing over different number of HPs as you listed.")
-    
+    assert len(hps_suggestion) == len(hps_dict), ValueError('We are optimizing over different number of HPs as you listed.')
+
     return hps_suggestion
 
 
