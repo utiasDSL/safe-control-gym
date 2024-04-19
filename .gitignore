@@ -10,6 +10,7 @@ results/
 z_docstring.py
 TODOs.md
 #
+hp_study_cartpole/
 hpo_strategy_study*/
 *.jpg
 *.pickle

@@ -6,10 +6,10 @@ task_config:
 
   # state initialization
   init_state:
-    init_x: 0.1
-    init_x_dot: -1.5
+    init_x: 0.0
+    init_x_dot: 0.0
     init_theta: 0.0
-    init_theta_dot: 0.5
+    init_theta_dot: 0.0
   randomized_init: True
   randomized_inertial_prop: False
   normalized_rl_action_space: True
@@ -17,8 +17,8 @@ task_config:
   init_state_randomization_info:
     init_x:
       distrib: 'uniform'
-      low: -1
-      high: 1
+      low: -0.1
+      high: 0.1
     init_x_dot:
       distrib: 'uniform'
       low: -0.1
