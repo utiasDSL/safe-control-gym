@@ -47,7 +47,7 @@ python ./safe_control_gym/hyperparameters/database.py --func create --tag ${algo
 if [ "$resume" == 'False' ]; then
 
 python ./examples/hpo/hpo_experiment.py \
-         --overrides ./examples/hpo/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_150.yaml \
+         --overrides ./examples/hpo/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_.yaml \
                      ./examples/hpo/rl/config_overrides/${sys}/${sys}_${task}.yaml \
                      ./examples/hpo/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_hpo_.yaml \
                      --output_dir ./examples/hpo/rl/${algo}/hpo_study_${sampler}_${sys} \
@@ -61,7 +61,7 @@ sleep 3
 
 # set load_study to True
 python ./examples/hpo/hpo_experiment.py \
-         --overrides ./examples/hpo/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_150.yaml \
+         --overrides ./examples/hpo/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_.yaml \
                      ./examples/hpo/rl/config_overrides/${sys}/${sys}_${task}.yaml \
                      ./examples/hpo/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_hpo_.yaml \
                      --output_dir ./examples/hpo/rl/${algo}/hpo_study_${sampler}_${sys} \
@@ -81,7 +81,7 @@ cd ~/safe-control-gym
 
 # set load_study to True
 python ./examples/hpo/hpo_experiment.py \
-         --overrides ./examples/hpo/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_150.yaml \
+         --overrides ./examples/hpo/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_.yaml \
                      ./examples/hpo/rl/config_overrides/${sys}/${sys}_${task}.yaml \
                      ./examples/hpo/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_hpo_.yaml \
                      --output_dir ./examples/hpo/rl/${algo}/hpo_study_${sampler}_${sys} \
@@ -92,7 +92,7 @@ pid1=$!
 
 # set load_study to True
 python ./examples/hpo/hpo_experiment.py \
-         --overrides ./examples/hpo/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_150.yaml \
+         --overrides ./examples/hpo/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_.yaml \
                      ./examples/hpo/rl/config_overrides/${sys}/${sys}_${task}.yaml \
                      ./examples/hpo/rl/${algo}/config_overrides/${sys}/${algo}_${sys}_hpo_.yaml \
                      --output_dir ./examples/hpo/rl/${algo}/hpo_study_${sampler}_${sys} \
