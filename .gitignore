@@ -9,13 +9,7 @@ examples/pid/*data/
 results/
 z_docstring.py
 TODOs.md
-#
-hp_study*/
-hpo_study*/
-*.jpg
-*.pickle
-*.pkl
-fig/
+
 
 
 # macOS users
