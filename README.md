@@ -190,6 +190,19 @@ Note that the Bullet engine frequency reported for `safe-control-gym` is typical
 [004]: https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/envs/gym_control/cartpole.py
 [005]: https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/envs/gym_pybullet_drones/quadrotor.py
 
+## Run Tests and Linting
+Tests can be run locally by executing:
+```bash
+python3 -m pytest ./tests/  # Run all tests
+```
+
+Linting can be run locally with:
+```bash
+pre-commit install  # Install the pre-commit hooks
+pre-commit autoupdate  # Auto-update the version of the hooks
+pre-commit run --all  # Run the hooks on all files
+```
+
 ## References
 
 - Brunke, L., Greeff, M., Hall, A. W., Yuan, Z., Zhou, S., Panerati, J., & Schoellig, A. P. (2022). [Safe learning in robotics: From learning-based control to safe reinforcement learning](https://www.annualreviews.org/doi/abs/10.1146/annurev-control-042920-020211). Annual Review of Control, Robotics, and Autonomous Systems, 5, 411-444.

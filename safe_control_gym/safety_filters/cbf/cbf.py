@@ -231,9 +231,11 @@ class CBF(BaseSafetyFilter):
             success (bool): Whether the safety filtering was successful or not.
         '''
 
+        uncertified_action = np.clip(uncertified_action, self.env.physical_action_bounds[0], self.env.physical_action_bounds[1])
         self.results_dict['uncertified_action'].append(uncertified_action)
         certified_action, success = self.solve_optimization(current_state, uncertified_action)
         self.results_dict['feasible'].append(success)
+        certified_action = np.squeeze(np.array(certified_action))
         self.results_dict['certified_action'].append(certified_action)
         self.results_dict['correction'].append(np.linalg.norm(certified_action - uncertified_action))
 

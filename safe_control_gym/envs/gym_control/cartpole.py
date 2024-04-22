@@ -644,7 +644,7 @@ class CartPole(BenchmarkEnv):
             done (bool): Whether an episode is over.
         '''
         # Done if goal reached for stabilization task with quadratic cost.
-        if self.TASK == Task.STABILIZATION and self.COST == Cost.QUADRATIC:
+        if self.TASK == Task.STABILIZATION:
             self.goal_reached = bool(np.linalg.norm(self.state - self.X_GOAL) < self.TASK_INFO['stabilization_goal_tolerance'])
             if self.goal_reached:
                 return True

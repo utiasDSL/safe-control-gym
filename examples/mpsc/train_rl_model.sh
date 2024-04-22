@@ -13,7 +13,7 @@ ALGO='ppo'
 rm -r -f ./unsafe_rl_temp_data/
 
 # Train the unsafe controller/agent.
-python3 ../../safe_control_gym/experiments/execute_rl_controller.py \
+python3 ../../safe_control_gym/experiments/train_rl_controller.py \
     --algo ${ALGO} \
     --task ${SYS} \
     --overrides \
@@ -24,7 +24,7 @@ python3 ../../safe_control_gym/experiments/execute_rl_controller.py \
     --seed 2
 
 # Move the newly trained unsafe model.
-mv ./unsafe_rl_temp_data/seed2_*/model_latest.pt ./models/${ALGO}_model_${SYS}_${TASK}.pt
+mv ./unsafe_rl_temp_data/seed2_*/model_best.pt ./models/${ALGO}_model_${SYS}_${TASK}.pt
 
 # Removed the temporary data used to train the new unsafe model.
 rm -r -f ./unsafe_rl_temp_data/

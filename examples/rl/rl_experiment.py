@@ -12,11 +12,12 @@ from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 
 
-def run(gui=True, n_episodes=1, n_steps=None, curr_path='.'):
+def run(gui=False, plot=True, n_episodes=1, n_steps=None, curr_path='.'):
     '''Main function to run RL experiments.
 
     Args:
-        gui (bool): Whether to display the gui and plot graphs.
+        gui (bool): Whether to display the gui.
+        plot (bool): Whether to plot graphs.
         n_episodes (int): The number of episodes to execute.
         n_steps (int): How many steps to run the experiment.
         curr_path (str): The current relative path to the experiment folder.
@@ -40,7 +41,7 @@ def run(gui=True, n_episodes=1, n_steps=None, curr_path='.'):
     env_func = partial(make,
                        config.task,
                        **config.task_config)
-    env = env_func()
+    env = env_func(gui=gui)
 
     # Setup controller.
     ctrl = make(config.algo,
@@ -59,7 +60,7 @@ def run(gui=True, n_episodes=1, n_steps=None, curr_path='.'):
     results, metrics = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
     ctrl.close()
 
-    if gui is True:
+    if plot is True:
         if system == Environment.CARTPOLE:
             graph1_1 = 2
             graph1_2 = 3

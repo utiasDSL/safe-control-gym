@@ -15,7 +15,8 @@ import casadi as cs
 import numpy as np
 from pytope import Polytope
 
-from safe_control_gym.controllers.mpc.mpc_utils import discretize_linear_system, rk_discrete
+from safe_control_gym.controllers.lqr.lqr_utils import discretize_linear_system
+from safe_control_gym.controllers.mpc.mpc_utils import rk_discrete
 from safe_control_gym.envs.benchmark_env import Environment, Task
 from safe_control_gym.envs.constraints import ConstrainedVariableType, LinearConstraint, QuadraticContstraint
 from safe_control_gym.safety_filters.mpsc.mpsc import MPSC

@@ -1,13 +1,14 @@
 # Model args
 hidden_dim: 64
+activation: 'tanh'
 norm_obs: False
 norm_reward: False
-clip_obs: 10.
-clip_reward: 10.
+clip_obs: 10
+clip_reward: 10
 
 # Loss args
-gamma:  0.99
-use_gae:  False
+gamma: 0.99
+use_gae: False
 gae_lambda: 0.95
 use_clipped_value: False
 clip_param: 0.2

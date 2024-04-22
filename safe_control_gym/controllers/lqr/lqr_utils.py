@@ -67,8 +67,8 @@ def discretize_linear_system(A, B, dt, exact=False):
         Ad = Md[:state_dim, :state_dim]
         Bd = Md[:state_dim, state_dim:]
     else:
-        Identity_m = np.eye(state_dim)
-        Ad = Identity_m + A * dt
+        Identity = np.eye(state_dim)
+        Ad = Identity + A * dt
         Bd = B * dt
 
     return Ad, Bd

@@ -33,7 +33,7 @@ from skopt.sampler import Lhs
 from safe_control_gym.controllers.mpc.gp_utils import (GaussianProcessCollection, ZeroMeanIndependentGPModel,
                                                        covMatern52ard, covSEard, kmeans_centriods)
 from safe_control_gym.controllers.mpc.linear_mpc import MPC, LinearMPC
-from safe_control_gym.controllers.mpc.mpc_utils import discretize_linear_system
+from safe_control_gym.controllers.lqr.lqr_utils import discretize_linear_system
 from safe_control_gym.envs.benchmark_env import Task
 
 
@@ -411,7 +411,6 @@ class GPMPC(MPC):
         Gamma_inv = torch.diag_embed(1 / Gamma)
         # TODO: Should inverse be used here instead? pinverse was more stable previsouly.
         Sigma_inv = K_zind_zind + K_x_zind.transpose(1, 2) @ Gamma_inv @ K_x_zind
-        # uncomment the following line for debugging
         # Sigma = torch.pinverse(K_zind_zind + K_x_zind.transpose(1, 2) @ Gamma_inv @ K_x_zind)  # For debugging
         mean_post_factor = torch.zeros((dim_gp_outputs, n_ind_points))
         for i in range(dim_gp_outputs):
@@ -726,7 +725,7 @@ class GPMPC(MPC):
                                                  self.train_iterations + validation_iterations,
                                                  random_state=self.seed)
             input_samples = np.array(input_samples)  # not being used currently
-            seeds = self.env.np_random.randint(0, 99999, size=self.train_iterations + validation_iterations)
+            seeds = self.env.np_random.integers(0, 99999, size=self.train_iterations + validation_iterations)
             for i in range(self.train_iterations + validation_iterations):
                 # For random initial state training.
                 # init_state = init_state_samples[i,:]

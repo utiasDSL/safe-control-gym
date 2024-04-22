@@ -1,4 +1,4 @@
- # Install the pre-commit hooks below with
+# Install the pre-commit hooks below with
 # 'pre-commit install'
 
 # Auto-update the version of the hooks with
@@ -9,7 +9,7 @@
 
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v4.5.0
     hooks:
     -   id: check-ast
     -   id: check-yaml
@@ -49,7 +49,7 @@ repos:
     hooks:
     -   id: flake8
         name: flake8_default
-        args: ['--ignore=E501,W503,W504']
+        args: ['--ignore=E501']
         exclude: (^safe_control_gym/__init__.py|^tests/|^safe_control_gym/math_and_models/transformations.py)
     -   id: flake8
         name: flake8_tests
