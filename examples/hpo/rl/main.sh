@@ -14,6 +14,6 @@ hpo_runs=(1)
 for run in "${hpo_runs[@]}"
 do
 
-bash examples/hpo/rl/rl_hpo.sh ${run} $((run+6)) ${sampler} ${localOrHost} ${algo} ${sys} ${task} ${resume}
+bash examples/hpo/rl/rl_hpo.sh ${run} $((run+6)) ${sampler} ${localOrHost} ${sys} ${task} ${algo} ${resume}
 
 done
