@@ -74,7 +74,7 @@ def test_hpo(SYS, TASK, ALGO, PRIOR, SAMPLER):
 
 @pytest.mark.parametrize('SYS', ['cartpole'])
 @pytest.mark.parametrize('TASK', ['stab'])
-@pytest.mark.parametrize('ALGO', ['ppo', 'sac'])
+@pytest.mark.parametrize('ALGO', ['ppo', 'sac', 'gp_mpc'])
 @pytest.mark.parametrize('PRIOR', [''])
 @pytest.mark.parametrize('LOAD', [False, True])
 @pytest.mark.parametrize('SAMPLER', ['TPESampler', 'RandomSampler'])
@@ -88,17 +88,30 @@ def test_hpo_parallelism(SYS, TASK, ALGO, PRIOR, LOAD, SAMPLER):
         # create database
         create(munch.Munch({'tag': f'{ALGO}_hpo'}))
         # output_dir
-        output_dir = f'./examples/hpo/rl/{ALGO}/results'
-        sys.argv[1:] = ['--algo', ALGO,
-                        '--task', SYS,
-                        '--overrides',
-                            f'./examples/hpo/rl/config_overrides/{SYS}/{SYS}_{TASK}.yaml',
-                            f'./examples/hpo/rl/{ALGO}/config_overrides/{SYS}/{ALGO}_{SYS}_{PRIOR}.yaml',
-                            f'./examples/hpo/rl/{ALGO}/config_overrides/{SYS}/{ALGO}_{SYS}_hpo_.yaml',
-                        '--output_dir', output_dir,
-                        '--seed', '7',
-                        '--use_gpu', 'True'
-                        ]
+        output_dir = f'./examples/hpo/results'
+
+        if ALGO == 'gp_mpc':
+            PRIOR = '150'
+            sys.argv[1:] = ['--algo', ALGO,
+                            '--task', SYS,
+                            '--overrides',
+                                f'./examples/hpo/gp_mpc/config_overrides/{SYS}/{SYS}_{TASK}.yaml',
+                                f'./examples/hpo/gp_mpc/config_overrides/{SYS}/{ALGO}_{SYS}_{PRIOR}.yaml',
+                                f'./examples/hpo/gp_mpc/config_overrides/{SYS}/{ALGO}_{SYS}_hpo_.yaml',
+                            '--output_dir', output_dir,
+                            '--seed', '1',
+                            ]
+        else:
+            sys.argv[1:] = ['--algo', ALGO,
+                            '--task', SYS,
+                            '--overrides',
+                                f'./examples/hpo/rl/config_overrides/{SYS}/{SYS}_{TASK}.yaml',
+                                f'./examples/hpo/rl/{ALGO}/config_overrides/{SYS}/{ALGO}_{SYS}_{PRIOR}.yaml',
+                                f'./examples/hpo/rl/{ALGO}/config_overrides/{SYS}/{ALGO}_{SYS}_hpo_.yaml',
+                            '--output_dir', output_dir,
+                            '--seed', '7',
+                            '--use_gpu', 'True'
+                            ]
 
         fac = ConfigFactory()
         fac.add_argument('--load_study', type=bool, default=False, help='whether to load study from a previous HPO.')
@@ -115,23 +128,36 @@ def test_hpo_parallelism(SYS, TASK, ALGO, PRIOR, LOAD, SAMPLER):
         # first, wait a bit untill the HPO study is created
         time.sleep(3)
         # output_dir
-        output_dir = f'./examples/hpo/rl/{ALGO}/results'
-        sys.argv[1:] = ['--algo', ALGO,
-                        '--task', SYS,
-                        '--overrides',
-                            f'./examples/hpo/rl/config_overrides/{SYS}/{SYS}_{TASK}.yaml',
-                            f'./examples/hpo/rl/{ALGO}/config_overrides/{SYS}/{ALGO}_{SYS}_{PRIOR}.yaml',
-                            f'./examples/hpo/rl/{ALGO}/config_overrides/{SYS}/{ALGO}_{SYS}_hpo_.yaml',
-                        '--output_dir', output_dir,
-                        '--seed', '8',
-                        '--use_gpu', 'True'
-                        ]
+        output_dir = f'./examples/hpo/results'
+        if ALGO == 'gp_mpc':
+            PRIOR = '150'
+            sys.argv[1:] = ['--algo', ALGO,
+                            '--task', SYS,
+                            '--overrides',
+                                f'./examples/hpo/gp_mpc/config_overrides/{SYS}/{SYS}_{TASK}.yaml',
+                                f'./examples/hpo/gp_mpc/config_overrides/{SYS}/{ALGO}_{SYS}_{PRIOR}.yaml',
+                                f'./examples/hpo/gp_mpc/config_overrides/{SYS}/{ALGO}_{SYS}_hpo_.yaml',
+                            '--output_dir', output_dir,
+                            '--seed', '1',
+                            ]
+        else:
+            sys.argv[1:] = ['--algo', ALGO,
+                            '--task', SYS,
+                            '--overrides',
+                                f'./examples/hpo/rl/config_overrides/{SYS}/{SYS}_{TASK}.yaml',
+                                f'./examples/hpo/rl/{ALGO}/config_overrides/{SYS}/{ALGO}_{SYS}_{PRIOR}.yaml',
+                                f'./examples/hpo/rl/{ALGO}/config_overrides/{SYS}/{ALGO}_{SYS}_hpo_.yaml',
+                            '--output_dir', output_dir,
+                            '--seed', '8',
+                            '--use_gpu', 'True'
+                            ]
 
         fac = ConfigFactory()
         fac.add_argument('--load_study', type=bool, default=True, help='whether to load study from a previous HPO.')
         fac.add_argument('--sampler', type=str, default='TPESampler', help='which sampler to use in HPO.')
         config = fac.merge()
-        config.hpo_config.trials = 0
+        config.hpo_config.trials = 1
+        config.hpo_config.repetitions = 1
         config.sampler = SAMPLER
 
         hpo(config)

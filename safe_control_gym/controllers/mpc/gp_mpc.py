@@ -915,22 +915,6 @@ class GPMPC(MPC):
 
         return train_runs, test_runs
 
-    def _run(self):
-        '''Runs evaluation as an unified calling function for hyperparameter optimization.
-           Here we assume _learn() has been called and self.test_runs is available.
-        '''
-
-        # get accumulated reward
-        rewards = []
-        for ep in range(len(self.test_runs[self.num_epochs - 1])):
-            # to get bounded accumulated reward to achieve fair HPO across different algorithms
-            # take exp for reward in each step and sum them up
-            rewards.append(np.sum(np.exp(2 * self.test_runs[self.num_epochs - 1][ep]['reward'])))
-
-        mean_reward = np.mean(rewards)
-
-        return mean_reward
-
     def gather_training_samples(self, all_runs, epoch_i, num_samples, rand_generator=None):
         n_episodes = len(all_runs[epoch_i].keys())
         num_samples_per_episode = int(num_samples / n_episodes)

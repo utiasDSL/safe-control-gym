@@ -22,6 +22,7 @@ from optuna.trial import FrozenTrial, TrialState
 from optuna.visualization.matplotlib import plot_optimization_history, plot_param_importances
 from optuna_dashboard import run_server
 
+from safe_control_gym.experiments.base_experiment import BaseExperiment
 from safe_control_gym.hyperparameters.hpo_sampler import HYPERPARAMS_SAMPLER
 from safe_control_gym.utils.logging import ExperimentLogger
 from safe_control_gym.utils.registration import make
@@ -85,7 +86,7 @@ class HPO(object):
         while increase_runs:
             increase_runs = False
             if first_iteration:
-                Gs_rew = np.inf
+                Gs = np.inf
             for i in range(self.hpo_config.repetitions):
 
                 seed = np.random.randint(0, 10000)
@@ -111,6 +112,8 @@ class HPO(object):
                                       **deepcopy(self.algo_config))
 
                     self.agent.reset()
+                    eval_env = self.env_func(seed=seed * 111)
+                    experiment = BaseExperiment(eval_env, self.agent)
                 except Exception as e:
                     # catch exception
                     self.logger.info(f'Exception occurs when constructing agent: {e}')
@@ -118,7 +121,8 @@ class HPO(object):
                 # return objective estimate
                 # TODO: report intermediate results to Optuna for pruning
                 try:
-                    self.agent.learn()
+                    # self.agent.learn()
+                    experiment.launch_training()
                     self.total_runs += 1
 
                 except Exception as e:
@@ -126,6 +130,7 @@ class HPO(object):
                     self.agent.close()
                     del self.agent
                     del self.env_func
+                    del experiment
                     self.logger.info(f'Exception occurs during learning: {e}')
                     print(e)
                     print('Sampled hyperparameters:')
@@ -133,37 +138,34 @@ class HPO(object):
                     returns.append(0.0)
                     break
 
-                avg_return = self.agent._run()
+                # avg_return = self.agent._run()
+                _, metrics = experiment.run_evaluation(n_episodes=5, n_steps=None, done_on_max_steps=True)
 
-                returns.append(avg_return)
-                self.logger.info('Sampled rewards: {}'.format(returns))
+                # at the moment, only single-objective optimization is supported
+                returns.append(metrics[self.hpo_config.objective[0]])
+                self.logger.info('Sampled objectives: {}'.format(returns))
 
                 self.agent.close()
                 # delete instances
                 del self.agent
                 del self.env_func
 
-            Gss_rew = self._compute_cvar(np.array(returns), self.hpo_config.alpha)
+            Gss = self._compute_cvar(np.array(returns), self.hpo_config.alpha)
 
             # if the current objective is better than the best objective, trigger more runs to avoid maximization bias
             if self.hpo_config.warm_trials < len(self.study.trials) and self.hpo_config.dynamical_runs:
-                if Gss_rew > self.study.best_value or first_iteration is False:
-                    if abs(Gs_rew - Gss_rew) > self.hpo_config.approximation_threshold:
+                if Gss > self.study.best_value or first_iteration is False:
+                    if abs(Gs - Gss) > self.hpo_config.approximation_threshold:
                         increase_runs = True
                         first_iteration = False
-                        Gs_rew = Gss_rew
+                        Gs = Gss
                         self.logger.info('Trigger more runs')
                     else:
                         increase_runs = False
 
-        return_cvar = Gss_rew
+        self.logger.info('Returns: {}'.format(Gss))
 
-        self.logger.info('CVaR of returns: {}'.format(return_cvar))
-
-        if 'performance' in self.hpo_config.objective:
-            return return_cvar
-        else:
-            raise ValueError('Objective must be performance.')
+        return Gss
 
     def hyperparameter_optimization(self) -> None:
 

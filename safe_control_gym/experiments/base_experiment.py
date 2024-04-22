@@ -48,7 +48,7 @@ class BaseExperiment:
 
         self.reset()
 
-    def run_evaluation(self, training=False, n_episodes=None, n_steps=None, log_freq=None, verbose=True, **kwargs):
+    def run_evaluation(self, training=False, n_episodes=None, n_steps=None, done_on_max_steps=None, log_freq=None, verbose=True, **kwargs):
         '''Evaluate a trained controller.
 
         Args:
@@ -64,7 +64,7 @@ class BaseExperiment:
 
         if not training:
             self.reset()
-        trajs_data = self._execute_evaluations(log_freq=log_freq, n_episodes=n_episodes, n_steps=n_steps, **kwargs)
+        trajs_data = self._execute_evaluations(log_freq=log_freq, n_episodes=n_episodes, n_steps=n_steps, done_on_max_steps=done_on_max_steps, **kwargs)
         metrics = self.compute_metrics(trajs_data)
 
         # terminal printouts
@@ -78,7 +78,7 @@ class BaseExperiment:
             print('Evaluation done.')
         return dict(trajs_data), metrics
 
-    def _execute_evaluations(self, n_episodes=None, n_steps=None, log_freq=None, seeds=None):
+    def _execute_evaluations(self, n_episodes=None, n_steps=None, done_on_max_steps=None, log_freq=None, seeds=None):
         '''Runs the experiments and collects all the required data.
 
         Args:
@@ -116,10 +116,14 @@ class BaseExperiment:
                 for _ in range(sim_steps):
                     steps += 1
                     obs, _, done, info = self.env.step(action)
-                    if done and steps >= self.MAX_STEPS:
+                    if done_on_max_steps:
+                        done = done and steps >= self.MAX_STEPS
+                    if done:
                         trajs += 1
+                        steps = 0
                         if trajs < n_episodes and seeds is not None:
                             seed = seeds[trajs]
+                        self.env.save_data()
                         obs, info = self._evaluation_reset(ctrl_data=ctrl_data, sf_data=sf_data)
                         break
         elif n_steps is not None:
@@ -137,7 +141,11 @@ class BaseExperiment:
                             for data_key, data_val in self.safety_filter.results_dict.items():
                                 sf_data[data_key].append(np.array(deepcopy(data_val)))
                         break
+                    if done_on_max_steps:
+                        done = done and steps >= self.MAX_STEPS
                     if done:
+                        steps = 0
+                        self.env.save_data()
                         obs, info = self._evaluation_reset(ctrl_data=ctrl_data, sf_data=sf_data)
                         break
 
@@ -294,7 +302,6 @@ class RecordDataWrapper(gym.Wrapper):
 
     def __init__(self, env):
         super().__init__(env)
-        self.MAX_STEPS = int(env.CTRL_FREQ * env.EPISODE_LEN_SEC)
         self.episode_data = defaultdict(list)
         self.clear_data()
 
@@ -359,9 +366,6 @@ class RecordDataWrapper(gym.Wrapper):
         )
         for key, val in step_data.items():
             self.episode_data[key].append(val)
-
-        if done and len(self.episode_data['obs']) >= self.MAX_STEPS:
-            self.save_data()
 
         return obs, reward, done, info
 

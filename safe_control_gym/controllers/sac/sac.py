@@ -218,14 +218,6 @@ class SAC(BaseController):
 
         return action
 
-    def _run(self, **kwargs):
-        '''Runs evaluation as an unified calling function for hyperparameter optimization.
-        '''
-        results = self.run(env=self.eval_env, render=False, n_episodes=self.eval_batch_size, verbose=False, **kwargs)
-        mean_cost = np.mean(results['ep_returns'])
-
-        return mean_cost
-
     def run(self, env=None, render=False, n_episodes=10, verbose=False, **kwargs):
         '''Runs evaluation with current policy.'''
         self.agent.eval()

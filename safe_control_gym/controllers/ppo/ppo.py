@@ -256,14 +256,6 @@ class PPO(BaseController):
             eval_results.update(queued_stats)
         return eval_results
 
-    def _run(self, **kwargs):
-        '''Runs evaluation as an unified calling function for hyperparameter optimization.
-        '''
-        results = self.run(env=self.eval_env, render=False, n_episodes=self.eval_batch_size, verbose=False, **kwargs)
-        mean_cost = np.mean(results['ep_returns'])
-
-        return mean_cost
-
     def train_step(self):
         '''Performs a training/fine-tuning step.'''
         self.agent.train()

@@ -92,7 +92,7 @@ def train(config):
     # Run experiment
     experiment = BaseExperiment(eval_env, control_agent)
     experiment.launch_training()
-    results, metrics = experiment.run_evaluation(n_episodes=1, n_steps=None)
+    results, metrics = experiment.run_evaluation(n_episodes=1, n_steps=None, done_on_max_steps=True)
     control_agent.close()
 
     if True:
