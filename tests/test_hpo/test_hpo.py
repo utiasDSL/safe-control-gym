@@ -215,6 +215,7 @@ def test_hpo_without_database(SYS, TASK, ALGO, PRIOR, SAMPLER):
     config = fac.merge()
     config.hpo_config.trials = 1
     config.hpo_config.repetitions = 1
+    config.hpo_config.use_database = False
     config.sampler = SAMPLER
 
     hpo(config)
