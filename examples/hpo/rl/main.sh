@@ -17,3 +17,6 @@ do
 bash examples/hpo/rl/rl_hpo.sh ${run} $((run+6)) ${sampler} ${localOrHost} ${sys} ${task} ${algo} ${resume}
 
 done
+
+# eval
+bash examples/hpo/rl/rl_hp_evaluation.sh ${localOrHost} ${algo} ${sys} ${task} ${sampler}
