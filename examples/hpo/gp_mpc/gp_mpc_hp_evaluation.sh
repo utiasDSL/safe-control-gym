@@ -66,6 +66,7 @@ for hps in "${hp_kind[@]}"; do
                     ./examples/hpo/gp_mpc/config_overrides/cartpole/cartpole_stab.yaml \
         --output_dir "${OUTPUT_DIR}" \
         --opt_hps "${hp_path}" \
+        --n_episodes 10 \
         --seed "${seed}" \
         --tag "${hps}" \
         --use_gpu True

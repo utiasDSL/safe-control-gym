@@ -139,6 +139,7 @@ class HPO(object):
                     break
 
                 # avg_return = self.agent._run()
+                # TODO: add n_episondes to the config
                 _, metrics = experiment.run_evaluation(n_episodes=5, n_steps=None, done_on_max_steps=True)
 
                 # at the moment, only single-objective optimization is supported

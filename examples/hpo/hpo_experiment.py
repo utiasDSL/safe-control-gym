@@ -92,7 +92,7 @@ def train(config):
     # Run experiment
     experiment = BaseExperiment(eval_env, control_agent)
     experiment.launch_training()
-    results, metrics = experiment.run_evaluation(n_episodes=1, n_steps=None, done_on_max_steps=True)
+    results, metrics = experiment.run_evaluation(n_episodes=config.n_episodes, n_steps=None, done_on_max_steps=True)
     control_agent.close()
 
     if True:
@@ -178,6 +178,7 @@ if __name__ == '__main__':
     fac.add_argument('--opt_hps', type=str, default='', help='yaml file as a result of HPO.')
     fac.add_argument('--load_study', type=bool, default=False, help='whether to load study from a previous HPO.')
     fac.add_argument('--sampler', type=str, default='TPESampler', help='which sampler to use in HPO.')
+    fac.add_argument('--n_episodes', type=int, default=1, help='number of episodes to run.')
     # merge config
     config = fac.merge()
 
