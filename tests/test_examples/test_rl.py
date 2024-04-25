@@ -1,12 +1,13 @@
 import sys
+
 import pytest
 
 from examples.rl.rl_experiment import run
 
 
-@pytest.mark.parametrize('SYS', ['cartpole', 'quadrotor_2D', 'quadrotor_3D'])
-@pytest.mark.parametrize('TASK',['stab', 'track'])
-@pytest.mark.parametrize('ALGO',['ppo', 'sac'])
+@pytest.mark.parametrize('SYS',  ['cartpole', 'quadrotor_2D', 'quadrotor_3D'])
+@pytest.mark.parametrize('TASK', ['stab', 'track'])
+@pytest.mark.parametrize('ALGO', ['ppo', 'sac', 'safe_explorer_ppo'])
 def test_rl(SYS, TASK, ALGO):
     SYS_NAME = 'quadrotor' if 'quadrotor' in SYS else SYS
     sys.argv[1:] = ['--algo', ALGO,
@@ -17,4 +18,4 @@ def test_rl(SYS, TASK, ALGO):
                     '--kv_overrides',
                         'algo_config.training=False',
                     ]
-    run(gui=False, n_episodes=None, n_steps=10, curr_path='./examples/rl')
+    run(gui=False, plot=False, n_episodes=None, n_steps=10, curr_path='./examples/rl')

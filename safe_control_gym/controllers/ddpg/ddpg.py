@@ -4,9 +4,6 @@ Reference paper & code:
     * [Continuous Control with Deep Reinforcement Learning](https://arxiv.org/pdf/1509.02971.pdf)
     * [openai spinning up - ddpg](https://github.com/openai/spinningup/tree/master/spinup/algos/pytorch/ddpg)
     * [DeepRL - ddpg](https://github.com/ShangtongZhang/DeepRL/blob/master/deep_rl/agent/DDPG_agent.py)
-
-Example:
-    $ python safe_control_gym/experiments/execute_rl_controller.py --algo ddpg --task cartpole --output_dir results --tag test/cartpole_ddpg --seed 6
 '''
 
 import os
@@ -16,15 +13,16 @@ from collections import defaultdict
 import numpy as np
 import torch
 
-from safe_control_gym.utils.logging import ExperimentLogger
-from safe_control_gym.utils.utils import get_random_state, set_random_state, is_wrapped
-from safe_control_gym.envs.env_wrappers.vectorized_env import make_vec_envs
-from safe_control_gym.envs.env_wrappers.vectorized_env.vec_env_utils import _flatten_obs, _unflatten_obs
-from safe_control_gym.envs.env_wrappers.record_episode_statistics import RecordEpisodeStatistics, VecRecordEpisodeStatistics
-from safe_control_gym.math_and_models.normalization import BaseNormalizer, MeanStdNormalizer, RewardStdNormalizer
-
 from safe_control_gym.controllers.base_controller import BaseController
 from safe_control_gym.controllers.ddpg.ddpg_utils import DDPGAgent, DDPGBuffer, make_action_noise_process
+from safe_control_gym.envs.env_wrappers.record_episode_statistics import (RecordEpisodeStatistics,
+                                                                          VecRecordEpisodeStatistics)
+from safe_control_gym.envs.env_wrappers.vectorized_env import make_vec_envs
+from safe_control_gym.envs.env_wrappers.vectorized_env.vec_env_utils import _flatten_obs, _unflatten_obs
+from safe_control_gym.math_and_models.normalization import (BaseNormalizer, MeanStdNormalizer,
+                                                            RewardStdNormalizer)
+from safe_control_gym.utils.logging import ExperimentLogger
+from safe_control_gym.utils.utils import get_random_state, is_wrapped, set_random_state
 
 
 class DDPG(BaseController):
@@ -176,13 +174,13 @@ class DDPG(BaseController):
                 # latest/final checkpoint
                 self.save(self.checkpoint_path)
                 self.logger.info(f'Checkpoint | {self.checkpoint_path}')
-                path = os.path.join(self.output_dir, "checkpoints", "model_{}.pt".format(self.total_steps))
+                path = os.path.join(self.output_dir, 'checkpoints', 'model_{}.pt'.format(self.total_steps))
                 self.save(path)
             if self.num_checkpoints > 0:
                 interval_id = np.argmin(np.abs(np.array(step_interval) - self.total_steps))
-                if interval_save[interval_id] == False:
+                if not interval_save[interval_id]:
                     # Intermediate checkpoint.
-                    path = os.path.join(self.output_dir, "checkpoints", f'model_{self.total_steps}.pt')
+                    path = os.path.join(self.output_dir, 'checkpoints', f'model_{self.total_steps}.pt')
                     self.save(path, save_buffer=False)
                     interval_save[interval_id] = True
 
@@ -205,16 +203,6 @@ class DDPG(BaseController):
             if self.log_interval and self.total_steps % self.log_interval == 0:
                 self.log_step(results)
 
-    def _learn(self,
-               env=None,
-               **kwargs
-               ):
-        '''Performs learning as an unified calling function for hyperparameter optimization.
-        Args:
-            env (BenchmarkEnv): The environment to be used for training.
-        '''
-        return self.learn(env=env, **kwargs)
-
     def select_action(self, obs, info=None):
         '''Determine the action to take at the current timestep.
 
@@ -231,14 +219,6 @@ class DDPG(BaseController):
             action = self.agent.ac.act(obs)
 
         return action
-    
-    def _run(self, **kwargs):
-        '''Runs evaluation as an unified calling function for hyperparameter optimization.
-        '''
-        results = self.run(env=self.eval_env, render=False, n_episodes=self.eval_batch_size, verbose=False, **kwargs)
-        mean_cost = np.mean(results["ep_returns"])
-
-        return mean_cost
 
     def run(self, env=None, render=False, n_episodes=10, verbose=False, **kwargs):
         '''Runs evaluation with current policy.'''

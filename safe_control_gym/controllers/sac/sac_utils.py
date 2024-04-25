@@ -1,7 +1,7 @@
 '''SAC Utils.'''
 
-from copy import deepcopy
 from collections import defaultdict
+from copy import deepcopy
 
 import numpy as np
 import torch
@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from gymnasium.spaces import Box
 
-from safe_control_gym.math_and_models.distributions import Normal, Categorical
+from safe_control_gym.math_and_models.distributions import Categorical, Normal
 from safe_control_gym.math_and_models.neural_networks import MLP
 
 # -----------------------------------------------------------------------------------
@@ -42,8 +42,10 @@ class SACAgent:
         self.tau = tau
         self.use_entropy_tuning = use_entropy_tuning
 
+        self.activation = activation
+
         # model
-        self.ac = MLPActorCritic(obs_space, act_space, hidden_dims=[hidden_dim] * 2, activation=activation)
+        self.ac = MLPActorCritic(obs_space, act_space, hidden_dims=[hidden_dim] * 2, activation=self.activation)
         self.log_alpha = torch.tensor(np.log(init_temperature))
 
         if self.use_entropy_tuning:
@@ -140,7 +142,7 @@ class SACAgent:
 
     def update(self, batch):
         '''Updates model parameters based on current training batch.'''
-        resutls = defaultdict(list)
+        results = defaultdict(list)
 
         # actor update
         policy_loss, entropy_loss = self.compute_policy_loss(batch)
@@ -162,10 +164,10 @@ class SACAgent:
         # update target networks
         soft_update(self.ac, self.ac_targ, self.tau)
 
-        resutls['policy_loss'] = policy_loss.item()
-        resutls['critic_loss'] = critic_loss.item()
-        resutls['entropy_loss'] = entropy_loss.item()
-        return resutls
+        results['policy_loss'] = policy_loss.item()
+        results['critic_loss'] = critic_loss.item()
+        results['entropy_loss'] = entropy_loss.item()
+        return results
 
 
 # -----------------------------------------------------------------------------------
@@ -276,8 +278,10 @@ class MLPActorCritic(nn.Module):
             low, high = act_space.low, act_space.high
             low = torch.FloatTensor(low)
             high = torch.FloatTensor(high)
-            # Rescale action from [-1, 1] to [low, high]
-            def unscale_fn(x): return low.to(x.device) + (0.5 * (x + 1.0) * (high.to(x.device) - low.to(x.device)))
+
+            def unscale_fn(x):  # Rescale action from [-1, 1] to [low, high]
+                return low.to(x.device) + (0.5 * (x + 1.0) * (high.to(x.device) - low.to(x.device)))
+
             self.actor = MLPActor(obs_dim, act_dim, hidden_dims, activation, postprocess_fn=unscale_fn)
 
         # Q functions

@@ -2,6 +2,7 @@ algo: sac
 algo_config:
   # model args
   hidden_dim: 256
+  activation: "relu"
   use_entropy_tuning: False
 
   # optim args
@@ -25,5 +26,5 @@ algo_config:
   save_interval: 1000
   num_checkpoints: 100
   eval_interval: 1000
-  eval_save_best: True 
+  eval_save_best: True
   tensorboard: True

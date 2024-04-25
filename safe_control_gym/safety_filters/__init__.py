@@ -2,7 +2,6 @@
 
 from safe_control_gym.utils.registration import register
 
-
 register(idx='linear_mpsc',
          entry_point='safe_control_gym.safety_filters.mpsc.linear_mpsc:LINEAR_MPSC',
          config_entry_point='safe_control_gym.safety_filters.mpsc:mpsc.yaml')

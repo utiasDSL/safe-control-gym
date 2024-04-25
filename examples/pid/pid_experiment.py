@@ -4,9 +4,9 @@ import os
 import pickle
 from functools import partial
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pybullet as p
-import matplotlib.pyplot as plt
 
 from safe_control_gym.experiments.base_experiment import BaseExperiment
 from safe_control_gym.utils.configuration import ConfigFactory

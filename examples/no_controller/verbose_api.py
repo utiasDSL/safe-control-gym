@@ -5,8 +5,9 @@ Example:
     $ python3 verbose_api.py --task quadrotor --overrides verbose_api.yaml
 '''
 
-import time
 import inspect
+import time
+
 import pybullet as p
 
 from safe_control_gym.utils.configuration import ConfigFactory

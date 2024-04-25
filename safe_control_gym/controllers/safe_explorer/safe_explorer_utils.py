@@ -8,8 +8,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from gymnasium.spaces import Box
 
-from safe_control_gym.math_and_models.neural_networks import MLP
 from safe_control_gym.controllers.ppo.ppo_utils import random_sample
+from safe_control_gym.math_and_models.neural_networks import MLP
 
 
 class SafetyLayer:
@@ -46,7 +46,7 @@ class SafetyLayer:
         # Constraint slack variables/values.
         assert slack is not None and isinstance(slack, (int, float, list))
         if isinstance(slack, (int, float)):
-            slack = [slack] * obs_space.shape[0]
+            slack = [slack] * self.num_constraints
         self.slack = np.array(slack)
         # Optimizers.
         self.optimizers = [

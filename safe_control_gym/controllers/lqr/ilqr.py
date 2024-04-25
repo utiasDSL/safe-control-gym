@@ -8,7 +8,8 @@ import numpy as np
 from termcolor import colored
 
 from safe_control_gym.controllers.base_controller import BaseController
-from safe_control_gym.controllers.lqr.lqr_utils import get_cost_weight_matrix, compute_lqr_gain, discretize_linear_system
+from safe_control_gym.controllers.lqr.lqr_utils import (compute_lqr_gain, discretize_linear_system,
+                                                        get_cost_weight_matrix)
 from safe_control_gym.envs.benchmark_env import Task
 
 
@@ -108,8 +109,7 @@ class iLQR(BaseController):
             print(colored('--------------------------', 'green'))
 
             if self.ite_counter == 0 and env.done_on_out_of_bound and self.final_info['out_of_bounds']:
-                print(colored('[ERROR] The initial policy might be unstable. '
-                              + 'Break from iLQR updates.', 'red'))
+                print(colored('[ERROR] The initial policy might be unstable. Break from iLQR updates.', 'red'))
                 break
 
             # Maximum episode length.
@@ -133,10 +133,9 @@ class iLQR(BaseController):
                 # If cost is increased, increase lambda
                 self.lamb *= self.lamb_factor
 
-                print(f'Cost increased by {-delta_cost}. '
-                      + 'Set feedforward term and controller gain to that '
-                      'from the previous iteration. '
-                      f'Increased lambda to {self.lamb}.')
+                print(f'Cost increased by {-delta_cost}.')
+                print('Set feedforward term and controller gain to that from the previous iteration.')
+                print(f'Increased lambda to {self.lamb}.')
                 print(f'Current policy is from iteration {self.best_iteration}.')
 
                 # Reset feedforward term and controller gain to that from
@@ -164,8 +163,7 @@ class iLQR(BaseController):
                 # Check consecutive cost increment (cost decrement).
                 if abs(delta_cost) < self.epsilon and self.prev_ite_improved:
                     # Cost converged.
-                    print(colored('iLQR cost converged with a tolerance '
-                                  + f'of {self.epsilon}.', 'yellow'))
+                    print(colored(f'iLQR cost converged with a tolerance of {self.epsilon}.', 'yellow'))
                     break
 
                 # Set improved flag to True.

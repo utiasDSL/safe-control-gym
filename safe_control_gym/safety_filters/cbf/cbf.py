@@ -6,11 +6,11 @@ Reference:
 
 from typing import Tuple
 
-import numpy as np
 import casadi as cs
+import numpy as np
 
 from safe_control_gym.safety_filters.base_safety_filter import BaseSafetyFilter
-from safe_control_gym.safety_filters.cbf.cbf_utils import linear_function, cbf_cartpole, cartesian_product
+from safe_control_gym.safety_filters.cbf.cbf_utils import cartesian_product, cbf_cartpole, linear_function
 
 
 class CBF(BaseSafetyFilter):
@@ -138,8 +138,7 @@ class CBF(BaseSafetyFilter):
             cost = 0.5 * cs.norm_2(uncertified_action_var - u_var) ** 2
 
         # CBF constraint
-        opti.subject_to(-self.linear_func(x=barrier_at_x)['y'] - lie_derivative_at_x <=
-                        right_hand_side)
+        opti.subject_to(-self.linear_func(x=barrier_at_x)['y'] - lie_derivative_at_x <= right_hand_side)
 
         # Input constraints
         for input_constraint in self.input_constraints_sym:
@@ -232,9 +231,11 @@ class CBF(BaseSafetyFilter):
             success (bool): Whether the safety filtering was successful or not.
         '''
 
+        uncertified_action = np.clip(uncertified_action, self.env.physical_action_bounds[0], self.env.physical_action_bounds[1])
         self.results_dict['uncertified_action'].append(uncertified_action)
         certified_action, success = self.solve_optimization(current_state, uncertified_action)
         self.results_dict['feasible'].append(success)
+        certified_action = np.squeeze(np.array(certified_action))
         self.results_dict['certified_action'].append(certified_action)
         self.results_dict['correction'].append(np.linalg.norm(certified_action - uncertified_action))
 

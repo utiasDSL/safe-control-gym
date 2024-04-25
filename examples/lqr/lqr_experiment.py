@@ -2,15 +2,15 @@
 
 import os
 import pickle
-from functools import partial
 from collections import defaultdict
+from functools import partial
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.ticker import FormatStrFormatter
 
-from safe_control_gym.experiments.base_experiment import BaseExperiment
 from safe_control_gym.envs.benchmark_env import Task
+from safe_control_gym.experiments.base_experiment import BaseExperiment
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 

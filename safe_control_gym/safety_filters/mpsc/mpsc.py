@@ -8,17 +8,16 @@ Based on
       https://arxiv.org/pdf/1803.08552.pdf
 '''
 
-from copy import deepcopy
 from abc import ABC, abstractmethod
+from copy import deepcopy
 
 import numpy as np
 
-from safe_control_gym.safety_filters.base_safety_filter import BaseSafetyFilter
-from safe_control_gym.safety_filters.mpsc.mpsc_utils import get_trajectory_on_horizon
-from safe_control_gym.safety_filters.mpsc.mpsc_cost_function.one_step_cost import ONE_STEP_COST
-from safe_control_gym.controllers.mpc.mpc_utils import get_cost_weight_matrix, reset_constraints
 from safe_control_gym.controllers.lqr.lqr_utils import compute_lqr_gain
-from safe_control_gym.safety_filters.mpsc.mpsc_utils import Cost_Function
+from safe_control_gym.controllers.mpc.mpc_utils import get_cost_weight_matrix, reset_constraints
+from safe_control_gym.safety_filters.base_safety_filter import BaseSafetyFilter
+from safe_control_gym.safety_filters.mpsc.mpsc_cost_function.one_step_cost import ONE_STEP_COST
+from safe_control_gym.safety_filters.mpsc.mpsc_utils import Cost_Function, get_trajectory_on_horizon
 
 
 class MPSC(BaseSafetyFilter, ABC):
@@ -33,7 +32,7 @@ class MPSC(BaseSafetyFilter, ABC):
                  warmstart: bool = True,
                  additional_constraints: list = None,
                  use_terminal_set: bool = True,
-                 cost_function: str = Cost_Function.ONE_STEP_COST,
+                 cost_function: Cost_Function = Cost_Function.ONE_STEP_COST,
                  **kwargs
                  ):
         '''Initialize the MPSC.
@@ -47,7 +46,7 @@ class MPSC(BaseSafetyFilter, ABC):
             warmstart (bool): If the previous MPC soln should be used to warmstart the next mpc step.
             additional_constraints (list): List of additional constraints to consider.
             use_terminal_set (bool): Whether to use a terminal set constraint or not.
-            cost_function (str): A string (from Cost_Function) representing the cost function to be used.
+            cost_function (Cost_Function): A string (from Cost_Function) representing the cost function to be used.
         '''
 
         # Store all params/args.
@@ -57,8 +56,10 @@ class MPSC(BaseSafetyFilter, ABC):
 
         super().__init__(env_func, **kwargs)
 
+        np.random.seed(self.seed)
+
         # Setup the Environments.
-        self.env = env_func(randomized_init=False)
+        self.env = env_func(normalized_rl_action_space=False)
         self.training_env = env_func(randomized_init=True,
                                      init_state=None,
                                      cost='quadratic',
@@ -82,8 +83,7 @@ class MPSC(BaseSafetyFilter, ABC):
         if self.additional_constraints is None:
             additional_constraints = []
         self.constraints, self.state_constraints_sym, self.input_constraints_sym = reset_constraints(
-            self.env.constraints.constraints +
-            additional_constraints)
+            self.env.constraints.constraints + additional_constraints)
 
         if cost_function == Cost_Function.ONE_STEP_COST:
             self.cost_function = ONE_STEP_COST()
@@ -141,9 +141,7 @@ class MPSC(BaseSafetyFilter, ABC):
         self.cost_function.prepare_cost_variables(opti_dict, obs, iteration)
 
         # Initial guess for optimization problem.
-        if (self.warmstart and
-                self.z_prev is not None and
-                self.v_prev is not None):
+        if (self.warmstart and self.z_prev is not None and self.v_prev is not None):
             # Shift previous solutions by 1 step.
             z_guess = deepcopy(self.z_prev)
             v_guess = deepcopy(self.v_prev)
@@ -164,7 +162,7 @@ class MPSC(BaseSafetyFilter, ABC):
             self.prev_action = next_u_val
             feasible = True
         except Exception as e:
-            print('Error Return Status: ', opti.debug.return_status())
+            print('Error Return Status:', opti.debug.return_status())
             print(e)
             feasible = False
             action = None
@@ -186,7 +184,7 @@ class MPSC(BaseSafetyFilter, ABC):
             certified_action (ndarray): The certified action
             success (bool): Whether the safety filtering was successful or not.
         '''
-
+        uncertified_action = np.clip(uncertified_action, self.env.physical_action_bounds[0], self.env.physical_action_bounds[1])
         self.results_dict['uncertified_action'].append(uncertified_action)
         success = True
 
@@ -200,9 +198,7 @@ class MPSC(BaseSafetyFilter, ABC):
             certified_action = action
         else:
             self.kinf += 1
-            if (self.kinf <= self.horizon - 1 and
-                self.z_prev is not None and
-                    self.v_prev is not None):
+            if (self.kinf <= self.horizon - 1 and self.z_prev is not None and self.v_prev is not None):
                 action = np.squeeze(self.v_prev[:, self.kinf]) + \
                     np.squeeze(self.lqr_gain @ (current_state.reshape((self.model.nx, 1)) - self.z_prev[:, self.kinf].reshape((self.model.nx, 1))))
                 if self.integration_algo == 'LTI':
@@ -222,6 +218,7 @@ class MPSC(BaseSafetyFilter, ABC):
                 success = False
                 certified_action = clipped_action
 
+        certified_action = np.squeeze(np.array(certified_action))
         self.results_dict['kinf'].append(self.kinf)
         self.results_dict['certified_action'].append(certified_action)
         self.results_dict['correction'].append(np.linalg.norm(certified_action - uncertified_action))

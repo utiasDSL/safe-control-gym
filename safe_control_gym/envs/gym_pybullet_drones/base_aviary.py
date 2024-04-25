@@ -8,11 +8,12 @@ image types captured by PyBullet's camera rendering.
 '''
 
 import os
-import time
 import pkgutil
+import time
 import xml.etree.ElementTree as etxml
 from datetime import datetime
 from enum import Enum
+
 import numpy as np
 import pybullet as p
 import pybullet_data
@@ -92,7 +93,7 @@ class BaseAviary(BenchmarkEnv):
             self.J_INV, \
             self.KF, \
             self.KM, \
-            self.COLLISION_H,\
+            self.COLLISION_H, \
             self.COLLISION_R, \
             self.COLLISION_Z_OFFSET, \
             self.MAX_SPEED_KMH, \
@@ -125,14 +126,12 @@ class BaseAviary(BenchmarkEnv):
         # Compute constants.
         self.GRAVITY = self.GRAVITY_ACC * self.MASS
         self.HOVER_RPM = np.sqrt(self.GRAVITY / (4 * self.KF))
-        self.MAX_RPM = np.sqrt((self.THRUST2WEIGHT_RATIO * self.GRAVITY) /
-                               (4 * self.KF))
+        self.MAX_RPM = np.sqrt((self.THRUST2WEIGHT_RATIO * self.GRAVITY) / (4 * self.KF))
         self.MAX_THRUST = (4 * self.KF * self.MAX_RPM**2)
         self.MAX_XY_TORQUE = (self.L * self.KF * self.MAX_RPM**2)
         self.MAX_Z_TORQUE = (2 * self.KM * self.MAX_RPM**2)
         self.GND_EFF_H_CLIP = 0.25 * self.PROP_RADIUS * np.sqrt(
-            (15 * self.MAX_RPM**2 * self.KF * self.GND_EFF_COEFF)
-            / self.MAX_THRUST)
+            (15 * self.MAX_RPM**2 * self.KF * self.GND_EFF_COEFF) / self.MAX_THRUST)
         # BenchmarkEnv constructor.
         super().__init__(gui=gui, verbose=verbose, **kwargs)
         # Connect to PyBullet.
@@ -171,8 +170,7 @@ class BaseAviary(BenchmarkEnv):
             upAxisIndex=2,
             physicsClientId=self.PYB_CLIENT)
         self.CAM_PRO = p.computeProjectionMatrixFOV(fov=60.0,
-                                                    aspect=self.RENDER_WIDTH
-                                                    / self.RENDER_HEIGHT,
+                                                    aspect=self.RENDER_WIDTH / self.RENDER_HEIGHT,
                                                     nearVal=0.1,
                                                     farVal=1000.0)
         # Set default initial poses when loading drone's urdf model.
@@ -318,12 +316,10 @@ class BaseAviary(BenchmarkEnv):
             print(
                 '\n[INFO] BaseAviary.render() ——— it {:04d}'.format(
                     self.pyb_step_counter),
-                '——— wall-clock time {:.1f}s,'.format(time.time()
-                                                      - self.RESET_TIME),
+                '——— wall-clock time {:.1f}s,'.format(time.time() - self.RESET_TIME),
                 'simulation time {:.1f}s@{:d}Hz ({:.2f}x)'.format(
                     self.pyb_step_counter * self.TIMESTEP, self.SIM_FREQ,
-                    (self.pyb_step_counter * self.TIMESTEP) /
-                    (time.time() - self.RESET_TIME)))
+                    (self.pyb_step_counter * self.TIMESTEP) / (time.time() - self.RESET_TIME)))
             for i in range(self.NUM_DRONES):
                 print(
                     '[INFO] BaseAviary.render() ——— drone {:d}'.format(i),
@@ -515,10 +511,8 @@ class BaseAviary(BenchmarkEnv):
         z_torques = np.array(rpm**2) * self.KM
         z_torque = (-z_torques[0] + z_torques[1] - z_torques[2] + z_torques[3])
         if self.DRONE_MODEL == DroneModel.CF2X:
-            x_torque = (forces[0] + forces[1] - forces[2]
-                        - forces[3]) * (self.L / np.sqrt(2))
-            y_torque = (-forces[0] + forces[1] + forces[2]
-                        - forces[3]) * (self.L / np.sqrt(2))
+            x_torque = (forces[0] + forces[1] - forces[2] - forces[3]) * (self.L / np.sqrt(2))
+            y_torque = (-forces[0] + forces[1] + forces[2] - forces[3]) * (self.L / np.sqrt(2))
         elif self.DRONE_MODEL == DroneModel.CF2P:
             x_torque = (forces[1] - forces[3]) * self.L
             y_torque = (-forces[0] + forces[2]) * self.L

@@ -3,15 +3,15 @@
 This module also contains enumerations for cost functions, tasks, disturbances, and quadrotor types.
 '''
 
-import os
 import copy
-from enum import Enum
+import os
 from abc import ABC, abstractmethod
+from enum import Enum
 
 import gymnasium as gym
+import numpy as np
 from gymnasium import spaces
 from gymnasium.utils import seeding
-import numpy as np
 from matplotlib import pyplot as plt
 
 from safe_control_gym.envs.constraints import create_constraint_list
@@ -436,7 +436,7 @@ class BenchmarkEnv(gym.Env, ABC):
         # Sanity check (reset at least once).
         self._check_initial_reset()
         # Save the raw input action.
-        action = np.atleast_1d(action)
+        action = np.atleast_1d(np.squeeze(action))
 
         if action.ndim != 1:
             raise ValueError('[ERROR]: The action returned by the controller must be 1 dimensional.')
@@ -511,8 +511,13 @@ class BenchmarkEnv(gym.Env, ABC):
 
         # Apply penalized reward when close to constraint violation
         if self.COST == Cost.RL_REWARD:
-            if self.constraints is not None and self.use_constraint_penalty and self.constraints.is_almost_active(self, c_value=c_value):
-                rew += self.constraint_penalty
+            if self.constraints is not None and self.use_constraint_penalty and self.constraints.is_violated(self, c_value=c_value):
+                if self.rew_exponential:
+                    rew = np.log(rew)
+                    rew += self.constraint_penalty
+                    rew = np.exp(rew)
+                else:
+                    rew += self.constraint_penalty
 
         # Terminate when reaching time limit,
         # but distinguish between done due to true termination or time limit reached

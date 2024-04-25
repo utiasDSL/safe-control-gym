@@ -6,30 +6,25 @@ References papers & code:
     * [robust-adversarial-rl](https://github.com/jerinphilip/robust-adversarial-rl)
     * [rllab-adv](https://github.com/lerrel/rllab-adv)
     * [Robust Reinforcement Learning via adversary pools](https://github.com/eugenevinitsky/robust_RL_multi_adversary)
-
-Example:
-    train on cartpole_adversary:
-        $ python safe_control_gym/experiments/execute_rl_controller.py --mode train_two_phase --exp_id rap_cartpole_adv \
-        --algo rap --task cartpole_adversary --num_workers 2 --max_env_steps 2000000 \
-        --tensorboard --use_gae --num_adversaries 2
 '''
 
 import os
 import time
 from collections import defaultdict
 
-import torch
 import numpy as np
-
-from safe_control_gym.utils.logging import ExperimentLogger
-from safe_control_gym.utils.utils import get_random_state, set_random_state, is_wrapped
-from safe_control_gym.envs.env_wrappers.vectorized_env import make_vec_envs
-from safe_control_gym.envs.env_wrappers.record_episode_statistics import RecordEpisodeStatistics, VecRecordEpisodeStatistics
-from safe_control_gym.math_and_models.normalization import BaseNormalizer, MeanStdNormalizer, RewardStdNormalizer
+import torch
 
 from safe_control_gym.controllers.base_controller import BaseController
 from safe_control_gym.controllers.ppo.ppo_utils import PPOAgent, PPOBuffer, compute_returns_and_advantages
 from safe_control_gym.controllers.rarl.rarl_utils import split_obs_by_adversary
+from safe_control_gym.envs.env_wrappers.record_episode_statistics import (RecordEpisodeStatistics,
+                                                                          VecRecordEpisodeStatistics)
+from safe_control_gym.envs.env_wrappers.vectorized_env import make_vec_envs
+from safe_control_gym.math_and_models.normalization import (BaseNormalizer, MeanStdNormalizer,
+                                                            RewardStdNormalizer)
+from safe_control_gym.utils.logging import ExperimentLogger
+from safe_control_gym.utils.utils import get_random_state, is_wrapped, set_random_state
 
 
 class RAP(BaseController):

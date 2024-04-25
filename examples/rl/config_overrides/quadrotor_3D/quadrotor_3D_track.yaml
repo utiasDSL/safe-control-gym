@@ -7,34 +7,47 @@ task_config:
   quad_type: 3
   normalized_rl_action_space: True
 
+  init_state:
+    init_x: 0.4
+    init_x_dot: 0
+    init_y: 0.4
+    init_y_dot: 0
+    init_z: 1.4
+    init_z_dot: 0
+    init_phi: 0
+    init_theta: 0
+    init_psi: 0
+    init_p: 0
+    init_q: 0
+    init_r: 0
   randomized_init: True
   randomized_inertial_prop: False
 
   init_state_randomization_info:
     init_x:
       distrib: 'uniform'
-      low: -1
-      high: 1
+      low: -2
+      high: 2
     init_x_dot:
       distrib: 'uniform'
-      low: -0.1
-      high: 0.1
+      low: -1
+      high: 1
     init_y:
+      distrib: 'uniform'
+      low: -2
+      high: 2
+    init_y_dot:
       distrib: 'uniform'
       low: -1
       high: 1
-    init_y_dot:
-      distrib: 'uniform'
-      low: -0.1
-      high: 0.1
     init_z:
       distrib: 'uniform'
-      low: 1
+      low: 0.3  # Just so it doesn't crash into the ground
       high: 2
     init_z_dot:
       distrib: 'uniform'
-      low: -0.1
-      high: 0.1
+      low: -1
+      high: 1
     init_phi:
       distrib: 'uniform'
       low: -0.2
@@ -49,16 +62,16 @@ task_config:
       high: 0.2
     init_p:
       distrib: 'uniform'
-      low: -0.1
-      high: 0.1
+      low: -1
+      high: 1
     init_q:
       distrib: 'uniform'
-      low: -0.1
-      high: 0.1
+      low: -1
+      high: 1
     init_r:
       distrib: 'uniform'
-      low: -0.1
-      high: 0.1
+      low: -1
+      high: 1
 
   task: traj_tracking
   task_info:
@@ -76,7 +89,7 @@ task_config:
     Iyy: 1.4e-5
     Izz: 2.17e-5
 
-  episode_len_sec: 6
+  episode_len_sec: 5
   cost: rl_reward
   obs_goal_horizon: 1
 

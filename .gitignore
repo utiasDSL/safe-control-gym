@@ -10,13 +10,9 @@ results/
 z_docstring.py
 TODOs.md
 # 
-hpo/
-hpo_strategy_study*/
-hpo_strategy_study*/
-*.jpg
-*.pickle
-*.pkl
-fig/
+hpo_study*/
+hp_study*/
+comparisons/
 
 
 # macOS users

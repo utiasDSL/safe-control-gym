@@ -1,12 +1,13 @@
 import sys
+
 import pytest
 
 from examples.cbf.cbf_experiment import run
 
 
-@pytest.mark.parametrize('SYS', ['cartpole'])
-@pytest.mark.parametrize('ALGO',['ppo', 'sac'])
-@pytest.mark.parametrize('SAFETY_FILTER',['cbf', 'cbf_nn'])
+@pytest.mark.parametrize('SYS',           ['cartpole'])
+@pytest.mark.parametrize('ALGO',          ['ppo', 'sac'])
+@pytest.mark.parametrize('SAFETY_FILTER', ['cbf', 'cbf_nn'])
 def test_cbf(SYS, ALGO, SAFETY_FILTER):
     sys.argv[1:] = ['--algo', ALGO,
                     '--task', SYS,

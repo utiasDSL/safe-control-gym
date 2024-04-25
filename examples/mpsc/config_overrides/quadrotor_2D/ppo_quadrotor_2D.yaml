@@ -2,6 +2,7 @@ algo: ppo
 algo_config:
   # model args
   hidden_dim: 256
+  activation: "relu"
 
   # loss args
   use_gae: True

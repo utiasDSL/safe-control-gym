@@ -9,6 +9,7 @@ TASK='track'
 
 ALGO='ppo'
 # ALGO='sac'
+# ALGO='safe_explorer_ppo'
 
 if [ "$SYS" == 'cartpole' ]; then
     SYS_NAME=$SYS
@@ -24,4 +25,5 @@ python3 ./rl_experiment.py \
         ./config_overrides/${SYS}/${SYS}_${TASK}.yaml \
         ./config_overrides/${SYS}/${ALGO}_${SYS}.yaml \
     --kv_overrides \
-        algo_config.training=False
+        algo_config.training=False \
+        task_config.randomized_init=False
