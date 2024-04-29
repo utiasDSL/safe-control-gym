@@ -95,18 +95,25 @@ def train(config):
     results, metrics = experiment.run_evaluation(n_episodes=config.n_episodes, n_steps=None, done_on_max_steps=True)
     control_agent.close()
 
+    if config.task == Environment.QUADROTOR:
+        system = f'quadrotor_{str(config.task_config.quad_type)}D'
+        if config.task_config.quad_type == 4:
+            system = 'quadrotor_2D'
+    else:
+        system = config.task
+
     if True:
-        if config.task == Environment.CARTPOLE:
+        if system == Environment.CARTPOLE:
             graph1_1 = 2
             graph1_2 = 3
             graph3_1 = 0
             graph3_2 = 1
-        elif config.task == 'quadrotor_2D':
+        elif system == 'quadrotor_2D':
             graph1_1 = 4
             graph1_2 = 5
             graph3_1 = 0
             graph3_2 = 2
-        elif config.task == 'quadrotor_3D':
+        elif system == 'quadrotor_3D':
             graph1_1 = 6
             graph1_2 = 9
             graph3_1 = 0

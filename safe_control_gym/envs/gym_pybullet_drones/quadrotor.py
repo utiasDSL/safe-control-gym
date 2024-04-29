@@ -15,7 +15,7 @@ from gymnasium import spaces
 from safe_control_gym.envs.benchmark_env import Cost, Task
 from safe_control_gym.envs.constraints import GENERAL_CONSTRAINTS
 from safe_control_gym.envs.gym_pybullet_drones.base_aviary import BaseAviary
-from safe_control_gym.envs.gym_pybullet_drones.quadrotor_utils import QuadType, cmd2pwm, pwm2rpm
+from safe_control_gym.envs.gym_pybullet_drones.quadrotor_utils import QuadType, AttitudeControl, cmd2pwm, pwm2rpm
 from safe_control_gym.math_and_models.symbolic_systems import SymbolicModel
 from safe_control_gym.math_and_models.transformations import csRotXYZ, transform_trajectory
 
@@ -186,6 +186,8 @@ class Quadrotor(BaseAviary):
                 self.info_mse_metric_state_weight = np.array([1, 0], ndmin=1, dtype=float)
             elif self.QUAD_TYPE == QuadType.TWO_D:
                 self.info_mse_metric_state_weight = np.array([1, 0, 1, 0, 0, 0], ndmin=1, dtype=float)
+            elif self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
+                self.info_mse_metric_state_weight = np.array([1, 0, 1, 0, 0], ndmin=1, dtype=float)
             elif self.QUAD_TYPE == QuadType.THREE_D:
                 self.info_mse_metric_state_weight = np.array([1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0], ndmin=1, dtype=float)
             else:
@@ -193,7 +195,8 @@ class Quadrotor(BaseAviary):
         else:
             if (self.QUAD_TYPE == QuadType.ONE_D and len(info_mse_metric_state_weight) == 2) or \
                     (self.QUAD_TYPE == QuadType.TWO_D and len(info_mse_metric_state_weight) == 6) or \
-                    (self.QUAD_TYPE == QuadType.THREE_D and len(info_mse_metric_state_weight) == 12):
+                    (self.QUAD_TYPE == QuadType.THREE_D and len(info_mse_metric_state_weight) == 12) or \
+                    (self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE and len(info_mse_metric_state_weight) == 5):
                 self.info_mse_metric_state_weight = np.array(info_mse_metric_state_weight, ndmin=1, dtype=float)
             else:
                 raise ValueError('[ERROR] in Quadrotor.__init__(), wrong info_mse_metric_state_weight argument size.')
@@ -206,6 +209,7 @@ class Quadrotor(BaseAviary):
         self.INIT_STATE_LABELS = {
             QuadType.ONE_D: ['init_x', 'init_x_dot'],
             QuadType.TWO_D: ['init_x', 'init_x_dot', 'init_z', 'init_z_dot', 'init_theta', 'init_theta_dot'],
+            QuadType.TWO_D_ATTITUDE: ['init_x', 'init_x_dot', 'init_z', 'init_z_dot', 'init_theta'],
             QuadType.THREE_D: ['init_x', 'init_x_dot', 'init_y', 'init_y_dot', 'init_z', 'init_z_dot',
                                'init_phi', 'init_theta', 'init_psi', 'init_p', 'init_q', 'init_r']
         }
@@ -232,7 +236,7 @@ class Quadrotor(BaseAviary):
             self.INERTIAL_PROP_RAND_INFO.pop('Ixx', None)
             self.INERTIAL_PROP_RAND_INFO.pop('Iyy', None)
             self.INERTIAL_PROP_RAND_INFO.pop('Izz', None)
-        elif self.QUAD_TYPE == QuadType.TWO_D:
+        elif self.QUAD_TYPE == QuadType.TWO_D or self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
             # Only randomize Iyy for the 2D quadrotor.
             self.INERTIAL_PROP_RAND_INFO.pop('Ixx', None)
             self.INERTIAL_PROP_RAND_INFO.pop('Izz', None)
@@ -243,6 +247,8 @@ class Quadrotor(BaseAviary):
         elif self.QUAD_TYPE == QuadType.ONE_D and np.array(inertial_prop).shape == (1,):
             self.MASS = inertial_prop[0]
         elif self.QUAD_TYPE == QuadType.TWO_D and np.array(inertial_prop).shape == (2,):
+            self.MASS, self.J[1, 1] = inertial_prop
+        elif self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE and np.array(inertial_prop).shape == (2,):
             self.MASS, self.J[1, 1] = inertial_prop
         elif self.QUAD_TYPE == QuadType.THREE_D and np.array(inertial_prop).shape == (4,):
             self.MASS, self.J[0, 0], self.J[1, 1], self.J[2, 2] = inertial_prop
@@ -255,7 +261,10 @@ class Quadrotor(BaseAviary):
             raise ValueError('[ERROR] in Quadrotor.__init__(), inertial_prop incorrect format.')
 
         # Create X_GOAL and U_GOAL references for the assigned task.
-        self.U_GOAL = np.ones(self.action_dim) * self.MASS * self.GRAVITY_ACC / self.action_dim
+        if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
+            self.U_GOAL = np.array([self.MASS * self.GRAVITY_ACC / self.action_dim, 0.0])
+        else:
+            self.U_GOAL = np.ones(self.action_dim) * self.MASS * self.GRAVITY_ACC / self.action_dim
         if self.TASK == Task.STABILIZATION:
             if self.QUAD_TYPE == QuadType.ONE_D:
                 self.X_GOAL = np.hstack(
@@ -266,6 +275,11 @@ class Quadrotor(BaseAviary):
                     self.TASK_INFO['stabilization_goal'][0], 0.0,
                     self.TASK_INFO['stabilization_goal'][1], 0.0, 0.0, 0.0
                 ])  # x = {x, x_dot, z, z_dot, theta, theta_dot}.
+            elif self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
+                self.X_GOAL = np.hstack([
+                    self.TASK_INFO['stabilization_goal'][0], 0.0,
+                    self.TASK_INFO['stabilization_goal'][1], 0.0, 0.0
+                ]) # x = {x, x_dot, z, z_dot, theta}.
             elif self.QUAD_TYPE == QuadType.THREE_D:
                 self.X_GOAL = np.hstack([
                     self.TASK_INFO['stabilization_goal'][0], 0.0,
@@ -296,6 +310,14 @@ class Quadrotor(BaseAviary):
                     np.zeros(POS_REF.shape[0]),  # zeros
                     np.zeros(VEL_REF.shape[0])
                 ]).transpose()
+            elif self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
+                self.X_GOAL = np.vstack([
+                    POS_REF[:, 0],  # x
+                    VEL_REF[:, 0],  # x_dot
+                    POS_REF[:, 2],  # z
+                    VEL_REF[:, 2],  # z_dot
+                    np.zeros(POS_REF.shape[0])  # zeros
+                ]).transpose()
             elif self.QUAD_TYPE == QuadType.THREE_D:
                 # Additional transformation of the originally planar trajectory.
                 POS_REF_TRANS, VEL_REF_TRANS = transform_trajectory(
@@ -317,6 +339,10 @@ class Quadrotor(BaseAviary):
                     np.zeros(VEL_REF_TRANS.shape[0]),
                     np.zeros(VEL_REF_TRANS.shape[0])
                 ]).transpose()
+
+        # Set attitude controller quadtype is QuadType.TWO_D_ATTITUDE
+        if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
+            self.attitude_control = AttitudeControl(self.CTRL_TIMESTEP)
 
         # Set prior/symbolic info.
         self._setup_symbolic()
@@ -371,6 +397,8 @@ class Quadrotor(BaseAviary):
         INIT_RPY = [init_values.get('init_' + k, 0.) for k in ['phi', 'theta', 'psi']]
         if self.QUAD_TYPE == QuadType.TWO_D:
             INIT_ANG_VEL = [0, init_values.get('init_theta_dot', 0.), 0]
+        elif self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
+            INIT_ANG_VEL = [0, 0, 0]
         else:
             INIT_ANG_VEL = [init_values.get('init_' + k, 0.) for k in ['p', 'q', 'r']]  # TODO: transform from body rates.
         p.resetBasePositionAndOrientation(self.DRONE_IDS[0], INIT_XYZ,
@@ -428,6 +456,9 @@ class Quadrotor(BaseAviary):
                 # Only disturb on z direction.
                 disturb_force = [0, 0, float(disturb_force)]
             elif self.QUAD_TYPE == QuadType.TWO_D:
+                # Only disturb on x-z plane.
+                disturb_force = [float(disturb_force[0]), 0, float(disturb_force[1])]
+            elif self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
                 # Only disturb on x-z plane.
                 disturb_force = [float(disturb_force[0]), 0, float(disturb_force[1])]
             elif self.QUAD_TYPE == QuadType.THREE_D:
@@ -508,6 +539,25 @@ class Quadrotor(BaseAviary):
                                length * (T2 - T1) / Iyy / np.sqrt(2))
             # Define observation.
             Y = cs.vertcat(x, x_dot, z, z_dot, theta, theta_dot)
+        elif self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
+            nx, nu = 5, 2
+            # Define states.
+            x = cs.MX.sym('x')
+            x_dot = cs.MX.sym('x_dot')
+            theta = cs.MX.sym('theta')
+            X = cs.vertcat(x, x_dot, z, z_dot, theta)
+            # Define input collective thrust and theta.
+            T = cs.MX.sym('T_c')
+            P = cs.MX.sym('P_c')
+            U = cs.vertcat(T, P)
+            # Define dynamics equations.
+            X_dot = cs.vertcat(x_dot,
+                               (18.112984649321753 * T + 3.7613154938448576) * cs.sin(theta),
+                               z_dot,
+                               (18.112984649321753 * T + 3.7613154938448576) * cs.cos(theta) - g,
+                               -60.00143727772195 * theta + 60.00143727772195 * P)
+            # Define observation.
+            Y = cs.vertcat(x, x_dot, z, z_dot, theta)
         elif self.QUAD_TYPE == QuadType.THREE_D:
             nx, nu = 12, 4
             Ixx = prior_prop.get('Ixx', self.J[0, 0])
@@ -608,28 +658,39 @@ class Quadrotor(BaseAviary):
             action_dim = 2
             self.ACTION_LABELS = ['T1', 'T2']
             self.ACTION_UNITS = ['N', 'N'] if not self.NORMALIZED_RL_ACTION_SPACE else ['-', '-']
+        elif self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
+            action_dim = 2
+            self.ACTION_LABELS = ['T_c', 'P_c']
+            self.ACTION_UNITS = ['N', 'rad'] if not self.NORMALIZED_RL_ACTION_SPACE else ['-', '-']
         elif self.QUAD_TYPE == QuadType.THREE_D:
             action_dim = 4
             self.ACTION_LABELS = ['T1', 'T2', 'T3', 'T4']
             self.ACTION_UNITS = ['N', 'N', 'N', 'N'] if not self.NORMALIZED_RL_ACTION_SPACE else ['-', '-', '-', '-']
 
-        n_mot = 4 / action_dim
-        a_low = self.KF * n_mot * (self.PWM2RPM_SCALE * self.MIN_PWM + self.PWM2RPM_CONST)**2
-        a_high = self.KF * n_mot * (self.PWM2RPM_SCALE * self.MAX_PWM + self.PWM2RPM_CONST)**2
-        self.physical_action_bounds = (np.full(action_dim, a_low, np.float32),
-                                       np.full(action_dim, a_high, np.float32))
+        if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
+            n_mot = 4 / action_dim
+            a_low = self.KF * n_mot * (self.PWM2RPM_SCALE * self.MIN_PWM + self.PWM2RPM_CONST)**2
+            a_high = self.KF * n_mot * (self.PWM2RPM_SCALE * self.MAX_PWM + self.PWM2RPM_CONST)**2
+            self.physical_action_bounds = (np.array([np.full(1, a_low, np.float32), np.full(1, -85 * math.pi / 180, np.float32)]),
+                                        np.array([np.full(1, a_high, np.float32), np.full(1, 85 * math.pi / 180, np.float32)]))
+        else:
+            n_mot = 4 / action_dim
+            a_low = self.KF * n_mot * (self.PWM2RPM_SCALE * self.MIN_PWM + self.PWM2RPM_CONST)**2
+            a_high = self.KF * n_mot * (self.PWM2RPM_SCALE * self.MAX_PWM + self.PWM2RPM_CONST)**2
+            self.physical_action_bounds = (np.full(action_dim, a_low, np.float32),
+                                        np.full(action_dim, a_high, np.float32))
 
         if self.NORMALIZED_RL_ACTION_SPACE:
             # Normalized thrust (around hover thrust).
             self.hover_thrust = self.GRAVITY_ACC * self.MASS / action_dim
             self.action_space = spaces.Box(low=-np.ones(action_dim),
-                                           high=np.ones(action_dim),
-                                           dtype=np.float32)
+                                        high=np.ones(action_dim),
+                                        dtype=np.float32)
         else:
             # Direct thrust control.
             self.action_space = spaces.Box(low=self.physical_action_bounds[0],
-                                           high=self.physical_action_bounds[1],
-                                           dtype=np.float32)
+                                        high=self.physical_action_bounds[1],
+                                        dtype=np.float32)
 
     def _set_observation_space(self):
         '''Sets the observation space of the environment.'''
@@ -661,6 +722,20 @@ class Quadrotor(BaseAviary):
             ])
             self.STATE_LABELS = ['x', 'x_dot', 'z', 'z_dot', 'theta', 'theta_dot']
             self.STATE_UNITS = ['m', 'm/s', 'm', 'm/s', 'rad', 'rad/s']
+        elif self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
+            # obs/state = {x, x_dot, z, z_dot, theta}.
+            low = np.array([
+                -self.x_threshold, -np.finfo(np.float32).max,
+                self.GROUND_PLANE_Z, -np.finfo(np.float32).max,
+                -self.theta_threshold_radians
+            ])
+            high = np.array([
+                self.x_threshold, np.finfo(np.float32).max,
+                self.z_threshold, np.finfo(np.float32).max,
+                self.theta_threshold_radians
+            ])
+            self.STATE_LABELS = ['x', 'x_dot', 'z', 'z_dot', 'theta']
+            self.STATE_UNITS = ['m', 'm/s', 'm', 'm/s', 'rad']
         elif self.QUAD_TYPE == QuadType.THREE_D:
             # obs/state = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p_body, q_body, r_body}.
             low = np.array([
@@ -725,13 +800,22 @@ class Quadrotor(BaseAviary):
         if self.adversary_disturbance == 'action':
             action = action + self.adv_action
         self.current_noisy_physical_action = action
+        
+        if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
+            # Convert thrust and pitch to quad motor rpm commands.
+            thrust, pitch = action
+            thrust = np.clip(thrust, self.physical_action_bounds[0][0], self.physical_action_bounds[1][0])[0]
+            pitch = np.clip(pitch, self.physical_action_bounds[0][1], self.physical_action_bounds[1][1])[0]
+            self.current_clipped_action = np.array([thrust, pitch]).flatten()
+            # get target euler angles
+            rpm = self.attitude_control._dslPIDAttitudeControl(thrust, self.quat[0], np.array([0, pitch, 0]))
+        else:
+            thrust = np.clip(action, self.physical_action_bounds[0], self.physical_action_bounds[1])
+            self.current_clipped_action = thrust
 
-        thrust = np.clip(action, self.physical_action_bounds[0], self.physical_action_bounds[1])
-        self.current_clipped_action = thrust
-
-        # convert to quad motor rpm commands
-        pwm = cmd2pwm(thrust, self.PWM2RPM_SCALE, self.PWM2RPM_CONST, self.KF, self.MIN_PWM, self.MAX_PWM)
-        rpm = pwm2rpm(pwm, self.PWM2RPM_SCALE, self.PWM2RPM_CONST)
+            # convert to quad motor rpm commands
+            pwm = cmd2pwm(thrust, self.PWM2RPM_SCALE, self.PWM2RPM_CONST, self.KF, self.MIN_PWM, self.MAX_PWM)
+            rpm = pwm2rpm(pwm, self.PWM2RPM_SCALE, self.PWM2RPM_CONST)
         return rpm
 
     def normalize_action(self, action):
@@ -743,8 +827,11 @@ class Quadrotor(BaseAviary):
         Returns:
             normalized_action (ndarray): The action in the correct action space.
         '''
-        if self.NORMALIZED_RL_ACTION_SPACE:
-            action = (action / self.hover_thrust - 1) / self.norm_act_scale
+        if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
+            action = np.array([(action[0] / self.hover_thrust - 1) / self.norm_act_scale, action[1] / (85 * math.pi / 180)])
+        else:
+            if self.NORMALIZED_RL_ACTION_SPACE:
+                action = (action / self.hover_thrust - 1) / self.norm_act_scale
 
         return action
 
@@ -757,8 +844,11 @@ class Quadrotor(BaseAviary):
         Returns:
             physical_action (ndarray): The physical action.
         '''
-        if self.NORMALIZED_RL_ACTION_SPACE:
-            action = (1 + self.norm_act_scale * action) * self.hover_thrust
+        if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
+            action = np.array([(1 + self.norm_act_scale * action[0]) * self.hover_thrust, action[1] * (85 * math.pi / 180)])
+        else:
+            if self.NORMALIZED_RL_ACTION_SPACE:
+                action = (1 + self.norm_act_scale * action) * self.hover_thrust
 
         return action
 
@@ -779,6 +869,11 @@ class Quadrotor(BaseAviary):
             self.state = np.hstack(
                 [pos[0], vel[0], pos[2], vel[2], rpy[1], ang_v[1]]
             ).reshape((6,))
+        elif self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
+            # {x, x_dot, z, z_dot, theta}.
+            self.state = np.hstack(
+                [pos[0], vel[0], pos[2], vel[2], rpy[1]]
+            ).reshape((5,))
         elif self.QUAD_TYPE == QuadType.THREE_D:
             Rob = np.array(p.getMatrixFromQuaternion(self.quat[0])).reshape((3, 3))
             Rbo = Rob.T
@@ -873,6 +968,8 @@ class Quadrotor(BaseAviary):
                 mask = np.array([1, 0])
             if self.QUAD_TYPE == QuadType.TWO_D:
                 mask = np.array([1, 0, 1, 0, 1, 0])
+            if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
+                mask = np.array([1, 0, 1, 0, 1])
             if self.QUAD_TYPE == QuadType.THREE_D:
                 mask = np.array([1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0])
             # Element-wise or to check out-of-bound conditions.
