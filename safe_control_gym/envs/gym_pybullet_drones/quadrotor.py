@@ -803,19 +803,20 @@ class Quadrotor(BaseAviary):
         
         if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
             # Convert thrust and pitch to quad motor rpm commands.
-            thrust, pitch = action
-            thrust = np.clip(thrust, self.physical_action_bounds[0][0], self.physical_action_bounds[1][0])[0]
+            thrust_c, pitch = action
+            rpm = self.attitude_control._dslPIDAttitudeControl(thrust_c, self.quat[0], np.array([0, pitch, 0]))
+            thrust_action = self.KF * rpm**2
+            thrust = np.array([thrust_action[0] + thrust_action[3], thrust_action[1] + thrust_action[2]])
+            thrust = np.clip(thrust, np.full(2, self.physical_action_bounds[0][0]), np.full(2, self.physical_action_bounds[1][0]))
             pitch = np.clip(pitch, self.physical_action_bounds[0][1], self.physical_action_bounds[1][1])[0]
-            self.current_clipped_action = np.array([thrust, pitch]).flatten()
-            # get target euler angles
-            rpm = self.attitude_control._dslPIDAttitudeControl(thrust, self.quat[0], np.array([0, pitch, 0]))
+            self.current_clipped_action = np.array([sum(thrust), pitch])
         else:
             thrust = np.clip(action, self.physical_action_bounds[0], self.physical_action_bounds[1])
             self.current_clipped_action = thrust
-
-            # convert to quad motor rpm commands
-            pwm = cmd2pwm(thrust, self.PWM2RPM_SCALE, self.PWM2RPM_CONST, self.KF, self.MIN_PWM, self.MAX_PWM)
-            rpm = pwm2rpm(pwm, self.PWM2RPM_SCALE, self.PWM2RPM_CONST)
+        # convert to quad motor rpm commands
+        pwm = cmd2pwm(thrust, self.PWM2RPM_SCALE, self.PWM2RPM_CONST, self.KF, self.MIN_PWM, self.MAX_PWM)
+        rpm = pwm2rpm(pwm, self.PWM2RPM_SCALE, self.PWM2RPM_CONST)
+        
         return rpm
 
     def normalize_action(self, action):
@@ -827,10 +828,10 @@ class Quadrotor(BaseAviary):
         Returns:
             normalized_action (ndarray): The action in the correct action space.
         '''
-        if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
-            action = np.array([(action[0] / self.hover_thrust - 1) / self.norm_act_scale, action[1] / (85 * math.pi / 180)])
-        else:
-            if self.NORMALIZED_RL_ACTION_SPACE:
+        if self.NORMALIZED_RL_ACTION_SPACE:
+            if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
+                action = np.array([(action[0] / self.hover_thrust - 1) / self.norm_act_scale, action[1]])
+            else:
                 action = (action / self.hover_thrust - 1) / self.norm_act_scale
 
         return action
@@ -844,10 +845,11 @@ class Quadrotor(BaseAviary):
         Returns:
             physical_action (ndarray): The physical action.
         '''
-        if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
-            action = np.array([(1 + self.norm_act_scale * action[0]) * self.hover_thrust, action[1] * (85 * math.pi / 180)])
-        else:
-            if self.NORMALIZED_RL_ACTION_SPACE:
+
+        if self.NORMALIZED_RL_ACTION_SPACE:
+            if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
+                action = np.array([(1 + self.norm_act_scale * action[0]) * self.hover_thrust, action[1]])
+            else:
                 action = (1 + self.norm_act_scale * action) * self.hover_thrust
 
         return action

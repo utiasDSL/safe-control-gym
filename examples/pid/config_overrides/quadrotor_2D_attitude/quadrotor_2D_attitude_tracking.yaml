@@ -5,7 +5,7 @@ task_config:
   pyb_freq: 840
   gui: False
   physics: pyb
-  quad_type: 2
+  quad_type: 4
 
   init_state_randomization_info:
     init_x:
@@ -28,10 +28,6 @@ task_config:
       distrib: 'uniform'
       low: -0.2
       high: 0.2
-    init_theta_dot:
-      distrib: 'uniform'
-      low: -0.1
-      high: 0.1
   randomized_init: True
   randomized_inertial_prop: False
 

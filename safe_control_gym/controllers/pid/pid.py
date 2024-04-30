@@ -94,7 +94,7 @@ class PID(BaseController):
         step = self.extract_step(info)
 
         # Step the environment and print all returned information.
-        if self.env.QUAD_TYPE == 2:
+        if self.env.QUAD_TYPE == 2 or self.env.QUAD_TYPE == 4:
             cur_pos = np.array([obs[0], 0, obs[2]])
             cur_quat = np.array(p.getQuaternionFromEuler([0, obs[4], 0]))
             cur_vel = np.array([obs[1], 0, obs[3]])
@@ -103,7 +103,7 @@ class PID(BaseController):
             cur_quat = np.array(p.getQuaternionFromEuler([obs[6], obs[7], obs[8]]))
             cur_vel = np.array([obs[1], obs[3], obs[5]])
 
-        if self.env.QUAD_TYPE == 2:
+        if self.env.QUAD_TYPE == 2 or self.env.QUAD_TYPE == 4:
             if self.env.TASK == Task.TRAJ_TRACKING:
                 target_pos = np.array([self.reference[step, 0],
                                        0,
@@ -147,6 +147,8 @@ class PID(BaseController):
         action = self.KF * action**2
         if self.env.QUAD_TYPE == 2:
             action = np.array([action[0] + action[3], action[1] + action[2]])
+        elif self.env.QUAD_TYPE == 4: # 2D quadrotor with attitude control
+            action = np.array([thrust, computed_target_rpy[1]])
 
         return action
 
