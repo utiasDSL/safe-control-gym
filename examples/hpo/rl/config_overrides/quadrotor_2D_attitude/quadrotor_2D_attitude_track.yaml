@@ -55,8 +55,8 @@ task_config:
   obs_goal_horizon: 1
 
   # RL Reward
-  rew_state_weight: [1, 0.01, 1, 0.01, 0.01]
-  rew_act_weight: 0.01
+  rew_state_weight: [10, 0.0, 10, 0.0, 1]
+  rew_act_weight: 0.0
   rew_exponential: True
 
   constraints:
@@ -78,9 +78,9 @@ task_config:
       constrained_variable: input
       upper_bounds:
         - 0.58
-        - 0.2
+        - 0.8
       lower_bounds:
-        - 0.12
-        - -0.2
+        - 0.06
+        - -0.8
   done_on_out_of_bound: True
   done_on_violation: False

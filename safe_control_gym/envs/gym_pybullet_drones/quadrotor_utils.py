@@ -72,9 +72,6 @@ class AttitudeControl(ABC):
                  g: float = 9.8,
                  kf: float = 3.16e-10,
                  km: float = 7.94e-12,
-                 p_coeff_for=np.array([.4, .4, 1.25]),
-                 i_coeff_for=np.array([.05, .05, .05]),
-                 d_coeff_for=np.array([.2, .2, .5]),
                  p_coeff_tor=np.array([70000., 70000., 60000.]),
                  i_coeff_tor=np.array([.0, .0, 500.]),
                  d_coeff_tor=np.array([20000., 20000., 12000.]),
@@ -90,9 +87,6 @@ class AttitudeControl(ABC):
             g (float, optional): The gravitational acceleration in m/s^2.
             kf (float, optional): Thrust coefficient.
             km (float, optional): Torque coefficient.
-            p_coeff_for (ndarray, optional): Position proportional coefficients.
-            i_coeff_for (ndarray, optional): Position integral coefficients.
-            d_coeff_for (ndarray, optional): Position derivative coefficients.
             p_coeff_tor (ndarray, optional): Attitude proportional coefficients.
             i_coeff_tor (ndarray, optional): Attitude integral coefficients.
             d_coeff_tor (ndarray, optional): Attitude derivative coefficients.
@@ -105,9 +99,6 @@ class AttitudeControl(ABC):
         self.g = g
         self.KF = kf
         self.KM = km
-        self.P_COEFF_FOR = np.array(p_coeff_for)
-        self.I_COEFF_FOR = np.array(i_coeff_for)
-        self.D_COEFF_FOR = np.array(d_coeff_for)
         self.P_COEFF_TOR = np.array(p_coeff_tor)
         self.I_COEFF_TOR = np.array(i_coeff_tor)
         self.D_COEFF_TOR = np.array(d_coeff_tor)
@@ -117,10 +108,21 @@ class AttitudeControl(ABC):
         self.MAX_PWM = np.array(max_pwm)
         self.MIXER_MATRIX = np.array([[.5, -.5, -1], [.5, .5, 1], [-.5, .5, -1], [-.5, -.5, 1]])
 
+        self.a_coeff = -1.1264
+        self.b_coeff = 2.2541
+        self.c_coeff = 0.0209
+
         self.last_rpy = np.zeros(3)
         self.integral_rpy_e = np.zeros(3)
 
         self.control_timestep = control_timestep
+
+    def reset(self):
+        '''Reinitialize just the controller before a new run.'''
+
+        # Clear PID control variables.
+        self.last_rpy = np.zeros(3)
+        self.integral_rpy_e = np.zeros(3)
 
     def _dslPIDAttitudeControl(self,
                                thrust,
@@ -133,7 +135,7 @@ class AttitudeControl(ABC):
             Parameters
             ----------
             thrust : float
-                The target thrust along the drone z-axis.
+                The target thrust (Newton) along the drone z-axis.
             cur_quat : ndarray
                 (4,1)-shaped array of floats containing the current orientation as a quaternion.
             target_euler : ndarray
@@ -164,8 +166,27 @@ class AttitudeControl(ABC):
                             + np.multiply(self.D_COEFF_TOR, rpy_rates_e) \
                             + np.multiply(self.I_COEFF_TOR, self.integral_rpy_e)
             target_torques = np.clip(target_torques, -3200, 3200)
-            pwm = thrust + np.dot(self.MIXER_MATRIX, target_torques)
-            pwm = np.clip(pwm, self.MIN_PWM, self.MAX_PWM)
-            return self.PWM2RPM_SCALE * pwm + self.PWM2RPM_CONST
+            # pwm = thrust + np.dot(self.MIXER_MATRIX, target_torques)
+            # pwm = np.clip(pwm, self.MIN_PWM, self.MAX_PWM)
+            # return self.PWM2RPM_SCALE * pwm + self.PWM2RPM_CONST
+            return thrust + self.pwm2thrust(np.dot(self.MIXER_MATRIX, target_torques))
+    
+    def pwm2thrust(self, pwm):
+        """Convert pwm to thrust using a quadratic function."""
+
+        pwm_scaled = pwm / self.MAX_PWM
+        # pwm_scaled = pwm
+        # solve quadratic equation using abc formula
+        thrust = (-self.b_coeff + np.sqrt(self.b_coeff**2 - 4 * self.a_coeff * (self.c_coeff - pwm_scaled))) / (2 * self.a_coeff)
+        return thrust
+    
+    def thrust2pwm(self, thrust):
+        """Convert thrust to pwm using a quadratic function."""
+
+        pwm = self.a_coeff * thrust * thrust + self.b_coeff * thrust + self.c_coeff
+        pwm = np.maximum(pwm, 0.0)
+        pwm = np.minimum(pwm, 1.0)
+        thrust_pwm = pwm * self.MAX_PWM
+        return thrust_pwm
 
     

@@ -262,7 +262,7 @@ class Quadrotor(BaseAviary):
 
         # Create X_GOAL and U_GOAL references for the assigned task.
         if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
-            self.U_GOAL = np.array([self.MASS * self.GRAVITY_ACC / self.action_dim, 0.0])
+            self.U_GOAL = np.array([self.MASS * self.GRAVITY_ACC, 0.0])
         else:
             self.U_GOAL = np.ones(self.action_dim) * self.MASS * self.GRAVITY_ACC / self.action_dim
         if self.TASK == Task.STABILIZATION:
@@ -340,7 +340,7 @@ class Quadrotor(BaseAviary):
                     np.zeros(VEL_REF_TRANS.shape[0])
                 ]).transpose()
 
-        # Set attitude controller quadtype is QuadType.TWO_D_ATTITUDE
+        # Set attitude controller if quadtype is QuadType.TWO_D_ATTITUDE
         if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
             self.attitude_control = AttitudeControl(self.CTRL_TIMESTEP)
 
@@ -399,6 +399,7 @@ class Quadrotor(BaseAviary):
             INIT_ANG_VEL = [0, init_values.get('init_theta_dot', 0.), 0]
         elif self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
             INIT_ANG_VEL = [0, 0, 0]
+            self.attitude_control.reset()
         else:
             INIT_ANG_VEL = [init_values.get('init_' + k, 0.) for k in ['p', 'q', 'r']]  # TODO: transform from body rates.
         p.resetBasePositionAndOrientation(self.DRONE_IDS[0], INIT_XYZ,
@@ -613,7 +614,10 @@ class Quadrotor(BaseAviary):
             Y = cs.vertcat(x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p_body, q_body, r_body)
         # Set the equilibrium values for linearizations.
         X_EQ = np.zeros(self.state_dim)
-        U_EQ = np.ones(self.action_dim) * u_eq / self.action_dim
+        if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
+            U_EQ = np.array([u_eq, 0])
+        else:
+            U_EQ = np.ones(self.action_dim) * u_eq / self.action_dim
         # Define cost (quadratic form).
         Q = cs.MX.sym('Q', nx, nx)
         R = cs.MX.sym('R', nu, nu)
@@ -682,7 +686,11 @@ class Quadrotor(BaseAviary):
 
         if self.NORMALIZED_RL_ACTION_SPACE:
             # Normalized thrust (around hover thrust).
-            self.hover_thrust = self.GRAVITY_ACC * self.MASS / action_dim
+            if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
+                # divided by 4 as the input to the attitude controller is the individual motor thrusts.
+                self.hover_thrust = self.GRAVITY_ACC * self.MASS / 4
+            else:
+                self.hover_thrust = self.GRAVITY_ACC * self.MASS / action_dim
             self.action_space = spaces.Box(low=-np.ones(action_dim),
                                         high=np.ones(action_dim),
                                         dtype=np.float32)
@@ -792,20 +800,25 @@ class Quadrotor(BaseAviary):
             action (ndarray): The motors RPMs to apply to the quadrotor.
         '''
         action = self.denormalize_action(action)
+        # self.current_physical_action = self.normalize_action(action)
         self.current_physical_action = action
 
         # Apply disturbances.
         if 'action' in self.disturbances:
-            action = self.disturbances['action'].apply(action, self)
+            self.current_physical_action = self.disturbances['action'].apply(self.current_physical_action, self)
         if self.adversary_disturbance == 'action':
-            action = action + self.adv_action
-        self.current_noisy_physical_action = action
+            self.current_physical_action = self.current_physical_action + self.adv_action
+        self.current_noisy_physical_action = self.current_physical_action
         
         if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
-            # Convert thrust and pitch to quad motor rpm commands.
-            thrust_c, pitch = action
-            rpm = self.attitude_control._dslPIDAttitudeControl(thrust_c, self.quat[0], np.array([0, pitch, 0]))
-            thrust_action = self.KF * rpm**2
+            indivisual_thrust, pitch = action
+            # rpm = self.attitude_control._dslPIDAttitudeControl(indivisual_thrust, 
+            #                                                    self.quat[0], np.array([0, pitch, 0])) # input thrsut is pwm
+            # thrust_action = self.KF * rpm**2
+            # thrust_action = self.attitude_control._dslPIDAttitudeControl(self.attitude_control.pwm2thrust(thrust_c/3), 
+            #                                                             self.quat[0], np.array([0, pitch, 0])) # input thrsut is in Newton
+            thrust_action = self.attitude_control._dslPIDAttitudeControl(indivisual_thrust, 
+                                                                         self.quat[0], np.array([0, pitch, 0])) # input thrsut is in Newton
             thrust = np.array([thrust_action[0] + thrust_action[3], thrust_action[1] + thrust_action[2]])
             thrust = np.clip(thrust, np.full(2, self.physical_action_bounds[0][0]), np.full(2, self.physical_action_bounds[1][0]))
             pitch = np.clip(pitch, self.physical_action_bounds[0][1], self.physical_action_bounds[1][1])[0]
@@ -848,7 +861,18 @@ class Quadrotor(BaseAviary):
 
         if self.NORMALIZED_RL_ACTION_SPACE:
             if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
-                action = np.array([(1 + self.norm_act_scale * action[0]) * self.hover_thrust, action[1]])
+                # # divided by 4 as action[0] is a collective thrust
+                # thrust = action[0] / 4
+                # hover_pwm = (self.HOVER_RPM - self.PWM2RPM_CONST) / self.PWM2RPM_SCALE
+                # thrust = np.where(thrust <= 0, self.MIN_PWM + (thrust + 1) * (hover_pwm - self.MIN_PWM),
+                #                    hover_pwm + (self.MAX_PWM - hover_pwm) * thrust)
+                
+                thrust = (1 + self.norm_act_scale * action[0]) * self.hover_thrust
+                # thrust = self.attitude_control.thrust2pwm(thrust)
+
+                # thrust = self.HOVER_RPM * (1+0.05*action[0])
+
+                action = np.array([thrust, action[1]])
             else:
                 action = (1 + self.norm_act_scale * action) * self.hover_thrust
 
