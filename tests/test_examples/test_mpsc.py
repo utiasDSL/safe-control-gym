@@ -12,7 +12,7 @@ from examples.mpsc.mpsc_experiment import run
 @pytest.mark.parametrize('MPSC_COST',       ['one_step_cost'])
 def test_mpsc(SYS, TASK, ALGO, SAFETY_FILTER, MPSC_COST):
     if SYS == 'cartpole' and ALGO == 'pid':
-        pytest.skip('PID is designed for quadrotors and does not function for the carpole system.')
+        pytest.skip('PID is designed for quadrotors and does not function for the cartpole system.')
     SYS_NAME = SYS if SYS == 'cartpole' else 'quadrotor'
     sys.argv[1:] = ['--task', SYS_NAME,
                     '--algo', ALGO,
