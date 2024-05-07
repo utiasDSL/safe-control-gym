@@ -32,12 +32,12 @@ task_config:
       high: 0.1
     init_z_dot:
       distrib: 'uniform'
-      low: -0.1
-      high: 0.1
+      low: 0.1
+      high: 0.2
     init_theta:
       distrib: 'uniform'
-      low: -0.2
-      high: 0.2
+      low: -0.05
+      high: 0.05
     init_theta_dot:
       distrib: 'uniform'
       low: -0.1

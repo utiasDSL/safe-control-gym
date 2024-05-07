@@ -1,16 +1,16 @@
 algo: sac
 algo_config:
   # model args
-  hidden_dim: 128
+  hidden_dim: 64
   activation: "relu"
-  use_entropy_tuning: False
+  use_entropy_tuning: True
 
   # optim args
-  train_interval: 100
-  train_batch_size: 256
-  actor_lr: 0.001
-  critic_lr: 0.001
-  entropy_lr: 0.001
+  train_interval: 10
+  train_batch_size: 512
+  actor_lr: 0.0001
+  critic_lr: 0.0001
+  entropy_lr: 0.0001
 
   # runner args
   max_env_steps: 200000

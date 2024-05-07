@@ -27,16 +27,16 @@ task_config:
       high: 0.1
     init_z:
       distrib: 'uniform'
-      low: -0.1
-      high: 0.1
+      low: 0.1
+      high: 0.2
     init_z_dot:
       distrib: 'uniform'
       low: -0.1
       high: 0.1
     init_theta:
       distrib: 'uniform'
-      low: -0.2
-      high: 0.2
+      low: -0.05
+      high: 0.05
 
   task: traj_tracking
   task_info:
@@ -55,8 +55,8 @@ task_config:
   obs_goal_horizon: 1
 
   # RL Reward
-  rew_state_weight: [10, 0.0, 10, 0.0, 1]
-  rew_act_weight: 0.0
+  rew_state_weight: [1, 0.01, 1, 0.01, 0.01]
+  rew_act_weight: 0.01
   rew_exponential: True
 
   constraints:

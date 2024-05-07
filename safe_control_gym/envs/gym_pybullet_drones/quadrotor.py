@@ -826,6 +826,7 @@ class Quadrotor(BaseAviary):
         else:
             thrust = np.clip(action, self.physical_action_bounds[0], self.physical_action_bounds[1])
             self.current_clipped_action = thrust
+        # print(sum(thrust))
         # convert to quad motor rpm commands
         pwm = cmd2pwm(thrust, self.PWM2RPM_SCALE, self.PWM2RPM_CONST, self.KF, self.MIN_PWM, self.MAX_PWM)
         rpm = pwm2rpm(pwm, self.PWM2RPM_SCALE, self.PWM2RPM_CONST)
@@ -867,7 +868,7 @@ class Quadrotor(BaseAviary):
                 # thrust = np.where(thrust <= 0, self.MIN_PWM + (thrust + 1) * (hover_pwm - self.MIN_PWM),
                 #                    hover_pwm + (self.MAX_PWM - hover_pwm) * thrust)
                 
-                thrust = (1 + self.norm_act_scale * action[0]) * self.hover_thrust
+                thrust = (1 + self.norm_act_scale * action[0]) * self.hover_thrust * 1.15
                 # thrust = self.attitude_control.thrust2pwm(thrust)
 
                 # thrust = self.HOVER_RPM * (1+0.05*action[0])

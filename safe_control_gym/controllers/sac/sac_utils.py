@@ -80,12 +80,12 @@ class SACAgent:
     def train(self):
         '''Sets training mode.'''
         self.ac.train()
-        self.log_alpha.requires_grad = True
+        # self.log_alpha.requires_grad = True
 
     def eval(self):
         '''Sets evaluation mode.'''
         self.ac.eval()
-        self.log_alpha.requires_grad = False
+        # self.log_alpha.requires_grad = False
 
     def state_dict(self):
         '''Snapshots agent state.'''
@@ -208,7 +208,7 @@ class MLPActor(nn.Module):
             logp = None
 
         action = torch.tanh(action)
-        action = self.postprocess_fn(action)
+        # action = self.postprocess_fn(action)
         return action, logp
 
 

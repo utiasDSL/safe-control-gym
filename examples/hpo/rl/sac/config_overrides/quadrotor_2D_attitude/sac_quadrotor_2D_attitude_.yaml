@@ -1,0 +1,30 @@
+algo: sac
+algo_config:
+  # model args
+  hidden_dim: 64
+  activation: "relu"
+  use_entropy_tuning: True
+
+  # optim args
+  train_interval: 10
+  train_batch_size: 512
+  actor_lr: 0.0001
+  critic_lr: 0.0001
+  entropy_lr: 0.0001
+
+  # runner args
+  max_env_steps: 200000
+  warm_up_steps: 1000
+  rollout_batch_size: 4
+  num_workers: 1
+  max_buffer_size: 1000000
+  deque_size: 10
+  eval_batch_size: 10
+
+  # misc
+  log_interval: 1000
+  save_interval: 1000
+  num_checkpoints: 10
+  eval_interval: 1000
+  eval_save_best: True
+  tensorboard: True
