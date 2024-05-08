@@ -208,7 +208,7 @@ class MLPActor(nn.Module):
             logp = None
 
         action = torch.tanh(action)
-        # action = self.postprocess_fn(action)
+        action = self.postprocess_fn(action)
         return action, logp
 
 
