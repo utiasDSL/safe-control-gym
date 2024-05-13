@@ -4,9 +4,6 @@ Reference:
     * stable baselines3 https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/rl_zoo3/hyperparams_opt.py
     * Optuna: https://optuna.org
 
-Reruirement:
-    * python -m pip install pymysql
-
 """
 import os
 from copy import deepcopy

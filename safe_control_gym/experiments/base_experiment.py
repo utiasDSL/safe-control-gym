@@ -400,7 +400,6 @@ class MetricExtractor:
             'average_length': np.asarray(self.get_episode_lengths()).mean(),
             'length': self.get_episode_lengths() if len(self.get_episode_lengths()) > 1 else self.get_episode_lengths()[0],
             'average_return': np.asarray(self.get_episode_returns()).mean(),
-            'exponentiated_avg_return': np.asarray(self.get_episode_returns(exponentiate=True)).mean(),
             'average_rmse': np.asarray(self.get_episode_rmse()).mean(),
             'rmse': np.asarray(self.get_episode_rmse()) if len(self.get_episode_rmse()) > 1 else self.get_episode_rmse()[0],
             'rmse_std': np.asarray(self.get_episode_rmse()).std(),
@@ -413,7 +412,7 @@ class MetricExtractor:
         }
         return metrics
 
-    def get_episode_data(self, key, postprocess_func=lambda x: x, exponentiate=False):
+    def get_episode_data(self, key, postprocess_func=lambda x: x):
         '''Extract data field from recorded trajectory data, optionally postprocess each episode data (e.g. get sum).
 
         Args:
@@ -425,10 +424,7 @@ class MetricExtractor:
         '''
 
         if key in self.data:
-            if exponentiate:
-                episode_data = [postprocess_func(np.exp(2 * ep_val)) for ep_val in self.data[key]]
-            else:
-                episode_data = [postprocess_func(ep_val) for ep_val in self.data[key]]
+            episode_data = [postprocess_func(ep_val) for ep_val in self.data[key]]
         elif key in self.data['info'][0][-1]:
             # if the data field is contained in step info dict
             episode_data = []
@@ -439,10 +435,7 @@ class MetricExtractor:
                         ep_info_data.append(info.get(key))
                     elif self.verbose:
                         print(f'[Warn] MetricExtractor.get_episode_data: key {key} not in info dict.')
-                if exponentiate:
-                    episode_data.append(postprocess_func(np.exp(2 * ep_info_data)))
-                else:
-                    episode_data.append(postprocess_func(ep_info_data))
+                episode_data.append(postprocess_func(ep_info_data))
         else:
             raise KeyError(f'Given data key \'{key}\' does not exist in recorded trajectory data.')
         return episode_data
@@ -455,15 +448,7 @@ class MetricExtractor:
         '''
         return self.get_episode_data('length', postprocess_func=sum)
 
-    def get_episode_returns(self, exponentiate=False):
-        '''Total reward/return of episodes.
-
-        Returns:
-            episode_rewards (list): The total reward of each episode.
-        '''
-        return self.get_episode_data('reward', postprocess_func=sum, exponentiate=exponentiate)
-    
-    def get_episode_exponentiated_returns(self):
+    def get_episode_returns(self):
         '''Total reward/return of episodes.
 
         Returns:

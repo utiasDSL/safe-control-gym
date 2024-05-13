@@ -12,9 +12,8 @@ from safe_control_gym.utils.configuration import ConfigFactory
 @pytest.mark.parametrize('SYS', ['cartpole'])
 @pytest.mark.parametrize('TASK', ['stab'])
 @pytest.mark.parametrize('ALGO', ['ppo', 'sac', 'gp_mpc'])
-@pytest.mark.parametrize('PRIOR', [''])
 @pytest.mark.parametrize('HYPERPARAMETER', ['default', 'optimimum'])
-def test_train(SYS, TASK, ALGO, PRIOR, HYPERPARAMETER):
+def test_train(SYS, TASK, ALGO, HYPERPARAMETER):
     '''Test training rl/lbc given a set of hyperparameters.
     '''
 
@@ -67,7 +66,7 @@ def test_train(SYS, TASK, ALGO, PRIOR, HYPERPARAMETER):
                         '--task', SYS,
                         '--overrides',
                             f'./examples/hpo/rl/config_overrides/{SYS}/{SYS}_{TASK}.yaml',
-                            f'./examples/hpo/rl/{ALGO}/config_overrides/{SYS}/{ALGO}_{SYS}_{PRIOR}.yaml',
+                            f'./examples/hpo/rl/{ALGO}/config_overrides/{SYS}/{ALGO}_{SYS}.yaml',
                         '--output_dir', output_dir,
                         '--tag', 's1',
                         '--opt_hps', opt_hp_path,
