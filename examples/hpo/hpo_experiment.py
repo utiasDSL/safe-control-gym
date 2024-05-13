@@ -63,7 +63,20 @@ def train(config):
         with open(config.opt_hps, 'r') as f:
             opt_hps = yaml.load(f, Loader=yaml.FullLoader)
         for hp in opt_hps:
-            if isinstance(config.algo_config[hp], list) and not isinstance(opt_hps[hp], list):
+            if hp == 'state_weight' or hp == 'state_dot_weight' or hp == 'action_weight':
+                    if config.algo == 'gp_mpc':
+                        if config.task == 'cartpole':
+                            config.algo_config['q_mpc'] = [opt_hps['state_weight'], opt_hps['state_dot_weight'], opt_hps['state_weight'], opt_hps['state_dot_weight']]
+                            config.algo_config['r_mpc'] = [opt_hps['action_weight']]
+                        else:
+                            raise ValueError('Only cartpole task is supported for gp_mpc.')
+                    else:
+                        if config.task == 'cartpole':
+                            config.task_config['rew_state_weight'] = [opt_hps['state_weight'], opt_hps['state_dot_weight'], opt_hps['state_weight'], opt_hps['state_dot_weight']]
+                            config.task_config['rew_action_weight'] = [opt_hps['action_weight']]
+                        else:
+                            raise ValueError('Only cartpole task is supported for rl.')
+            elif isinstance(config.algo_config[hp], list) and not isinstance(opt_hps[hp], list):
                 config.algo_config[hp] = [opt_hps[hp]] * len(config.algo_config[hp])
             else:
                 config.algo_config[hp] = opt_hps[hp]

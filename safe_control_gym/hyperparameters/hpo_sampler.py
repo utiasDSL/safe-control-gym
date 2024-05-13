@@ -27,6 +27,9 @@ PPO_dict = {
         'entropy_coef': [0.00000001, 0.1],
         'actor_lr': [1e-5, 1],
         'critic_lr': [1e-5, 1],
+        'state_weight': [0.001, 20],
+        'state_dot_weight': [0.001, 5],
+        'action_weight': [0.001, 5],
     }
 }
 SAC_dict = {
@@ -43,6 +46,9 @@ SAC_dict = {
         'tau': [0.005, 1.0],
         'actor_lr': [1e-5, 1],
         'critic_lr': [1e-5, 1],
+        'state_weight': [0.001, 20],
+        'state_dot_weight': [0.001, 5],
+        'action_weight': [0.001, 5],
     }
 }
 
@@ -57,6 +63,9 @@ GPMPC_dict = {
     },
     'float': {  # note that in float type, you must specify the upper and lower bound
         'learning_rate': [5e-4, 0.5],
+        'state_weight': [0.001, 20],
+        'state_dot_weight': [0.001, 5],
+        'action_weight': [0.001, 5],
     }
 }
 
@@ -106,6 +115,11 @@ def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]
     # ortho_init = False
     # ortho_init = trial.suggest_categorical('ortho_init', [False, True])
 
+    # objective
+    state_weight = trial.suggest_float('state_weight', PPO_dict['float']['state_weight'][0], PPO_dict['float']['state_weight'][1], log=True)
+    state_dot_weight = trial.suggest_float('state_dot_weight', PPO_dict['float']['state_dot_weight'][0], PPO_dict['float']['state_dot_weight'][1], log=True)
+    action_weight = trial.suggest_float('action_weight', PPO_dict['float']['action_weight'][0], PPO_dict['float']['action_weight'][1], log=True)
+
     hps_suggestion = {
         'hidden_dim': hidden_dim,
         'activation': activation,
@@ -121,6 +135,9 @@ def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]
         # "max_grad_norm": max_grad_norm, (currently not implemented in PPO controller)
         'max_env_steps': max_env_steps,
         'rollout_steps': rollout_steps,
+        'state_weight': state_weight,
+        'state_dot_weight': state_dot_weight,
+        'action_weight': action_weight,
     }
 
     assert len(hps_suggestion) == len(hps_dict), ValueError('We are optimizing over different number of HPs as you listed.')
@@ -156,6 +173,11 @@ def sac_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]
     max_env_steps = trial.suggest_categorical('max_env_steps', SAC_dict['categorical']['max_env_steps'])
     warm_up_steps = trial.suggest_categorical('warm_up_steps', SAC_dict['categorical']['warm_up_steps'])
 
+    # objective
+    state_weight = trial.suggest_float('state_weight', SAC_dict['float']['state_weight'][0], SAC_dict['float']['state_weight'][1], log=True)
+    state_dot_weight = trial.suggest_float('state_dot_weight', SAC_dict['float']['state_dot_weight'][0], SAC_dict['float']['state_dot_weight'][1], log=True)
+    action_weight = trial.suggest_float('action_weight', SAC_dict['float']['action_weight'][0], SAC_dict['float']['action_weight'][1], log=True)
+
     hps_suggestion = {
         'hidden_dim': hidden_dim,
         'activation': activation,
@@ -167,6 +189,9 @@ def sac_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]
         'critic_lr': critic_lr,
         'max_env_steps': max_env_steps,
         'warm_up_steps': warm_up_steps,
+        'state_weight': state_weight,
+        'state_dot_weight': state_dot_weight,
+        'action_weight': action_weight,
     }
 
     assert len(hps_suggestion) == len(hps_dict), ValueError('We are optimizing over different number of HPs as you listed.')
@@ -199,6 +224,11 @@ def gpmpc_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, An
     optimization_iterations = d * [trial.suggest_categorical('optimization_iterations', GPMPC_dict['categorical']['optimization_iterations'])]
     learning_rate = d * [trial.suggest_float('learning_rate', GPMPC_dict['float']['learning_rate'][0], GPMPC_dict['float']['learning_rate'][1], log=True)]
 
+    # objective
+    state_weight = trial.suggest_float('state_weight', GPMPC_dict['float']['state_weight'][0], GPMPC_dict['float']['state_weight'][1], log=True)
+    state_dot_weight = trial.suggest_float('state_dot_weight', GPMPC_dict['float']['state_dot_weight'][0], GPMPC_dict['float']['state_dot_weight'][1], log=True)
+    action_weight = trial.suggest_float('action_weight', GPMPC_dict['float']['action_weight'][0], GPMPC_dict['float']['action_weight'][1], log=True)
+    
     hps_suggestion = {
         'horizon': horizon,
         'kernel': kernel,
@@ -207,6 +237,9 @@ def gpmpc_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, An
         'num_samples': num_samples,
         'optimization_iterations': optimization_iterations,
         'learning_rate': learning_rate,
+        'state_weight': state_weight,
+        'state_dot_weight': state_dot_weight,
+        'action_weight': action_weight,
     }
 
     assert len(hps_suggestion) == len(hps_dict), ValueError('We are optimizing over different number of HPs as you listed.')
