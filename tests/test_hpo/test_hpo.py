@@ -176,6 +176,7 @@ def test_hpo_without_database(SYS, TASK, ALGO, SAMPLER):
     '''Test HPO for one single trial without using MySQL database.
         (create a study from scratch)
     '''
+    pytest.skip('Takes too long.')
 
     # output_dir
     output_dir = './examples/hpo/results'

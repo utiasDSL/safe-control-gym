@@ -28,5 +28,17 @@ jobs:
         pre-commit run --all
     - name: Unit tests
       run: |
+        sudo apt-get install mysql-server
+
+        sudo mysql
+        CREATE USER optuna@"%";
+        CREATE DATABASE ppo_hpo;
+        CREATE DATABASE sac_hpo;
+        CREATE DATABASE gp_mpc_hpo;
+        GRANT ALL ON ppo_hpo.* TO optuna@"%";
+        GRANT ALL ON sac_hpo.* TO optuna@"%";
+        GRANT ALL ON gp_mpc_hpo.* TO optuna@"%";
+        exit
+
         python -m pytest tests/
         rm -rf tmp/
