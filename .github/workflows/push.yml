@@ -26,10 +26,10 @@ jobs:
         pre-commit install
         pre-commit autoupdate
         pre-commit run --all
-    - name: Unit tests
+    - name: Setup MySQL Server
       run: |
         sudo apt-get install mysql-server
-
+        sudo systemctl start mysql
         sudo mysql
         CREATE USER optuna@"%";
         CREATE DATABASE ppo_hpo;
@@ -39,6 +39,7 @@ jobs:
         GRANT ALL ON sac_hpo.* TO optuna@"%";
         GRANT ALL ON gp_mpc_hpo.* TO optuna@"%";
         exit
-
+    - name: Unit tests
+      run: |
         python -m pytest tests/
         rm -rf tmp/
