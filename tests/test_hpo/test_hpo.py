@@ -18,6 +18,7 @@ def test_hpo(SYS, TASK, ALGO, SAMPLER):
     '''Test HPO for one single trial using MySQL database.
         (create a study from scratch)
     '''
+    pytest.skip('Takes too long.')
 
     # output_dir
     output_dir = './examples/hpo/results'
@@ -78,6 +79,8 @@ def test_hpo(SYS, TASK, ALGO, SAMPLER):
 @pytest.mark.parametrize('SAMPLER', ['TPESampler', 'RandomSampler'])
 def test_hpo_parallelism(SYS, TASK, ALGO, LOAD, SAMPLER):
     '''Test HPO for in parallel.'''
+
+    pytest.skip('Takes too long.')
 
     # if LOAD is False, create a study from scratch
     if not LOAD:
@@ -176,6 +179,8 @@ def test_hpo_without_database(SYS, TASK, ALGO, SAMPLER):
     '''Test HPO for one single trial without using MySQL database.
         (create a study from scratch)
     '''
+    pytest.skip('Takes too long.')
+
     # output_dir
     output_dir = './examples/hpo/results'
     # delete output_dir

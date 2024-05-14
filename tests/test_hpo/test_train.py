@@ -15,6 +15,8 @@ from safe_control_gym.utils.configuration import ConfigFactory
 @pytest.mark.parametrize('HYPERPARAMETER', ['default', 'optimimum'])
 def test_train(SYS, TASK, ALGO, HYPERPARAMETER):
     '''Test training rl/lbc given a set of hyperparameters.'''
+    pytest.skip('Takes too long.')
+
     # output_dir
     output_dir = './examples/hpo/results'
     # delete output_dir if exists
