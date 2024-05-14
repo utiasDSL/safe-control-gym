@@ -27,9 +27,13 @@ jobs:
         pre-commit autoupdate
         pre-commit run --all
     - name: Setup MySQL Server
+      env:
+        DB_USER: root
+        DB_PASSWORD: root
       run: |
         sudo apt-get install mysql-server
         sudo systemctl start mysql
+        echo "REACHED HERE"
         sudo mysql
         CREATE USER optuna@"%";
         CREATE DATABASE ppo_hpo;
