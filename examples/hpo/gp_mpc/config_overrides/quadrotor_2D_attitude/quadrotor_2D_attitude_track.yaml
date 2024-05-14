@@ -1,0 +1,66 @@
+task_config:
+  ctrl_freq: 60
+  pyb_freq: 840
+  gui: False
+  quad_type: 4
+  info_in_reset: False
+  randomized_init: True
+  init_state_randomization_info:
+    init_x:
+      distrib: 'uniform'
+      low: -0.1
+      high: 0.1
+    init_x_dot:
+      distrib: 'uniform'
+      low: -0.1
+      high: 0.1
+    init_z:
+      distrib: 'uniform'
+      low: -0.1
+      high: 0.1
+    init_z_dot:
+      distrib: 'uniform'
+      low: 0.1
+      high: 0.2
+    init_theta:
+      distrib: 'uniform'
+      low: -0.05
+      high: 0.05
+  cost: quadratic
+  inertial_prop:
+    - 0.027
+    - 1.4e-05
+  constraints:
+    - constraint_form: default_constraint
+      constrained_variable: input
+    - constraint_form: default_constraint
+      constrained_variable: state
+      upper_bounds:
+        - 100
+        - 100
+        - 100
+        - 100
+        - 100
+      lower_bounds:
+        - -100
+        - -100
+        - 0
+        - -100
+        - -100
+  done_on_violation: False
+  disturbances: null
+  task: traj_tracking
+  task_info:
+    trajectory_type: figure8
+    num_cycles: 1
+    trajectory_plane: 'xz'
+    trajectory_position_offset: [0, 1]
+    trajectory_scale: 0.5
+  episode_len_sec: 9
+  init_state:
+    init_x: 0.0
+    init_x_dot: 0.0
+    init_z: 1
+    init_z_dot: 0.0
+    init_theta: 0.0
+  verbose: false
