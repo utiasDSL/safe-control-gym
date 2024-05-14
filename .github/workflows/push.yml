@@ -26,23 +26,6 @@ jobs:
         pre-commit install
         pre-commit autoupdate
         pre-commit run --all
-    - name: Setup MySQL Server
-      env:
-        DB_USER: root
-        DB_PASSWORD: root
-      run: |
-        sudo apt-get install mysql-server
-        sudo systemctl start mysql
-        echo "REACHED HERE"
-        sudo mysql -h 127.0.0.1
-        CREATE USER optuna@"%";
-        CREATE DATABASE ppo_hpo;
-        CREATE DATABASE sac_hpo;
-        CREATE DATABASE gp_mpc_hpo;
-        GRANT ALL ON ppo_hpo.* TO optuna@"%";
-        GRANT ALL ON sac_hpo.* TO optuna@"%";
-        GRANT ALL ON gp_mpc_hpo.* TO optuna@"%";
-        exit
     - name: Unit tests
       run: |
         python -m pytest tests/
