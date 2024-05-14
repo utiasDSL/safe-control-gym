@@ -50,7 +50,7 @@ class MPC(BaseController):
             use_gpu (bool): False (use cpu) True (use cuda).
             seed (int): random seed.
         '''
-        super().__init__(env_func, output_dir, use_gpu, seed, **kwargs)
+        super().__init__(env_func=env_func, output_dir=output_dir, use_gpu=use_gpu, seed=seed, **kwargs)
         for k, v in locals().items():
             if k != 'self' and k != 'kwargs' and '__' not in k:
                 self.__dict__.update({k: v})

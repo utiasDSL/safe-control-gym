@@ -12,7 +12,7 @@ algo_config:
   gamma: 0.99
   use_gae: True
   gae_lambda: 0.95
-  use_clipped_value: False
+  use_clipped_value: True
   clip_param: 0.2
   target_kl: 0.01
   entropy_coef: 0.01
@@ -25,7 +25,7 @@ algo_config:
   max_grad_norm: 0.5
 
   # runner args
-  max_env_steps: 100000
+  max_env_steps: 72000
   num_workers: 1
   rollout_batch_size: 4
   rollout_steps: 100
@@ -33,9 +33,9 @@ algo_config:
   eval_batch_size: 10
 
   # misc
-  log_interval: 1000
-  save_interval: 1000
-  num_checkpoints: 0
-  eval_interval: 1000
+  log_interval: 73000
+  save_interval: 73000
+  eval_interval: 73000
+  num_checkpoints: 50
   eval_save_best: True
   tensorboard: False

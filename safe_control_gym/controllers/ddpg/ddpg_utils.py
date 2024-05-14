@@ -24,6 +24,7 @@ class DDPGAgent:
                  tau=0.005,
                  actor_lr=0.001,
                  critic_lr=0.001,
+                 activation='relu',
                  **kwargs):
         # params
         self.obs_space = obs_space
@@ -33,7 +34,7 @@ class DDPGAgent:
         self.tau = tau
 
         # model
-        self.ac = MLPActorCritic(obs_space, act_space, hidden_dims=[hidden_dim] * 2, activation='relu')
+        self.ac = MLPActorCritic(obs_space, act_space, hidden_dims=[hidden_dim] * 2, activation=activation)
 
         # target networks
         self.ac_targ = deepcopy(self.ac)
@@ -229,7 +230,7 @@ def make_action_noise_process(noise_config, act_space):
 
     std_func = std_config.pop('func')
     std_args = std_config.pop('args')
-    std = eval(std_func)(*std_args, **std_config)
+    std = eval(std_func)(std_args, **std_config)
 
     process = eval(process_func)(size=(act_space.shape[0],), std=std)
     return process

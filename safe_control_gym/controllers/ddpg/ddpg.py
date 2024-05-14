@@ -61,7 +61,8 @@ class DDPG(BaseController):
                                gamma=self.gamma,
                                tau=self.tau,
                                actor_lr=self.actor_lr,
-                               critic_lr=self.critic_lr)
+                               critic_lr=self.critic_lr,
+                               activation=self.activation)
         self.agent.to(self.device)
 
         # pre-/post-processing
@@ -162,6 +163,9 @@ class DDPG(BaseController):
 
     def learn(self, env=None, **kwargs):
         '''Performs learning (pre-training, training, fine-tuning, etc).'''
+        if self.num_checkpoints > 0:
+            step_interval = np.linspace(0, self.max_env_steps, self.num_checkpoints)
+            interval_save = np.zeros_like(step_interval, dtype=bool)
         while self.total_steps < self.max_env_steps:
             results = self.train_step()
 
@@ -170,10 +174,15 @@ class DDPG(BaseController):
                 # latest/final checkpoint
                 self.save(self.checkpoint_path)
                 self.logger.info(f'Checkpoint | {self.checkpoint_path}')
-            if self.num_checkpoints and self.total_steps % (self.max_env_steps // self.num_checkpoints) == 0:
-                # intermediate checkpoint
-                path = os.path.join(self.output_dir, 'checkpoints', f'model_{self.total_steps}.pt')
-                self.save(path, save_buffer=False)
+                path = os.path.join(self.output_dir, 'checkpoints', 'model_{}.pt'.format(self.total_steps))
+                self.save(path)
+            if self.num_checkpoints > 0:
+                interval_id = np.argmin(np.abs(np.array(step_interval) - self.total_steps))
+                if not interval_save[interval_id]:
+                    # Intermediate checkpoint.
+                    path = os.path.join(self.output_dir, 'checkpoints', f'model_{self.total_steps}.pt')
+                    self.save(path, save_buffer=False)
+                    interval_save[interval_id] = True
 
             # eval
             if self.eval_interval and self.total_steps % self.eval_interval == 0:
@@ -342,9 +351,7 @@ class DDPG(BaseController):
                 'progress': step / self.max_env_steps,
             },
             step,
-            prefix='time',
-            write=False,
-            write_tb=False)
+            prefix='time')
 
         # learning stats
         if 'policy_loss' in results:

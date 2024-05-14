@@ -27,6 +27,10 @@ Mosek = "^10.0.18"
 termcolor = "^1.1.0"
 pytest = "^7.2.2"
 pre-commit = "^3.3.2"
+optuna = "^3.0"
+optuna-dashboard = "^0.9"
+mysql-connector-python = "8.0.33"
+pymysql = "1.0.3"
 
 [tool.poetry.dev-dependencies]
 

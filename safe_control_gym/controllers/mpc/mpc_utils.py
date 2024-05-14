@@ -3,6 +3,7 @@
 import casadi as cs
 import numpy as np
 import scipy
+import scipy.linalg
 
 from safe_control_gym.controllers.lqr.lqr_utils import discretize_linear_system
 from safe_control_gym.envs.constraints import ConstraintList

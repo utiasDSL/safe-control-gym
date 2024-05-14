@@ -41,6 +41,7 @@ class PPO(BaseController):
                  seed=0,
                  **kwargs):
         super().__init__(env_func, training, checkpoint_path, output_dir, use_gpu, seed, **kwargs)
+
         # Task.
         if self.training:
             # Training and testing.
@@ -151,6 +152,10 @@ class PPO(BaseController):
               **kwargs
               ):
         '''Performs learning (pre-training, training, fine-tuning, etc).'''
+
+        if self.num_checkpoints > 0:
+            step_interval = np.linspace(0, self.max_env_steps, self.num_checkpoints)
+            interval_save = np.zeros_like(step_interval, dtype=bool)
         while self.total_steps < self.max_env_steps:
             results = self.train_step()
             # Checkpoint.
@@ -158,10 +163,15 @@ class PPO(BaseController):
                 # Latest/final checkpoint.
                 self.save(self.checkpoint_path)
                 self.logger.info(f'Checkpoint | {self.checkpoint_path}')
-            if self.num_checkpoints and self.total_steps % (self.max_env_steps // self.num_checkpoints) == 0:
-                # Intermediate checkpoint.
-                path = os.path.join(self.output_dir, 'checkpoints', f'model_{self.total_steps}.pt')
+                path = os.path.join(self.output_dir, 'checkpoints', 'model_{}.pt'.format(self.total_steps))
                 self.save(path)
+            if self.num_checkpoints > 0:
+                interval_id = np.argmin(np.abs(np.array(step_interval) - self.total_steps))
+                if interval_save[interval_id] is False:
+                    # Intermediate checkpoint.
+                    path = os.path.join(self.output_dir, 'checkpoints', f'model_{self.total_steps}.pt')
+                    self.save(path)
+                    interval_save[interval_id] = True
             # Evaluation.
             if self.eval_interval and self.total_steps % self.eval_interval == 0:
                 eval_results = self.run(env=self.eval_env, n_episodes=self.eval_batch_size)
@@ -305,9 +315,7 @@ class PPO(BaseController):
                 'progress': step / self.max_env_steps
             },
             step,
-            prefix='time',
-            write=False,
-            write_tb=False)
+            prefix='time')
         # Learning stats.
         self.logger.add_scalars(
             {
