@@ -1,5 +1,4 @@
 hpo_config:
-
   hpo: True   # do hyperparameter optimization
   load_if_exists: True # this should set to True if hpo is run in parallel
   use_database: False # this is set to true if MySQL is used
@@ -21,7 +20,7 @@ hpo_config:
   hps_config:
     # model args
     hidden_dim: 256
-    activation: "relu"
+    activation: relu
 
     # loss args
     gamma: 0.99

@@ -1,30 +1,22 @@
-"""Template hyperparameter optimization/hyperparameter evaluation script.
-
-"""
+'''Template hyperparameter optimization/hyperparameter evaluation script.'''
 import os
 from functools import partial
 
 import yaml
 
-import matplotlib.pyplot as plt
-import numpy as np
-
-from safe_control_gym.envs.benchmark_env import Environment, Task
-
-from safe_control_gym.hyperparameters.hpo import HPO
 from safe_control_gym.experiments.base_experiment import BaseExperiment
+from safe_control_gym.hyperparameters.hpo import HPO
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.utils import set_device_from_config, set_dir_from_config, set_seed_from_config
 
 
 def hpo(config):
-    """Hyperparameter optimization.
+    '''Hyperparameter optimization.
 
     Usage:
         * to start HPO, use with `--func hpo`.
-
-    """
+    '''
 
     # Experiment setup.
     if config.hpo_config.hpo:
@@ -48,12 +40,11 @@ def hpo(config):
 
 
 def train(config):
-    """Training for a given set of hyperparameters.
+    '''Training for a given set of hyperparameters.
 
     Usage:
         * to start training, use with `--func train`.
-
-    """
+    '''
     # Override algo_config with given yaml file
     if config.opt_hps == '':
         # if no opt_hps file is given
@@ -94,7 +85,7 @@ def train(config):
     experiment.launch_training()
     results, metrics = experiment.run_evaluation(n_episodes=1, n_steps=None, done_on_max_steps=True)
     control_agent.close()
-    
+
     return eval_env.X_GOAL, results, metrics
 
 
@@ -102,7 +93,6 @@ MAIN_FUNCS = {'hpo': hpo, 'train': train}
 
 
 if __name__ == '__main__':
-
     # Make config.
     fac = ConfigFactory()
     fac.add_argument('--func', type=str, default='train', help='main function to run.')
@@ -115,5 +105,5 @@ if __name__ == '__main__':
     # Execute.
     func = MAIN_FUNCS.get(config.func, None)
     if func is None:
-        raise Exception('Main function {} not supported.'.format(config.func))
+        raise Exception(f'Main function {config.func} not supported.')
     func(config)

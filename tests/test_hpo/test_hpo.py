@@ -86,7 +86,7 @@ def test_hpo_parallelism(SYS, TASK, ALGO, LOAD, SAMPLER):
         # create database
         create(munch.Munch({'tag': f'{ALGO}_hpo'}))
         # output_dir
-        output_dir = f'./examples/hpo/results'
+        output_dir = './examples/hpo/results'
 
         if ALGO == 'gp_mpc':
             PRIOR = '150'
@@ -126,7 +126,7 @@ def test_hpo_parallelism(SYS, TASK, ALGO, LOAD, SAMPLER):
         # first, wait a bit untill the HPO study is created
         time.sleep(3)
         # output_dir
-        output_dir = f'./examples/hpo/results'
+        output_dir = './examples/hpo/results'
         if ALGO == 'gp_mpc':
             PRIOR = '150'
             sys.argv[1:] = ['--algo', ALGO,
