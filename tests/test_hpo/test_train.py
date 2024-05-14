@@ -59,7 +59,8 @@ def test_train(SYS, TASK, ALGO, HYPERPARAMETER):
                             f'./examples/hpo/{ALGO}/config_overrides/{SYS}/{ALGO}_{SYS}_{PRIOR}.yaml',
                         '--output_dir', output_dir,
                         '--opt_hps', opt_hp_path,
-                        '--seed', '2'
+                        '--seed', '2',
+                        '--unittest', 'True'
                         ]
     else:
         sys.argv[1:] = ['--algo', ALGO,
@@ -71,11 +72,13 @@ def test_train(SYS, TASK, ALGO, HYPERPARAMETER):
                         '--tag', 's1',
                         '--opt_hps', opt_hp_path,
                         '--seed', '6',
-                        '--use_gpu', 'True'
+                        '--use_gpu', 'True',
+                        '--unittest', 'True'
                         ]
 
     fac = ConfigFactory()
     fac.add_argument('--opt_hps', type=str, default='', help='yaml file as a result of HPO.')
+    fac.add_argument('--unittest', type=bool, default=False, help='whether is for unittests.')
     config = fac.merge()
 
     train(config)

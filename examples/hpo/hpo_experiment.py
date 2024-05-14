@@ -67,6 +67,13 @@ def train(config):
                 config.algo_config[hp] = [opt_hps[hp]] * len(config.algo_config[hp])
             else:
                 config.algo_config[hp] = opt_hps[hp]
+    if config.unittest:
+        if 'max_env_steps' in config.algo_config:
+            config.algo_config.max_env_steps = 100
+        if 'num_epochs' in config.algo_config:
+            config.algo_config.num_epochs = 1
+        if 'horizon' in config.algo_config:
+            config.algo_config.horizon = 2
     # Experiment setup.
     set_dir_from_config(config)
     set_seed_from_config(config)
@@ -109,6 +116,7 @@ if __name__ == '__main__':
     fac.add_argument('--opt_hps', type=str, default='', help='yaml file as a result of HPO.')
     fac.add_argument('--load_study', type=bool, default=False, help='whether to load study from a previous HPO.')
     fac.add_argument('--sampler', type=str, default='TPESampler', help='which sampler to use in HPO.')
+    fac.add_argument('--unittest', type=bool, default=False, help='whether is for unittests.')
     # merge config
     config = fac.merge()
 
