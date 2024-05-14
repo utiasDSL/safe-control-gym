@@ -2,7 +2,7 @@ algo: sac
 algo_config:
   # model args
   hidden_dim: 256
-  activation: "relu"
+  activation: relu
   use_entropy_tuning: False
 
   # optim args

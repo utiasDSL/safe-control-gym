@@ -1,9 +1,8 @@
-"""Sampler for hyperparameters for different algorithms
+'''Sampler for hyperparameters for different algorithms
 
 Reference:
     * stable baselines3 https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/rl_zoo3/hyperparams_opt.py
-
-"""
+'''
 
 from typing import Any, Dict
 
@@ -62,13 +61,12 @@ GPMPC_dict = {
 
 
 def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]:
-    """Sampler for PPO hyperparameters.
+    '''Sampler for PPO hyperparameters.
 
-    args:
+    Args:
         hps_dict: the dict of hyperparameters that will be optimized over
         trial: budget variable
-
-    """
+    '''
 
     # TODO: conditional hyperparameters
 
@@ -92,7 +90,7 @@ def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]
     actor_lr = trial.suggest_float('actor_lr', PPO_dict['float']['actor_lr'][0], PPO_dict['float']['actor_lr'][1], log=True)
     critic_lr = trial.suggest_float('critic_lr', PPO_dict['float']['critic_lr'][0], PPO_dict['float']['critic_lr'][1], log=True)
     # The maximum value for the gradient clipping
-    # max_grad_norm = trial.suggest_categorical("max_grad_norm", [0.3, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 5])
+    # max_grad_norm = trial.suggest_categorical('max_grad_norm', [0.3, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 5])
 
     # The number of steps to run for each environment per update
     # Note: rollout_steps * n_envs should be greater than mini_batch_size
@@ -118,7 +116,7 @@ def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]
         'mini_batch_size': mini_batch_size,
         'actor_lr': actor_lr,
         'critic_lr': critic_lr,
-        # "max_grad_norm": max_grad_norm, (currently not implemented in PPO controller)
+        # 'max_grad_norm': max_grad_norm, (currently not implemented in PPO controller)
         'max_env_steps': max_env_steps,
         'rollout_steps': rollout_steps,
     }
@@ -129,13 +127,12 @@ def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]
 
 
 def sac_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]:
-    """Sampler for SAC hyperparameters.
+    '''Sampler for SAC hyperparameters.
 
-    args:
+    Args:
         hps_dict: the dict of hyperparameters that will be optimized over
         trial: budget variable
-
-    """
+    '''
 
     # TODO: conditional hyperparameters
 
@@ -175,13 +172,12 @@ def sac_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]
 
 
 def gpmpc_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]:
-    """Sampler for PPO hyperparameters.
+    '''Sampler for PPO hyperparameters.
 
-    args:
+    Args:
         hps_dict: the dict of hyperparameters that will be optimized over
         trial: budget variable
-
-    """
+    '''
 
     horizon = trial.suggest_categorical('horizon', GPMPC_dict['categorical']['horizon'])
     kernel = trial.suggest_categorical('kernel', GPMPC_dict['categorical']['kernel'])

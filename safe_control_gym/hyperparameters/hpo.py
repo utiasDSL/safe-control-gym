@@ -1,10 +1,9 @@
-""" The implementation of HPO class
+''' The implementation of HPO class
 
 Reference:
     * stable baselines3 https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/rl_zoo3/hyperparams_opt.py
     * Optuna: https://optuna.org
-
-"""
+'''
 import os
 from copy import deepcopy
 from functools import partial
@@ -28,16 +27,15 @@ from safe_control_gym.utils.registration import make
 class HPO(object):
 
     def __init__(self, algo, task, sampler, load_study, output_dir, task_config, hpo_config, **algo_config):
-        """ Hyperparameter optimization class
+        ''' Hyperparameter optimization class
 
-        args:
+        Args:
             algo: algo name
             env_func: environment that the agent will interact with
             output_dir: output directory
             hpo_config: hyperparameter optimization configuration
             algo_config: algorithm configuration
-
-        """
+        '''
 
         self.algo = algo
         self.study_name = algo + '_hpo'
@@ -61,18 +59,17 @@ class HPO(object):
         assert len(hpo_config.objective) == len(hpo_config.direction), 'objective and direction must have the same length'
 
     def objective(self, trial: optuna.Trial) -> float:
-        """ The stochastic objective function for a HPO tool to optimize over
+        ''' The stochastic objective function for a HPO tool to optimize over
 
-        args:
+        Args:
             trial: A single trial object that contains the hyperparameters to be evaluated
-
-        """
+        '''
 
         # sample candidate hyperparameters
         sampled_hyperparams = HYPERPARAMS_SAMPLER[self.algo](self.hps_config, trial)
 
         # log trial number
-        self.logger.info('Trial number: {}'.format(trial.number))
+        self.logger.info(f'Trial number: {trial.number}')
 
         # flag for increasing runs
         increase_runs = True
@@ -93,8 +90,8 @@ class HPO(object):
                     self.algo_config[hp] = sampled_hyperparams[hp]
 
                 seeds.append(seed)
-                self.logger.info('Sample hyperparameters: {}'.format(sampled_hyperparams))
-                self.logger.info('Seeds: {}'.format(seeds))
+                self.logger.info(f'Sample hyperparameters: {sampled_hyperparams}')
+                self.logger.info(f'Seeds: {seeds}')
 
                 try:
                     self.env_func = partial(make, self.task, output_dir=self.output_dir, **self.task_config)
@@ -140,7 +137,7 @@ class HPO(object):
 
                 # at the moment, only single-objective optimization is supported
                 returns.append(metrics[self.hpo_config.objective[0]])
-                self.logger.info('Sampled objectives: {}'.format(returns))
+                self.logger.info(f'Sampled objectives: {returns}')
 
                 self.agent.close()
                 # delete instances
@@ -160,14 +157,13 @@ class HPO(object):
                     else:
                         increase_runs = False
 
-        self.logger.info('Returns: {}'.format(Gss))
+        self.logger.info(f'Returns: {Gss}')
 
         return Gss
 
     def hyperparameter_optimization(self) -> None:
-
         if self.load_study:
-            self.study = optuna.load_study(study_name=self.study_name, storage='mysql+pymysql://optuna@localhost/{}'.format(self.study_name))
+            self.study = optuna.load_study(study_name=self.study_name, storage=f'mysql+pymysql://optuna@localhost/{self.study_name}')
         elif self.hpo_config.use_database is False:
             # single-objective optimization
             if len(self.hpo_config.direction) == 1:
@@ -193,7 +189,7 @@ class HPO(object):
                     sampler=self.sampler,
                     pruner=optuna.pruners.MedianPruner(n_warmup_steps=10),
                     study_name=self.study_name,
-                    storage='mysql+pymysql://optuna@localhost/{}'.format(self.study_name),
+                    storage=f'mysql+pymysql://optuna@localhost/{self.study_name}',
                     load_if_exists=self.hpo_config.load_if_exists
                 )
             # multi-objective optimization
@@ -203,7 +199,7 @@ class HPO(object):
                     sampler=self.sampler,
                     pruner=optuna.pruners.MedianPruner(n_warmup_steps=10),
                     study_name=self.study_name,
-                    storage='mysql+pymysql://optuna@localhost/{}'.format(self.study_name),
+                    storage=f'mysql+pymysql://optuna@localhost/{self.study_name}',
                     load_if_exists=self.hpo_config.load_if_exists
                 )
 
@@ -236,7 +232,7 @@ class HPO(object):
 
         # dashboard
         if self.hpo_config.dashboard and self.hpo_config.use_database:
-            run_server('mysql+pymysql://optuna@localhost/{}'.format(self.study_name))
+            run_server(f'mysql+pymysql://optuna@localhost/{self.study_name}')
 
         # save plot
         try:
@@ -255,27 +251,25 @@ class HPO(object):
                 for i in range(len(self.hpo_config.objective)):
                     plot_param_importances(self.study, target=lambda t: t.values[i])
                     plt.tight_layout()
-                    plt.savefig(output_dir + '/param_importances_{}.png'.format(self.hpo_config.objective[i]))
+                    plt.savefig(output_dir + f'/param_importances_{self.hpo_config.objective[i]}.png')
                     # plt.show()
                     plt.close()
                     plot_optimization_history(self.study, target=lambda t: t.values[i])
                     plt.tight_layout()
-                    plt.savefig(output_dir + '/optimization_history_{}.png'.format(self.hpo_config.objective[i]))
+                    plt.savefig(output_dir + f'/optimization_history_{self.hpo_config.objective[i]}.png')
                     # plt.show()
                     plt.close()
         except Exception as e:
             print(e)
             print('Plotting failed.')
 
-        self.logger.info('Total runs: {}'.format(self.total_runs))
+        self.logger.info(f'Total runs: {self.total_runs}')
         self.logger.close()
 
         return
 
     def _value_key(self, trial: FrozenTrial) -> float:
-        """ Returns value of trial object for sorting
-
-        """
+        ''' Returns value of trial object for sorting.'''
         if trial.value is None:
             if self.hpo_config.direction[0] == 'minimize':
                 return float('inf')
@@ -285,9 +279,7 @@ class HPO(object):
             return trial.value
 
     def _compute_cvar(self, returns: np.ndarray, alpha: float = 0.2) -> float:
-        """ Compute CVaR
-
-        """
+        ''' Compute CVaR.'''
         assert returns.ndim == 1, 'returns must be 1D array'
         sorted_returns = np.sort(returns)
         n = len(sorted_returns)

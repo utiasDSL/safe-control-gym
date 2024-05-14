@@ -221,11 +221,11 @@ class GaussianProcessCollection:
         self.parallel = parallel
         if parallel:
             self.gps = BatchGPModel(model_type,
-                                         likelihood,
-                                         input_mask=input_mask,
-                                         target_mask=target_mask,
-                                         normalize=normalize,
-                                         kernel=kernel)
+                                    likelihood,
+                                    input_mask=input_mask,
+                                    target_mask=target_mask,
+                                    normalize=normalize,
+                                    kernel=kernel)
         else:
             for _ in range(target_dim):
                 self.gp_list.append(GaussianProcess(model_type,
