@@ -34,7 +34,7 @@ jobs:
         sudo apt-get install mysql-server
         sudo systemctl start mysql
         echo "REACHED HERE"
-        sudo mysql
+        sudo mysql -h 127.0.0.1
         CREATE USER optuna@"%";
         CREATE DATABASE ppo_hpo;
         CREATE DATABASE sac_hpo;
