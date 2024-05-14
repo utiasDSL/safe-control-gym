@@ -33,7 +33,7 @@ You may replace `{algo}` with `ppo` or `sac` in order to run the scripts.
 Execute the following command for optimizing hyperparameters
 
 ```bash
-python ./examples/hpo/rl/rl_experiment.py \
+python ./examples/hpo/hpo_experiment.py \
                     --algo, {algo}, \
                     --task, {sys}, \
                     --overrides, \
@@ -52,7 +52,7 @@ You may replace `{sys}` with `cartpole` in order to run the script.
 Execute the following command if optimized hyperparameters are given
 
 ```bash
-python ./examples/hpo/rl/rl_experiment.py \
+python ./examples/hpo/hpo_experiment.py \
                     --algo {algo} \
                     --overrides \
                     ./examples/hpo/rl/{algo}/config_overrides/cartpole/{algo}_{sys}.yaml \
