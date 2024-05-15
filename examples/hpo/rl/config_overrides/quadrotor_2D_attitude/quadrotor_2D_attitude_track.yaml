@@ -5,7 +5,7 @@ task_config:
   pyb_freq: 840
   physics: pyb
   quad_type: 4
-  normalized_rl_action_space: True
+  normalized_rl_action_space: False
 
   init_state:
     init_x: 0
@@ -27,8 +27,8 @@ task_config:
       high: 0.1
     init_z:
       distrib: 'uniform'
-      low: 0.1
-      high: 0.2
+      low: -0.1
+      high: 0.1
     init_z_dot:
       distrib: 'uniform'
       low: -0.1

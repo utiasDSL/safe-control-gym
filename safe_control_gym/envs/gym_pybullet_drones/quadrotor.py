@@ -672,11 +672,11 @@ class Quadrotor(BaseAviary):
             self.ACTION_UNITS = ['N', 'N', 'N', 'N'] if not self.NORMALIZED_RL_ACTION_SPACE else ['-', '-', '-', '-']
 
         if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
-            n_mot = 4 / action_dim
+            n_mot = 4
             a_low = self.KF * n_mot * (self.PWM2RPM_SCALE * self.MIN_PWM + self.PWM2RPM_CONST)**2
             a_high = self.KF * n_mot * (self.PWM2RPM_SCALE * self.MAX_PWM + self.PWM2RPM_CONST)**2
-            self.physical_action_bounds = (np.array([np.full(1, a_low, np.float32), np.full(1, -85 * math.pi / 180, np.float32)]),
-                                        np.array([np.full(1, a_high, np.float32), np.full(1, 85 * math.pi / 180, np.float32)]))
+            self.physical_action_bounds = (np.array([np.full(1, a_low, np.float32), np.full(1, -25 * math.pi / 180, np.float32)]).flatten(),
+                                        np.array([np.full(1, a_high, np.float32), np.full(1, 25 * math.pi / 180, np.float32)]).flatten())
         else:
             n_mot = 4 / action_dim
             a_low = self.KF * n_mot * (self.PWM2RPM_SCALE * self.MIN_PWM + self.PWM2RPM_CONST)**2
@@ -687,8 +687,7 @@ class Quadrotor(BaseAviary):
         if self.NORMALIZED_RL_ACTION_SPACE:
             # Normalized thrust (around hover thrust).
             if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
-                # divided by 4 as the input to the attitude controller is the individual motor thrusts.
-                self.hover_thrust = self.GRAVITY_ACC * self.MASS / 4
+                self.hover_thrust = self.GRAVITY_ACC * self.MASS
             else:
                 self.hover_thrust = self.GRAVITY_ACC * self.MASS / action_dim
             self.action_space = spaces.Box(low=-np.ones(action_dim),
@@ -696,12 +695,7 @@ class Quadrotor(BaseAviary):
                                         dtype=np.float32)
         else:
             # Direct thrust control.
-            if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
-                self.action_space = spaces.Box(low=np.array([np.full(1, a_low*2, np.float32), np.full(1, -85 * math.pi / 180, np.float32)]),
-                                            high=np.array([np.full(1, a_high*2, np.float32), np.full(1, 85 * math.pi / 180, np.float32)]),
-                                            dtype=np.float32)
-            else:
-                self.action_space = spaces.Box(low=self.physical_action_bounds[0],
+            self.action_space = spaces.Box(low=self.physical_action_bounds[0],
                                             high=self.physical_action_bounds[1],
                                             dtype=np.float32)
 
@@ -816,17 +810,18 @@ class Quadrotor(BaseAviary):
         self.current_noisy_physical_action = self.current_physical_action
         
         if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
-            indivisual_thrust, pitch = action
+            collective_thrust, pitch = action
             # rpm = self.attitude_control._dslPIDAttitudeControl(indivisual_thrust, 
             #                                                    self.quat[0], np.array([0, pitch, 0])) # input thrsut is pwm
             # thrust_action = self.KF * rpm**2
             # thrust_action = self.attitude_control._dslPIDAttitudeControl(self.attitude_control.pwm2thrust(thrust_c/3), 
             #                                                             self.quat[0], np.array([0, pitch, 0])) # input thrsut is in Newton
-            thrust_action = self.attitude_control._dslPIDAttitudeControl(indivisual_thrust, 
+            # print(f"collective_thrust: {collective_thrust}, pitch: {pitch}")
+            thrust_action = self.attitude_control._dslPIDAttitudeControl(collective_thrust/4,
                                                                          self.quat[0], np.array([0, pitch, 0])) # input thrsut is in Newton
             thrust = np.array([thrust_action[0] + thrust_action[3], thrust_action[1] + thrust_action[2]])
-            thrust = np.clip(thrust, np.full(2, self.physical_action_bounds[0][0]), np.full(2, self.physical_action_bounds[1][0]))
-            pitch = np.clip(pitch, self.physical_action_bounds[0][1], self.physical_action_bounds[1][1])[0]
+            thrust = np.clip(thrust, np.full(2, self.physical_action_bounds[0][0]/2), np.full(2, self.physical_action_bounds[1][0]/2))
+            pitch = np.clip(pitch, self.physical_action_bounds[0][1], self.physical_action_bounds[1][1])
             self.current_clipped_action = np.array([sum(thrust), pitch])
         else:
             thrust = np.clip(action, self.physical_action_bounds[0], self.physical_action_bounds[1])
@@ -873,7 +868,7 @@ class Quadrotor(BaseAviary):
                 # thrust = np.where(thrust <= 0, self.MIN_PWM + (thrust + 1) * (hover_pwm - self.MIN_PWM),
                 #                    hover_pwm + (self.MAX_PWM - hover_pwm) * thrust)
                 
-                thrust = (1 + self.norm_act_scale * action[0]) * self.hover_thrust * 1.15
+                thrust = (1 + self.norm_act_scale * action[0]) * self.hover_thrust
                 # thrust = self.attitude_control.thrust2pwm(thrust)
 
                 # thrust = self.HOVER_RPM * (1+0.05*action[0])

@@ -68,7 +68,8 @@ def train(config):
             else:
                 config.algo_config[hp] = opt_hps[hp]
     # Experiment setup.
-    set_dir_from_config(config)
+    if config.plot_best is False:
+        set_dir_from_config(config)
     set_seed_from_config(config)
     set_device_from_config(config)
 
@@ -89,9 +90,13 @@ def train(config):
     control_agent.reset()
 
     eval_env = env_func(seed=config.seed * 111)
-    # Run experiment
-    experiment = BaseExperiment(eval_env, control_agent)
-    experiment.launch_training()
+
+    if config.plot_best:
+        control_agent.load('examples/hpo/results/2D/seed6_May-15-11-07-56_v0.5.0-611-gce9662f/model_best.pt')
+        experiment = BaseExperiment(eval_env, control_agent)
+    else:
+        experiment = BaseExperiment(eval_env, control_agent)
+        experiment.launch_training()
     results, metrics = experiment.run_evaluation(n_episodes=config.n_episodes, n_steps=None, done_on_max_steps=True)
     control_agent.close()
 
@@ -118,36 +123,37 @@ def train(config):
             graph1_2 = 9
             graph3_1 = 0
             graph3_2 = 4
-
-        _, ax = plt.subplots()
-        ax.plot(results['obs'][0][:, graph1_1], results['obs'][0][:, graph1_2], 'r--', label='Agent Trajectory')
-        ax.scatter(results['obs'][0][0, graph1_1], results['obs'][0][0, graph1_2], color='g', marker='o', s=100, label='Initial State')
-        ax.set_xlabel(r'$\theta$')
-        ax.set_ylabel(r'$\dot{\theta}$')
-        ax.set_box_aspect(0.5)
-        ax.legend(loc='upper right')
-        # save the plot
-        plt.savefig(os.path.join(config.output_dir, 'trajectory_theta_theta_dot.png'))
-
-        if config.task_config.task == Task.TRAJ_TRACKING and config.task == Environment.CARTPOLE:
-            _, ax2 = plt.subplots()
-            ax2.plot(np.linspace(0, 20, results['obs'][0].shape[0]), results['obs'][0][:, 0], 'r--', label='Agent Trajectory')
-            ax2.plot(np.linspace(0, 20, results['obs'][0].shape[0]), eval_env.X_GOAL[:, 0], 'b', label='Reference')
-            ax2.set_xlabel(r'Time')
-            ax2.set_ylabel(r'X')
-            ax2.set_box_aspect(0.5)
-            ax2.legend(loc='upper right')
+        
+        if config.task_config.quad_type != 4:
+            _, ax = plt.subplots()
+            ax.plot(results['obs'][0][:, graph1_1], results['obs'][0][:, graph1_2], 'r--', label='Agent Trajectory')
+            ax.scatter(results['obs'][0][0, graph1_1], results['obs'][0][0, graph1_2], color='g', marker='o', s=100, label='Initial State')
+            ax.set_xlabel(r'$\theta$')
+            ax.set_ylabel(r'$\dot{\theta}$')
+            ax.set_box_aspect(0.5)
+            ax.legend(loc='upper right')
             # save the plot
-            plt.savefig(os.path.join(config.output_dir, 'trajectory_time_x.png'))
-        elif config.task == Environment.QUADROTOR:
-            _, ax2 = plt.subplots()
-            ax2.plot(results['obs'][0][:, graph3_1 + 1], results['obs'][0][:, graph3_2 + 1], 'r--', label='Agent Trajectory')
-            ax2.set_xlabel(r'x_dot')
-            ax2.set_ylabel(r'z_dot')
-            ax2.set_box_aspect(0.5)
-            ax2.legend(loc='upper right')
-            # save the plot
-            plt.savefig(os.path.join(config.output_dir, 'trajectory_x_dot_z_dot.png'))
+            plt.savefig(os.path.join(config.output_dir, 'trajectory_theta_theta_dot.png'))
+
+            if config.task_config.task == Task.TRAJ_TRACKING and config.task == Environment.CARTPOLE:
+                _, ax2 = plt.subplots()
+                ax2.plot(np.linspace(0, 20, results['obs'][0].shape[0]), results['obs'][0][:, 0], 'r--', label='Agent Trajectory')
+                ax2.plot(np.linspace(0, 20, results['obs'][0].shape[0]), eval_env.X_GOAL[:, 0], 'b', label='Reference')
+                ax2.set_xlabel(r'Time')
+                ax2.set_ylabel(r'X')
+                ax2.set_box_aspect(0.5)
+                ax2.legend(loc='upper right')
+                # save the plot
+                plt.savefig(os.path.join(config.output_dir, 'trajectory_time_x.png'))
+            elif config.task == Environment.QUADROTOR:
+                _, ax2 = plt.subplots()
+                ax2.plot(results['obs'][0][:, graph3_1 + 1], results['obs'][0][:, graph3_2 + 1], 'r--', label='Agent Trajectory')
+                ax2.set_xlabel(r'x_dot')
+                ax2.set_ylabel(r'z_dot')
+                ax2.set_box_aspect(0.5)
+                ax2.legend(loc='upper right')
+                # save the plot
+                plt.savefig(os.path.join(config.output_dir, 'trajectory_x_dot_z_dot.png'))
 
         _, ax3 = plt.subplots()
         ax3.plot(results['obs'][0][:, graph3_1], results['obs'][0][:, graph3_2], 'r--', label='Agent Trajectory')
@@ -186,6 +192,7 @@ if __name__ == '__main__':
     fac.add_argument('--load_study', type=bool, default=False, help='whether to load study from a previous HPO.')
     fac.add_argument('--sampler', type=str, default='TPESampler', help='which sampler to use in HPO.')
     fac.add_argument('--n_episodes', type=int, default=1, help='number of episodes to run.')
+    fac.add_argument('--plot_best', type=bool, default=False, help='plot best agent trajectory.')
     # merge config
     config = fac.merge()
 

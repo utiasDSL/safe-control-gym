@@ -134,8 +134,8 @@ class AttitudeControl(ABC):
 
             Parameters
             ----------
-            thrust : float
-                The target thrust (Newton) along the drone z-axis.
+            thrust : ndarray
+                (4,1)-shaped array of target thrust (Newton) along the drone z-axis.
             cur_quat : ndarray
                 (4,1)-shaped array of floats containing the current orientation as a quaternion.
             target_euler : ndarray

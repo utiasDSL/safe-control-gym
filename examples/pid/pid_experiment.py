@@ -8,12 +8,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pybullet as p
 
+from safe_control_gym.envs.benchmark_env import Environment, Task
+
 from safe_control_gym.experiments.base_experiment import BaseExperiment
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
+from safe_control_gym.utils.utils import set_dir_from_config
 
 
-def run(gui=True, n_episodes=1, n_steps=None, save_data=False):
+def run(gui=False, n_episodes=1, n_steps=None, save_data=False):
     '''The main function running PID experiments.
 
     Args:
@@ -118,14 +121,86 @@ def run(gui=True, n_episodes=1, n_steps=None, save_data=False):
         # Step the environment and print all returned information.
         obs, reward, done, info, action = trajs_data['obs'][0][i], trajs_data['reward'][0][i], trajs_data['done'][0][i], trajs_data['info'][0][i], trajs_data['action'][0][i]
 
-        # Print the last action and the information returned at each step.
-        print(i, '-th step.')
-        print(action, '\n', obs, '\n', reward, '\n', done, '\n', info, '\n')
+        # # Print the last action and the information returned at each step.
+        # print(i, '-th step.')
+        # print(action, '\n', obs, '\n', reward, '\n', done, '\n', info, '\n')
 
     elapsed_sec = trajs_data['timestamp'][0][-1] - trajs_data['timestamp'][0][0]
-    print(f'\n{iterations} iterations (@{config.task_config.ctrl_freq}Hz) in {elapsed_sec:.2f} seconds, i.e. {iterations / elapsed_sec:.2f} steps/sec for a {(iterations * (1. / config.task_config.ctrl_freq)) / elapsed_sec:.2f}x speedup.\n')
+    # print(f'\n{iterations} iterations (@{config.task_config.ctrl_freq}Hz) in {elapsed_sec:.2f} seconds, i.e. {iterations / elapsed_sec:.2f} steps/sec for a {(iterations * (1. / config.task_config.ctrl_freq)) / elapsed_sec:.2f}x speedup.\n')
 
-    print('FINAL METRICS - ' + ', '.join([f'{key}: {value}' for key, value in metrics.items()]))
+    # print('FINAL METRICS - ' + ', '.join([f'{key}: {value}' for key, value in metrics.items()]))
+
+    set_dir_from_config(config)
+    if config.task == Environment.QUADROTOR:
+        system = f'quadrotor_{str(config.task_config.quad_type)}D'
+        if config.task_config.quad_type == 4:
+            system = 'quadrotor_2D'
+    else:
+        system = config.task
+
+    if True:
+        if system == Environment.CARTPOLE:
+            graph1_1 = 2
+            graph1_2 = 3
+            graph3_1 = 0
+            graph3_2 = 1
+        elif system == 'quadrotor_2D':
+            graph1_1 = 4
+            graph1_2 = 5
+            graph3_1 = 0
+            graph3_2 = 2
+        elif system == 'quadrotor_3D':
+            graph1_1 = 6
+            graph1_2 = 9
+            graph3_1 = 0
+            graph3_2 = 4
+
+        _, ax = plt.subplots()
+        # ax.plot(trajs_data['obs'][0][:, graph1_1], trajs_data['obs'][0][:, graph1_2], 'r--', label='Agent Trajectory')
+        # ax.scatter(trajs_data['obs'][0][0, graph1_1], trajs_data['obs'][0][0, graph1_2], color='g', marker='o', s=100, label='Initial State')
+        # ax.set_xlabel(r'$\theta$')
+        # ax.set_ylabel(r'$\dot{\theta}$')
+        # ax.set_box_aspect(0.5)
+        # ax.legend(loc='upper right')
+        # # save the plot
+        # plt.savefig(os.path.join(config.output_dir, 'trajectory_theta_theta_dot.png'))
+
+        # if config.task_config.task == Task.TRAJ_TRACKING and config.task == Environment.CARTPOLE:
+        #     _, ax2 = plt.subplots()
+        #     ax2.plot(np.linspace(0, 20, trajs_data['obs'][0].shape[0]), trajs_data['obs'][0][:, 0], 'r--', label='Agent Trajectory')
+        #     ax2.plot(np.linspace(0, 20, trajs_data['obs'][0].shape[0]), ctrl.env.X_GOAL[:, 0], 'b', label='Reference')
+        #     ax2.set_xlabel(r'Time')
+        #     ax2.set_ylabel(r'X')
+        #     ax2.set_box_aspect(0.5)
+        #     ax2.legend(loc='upper right')
+        #     # save the plot
+        #     plt.savefig(os.path.join(config.output_dir, 'trajectory_time_x.png'))
+        # elif config.task == Environment.QUADROTOR:
+        #     _, ax2 = plt.subplots()
+        #     ax2.plot(trajs_data['obs'][0][:, graph3_1 + 1], trajs_data['obs'][0][:, graph3_2 + 1], 'r--', label='Agent Trajectory')
+        #     ax2.set_xlabel(r'x_dot')
+        #     ax2.set_ylabel(r'z_dot')
+        #     ax2.set_box_aspect(0.5)
+        #     ax2.legend(loc='upper right')
+        #     # save the plot
+        #     plt.savefig(os.path.join(config.output_dir, 'trajectory_x_dot_z_dot.png'))
+
+        _, ax3 = plt.subplots()
+        ax3.plot(trajs_data['obs'][0][:, graph3_1], trajs_data['obs'][0][:, graph3_2], 'r--', label='Agent Trajectory')
+        if config.task_config.task == Task.TRAJ_TRACKING and config.task == Environment.QUADROTOR:
+            ax3.plot(ctrl.env.X_GOAL[:, graph3_1], ctrl.env.X_GOAL[:, graph3_2], 'g--', label='Reference')
+        ax3.scatter(trajs_data['obs'][0][0, graph3_1], trajs_data['obs'][0][0, graph3_2], color='g', marker='o', s=100, label='Initial State')
+        ax3.set_xlabel(r'X')
+        if config.task == Environment.CARTPOLE:
+            ax3.set_ylabel(r'Vel')
+        elif config.task == Environment.QUADROTOR:
+            ax3.set_ylabel(r'Z')
+        ax3.set_box_aspect(0.5)
+        ax3.legend(loc='upper right')
+
+        plt.tight_layout()
+        # save the plot
+        plt.savefig(os.path.join(config.output_dir, 'trajectory_x.png'))
 
 
 if __name__ == '__main__':
