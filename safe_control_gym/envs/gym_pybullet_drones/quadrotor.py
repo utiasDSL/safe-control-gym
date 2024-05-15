@@ -696,9 +696,14 @@ class Quadrotor(BaseAviary):
                                         dtype=np.float32)
         else:
             # Direct thrust control.
-            self.action_space = spaces.Box(low=self.physical_action_bounds[0],
-                                        high=self.physical_action_bounds[1],
-                                        dtype=np.float32)
+            if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
+                self.action_space = spaces.Box(low=np.array([np.full(1, a_low*2, np.float32), np.full(1, -85 * math.pi / 180, np.float32)]),
+                                            high=np.array([np.full(1, a_high*2, np.float32), np.full(1, 85 * math.pi / 180, np.float32)]),
+                                            dtype=np.float32)
+            else:
+                self.action_space = spaces.Box(low=self.physical_action_bounds[0],
+                                            high=self.physical_action_bounds[1],
+                                            dtype=np.float32)
 
     def _set_observation_space(self):
         '''Sets the observation space of the environment.'''

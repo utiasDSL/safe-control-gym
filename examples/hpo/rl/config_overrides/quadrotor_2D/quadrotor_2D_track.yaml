@@ -5,7 +5,7 @@ task_config:
   pyb_freq: 840
   physics: pyb
   quad_type: 2 # 2D
-  normalized_rl_action_space: True
+  normalized_rl_action_space: False
 
   init_state:
     init_x: 0
