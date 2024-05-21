@@ -1,0 +1,3 @@
+[submodule "risk-averse-hetero-bo"]
+	path = risk-averse-hetero-bo
+	url = https://github.com/middleyuan/risk-averse-hetero-bo.git
