@@ -55,8 +55,8 @@ conda activate safe
 Install the `safe-control-gym` repository
 
 ```bash
-pip install --upgrade pip
-pip install -e .
+python -m pip install --upgrade pip
+python -m pip install -e .
 ```
 
 #### Note
