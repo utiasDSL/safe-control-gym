@@ -12,15 +12,15 @@ import optuna
 # define the categorical choice or real interval for each hyperparameter
 PPO_dict = {
     'categorical': {
-        'hidden_dim': [8, 16, 32, 64, 128, 256],
+        'hidden_dim': [8, 16, 32, 64, 128, 256, 512],
         'activation': ['tanh', 'relu', 'leaky_relu'],
         'gamma': [0.9, 0.95, 0.98, 0.99, 0.995, 0.999, 0.9999],
         'gae_lambda': [0.8, 0.9, 0.92, 0.95, 0.98, 0.99, 1.0],
         'clip_param': [0.1, 0.2, 0.3, 0.4],
         'opt_epochs': [1, 5, 10, 20],
-        'mini_batch_size': [32, 64, 128],
-        'rollout_steps': [50, 100, 150, 200],
-        'max_env_steps': [30000, 72000, 216000],  # to make sure having the checkpoint at these steps [30000, 72000, 216000]
+        'mini_batch_size': [32, 64, 128, 256],
+        'rollout_steps': [50, 100, 150, 200], # steps increment by rollout_steps * n_envs
+        'max_env_steps': [30000, 72000, 114000, 156000, 216000],  # to make sure having the checkpoint at these steps [30000, 72000, 216000]
     },
     'float': {  # note that in float type, you must specify the upper and lower bound
         'target_kl': [0.00000001, 0.8],
@@ -34,26 +34,29 @@ SAC_dict = {
         'hidden_dim': [32, 64, 128, 256, 512],
         'activation': ['tanh', 'relu', 'leaky_relu'],
         'gamma': [0.9, 0.95, 0.98, 0.99, 0.995, 0.999, 0.9999],
-        'train_interval': [10, 100, 1000],  # should be divisible by max_env_steps
-        'train_batch_size': [32, 64, 128, 256, 512],
-        'max_env_steps': [30000, 72000, 216000],  # to make sure having the checkpoint at these steps [30000, 72000, 216000]
+        'train_interval': [10, 100, 1000],  # max_env_steps should be divisible by train_interval
+        'train_batch_size': [32, 64, 128, 256, 512, 1024],
+        'max_env_steps': [30000, 72000, 114000, 156000, 216000],  # to make sure having the checkpoint at these steps [30000, 72000, 216000]
         'warm_up_steps': [500, 1000, 2000, 4000],
+        'max_buffer_size': [10000, 50000, 100000, 200000], 
     },
     'float': {  # note that in float type, you must specify the upper and lower bound
         'tau': [0.005, 1.0],
+        'init_temperature': [0.01, 1],  # initial temperature for the policy
         'actor_lr': [1e-5, 1],
         'critic_lr': [1e-5, 1],
+        'entropy_lr': [1e-5, 1],
     }
 }
 
 GPMPC_dict = {
     'categorical': {
-        'horizon': [10, 15, 20, 25, 30, 35],
+        'horizon': [10, 15, 20, 25, 30, 35, 40],
         'kernel': ['Matern', 'RBF'],
         'n_ind_points': [30, 40, 50],  # number should lower 0.8 * MIN(num_samples) if 0,2 is test_data_ratio
         'num_epochs': [4, 5, 6, 7, 8],
         'num_samples': [70, 75, 80, 85],
-        'optimization_iterations': [2800, 3000, 3200],  # to make sure having the same checkpoint at these steps [30000, 54000, 72000]
+        'optimization_iterations': [2800, 3000, 3200],
     },
     'float': {  # note that in float type, you must specify the upper and lower bound
         'learning_rate': [5e-4, 0.5],
@@ -152,9 +155,12 @@ def sac_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]
     train_batch_size = trial.suggest_categorical('train_batch_size', SAC_dict['categorical']['train_batch_size'])
     actor_lr = trial.suggest_float('actor_lr', SAC_dict['float']['actor_lr'][0], SAC_dict['float']['actor_lr'][1], log=True)
     critic_lr = trial.suggest_float('critic_lr', SAC_dict['float']['critic_lr'][0], SAC_dict['float']['critic_lr'][1], log=True)
+    entropy_lr = trial.suggest_float('entropy_lr', SAC_dict['float']['entropy_lr'][0], SAC_dict['float']['entropy_lr'][1], log=True)
+    init_temperature = trial.suggest_float('init_temperature', SAC_dict['float']['init_temperature'][0], SAC_dict['float']['init_temperature'][1], log=False)
 
     max_env_steps = trial.suggest_categorical('max_env_steps', SAC_dict['categorical']['max_env_steps'])
     warm_up_steps = trial.suggest_categorical('warm_up_steps', SAC_dict['categorical']['warm_up_steps'])
+    max_buffer_size = trial.suggest_categorical('max_buffer_size', SAC_dict['categorical']['max_buffer_size'])
 
     hps_suggestion = {
         'hidden_dim': hidden_dim,
