@@ -12,7 +12,8 @@ seed=$7
 n_initial=$8
 min_repeat_eval=$9
 metric=${10}
-run=${11}
+num_processes=${11}
+run=${12}
 
 
 FOLDER="/examples/hpo/quadrotor_2D_attitude/${algo}/${run}"
@@ -44,7 +45,8 @@ python ./risk-averse-hetero-bo/runner_files/erahbo_experiment.py \
         --seed ${seed} \
         --n_initial ${n_initial} \
         --min_repeat_eval ${min_repeat_eval} \
-        --metric ${metric} &
+        --metric ${metric} \
+        --max_processes ${num_processes} &
 
 # activate SCG environment
 conda deactivate
