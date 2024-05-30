@@ -137,7 +137,7 @@ def main(config):
                                 else:
                                     config.task_config['rew_state_weight'] = [hps['state_weight'], hps['state_dot_weight'], hps['state_weight'], hps['state_dot_weight'], hps['state_weight']]
                                     config.task_config['rew_action_weight'] = [hps['action_weight'], hps['action_weight']]
-                            elif hp == 'actor_lr' or hp == 'critic_lr' or hp == 'entropy_lr' or hp == 'learning_rate' or hp == 'target_kl' or hp == 'entropy_coef':
+                            elif hp == 'actor_lr' or hp == 'critic_lr' or hp == 'entropy_lr' or hp == 'learning_rate':
                                 config.algo_config[hp] = math.pow(10, hps[hp])
                             else:
                                 config.algo_config[hp] = hps[hp]
