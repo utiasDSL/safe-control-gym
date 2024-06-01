@@ -259,25 +259,32 @@ class GaussianProcessCollection:
             train_inputs, train_targets (torch.tensors): Input and target training data.
             path_to_statedicts (str): Path to where the state dicts are saved.
         '''
-        assert self.parallel is False, ValueError('Parallel GP not supported yet.')
-
+        
         self._init_properties(train_inputs, train_targets)
-        gp_K_plus_noise_list = []
-        gp_K_plus_noise_inv_list = []
-        for gp_ind, gp in enumerate(self.gp_list):
-            path = os.path.join(path_to_statedicts, f'best_model_{self.target_mask[gp_ind]}.pth')
-            print('#########################################')
-            print('#       Loading GP dimension {self.target_mask[gp_ind]}         #')
-            print('#########################################')
-            print(f'Path: {path}')
-            gp.init_with_hyperparam(train_inputs,
-                                    train_targets[:, self.target_mask[gp_ind]],
-                                    path)
-            gp_K_plus_noise_list.append(gp.model.K_plus_noise.detach())
-            gp_K_plus_noise_inv_list.append(gp.model.K_plus_noise_inv.detach())
-            print('Loaded!')
-        gp_K_plus_noise = torch.stack(gp_K_plus_noise_list)
-        gp_K_plus_noise_inv = torch.stack(gp_K_plus_noise_inv_list)
+        if self.parallel:
+            self.gps.init_with_hyperparam(train_inputs,
+                                          train_targets,
+                                          path_to_statedicts)
+            gp_K_plus_noise = self.gps.gp_K_plus_noise
+            gp_K_plus_noise_inv = self.gps.gp_K_plus_noise_inv
+        else:
+            gp_K_plus_noise_list = []
+            gp_K_plus_noise_inv_list = []
+            for gp_ind, gp in enumerate(self.gp_list):
+                path = os.path.join(path_to_statedicts, f'best_model_{self.target_mask[gp_ind]}.pth')
+                print('#########################################')
+                print('#       Loading GP dimension {self.target_mask[gp_ind]}         #')
+                print('#########################################')
+                print(f'Path: {path}')
+                gp.init_with_hyperparam(train_inputs,
+                                        train_targets[:, self.target_mask[gp_ind]],
+                                        path)
+                gp_K_plus_noise_list.append(gp.model.K_plus_noise.detach())
+                gp_K_plus_noise_inv_list.append(gp.model.K_plus_noise_inv.detach())
+                print('Loaded!')
+            gp_K_plus_noise = torch.stack(gp_K_plus_noise_list)
+            gp_K_plus_noise_inv = torch.stack(gp_K_plus_noise_inv_list)
+        
         self.K_plus_noise = gp_K_plus_noise
         self.K_plus_noise_inv = gp_K_plus_noise_inv
         self.casadi_predict = self.make_casadi_predict_func()

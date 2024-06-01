@@ -92,7 +92,12 @@ def train(config):
     eval_env = env_func(seed=config.seed * 111)
 
     if config.plot_best:
-        control_agent.load('examples/hpo/results/2D/seed6_May-15-11-07-56_v0.5.0-611-gce9662f/model_best.pt')
+        ## rl
+        control_agent.load('/home/tueilsy-st01/safe-control-gym/examples/hpo/results/2D_attitude/seed6_May-31-21-55-42_v0.5.0-623-g8229ba3/model_latest.pt')
+        # control_agent.load('/home/tueilsy-st01/safe-control-gym/examples/hpo/rl/ppo/model_latest_ppo.pt')
+
+        ## gpmpc
+        #control_agent.load('/home/tueilsy-st01/safe-control-gym/examples/hpo/results/temp/seed2_May-29-11-31-10_v0.5.0-619-gdbfb011')
         experiment = BaseExperiment(eval_env, control_agent)
     else:
         experiment = BaseExperiment(eval_env, control_agent)
@@ -123,6 +128,18 @@ def train(config):
             graph1_2 = 9
             graph3_1 = 0
             graph3_2 = 4
+
+        # plot results['current_physical_action']
+        _, ax_act = plt.subplots()
+        ax_act.plot(results['current_physical_action'][0][:, 0], 'b', label='Thrust')
+        if config.task_config.quad_type == 4:
+            ax_act.plot(results['current_physical_action'][0][:, 1], 'r', label='Pitch')
+        else:
+            ax_act.plot(results['current_physical_action'][0][:, 1], 'r', label='Thrust')
+        ax_act.legend()
+        ax_act.set_xlabel('Step')
+        ax_act.set_ylabel('Input')
+        plt.savefig(os.path.join(config.output_dir, 'inputs.png'))
         
         if config.task_config.quad_type != 4:
             _, ax = plt.subplots()
