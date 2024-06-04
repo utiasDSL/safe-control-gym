@@ -1259,7 +1259,7 @@ class Quadrotor(BaseAviary):
                 logger.warning(
                     '"at_goal_position" and "task_completed" are only intended for used with the 3D quadrotor.'
                 )
-
+        info["drone_pose"] = self._get_drone_state_vector(0)[..., :7]
         return info
 
     def _get_reset_info(self):
