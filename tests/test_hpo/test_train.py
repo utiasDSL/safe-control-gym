@@ -93,7 +93,7 @@ def test_train_cartpole(SYS, TASK, ALGO, PRIOR, HYPERPARAMETER):
 
 @pytest.mark.parametrize('SYS', ['quadrotor_2D', 'quadrotor_2D_attitude'])
 @pytest.mark.parametrize('TASK', ['track'])
-@pytest.mark.parametrize('ALGO', ['ppo', 'sac', 'gp_mpc'])
+@pytest.mark.parametrize('ALGO', ['ppo', 'sac', 'gp_mpc', 'gpmpc_acados'])
 @pytest.mark.parametrize('PRIOR', [''])
 @pytest.mark.parametrize('HYPERPARAMETER', ['default', 'optimimum'])
 def test_train_quad(SYS, TASK, ALGO, PRIOR, HYPERPARAMETER):
@@ -111,7 +111,7 @@ def test_train_quad(SYS, TASK, ALGO, PRIOR, HYPERPARAMETER):
     create(munch.Munch({'tag': f'{ALGO}_hpo'}))
 
     # optimized hp path
-    if ALGO == 'ppo' or ALGO == 'sac' or ALGO == 'gp_mpc':
+    if ALGO == 'ppo' or ALGO == 'sac' or ALGO == 'gp_mpc' or ALGO == 'gpmpc_acados':
         if HYPERPARAMETER == 'default':
             opt_hp_path = ''
         elif HYPERPARAMETER == 'optimimum':
@@ -119,13 +119,13 @@ def test_train_quad(SYS, TASK, ALGO, PRIOR, HYPERPARAMETER):
         else:
             raise ValueError('HYPERPARAMETER must be either default or optimimum')
         
-    if ALGO == 'gp_mpc':
+    if ALGO == 'gp_mpc' or ALGO == 'gpmpc_acados':
         PRIOR = '150'
         sys.argv[1:] = ['--algo', ALGO,
                         '--task', SYS_NAME,
                         '--overrides',
-                            f'./examples/hpo/{ALGO}/config_overrides/{SYS}/{SYS}_{TASK}.yaml',
-                            f'./examples/hpo/{ALGO}/config_overrides/{SYS}/{ALGO}_{SYS}_{PRIOR}.yaml',
+                            f'./examples/hpo/gp_mpc/config_overrides/{SYS}/{SYS}_{TASK}.yaml',
+                            f'./examples/hpo/gp_mpc/config_overrides/{SYS}/{ALGO}_{SYS}_{PRIOR}.yaml',
                         '--output_dir', output_dir,
                         '--opt_hps', opt_hp_path,
                         '--seed', '2',

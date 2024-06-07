@@ -49,3 +49,19 @@ register(idx='rarl',
 register(idx='rap',
          entry_point='safe_control_gym.controllers.rarl.rap:RAP',
          config_entry_point='safe_control_gym.controllers.rarl:rap.yaml')
+
+register(idx='sqp_mpc',
+         entry_point='safe_control_gym.controllers.mpc.sqp_mpc:SQPMPC',
+         config_entry_point='safe_control_gym.controllers.mpc:sqp_mpc.yaml')
+
+register(idx='sqp_gp_mpc',
+            entry_point='safe_control_gym.controllers.mpc.sqp_gp_mpc:SQPGPMPC',
+            config_entry_point='safe_control_gym.controllers.mpc:sqp_gp_mpc.yaml')
+
+register(idx='mpc_acados',
+            entry_point='safe_control_gym.controllers.mpc.mpc_acados:MPC_ACADOS',
+            config_entry_point='safe_control_gym.controllers.mpc:mpc_acados.yaml')
+
+register(idx='gpmpc_acados',
+            entry_point='safe_control_gym.controllers.mpc.gpmpc_acados:GPMPC_ACADOS',
+            config_entry_point='safe_control_gym.controllers.mpc:gpmpc_acados.yaml')
