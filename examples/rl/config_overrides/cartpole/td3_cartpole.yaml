@@ -1,0 +1,32 @@
+algo: td3
+algo_config:
+  # model args
+  hidden_dim: 256
+  activation: 'relu'
+
+  # loss args
+  gamma: 0.98
+  tau: 0.01
+
+  # optim args
+  train_interval: 100
+  train_batch_size: 512
+  actor_lr: 0.003
+  critic_lr: 0.003
+
+  # runner args
+  max_env_steps: 50000
+  warm_up_steps: 100
+  rollout_batch_size: 4
+  num_workers: 1
+  max_buffer_size: 50000
+  deque_size: 10
+  eval_batch_size: 10
+
+  # misc
+  log_interval: 2000
+  save_interval: 0
+  num_checkpoints: 0
+  eval_interval: 2000
+  eval_save_best: True
+  tensorboard: False

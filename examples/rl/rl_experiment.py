@@ -1,4 +1,4 @@
-'''This script tests the RL implementation.'''
+"""This script tests the RL implementation."""
 
 import shutil
 from functools import partial
@@ -13,7 +13,7 @@ from safe_control_gym.utils.registration import make
 
 
 def run(gui=False, plot=True, n_episodes=1, n_steps=None, curr_path='.'):
-    '''Main function to run RL experiments.
+    """Main function to run RL experiments.
 
     Args:
         gui (bool): Whether to display the gui.
@@ -26,7 +26,7 @@ def run(gui=False, plot=True, n_episodes=1, n_steps=None, curr_path='.'):
         X_GOAL (np.ndarray): The goal (stabilization or reference trajectory) of the experiment.
         results (dict): The results of the experiment.
         metrics (dict): The metrics of the experiment.
-    '''
+    """
 
     # Create the configuration dictionary.
     fac = ConfigFactory()
@@ -51,6 +51,7 @@ def run(gui=False, plot=True, n_episodes=1, n_steps=None, curr_path='.'):
 
     # Load state_dict from trained.
     ctrl.load(f'{curr_path}/models/{config.algo}/{config.algo}_model_{system}_{task}.pt')
+    # ctrl.load(f'{curr_path}/models/{config.algo}/model_best.pt')
 
     # Remove temporary files and directories
     shutil.rmtree(f'{curr_path}/temp', ignore_errors=True)
@@ -76,6 +77,11 @@ def run(gui=False, plot=True, n_episodes=1, n_steps=None, curr_path='.'):
             graph1_2 = 9
             graph3_1 = 0
             graph3_2 = 4
+        elif system == 'quadrotor_4D':
+            graph1_1 = 4
+            graph1_2 = 5
+            graph3_1 = 0
+            graph3_2 = 2
 
         _, ax = plt.subplots()
         ax.plot(results['obs'][0][:, graph1_1], results['obs'][0][:, graph1_2], 'r--', label='RL Trajectory')
@@ -116,6 +122,7 @@ def run(gui=False, plot=True, n_episodes=1, n_steps=None, curr_path='.'):
 
         plt.tight_layout()
         plt.show()
+        # plt.savefig(f"{curr_path}/perf.png")
 
     return env.X_GOAL, results, metrics
 

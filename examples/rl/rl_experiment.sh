@@ -1,14 +1,16 @@
 #!/bin/bash
 
-# SYS='cartpole'
+#SYS='cartpole'
 # SYS='quadrotor_2D'
-SYS='quadrotor_3D'
+SYS='quadrotor_2D_attitude'
+# SYS='quadrotor_3D'
 
-# TASK='stab'
-TASK='track'
+#TASK='stab'
+ TASK='track'
 
-ALGO='ppo'
+ ALGO='ppo'
 # ALGO='sac'
+#ALGO='td3'
 # ALGO='safe_explorer_ppo'
 
 if [ "$SYS" == 'cartpole' ]; then

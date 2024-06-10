@@ -34,6 +34,10 @@ register(idx='sac',
          entry_point='safe_control_gym.controllers.sac.sac:SAC',
          config_entry_point='safe_control_gym.controllers.sac:sac.yaml')
 
+register(idx='td3',
+         entry_point='safe_control_gym.controllers.td3.td3:TD3',
+         config_entry_point='safe_control_gym.controllers.td3:td3.yaml')
+
 register(idx='ddpg',
          entry_point='safe_control_gym.controllers.ddpg.ddpg:DDPG',
          config_entry_point='safe_control_gym.controllers.ddpg:ddpg.yaml')
