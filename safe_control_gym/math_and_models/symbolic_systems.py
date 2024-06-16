@@ -1,6 +1,5 @@
-"""Symbolic Models.
+"""Symbolic Models."""
 
-"""
 import numpy as np
 import casadi as cs
 

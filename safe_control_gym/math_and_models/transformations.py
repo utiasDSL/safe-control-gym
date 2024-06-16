@@ -1,14 +1,15 @@
-"""Transformations with NumPy 
+"""Transformations with NumPy
 
 Based on github.com/bulletphysics/bullet3/blob/master/examples/pybullet/gym/pybullet_envs/deep_mimic/mocap/transformation.py
 """
+
 import math
-import numpy as np 
+import numpy as np
 import casadi as cs
-import pybullet as p
+
 
 def unit_vector(data, axis=None, out=None):
-  """Return ndarray normalized by length, i.e. Euclidean norm, along axis.
+    """Return ndarray normalized by length, i.e. Euclidean norm, along axis.
     >>> v0 = np.random.random(3)
     >>> v1 = unit_vector(v0)
     >>> np.allclose(v1, v0 / np.linalg.norm(v0))
@@ -30,27 +31,27 @@ def unit_vector(data, axis=None, out=None):
     []
     >>> list(unit_vector([1]))
     [1.0]
-  """
-  if out is None:
-    data = np.array(data, dtype=np.float64, copy=True)
-    if data.ndim == 1:
-      data /= math.sqrt(np.dot(data, data))
-      return data
-  else:
-    if out is not data:
-      out[:] = np.array(data, copy=False)
-    data = out
-  length = np.atleast_1d(np.sum(data * data, axis))
-  np.sqrt(length, length)
-  if axis is not None:
-    length = np.expand_dims(length, axis)
-  data /= length
-  if out is None:
-    return data
+    """
+    if out is None:
+        data = np.array(data, dtype=np.float64, copy=True)
+        if data.ndim == 1:
+            data /= math.sqrt(np.dot(data, data))
+            return data
+    else:
+        if out is not data:
+            out[:] = np.array(data, copy=False)
+        data = out
+    length = np.atleast_1d(np.sum(data * data, axis))
+    np.sqrt(length, length)
+    if axis is not None:
+        length = np.expand_dims(length, axis)
+    data /= length
+    if out is None:
+        return data
 
 
 def projection_matrix(point, normal, direction=None, perspective=None, pseudo=False):
-  """Return matrix to project onto plane defined by point and normal.
+    """Return matrix to project onto plane defined by point and normal.
     Using either perspective point, projection direction, or none of both.
     If pseudo is True, perspective projections will preserve relative depth
     such that Perspective = dot(Orthogonal, PseudoPerspective).
@@ -75,34 +76,35 @@ def projection_matrix(point, normal, direction=None, perspective=None, pseudo=Fa
     True
     >>> np.allclose(v1[0], 3-v1[1])
     True
-  """
-  M = np.identity(4)
-  point = np.array(point[:3], dtype=np.float64, copy=False)
-  normal = unit_vector(normal[:3])
-  if perspective is not None:
-    # perspective projection
-    perspective = np.array(perspective[:3], dtype=np.float64, copy=False)
-    M[0, 0] = M[1, 1] = M[2, 2] = np.dot(perspective - point, normal)
-    M[:3, :3] -= np.outer(perspective, normal)
-    if pseudo:
-      # preserve relative depth
-      M[:3, :3] -= np.outer(normal, normal)
-      M[:3, 3] = np.dot(point, normal) * (perspective + normal)
+    """
+    M = np.identity(4)
+    point = np.array(point[:3], dtype=np.float64, copy=False)
+    normal = unit_vector(normal[:3])
+    if perspective is not None:
+        # perspective projection
+        perspective = np.array(perspective[:3], dtype=np.float64, copy=False)
+        M[0, 0] = M[1, 1] = M[2, 2] = np.dot(perspective - point, normal)
+        M[:3, :3] -= np.outer(perspective, normal)
+        if pseudo:
+            # preserve relative depth
+            M[:3, :3] -= np.outer(normal, normal)
+            M[:3, 3] = np.dot(point, normal) * (perspective + normal)
+        else:
+            M[:3, 3] = np.dot(point, normal) * perspective
+        M[3, :3] = -normal
+        M[3, 3] = np.dot(perspective, normal)
+    elif direction is not None:
+        # parallel projection
+        direction = np.array(direction[:3], dtype=np.float64, copy=False)
+        scale = np.dot(direction, normal)
+        M[:3, :3] -= np.outer(direction, normal) / scale
+        M[:3, 3] = direction * (np.dot(point, normal) / scale)
     else:
-      M[:3, 3] = np.dot(point, normal) * perspective
-    M[3, :3] = -normal
-    M[3, 3] = np.dot(perspective, normal)
-  elif direction is not None:
-    # parallel projection
-    direction = np.array(direction[:3], dtype=np.float64, copy=False)
-    scale = np.dot(direction, normal)
-    M[:3, :3] -= np.outer(direction, normal) / scale
-    M[:3, 3] = direction * (np.dot(point, normal) / scale)
-  else:
-    # orthogonal projection
-    M[:3, :3] -= np.outer(normal, normal)
-    M[:3, 3] = np.dot(point, normal) * normal
-  return M
+        # orthogonal projection
+        M[:3, :3] -= np.outer(normal, normal)
+        M[:3, 3] = np.dot(point, normal) * normal
+    return M
+
 
 def transform_trajectory(pos, vel, trans_info={}):
     """Makes 2D reference trajectory into a 3D one.
@@ -113,14 +115,15 @@ def transform_trajectory(pos, vel, trans_info={}):
 
     """
     # Shape (4,4) with augmented last dim (always 1).
-    M = projection_matrix(trans_info["point"], trans_info["normal"])  
+    M = projection_matrix(trans_info["point"], trans_info["normal"])
     # Position.
-    aug_pos = np.concatenate([pos, np.ones((pos.shape[0],1))], -1)  # (T,4)
-    trans_pos = np.matmul(aug_pos, M.transpose())[:,:3]  # (T,3)
+    aug_pos = np.concatenate([pos, np.ones((pos.shape[0], 1))], -1)  # (T,4)
+    trans_pos = np.matmul(aug_pos, M.transpose())[:, :3]  # (T,3)
     # Velocity (transfomration is linear, direclty multiply for derivatives).
-    aug_vel = np.concatenate([vel, np.ones((vel.shape[0],1))], -1)  # (T,4)
-    trans_vel = np.matmul(aug_vel, M.transpose())[:,:3]  # (T,3)
+    aug_vel = np.concatenate([vel, np.ones((vel.shape[0], 1))], -1)  # (T,4)
+    trans_vel = np.matmul(aug_vel, M.transpose())[:, :3]  # (T,3)
     return trans_pos, trans_vel
+
 
 def csRotZ(psi):
     """Rotation matrix about Z axis following SDFormat http://sdformat.org/tutorials?tut=specify_pose&cat=specification&.
@@ -131,10 +134,9 @@ def csRotZ(psi):
     Returns:
       R: casadi Rotation matrix
     """
-    R = cs.blockcat([[cs.cos(psi), -cs.sin(psi), 0],
-                     [cs.sin(psi),  cs.cos(psi), 0],
-                     [          0,            0, 1]])
+    R = cs.blockcat([[cs.cos(psi), -cs.sin(psi), 0], [cs.sin(psi), cs.cos(psi), 0], [0, 0, 1]])
     return R
+
 
 def csRotY(theta):
     """Rotation matrix about Y axis following SDFormat http://sdformat.org/tutorials?tut=specify_pose&cat=specification&.
@@ -145,9 +147,9 @@ def csRotY(theta):
     Returns:
       R: casadi Rotation matrix
     """
-    R = cs.blockcat([[ cs.cos(theta), 0, cs.sin(theta)],
-                     [             0, 1,             0],
-                     [-cs.sin(theta), 0, cs.cos(theta)]])
+    R = cs.blockcat(
+        [[cs.cos(theta), 0, cs.sin(theta)], [0, 1, 0], [-cs.sin(theta), 0, cs.cos(theta)]]
+    )
     return R
 
 
@@ -160,10 +162,9 @@ def csRotX(phi):
     Returns:
       R: casadi Rotation matrix
     """
-    R = cs.blockcat([[ 1,           0,            0],
-                     [ 0, cs.cos(phi), -cs.sin(phi)],
-                     [ 0, cs.sin(phi),  cs.cos(phi)]])
+    R = cs.blockcat([[1, 0, 0], [0, cs.cos(phi), -cs.sin(phi)], [0, cs.sin(phi), cs.cos(phi)]])
     return R
+
 
 def csRotXYZ(phi, theta, psi):
     """Rotation matrix from euller angles  following SDFormat http://sdformat.org/tutorials?tut=specify_pose&cat=specification&.
@@ -181,7 +182,8 @@ def csRotXYZ(phi, theta, psi):
 
     return R
 
-def RotXYZ(phi, theta,psi):
+
+def RotXYZ(phi, theta, psi):
     """Rotation matrix from euller angles  following SDFormat http://sdformat.org/tutorials?tut=specify_pose&cat=specification&.
     This represents the extrinsic X-Y-Z (or quivalently the intrinsic Z-Y-X (3-2-1)) euler angle rotation.
 
