@@ -5,15 +5,15 @@ BaseAviary implements most of the integration with PyBullet.
 
 The module also contains enumerations for drone models, PyBullet physics updates
 image types captured by PyBullet's camera rendering.
-
 """
 
 import os
 import time
+from pathlib import Path
+import logging
 
 import pkgutil
 import xml.etree.ElementTree as etxml
-from datetime import datetime
 from enum import Enum
 import numpy as np
 import pybullet as p
@@ -21,6 +21,7 @@ import pybullet_data
 
 from safe_control_gym.envs.benchmark_env import BenchmarkEnv
 
+logger = logging.getLogger(__name__)
 egl = pkgutil.get_loader("eglRenderer")
 
 
@@ -43,15 +44,6 @@ class Physics(str, Enum):
     )
 
 
-class ImageType(int, Enum):
-    """Camera capture image type enumeration class."""
-
-    RGB = 0  # Red, green, blue (and alpha).
-    DEP = 1  # Depth.
-    SEG = 2  # Segmentation by object id.
-    BW = 3  # Black and white.
-
-
 class BaseAviary(BenchmarkEnv):
     """Base class for "drone aviary" Gym environments."""
 
@@ -61,7 +53,7 @@ class BaseAviary(BenchmarkEnv):
     def __init__(
         self,
         drone_model: DroneModel = DroneModel.CF2X,
-        num_drones: int = 1,
+        n_drones: int = 1,
         physics: Physics = Physics.PYB,
         record=False,
         gui=False,
@@ -74,7 +66,7 @@ class BaseAviary(BenchmarkEnv):
         Args:
             drone_model (DroneModel, optional): The desired drone type (detailed in an .urdf file
                                                 in folder `assets`).
-            num_drones (int, optional): The desired number of drones in the aviary.
+            n_drones: The desired number of drones in the simulation.
             physics (Physics, optional): The desired implementation of PyBullet physics/custom
                                          dynamics.
             record (bool, optional): Whether to save a video of the simulation in folder
@@ -83,6 +75,7 @@ class BaseAviary(BenchmarkEnv):
             verbose (bool, optional): If to suppress environment print statetments.
 
         """
+        self._recording_id = None
         # Constants.
         self.GRAVITY_ACC = 9.8
         self.RAD2DEG = 180 / np.pi
@@ -90,7 +83,7 @@ class BaseAviary(BenchmarkEnv):
         # Parameters.
         self.DRONE_MODEL = DroneModel(drone_model)
         self.URDF_PATH = os.path.join(self.URDF_DIR, self.DRONE_MODEL.value + ".urdf")
-        self.NUM_DRONES = num_drones
+        self.n_drones = n_drones
         self.PHYSICS = Physics(physics)
         self.RECORD = record
         # Load the drone properties from the .urdf file.
@@ -118,37 +111,6 @@ class BaseAviary(BenchmarkEnv):
             self.MAX_PWM,
         ) = self._parse_urdf_parameters(self.URDF_PATH)
         self.GROUND_PLANE_Z = 0  # -0.05
-        if verbose:
-            print(
-                "[INFO] BaseAviary.__init__() loaded parameters from the drone's .urdf: \
-                \n[INFO] m {:f}, L {:f},\n[INFO] ixx {:f}, iyy {:f}, izz {:f}, \
-                \n[INFO] kf {:f}, km {:f},\n[INFO] t2w {:f}, max_speed_kmh {:f}, \
-                \n[INFO] gnd_eff_coeff {:f}, prop_radius {:f}, \
-                \n[INFO] drag_xy_coeff {:f}, drag_z_coeff {:f}, \
-                \n[INFO] dw_coeff_1 {:f}, dw_coeff_2 {:f}, dw_coeff_3 {:f} \
-                \n[INFO] pwm2rpm_scale {:f}, pwm2rpm_const {:f}, min_pwm {:f}, max_pwm {:f}".format(
-                    self.MASS,
-                    self.L,
-                    self.J[0, 0],
-                    self.J[1, 1],
-                    self.J[2, 2],
-                    self.KF,
-                    self.KM,
-                    self.THRUST2WEIGHT_RATIO,
-                    self.MAX_SPEED_KMH,
-                    self.GND_EFF_COEFF,
-                    self.PROP_RADIUS,
-                    self.DRAG_COEFF[0],
-                    self.DRAG_COEFF[2],
-                    self.DW_COEFF_1,
-                    self.DW_COEFF_2,
-                    self.DW_COEFF_3,
-                    self.PWM2RPM_SCALE,
-                    self.PWM2RPM_CONST,
-                    self.MIN_PWM,
-                    self.MAX_PWM,
-                )
-            )
         # Compute constants.
         self.GRAVITY = self.GRAVITY_ACC * self.MASS
         self.HOVER_RPM = np.sqrt(self.GRAVITY / (4 * self.KF))
@@ -162,7 +124,21 @@ class BaseAviary(BenchmarkEnv):
             * np.sqrt((15 * self.MAX_RPM**2 * self.KF * self.GND_EFF_COEFF) / self.MAX_THRUST)
         )
         # BenchmarkEnv constructor.
-        super().__init__(gui=gui, verbose=verbose, **kwargs)
+        super().__init__(
+            seed=kwargs["seed"],
+            gui=gui,
+            episode_len_sec=kwargs["episode_len_sec"],
+            sim_freq=kwargs["sim_freq"],
+            ctrl_freq=kwargs["ctrl_freq"],
+            init_state=kwargs["init_state"],
+            randomized_init=kwargs["randomized_init"],
+            init_state_randomization_info=kwargs["init_state_randomization_info"],
+            randomized_inertial_prop=kwargs["randomized_inertial_prop"],
+            inertial_prop_randomization_info=kwargs["inertial_prop_randomization_info"],
+            constraints=kwargs["constraints"],
+            disturbances=kwargs["disturbances"],
+            reseed=kwargs["reseed"],
+        )
         # Connect to PyBullet.
         self.PYB_CLIENT = -1
         if gui:
@@ -191,7 +167,7 @@ class BaseAviary(BenchmarkEnv):
         self.RENDER_WIDTH = int(640)
         self.RENDER_HEIGHT = int(480)
         self.FRAME_PER_SEC = 24
-        self.CAPTURE_FREQ = int(self.PYB_FREQ / self.FRAME_PER_SEC)
+        self.CAPTURE_FREQ = int(self.sim_settings.sim_freq / self.FRAME_PER_SEC)
         self.CAM_VIEW = p.computeViewMatrixFromYawPitchRoll(
             distance=3,
             yaw=-30,
@@ -209,20 +185,20 @@ class BaseAviary(BenchmarkEnv):
         self.INIT_XYZS = (
             np.vstack(
                 [
-                    np.array([x * 4 * self.L for x in range(self.NUM_DRONES)]),
-                    np.array([y * 4 * self.L for y in range(self.NUM_DRONES)]),
-                    np.ones(self.NUM_DRONES) * (self.COLLISION_H / 2 - self.COLLISION_Z_OFFSET),
+                    np.array([x * 4 * self.L for x in range(self.n_drones)]),
+                    np.array([y * 4 * self.L for y in range(self.n_drones)]),
+                    np.ones(self.n_drones) * (self.COLLISION_H / 2 - self.COLLISION_Z_OFFSET),
                 ]
             )
             .transpose()
-            .reshape(self.NUM_DRONES, 3)
+            .reshape(self.n_drones, 3)
         )
-        self.INIT_RPYS = np.zeros((self.NUM_DRONES, 3))
+        self.INIT_RPYS = np.zeros((self.n_drones, 3))
 
     def close(self):
         """Terminates the environment."""
-        if self.RECORD and self.GUI:
-            p.stopStateLogging(self.VIDEO_ID, physicsClientId=self.PYB_CLIENT)
+        if self._recording_id is not None:
+            p.stopStateLogging(self._recording_id, physicsClientId=self.PYB_CLIENT)
         if self.PYB_CLIENT >= 0:
             p.disconnect(physicsClientId=self.PYB_CLIENT)
         self.PYB_CLIENT = -1
@@ -237,27 +213,27 @@ class BaseAviary(BenchmarkEnv):
         # Initialize/reset counters and zero-valued variables.
         self.RESET_TIME = time.time()
         self.first_render_call = True
-        self.X_AX = -1 * np.ones(self.NUM_DRONES)
-        self.Y_AX = -1 * np.ones(self.NUM_DRONES)
-        self.Z_AX = -1 * np.ones(self.NUM_DRONES)
-        self.GUI_INPUT_TEXT = -1 * np.ones(self.NUM_DRONES)
+        self.X_AX = -1 * np.ones(self.n_drones)
+        self.Y_AX = -1 * np.ones(self.n_drones)
+        self.Z_AX = -1 * np.ones(self.n_drones)
+        self.GUI_INPUT_TEXT = -1 * np.ones(self.n_drones)
         self.USE_GUI_RPM = False
         self.last_input_switch = 0
-        self.last_clipped_action = np.zeros((self.NUM_DRONES, 4))
+        self.last_clipped_action = np.zeros((self.n_drones, 4))
         self.gui_input = np.zeros(4)
         # Initialize the drones kinematic information.
-        self.pos = np.zeros((self.NUM_DRONES, 3))
-        self.quat = np.zeros((self.NUM_DRONES, 4))
-        self.rpy = np.zeros((self.NUM_DRONES, 3))
-        self.vel = np.zeros((self.NUM_DRONES, 3))
-        self.ang_v = np.zeros((self.NUM_DRONES, 3))
+        self.pos = np.zeros((self.n_drones, 3))
+        self.quat = np.zeros((self.n_drones, 4))
+        self.rpy = np.zeros((self.n_drones, 3))
+        self.vel = np.zeros((self.n_drones, 3))
+        self.ang_v = np.zeros((self.n_drones, 3))
         if self.PHYSICS == Physics.DYN:
-            self.rpy_rates = np.zeros((self.NUM_DRONES, 3))
+            self.rpy_rates = np.zeros((self.n_drones, 3))
         # Set PyBullet's parameters.
         p.resetSimulation(physicsClientId=self.PYB_CLIENT)
         p.setGravity(0, 0, -self.GRAVITY_ACC, physicsClientId=self.PYB_CLIENT)
         p.setRealTimeSimulation(0, physicsClientId=self.PYB_CLIENT)
-        p.setTimeStep(self.PYB_TIMESTEP, physicsClientId=self.PYB_CLIENT)
+        p.setTimeStep(1 / self.sim_settings.sim_freq, physicsClientId=self.PYB_CLIENT)
         p.setAdditionalSearchPath(pybullet_data.getDataPath(), physicsClientId=self.PYB_CLIENT)
         # Load ground plane, drone and obstacles models.
         self.PLANE_ID = p.loadURDF(
@@ -272,22 +248,14 @@ class BaseAviary(BenchmarkEnv):
                     flags=p.URDF_USE_INERTIA_FROM_FILE,  # Use URDF inertia tensor.
                     physicsClientId=self.PYB_CLIENT,
                 )
-                for i in range(self.NUM_DRONES)
+                for i in range(self.n_drones)
             ]
         )
-        # for i in range(self.NUM_DRONES):
-        #     p.changeDynamics(self.DRONE_IDS[i], -1, linearDamping=0, angularDamping=0)
         # Remove default damping.
-        for i in range(self.NUM_DRONES):
+        for i in range(self.n_drones):
             p.changeDynamics(self.DRONE_IDS[i], -1, linearDamping=0, angularDamping=0)
         # Update and store the drones kinematic information.
         self._update_and_store_kinematic_information()
-        # Start video recording.
-        self._start_video_recording()
-        # # Show frame of references of drones, will severly slow down the GUI.
-        # for i in range(self.NUM_DRONES):
-        # if gui:
-        #     self._show_drone_local_axes(i)
 
     def _advance_simulation(self, clipped_action, disturbance_force=None):
         """Advances the environment by one simulation step.
@@ -299,12 +267,12 @@ class BaseAviary(BenchmarkEnv):
             disturbance_force (ndarray, optional): Disturbance force, applied to all drones.
 
         """
-        clipped_action = np.reshape(clipped_action, (self.NUM_DRONES, 4))
+        clipped_action = np.reshape(clipped_action, (self.n_drones, 4))
         # Repeat for as many as the aggregate physics steps.
-        for _ in range(self.PYB_STEPS_PER_CTRL):
+        for _ in range(self.sim_settings.sim_freq // self.sim_settings.ctrl_freq):
             # Update and store the drones kinematic info for certain
             # Between aggregate steps for certain types of update.
-            if self.PYB_STEPS_PER_CTRL > 1 and self.PHYSICS in [
+            if self.sim_settings.sim_freq // self.sim_settings.ctrl_freq > 1 and self.PHYSICS in [
                 Physics.DYN,
                 Physics.PYB_GND,
                 Physics.PYB_DRAG,
@@ -313,7 +281,7 @@ class BaseAviary(BenchmarkEnv):
             ]:
                 self._update_and_store_kinematic_information()
             # Step the simulation using the desired physics update.
-            for i in range(self.NUM_DRONES):
+            for i in range(self.n_drones):
                 if self.PHYSICS == Physics.PYB:
                     self._physics(clipped_action[i, :], i)
                 elif self.PHYSICS == Physics.DYN:
@@ -359,39 +327,6 @@ class BaseAviary(BenchmarkEnv):
             close (bool, optional): Unused.
 
         """
-        if self.first_render_call and not self.GUI:
-            print(
-                "[WARNING] BaseAviary.render() is implemented as text-only, re-initialize the environment using Aviary(gui=True) to use PyBullet's graphical interface"
-            )
-            self.first_render_call = False
-        if self.VERBOSE:
-            print(
-                "\n[INFO] BaseAviary.render() ——— it {:04d}".format(self.pyb_step_counter),
-                "——— wall-clock time {:.1f}s,".format(time.time() - self.RESET_TIME),
-                "simulation time {:.1f}s@{:d}Hz ({:.2f}x)".format(
-                    self.pyb_step_counter * self.TIMESTEP,
-                    self.SIM_FREQ,
-                    (self.pyb_step_counter * self.TIMESTEP) / (time.time() - self.RESET_TIME),
-                ),
-            )
-            for i in range(self.NUM_DRONES):
-                print(
-                    "[INFO] BaseAviary.render() ——— drone {:d}".format(i),
-                    "——— x {:+06.2f}, y {:+06.2f}, z {:+06.2f}".format(
-                        self.pos[i, 0], self.pos[i, 1], self.pos[i, 2]
-                    ),
-                    "——— velocity {:+06.2f}, {:+06.2f}, {:+06.2f}".format(
-                        self.vel[i, 0], self.vel[i, 1], self.vel[i, 2]
-                    ),
-                    "——— roll {:+06.2f}, pitch {:+06.2f}, yaw {:+06.2f}".format(
-                        self.rpy[i, 0] * self.RAD2DEG,
-                        self.rpy[i, 1] * self.RAD2DEG,
-                        self.rpy[i, 2] * self.RAD2DEG,
-                    ),
-                    "——— angular velocity {:+06.4f}, {:+06.4f}, {:+06.4f} ——— ".format(
-                        self.ang_v[i, 0], self.ang_v[i, 1], self.ang_v[i, 2]
-                    ),
-                )
 
     def _update_and_store_kinematic_information(self):
         """Updates and stores the drones kinematic information.
@@ -400,7 +335,7 @@ class BaseAviary(BenchmarkEnv):
         and improve performance (at the expense of memory).
 
         """
-        for i in range(self.NUM_DRONES):
+        for i in range(self.n_drones):
             self.pos[i], self.quat[i] = p.getBasePositionAndOrientation(
                 self.DRONE_IDS[i], physicsClientId=self.PYB_CLIENT
             )
@@ -409,29 +344,21 @@ class BaseAviary(BenchmarkEnv):
                 self.DRONE_IDS[i], physicsClientId=self.PYB_CLIENT
             )
 
-    def _start_video_recording(self):
-        """Starts the recording of a video output.
+    def record(self, path: Path):
+        """Start the recording of a video output.
 
         The format of the video output is .mp4, if GUI is True, or .png, otherwise.
         The video is saved under folder `files/videos`.
 
         """
-        if self.RECORD and self.GUI:
-            self.VIDEO_ID = p.startStateLogging(
-                loggingType=p.STATE_LOGGING_VIDEO_MP4,
-                fileName=os.path.join(
-                    self.output_dir,
-                    "videos/video-{}.mp4".format(datetime.now().strftime("%m.%d.%Y_%H.%M.%S")),
-                ),
-                physicsClientId=self.PYB_CLIENT,
-            )
-        if self.RECORD and not self.GUI:
-            self.FRAME_NUM = 0
-            self.IMG_PATH = os.path.join(
-                self.output_dir,
-                "quadrotor_videos/video-{}/".format(datetime.now().strftime("%m.%d.%Y_%H.%M.%S")),
-            )
-            os.makedirs(os.path.dirname(self.IMG_PATH), exist_ok=True)
+        if not self.sim_settings.gui:
+            logger.warning("Cannot record video without GUI.")
+            return
+        self._recording_id = p.startStateLogging(
+            loggingType=p.STATE_LOGGING_VIDEO_MP4,
+            fileName=str(path.absolute()),
+            physicsClientId=self.PYB_CLIENT,
+        )
 
     def _get_drone_state_vector(self, nth_drone):
         """Returns the state vector of the n-th drone.
@@ -499,19 +426,15 @@ class BaseAviary(BenchmarkEnv):
 
         """
         # Kin. info of all links (propellers and center of mass)
-        link_states = np.array(
-            p.getLinkStates(
-                self.DRONE_IDS[nth_drone],
-                linkIndices=[0, 1, 2, 3, 4],
-                computeLinkVelocity=1,
-                computeForwardKinematics=1,
-                physicsClientId=self.PYB_CLIENT,
-            )
+        s = p.getLinkStates(
+            self.DRONE_IDS[nth_drone],
+            linkIndices=[0, 1, 2, 3],
+            computeLinkVelocity=1,
+            computeForwardKinematics=1,
+            physicsClientId=self.PYB_CLIENT,
         )
+        prop_heights = np.array([s[0][0][2], s[1][0][2], s[2][0][2], s[3][0][2]])
         # Simple, per-propeller ground effects.
-        prop_heights = np.array(
-            [link_states[0, 0][2], link_states[1, 0][2], link_states[2, 0][2], link_states[3, 0][2]]
-        )
         prop_heights = np.clip(prop_heights, self.GND_EFF_H_CLIP, np.inf)
         gnd_effects = (
             np.array(rpm**2)
@@ -568,7 +491,7 @@ class BaseAviary(BenchmarkEnv):
             nth_drone (int): The ordinal number/position of the desired drone in list self.DRONE_IDS.
 
         """
-        for i in range(self.NUM_DRONES):
+        for i in range(self.n_drones):
             delta_z = self.pos[i, 2] - self.pos[nth_drone, 2]
             delta_xy = np.linalg.norm(
                 np.array(self.pos[i, 0:2]) - np.array(self.pos[nth_drone, 0:2])
@@ -622,10 +545,10 @@ class BaseAviary(BenchmarkEnv):
         rpy_rates_deriv = np.dot(self.J_INV, torques)
         no_pybullet_dyn_accs = force_world_frame / self.MASS
         # Update state.
-        vel = vel + self.TIMESTEP * no_pybullet_dyn_accs
-        rpy_rates = rpy_rates + self.TIMESTEP * rpy_rates_deriv
-        pos = pos + self.TIMESTEP * vel
-        rpy = rpy + self.TIMESTEP * rpy_rates
+        vel = vel + no_pybullet_dyn_accs / self.sim_settings.sim_freq
+        rpy_rates = rpy_rates + rpy_rates_deriv / self.sim_settings.sim_freq
+        pos = pos + vel / self.sim_settings.sim_freq
+        rpy = rpy + rpy_rates / self.sim_settings.sim_freq
         # Set PyBullet's state.
         p.resetBasePositionAndOrientation(
             self.DRONE_IDS[nth_drone],
@@ -643,49 +566,11 @@ class BaseAviary(BenchmarkEnv):
         # Store the roll, pitch, yaw rates for the next step #
         self.rpy_rates[nth_drone, :] = rpy_rates
 
-    def _show_drone_local_axes(self, nth_drone):
-        """Draws the local frame of the n-th drone in PyBullet's GUI.
-
-        Args:
-            nth_drone (int): The ordinal number/position of the desired drone in list self.DRONE_IDS.
-
-        """
-        if self.GUI:
-            AXIS_LENGTH = 2 * self.L
-            self.X_AX[nth_drone] = p.addUserDebugLine(
-                lineFromXYZ=[0, 0, 0],
-                lineToXYZ=[AXIS_LENGTH, 0, 0],
-                lineColorRGB=[1, 0, 0],
-                parentObjectUniqueId=self.DRONE_IDS[nth_drone],
-                parentLinkIndex=-1,
-                replaceItemUniqueId=int(self.X_AX[nth_drone]),
-                physicsClientId=self.PYB_CLIENT,
-            )
-            self.Y_AX[nth_drone] = p.addUserDebugLine(
-                lineFromXYZ=[0, 0, 0],
-                lineToXYZ=[0, AXIS_LENGTH, 0],
-                lineColorRGB=[0, 1, 0],
-                parentObjectUniqueId=self.DRONE_IDS[nth_drone],
-                parentLinkIndex=-1,
-                replaceItemUniqueId=int(self.Y_AX[nth_drone]),
-                physicsClientId=self.PYB_CLIENT,
-            )
-            self.Z_AX[nth_drone] = p.addUserDebugLine(
-                lineFromXYZ=[0, 0, 0],
-                lineToXYZ=[0, 0, AXIS_LENGTH],
-                lineColorRGB=[0, 0, 1],
-                parentObjectUniqueId=self.DRONE_IDS[nth_drone],
-                parentLinkIndex=-1,
-                replaceItemUniqueId=int(self.Z_AX[nth_drone]),
-                physicsClientId=self.PYB_CLIENT,
-            )
-
     def _parse_urdf_parameters(self, file_name):
         """Loads parameters from an URDF file.
 
         This method is nothing more than a custom XML parser for the .urdf
         files in folder `assets/`.
-
         """
         URDF_TREE = etxml.parse(file_name).getroot()
         M = float(URDF_TREE[1][0][1].attrib["value"])

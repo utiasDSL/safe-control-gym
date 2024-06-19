@@ -4,6 +4,10 @@ import importlib.util
 import logging
 from typing import Literal
 from types import ModuleType
+from dataclasses import dataclass
+from pathlib import Path
+
+from xml.etree import ElementTree
 
 import numpy as np
 from scipy.spatial.transform import Rotation as R
@@ -18,6 +22,7 @@ class Drone:
     def __init__(self, controller: Literal["pid", "mellinger"]):
         self.firmware = self._load_firmware()
         self.firmware_freq = Constants.firmware_freq
+        self.params = DroneParams.from_urdf(Path(__file__).resolve().parent / "assets/cf2x.urdf")
         # Initialize firmware states
         self._state = self.firmware.state_t()
         self._control = self.firmware.control_t()
@@ -123,7 +128,7 @@ class Drone:
             setattr(self._state.acc, name, value)
 
     def _pwms_to_action(self, pwms: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
-        return Constants.KF * (Constants.pwm2rpm_scale * pwms + Constants.pwm2rpm_const) ** 2
+        return self.params.kf * (self.params.pwm2rpm_scale * pwms + self.params.pwm2rpm_const) ** 2
 
     def full_state_cmd(
         self,
@@ -321,11 +326,10 @@ class Drone:
         y = control.yaw
         thrust = control.thrust
         thrust = [thrust - r + p + y, thrust - r - p - y, thrust + r - p + y, thrust + r + p - y]
-        thrust = np.clip(thrust, 0, Constants.max_pwm)  # Limit thrust to motor range
-        self._pwms = np.clip(self._thrust_to_pwm(thrust), Constants.min_pwm, Constants.max_pwm)
+        thrust = np.clip(thrust, 0, self.params.max_pwm)  # Limit thrust to motor range
+        self._pwms = np.clip(self._thrust_to_pwm(thrust), self.params.min_pwm, self.params.max_pwm)
 
-    @staticmethod
-    def _thrust_to_pwm(thrust: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+    def _thrust_to_pwm(self, thrust: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
         """Convert thrust to PWM signal.
 
         Assumes brushed motors.
@@ -336,10 +340,10 @@ class Drone:
         Returns:
             PWM signal.
         """
-        thrust = thrust / Constants.max_pwm * 60
+        thrust = thrust / self.params.max_pwm * 60
         volts = Constants.thrust_curve_a * thrust**2 + Constants.thrust_curve_b * thrust
         percentage = np.minimum(1, volts / Constants.supply_voltage)
-        return percentage * Constants.max_pwm
+        return percentage * self.params.max_pwm
 
     def _update_sensor_data(
         self, timestamp: float, acc: npt.NDArray[np.float64], gyro: npt.NDArray[np.float64]
@@ -378,3 +382,61 @@ class Drone:
         return mod
 
     # endregion
+
+
+@dataclass
+class DroneParams:
+    mass: float
+    arm_len: float
+    thrust2weight_ratio: float
+    J: npt.NDArray[np.float64]
+    kf: float
+    km: float
+    collision_h: float
+    collision_r: float
+    collision_z_offset: float
+    max_speed_kmh: float
+    gnd_eff_coeff: float
+    prop_radius: float
+    drag_coeff: npt.NDArray[np.float64]
+    dw_coeff_1: float
+    dw_coeff_2: float
+    dw_coeff_3: float
+    pwm2rpm_scale: float
+    pwm2rpm_const: float
+    min_pwm: float
+    max_pwm: float
+    J_inv: npt.NDArray[np.float64] = np.zeros((3, 3))  # Is calculated in __post_init__
+
+    def __post_init__(self):
+        self.J_inv = np.linalg.inv(self.J)
+
+    @staticmethod
+    def from_urdf(path: Path) -> DroneParams:
+        """Load the drone parameters from the URDF file in `assets/` with a custom XML parser."""
+        urdf = ElementTree.parse(path).getroot()
+        params = DroneParams(
+            mass=float(urdf[1][0][1].attrib["value"]),
+            arm_len=float(urdf[0].attrib["arm"]),
+            thrust2weight_ratio=float(urdf[0].attrib["thrust2weight"]),
+            J=np.diag([float(urdf[1][0][2].attrib[c]) for c in ("ixx", "iyy", "izz")]),
+            kf=float(urdf[0].attrib["kf"]),
+            km=float(urdf[0].attrib["km"]),
+            collision_h=float(urdf[1][2][1][0].attrib["length"]),
+            collision_r=float(urdf[1][2][1][0].attrib["radius"]),
+            collision_z_offset=[float(s) for s in urdf[1][2][0].attrib["xyz"].split(" ")][2],
+            max_speed_kmh=float(urdf[0].attrib["max_speed_kmh"]),
+            gnd_eff_coeff=float(urdf[0].attrib["gnd_eff_coeff"]),
+            prop_radius=float(urdf[0].attrib["prop_radius"]),
+            drag_coeff=np.array(
+                [float(urdf[0].attrib["drag_coeff_" + c]) for c in ("xy", "xy", "z")]
+            ),
+            dw_coeff_1=float(urdf[0].attrib["dw_coeff_1"]),
+            dw_coeff_2=float(urdf[0].attrib["dw_coeff_2"]),
+            dw_coeff_3=float(urdf[0].attrib["dw_coeff_3"]),
+            pwm2rpm_scale=float(urdf[0].attrib["pwm2rpm_scale"]),
+            pwm2rpm_const=float(urdf[0].attrib["pwm2rpm_const"]),
+            min_pwm=float(urdf[0].attrib["pwm_min"]),
+            max_pwm=float(urdf[0].attrib["pwm_max"]),
+        )
+        return params

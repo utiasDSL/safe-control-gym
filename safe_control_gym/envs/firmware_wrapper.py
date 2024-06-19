@@ -5,6 +5,7 @@ import logging
 import math
 from typing import Callable
 
+import gymnasium
 from safe_control_gym.envs.quadrotor import Quadrotor
 from safe_control_gym.envs.drone import Drone
 
@@ -18,30 +19,10 @@ spec.loader.exec_module(firm)
 logger = logging.getLogger(__name__)
 
 
-class FirmwareWrapper:
+class FirmwareWrapper(gymnasium.Env):
     CONTROLLER = "mellinger"  # specifies controller type
 
-    # Configurations to match firmware. Not recommended to change
-    GYRO_LPF_CUTOFF_FREQ = 80
-    ACCEL_LPF_CUTOFF_FREQ = 30
-
-    # Motor and power supply settings
-    BRUSHED = True
-
-    RAD_TO_DEG = 180 / math.pi
-
-    def __init__(
-        self,
-        env_func: Callable[[], Quadrotor],
-        firmware_freq: int,
-        ctrl_freq: int,
-        PWM2RPM_SCALE: float = 0.2685,
-        PWM2RPM_CONST: float = 4070.3,
-        KF: float = 3.16e-10,
-        MIN_PWM: int = 20000,
-        MAX_PWM: int = 65535,
-        verbose: bool = False,
-    ):
+    def __init__(self, env_func: Callable[[], Quadrotor], firmware_freq: int, ctrl_freq: int):
         """Initializes a FirmwareWrapper object.
 
         This allows users to simulate the on board controllers of CrazyFlie (CF), including access
@@ -52,13 +33,6 @@ class FirmwareWrapper:
             env_func (function): initilizer for safe-control-gym environment
             firmware_freq (int): frequency to run the firmware loop at (typically 500)
             ctrl_freq (int): frequency that .step will be called (typically < 60)
-            PWM2RPM_SCALE (float): mapping factor from PWM to RPM
-            PWM2RPM_CONST (float): mapping constant from PWM to RPM
-            KF = (float): motor force factor
-            MIN_PWM (int): minimum PWM command
-            MAX_PWM (int): maximum pwm command
-            verbose (bool): displays additional information
-            **kwargs: to be passed to BaseController
 
         Attributes:
             env: safe-control environment
@@ -66,6 +40,9 @@ class FirmwareWrapper:
         Todo:
             * Add support for state estimation
         """
+        super().__init__()
+        self.action_space = gymnasium.spaces.Box(low=-1, high=1, shape=(4,))
+        self.observation_space = gymnasium.spaces.Box(low=-1, high=1, shape=(10,))
         self.drone = Drone(self.CONTROLLER)
         self.firmware_freq = firmware_freq
         self.ctrl_freq = ctrl_freq
@@ -73,17 +50,10 @@ class FirmwareWrapper:
         self.env = env_func()
 
     def reset(self):
-        """Resets the firmware_wrapper object.
-
-        Todo:
-            * Add support for state estimation
-        """
         obs, info = self.env.reset()
         self.drone.reset(obs[[0, 2, 4]], obs[[6, 7, 8]], obs[[1, 3, 5]])
-        if self.env.NUM_DRONES > 1:
-            raise NotImplementedError(
-                "Firmware controller wrapper does not support multiple drones."
-            )
+        if self.env.n_drones > 1:
+            raise NotImplementedError("Firmware wrapper does not support multiple drones.")
         return obs, info
 
     def close(self):

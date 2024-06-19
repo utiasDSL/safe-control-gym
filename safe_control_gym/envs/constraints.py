@@ -58,11 +58,11 @@ class Constraint:
         self.rounding = rounding
         self.constrained_variable = ConstrainedVariableType(constrained_variable)
         if self.constrained_variable == ConstrainedVariableType.STATE:
-            self.dim = env.state_dim
+            self.dim = env.state_space.shape[0]
         elif self.constrained_variable == ConstrainedVariableType.INPUT:
-            self.dim = env.action_dim
+            self.dim = env.action_space.shape[0]
         elif self.constrained_variable == ConstrainedVariableType.INPUT_AND_STATE:
-            self.dim = env.state_dim + env.action_dim
+            self.dim = env.state_space.shape[0] + env.action_space.shape[0]
         else:
             raise NotImplementedError(
                 "[ERROR] invalid constrained_variable (use STATE, INPUT or INPUT_AND_STATE)."
