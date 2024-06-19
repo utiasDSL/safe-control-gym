@@ -51,7 +51,11 @@ class FirmwareWrapper(gymnasium.Env):
 
     def reset(self):
         obs, info = self.env.reset()
-        self.drone.reset(obs[[0, 2, 4]], obs[[6, 7, 8]], obs[[1, 3, 5]])
+        pos, vel, rpy = obs["pos"], obs["vel"], obs["rpy"]
+        self.drone.reset(pos, rpy, vel)
+        obs = np.concatenate(
+            [np.array([pos[0], vel[0], pos[1], vel[1], pos[2], vel[2]]), rpy, obs["ang_vel"]]
+        )
         if self.env.n_drones > 1:
             raise NotImplementedError("Firmware wrapper does not support multiple drones.")
         return obs, info
@@ -75,9 +79,10 @@ class FirmwareWrapper(gymnasium.Env):
         """
         while self.drone.tick / self.drone.firmware_freq < sim_time + 1 / self.step_freq:
             obs, reward, done, info = self.env.step(action)
-            pos = obs[[0, 2, 4]]
-            vel = obs[[1, 3, 5]]
-            rpy = obs[[6, 7, 8]]
+            pos, vel, rpy = obs["pos"], obs["vel"], obs["rpy"]
+            obs = np.concatenate(
+                [np.array([pos[0], vel[0], pos[1], vel[1], pos[2], vel[2]]), rpy, obs["ang_vel"]]
+            )
             action = self.drone.step_controller(pos, rpy, vel)[::-1]
         return obs, reward, done, info, action
 

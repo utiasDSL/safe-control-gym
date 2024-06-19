@@ -406,10 +406,15 @@ class DroneParams:
     pwm2rpm_const: float
     min_pwm: float
     max_pwm: float
-    J_inv: npt.NDArray[np.float64] = np.zeros((3, 3))  # Is calculated in __post_init__
+    # Defaults are calculated in __post_init__ according to the other parameters
+    min_thrust: float = 0.0
+    max_thrust: float = 0.0
+    J_inv: npt.NDArray[np.float64] = np.zeros((3, 3))
 
     def __post_init__(self):
         self.J_inv = np.linalg.inv(self.J)
+        self.min_thrust = self.kf * (self.pwm2rpm_scale * self.min_pwm + self.pwm2rpm_const) ** 2
+        self.max_thrust = self.kf * (self.pwm2rpm_scale * self.max_pwm + self.pwm2rpm_const) ** 2
 
     @staticmethod
     def from_urdf(path: Path) -> DroneParams:

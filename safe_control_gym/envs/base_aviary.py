@@ -19,7 +19,7 @@ import numpy as np
 import pybullet as p
 import pybullet_data
 
-from safe_control_gym.envs.benchmark_env import BenchmarkEnv
+from safe_control_gym.envs.drone_sim import DroneSim
 
 logger = logging.getLogger(__name__)
 egl = pkgutil.get_loader("eglRenderer")
@@ -44,7 +44,7 @@ class Physics(str, Enum):
     )
 
 
-class BaseAviary(BenchmarkEnv):
+class BaseAviary(DroneSim):
     """Base class for "drone aviary" Gym environments."""
 
     NAME = "base_aviary"
@@ -110,7 +110,7 @@ class BaseAviary(BenchmarkEnv):
             self.MIN_PWM,
             self.MAX_PWM,
         ) = self._parse_urdf_parameters(self.URDF_PATH)
-        self.GROUND_PLANE_Z = 0  # -0.05
+        self.GROUND_PLANE_Z = 0
         # Compute constants.
         self.GRAVITY = self.GRAVITY_ACC * self.MASS
         self.HOVER_RPM = np.sqrt(self.GRAVITY / (4 * self.KF))
@@ -124,17 +124,12 @@ class BaseAviary(BenchmarkEnv):
             * np.sqrt((15 * self.MAX_RPM**2 * self.KF * self.GND_EFF_COEFF) / self.MAX_THRUST)
         )
         # BenchmarkEnv constructor.
+
         super().__init__(
             seed=kwargs["seed"],
             gui=gui,
-            episode_len_sec=kwargs["episode_len_sec"],
             sim_freq=kwargs["sim_freq"],
             ctrl_freq=kwargs["ctrl_freq"],
-            init_state=kwargs["init_state"],
-            randomized_init=kwargs["randomized_init"],
-            init_state_randomization_info=kwargs["init_state_randomization_info"],
-            randomized_inertial_prop=kwargs["randomized_inertial_prop"],
-            inertial_prop_randomization_info=kwargs["inertial_prop_randomization_info"],
             constraints=kwargs["constraints"],
             disturbances=kwargs["disturbances"],
             reseed=kwargs["reseed"],

@@ -12,11 +12,11 @@ import casadi as cs
 import numpy as np
 import pybullet as p
 
-from safe_control_gym.envs.constraints import GENERAL_CONSTRAINTS
 from safe_control_gym.math_and_models.symbolic_systems import SymbolicModel
 from safe_control_gym.envs.base_aviary import BaseAviary
 from safe_control_gym.envs.quadrotor_utils import QuadType, cmd2pwm, pwm2rpm
 from safe_control_gym.math_and_models.transformations import csRotXYZ
+from gymnasium import spaces
 
 logger = logging.getLogger(__name__)
 
@@ -29,77 +29,13 @@ class Quadrotor(BaseAviary):
 
     """
 
-    NAME = "quadrotor"
-    AVAILABLE_CONSTRAINTS = deepcopy(GENERAL_CONSTRAINTS)
-
-    DISTURBANCE_MODES = {  # Set at runtime by QUAD_TYPE
-        "observation": {"dim": -1},
-        "action": {"dim": -1},
-        "dynamics": {"dim": -1},
-    }
-
-    INERTIAL_PROP_RAND_INFO = {
-        "M": {  # Nominal: 0.027
-            "distrib": "uniform",
-            "low": 0.022,
-            "high": 0.032,
-        },
-        "Ixx": {  # Nominal: 1.4e-5
-            "distrib": "uniform",
-            "low": 1.3e-5,
-            "high": 1.5e-5,
-        },
-        "Iyy": {  # Nominal: 1.4e-5
-            "distrib": "uniform",
-            "low": 1.3e-5,
-            "high": 1.5e-5,
-        },
-        "Izz": {  # Nominal: 2.17e-5
-            "distrib": "uniform",
-            "low": 2.07e-5,
-            "high": 2.27e-5,
-        },
-    }
     GATE_Z_LOW = 0.525
     GATE_Z_HIGH = 1.0
     OBSTACLE_Z = 1.05
 
-    INIT_STATE_RAND_INFO = {
-        "init_x": {"distrib": "uniform", "low": -0.5, "high": 0.5},
-        "init_x_dot": {"distrib": "uniform", "low": -0.01, "high": 0.01},
-        "init_y": {"distrib": "uniform", "low": -0.5, "high": 0.5},
-        "init_y_dot": {"distrib": "uniform", "low": -0.01, "high": 0.01},
-        "init_z": {"distrib": "uniform", "low": 0.1, "high": 1.5},
-        "init_z_dot": {"distrib": "uniform", "low": -0.01, "high": 0.01},
-        "init_phi": {"distrib": "uniform", "low": -0.3, "high": 0.3},
-        "init_theta": {"distrib": "uniform", "low": -0.3, "high": 0.3},
-        "init_psi": {"distrib": "uniform", "low": -0.3, "high": 0.3},
-        "init_p": {"distrib": "uniform", "low": -0.01, "high": 0.01},
-        "init_theta_dot": {  # Only used in 2D quad.
-            "distrib": "uniform",
-            "low": -0.01,
-            "high": 0.01,
-        },
-        "init_q": {"distrib": "uniform", "low": -0.01, "high": 0.01},
-        "init_r": {"distrib": "uniform", "low": -0.01, "high": 0.01},
-    }
-
-    TASK_INFO = {
-        "stabilization_goal": [0, 1],
-        "stabilization_goal_tolerance": 0.05,
-        "trajectory_type": "circle",
-        "num_cycles": 1,
-        "trajectory_plane": "zx",
-        "trajectory_position_offset": [0.5, 0],
-        "trajectory_scale": -0.5,
-        "proj_point": [0, 0, 0.5],
-        "proj_normal": [0, 1, 1],
-    }
-
     def __init__(
         self,
         init_state=None,
-        inertial_prop=None,
         # custom args
         quad_type: QuadType = QuadType.TWO_D,
         norm_act_scale=0.1,
@@ -108,14 +44,12 @@ class Quadrotor(BaseAviary):
         rew_act_weight=0.0001,
         rew_exponential=True,
         done_on_out_of_bound=True,
-        info_mse_metric_state_weight=None,
         **kwargs,
     ):
         """Initialize a quadrotor environment.
 
         Args:
             init_state (ndarray, optional): The initial state of the environment, (z, z_dot) or (x, x_dot, z, z_dot theta, theta_dot).
-            inertial_prop (ndarray, optional): The inertial properties of the environment (mass, Iyy).
             quad_type (QuadType, optional): The choice of motion type (1D along z or 2D in the x-z plane).
             norm_act_scale (float): scaling the [-1,1] action space around hover thrust when `normalized_action_space` is True.
             obs_goal_horizon (int): how many future goal states to append to obervation.
@@ -123,9 +57,16 @@ class Quadrotor(BaseAviary):
             rew_act_weight (list/ndarray): quadratic weights for action in rl reward.
             rew_exponential (bool): if to exponentiate negative quadratic cost to positive, bounded [0,1] reward.
             done_on_out_of_bound (bool): if to termiante when state is out of bound.
-            info_mse_metric_state_weight (list/ndarray): quadratic weights for state in mse calculation for info dict.
 
         """
+        self._init_state = init_state
+        self._init_state_randomization = kwargs["init_state_randomization_info"]
+        self._enable_init_state_randomization = kwargs["randomized_init"]
+
+        self._inertial = None
+        self._inertial_randomization = kwargs["inertial_prop_randomization_info"]
+        self._enable_inertial_randomization = kwargs["randomized_inertial_prop"]
+
         # Select the 1D (moving along z) or 2D (moving in the xz plane) quadrotor.
         self.QUAD_TYPE = QuadType(quad_type)
         self.norm_act_scale = norm_act_scale
@@ -135,58 +76,35 @@ class Quadrotor(BaseAviary):
         self.rew_exponential = rew_exponential
         self.done_on_out_of_bound = done_on_out_of_bound
 
-        self.info_mse_metric_state_weight = np.array(
-            [1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0], ndmin=1, dtype=float
-        )
-
         # BaseAviary constructor, called after defining the custom args,
         # since some BenchmarkEnv init setup can be task(custom args)-dependent.
-        super().__init__(init_state=init_state, inertial_prop=inertial_prop, **kwargs)
+        super().__init__(init_state=init_state, **kwargs)
 
         # Store initial state info.
-        self.INIT_STATE_LABELS = {
-            QuadType.THREE_D: [
-                "init_x",
-                "init_x_dot",
-                "init_y",
-                "init_y_dot",
-                "init_z",
-                "init_z_dot",
-                "init_phi",
-                "init_theta",
-                "init_psi",
-                "init_p",
-                "init_q",
-                "init_r",
-            ],
-        }
+        self.INIT_STATE_LABELS = [
+            "init_x",
+            "init_x_dot",
+            "init_y",
+            "init_y_dot",
+            "init_z",
+            "init_z_dot",
+            "init_phi",
+            "init_theta",
+            "init_psi",
+            "init_p",
+            "init_q",
+            "init_r",
+        ]
+
         assert isinstance(init_state, dict), "Expected init_state as dictionary."
-        for init_name in self.INIT_STATE_LABELS[self.QUAD_TYPE]:
+        for init_name in self.INIT_STATE_LABELS:
             self.__dict__[init_name.upper()] = init_state.get(init_name, 0.0)
-
-        # Remove randomization info of initial state components inconsistent with quad type.
-        for init_name in list(self.INIT_STATE_RAND_INFO.keys()):
-            if init_name not in self.INIT_STATE_LABELS[self.QUAD_TYPE]:
-                self.INIT_STATE_RAND_INFO.pop(init_name, None)
-
-        # Override inertial properties of passed as arguments.
-        if inertial_prop is None:
-            pass
-        elif self.QUAD_TYPE == QuadType.THREE_D and np.array(inertial_prop).shape == (4,):
-            self.MASS, self.J[0, 0], self.J[1, 1], self.J[2, 2] = inertial_prop
-        elif isinstance(inertial_prop, dict):
-            self.MASS = inertial_prop.get("M", self.MASS)
-            self.J[0, 0] = inertial_prop.get("Ixx", self.J[0, 0])
-            self.J[1, 1] = inertial_prop.get("Iyy", self.J[1, 1])
-            self.J[2, 2] = inertial_prop.get("Izz", self.J[2, 2])
-        else:
-            raise ValueError("Inertial_prop incorrect format.")
 
         # Set prior/symbolic info.
         self._setup_symbolic()
 
         # Equilibrium point at hover for linearization.
-        self.X_EQ = np.zeros(self.state_space.shape[0])
+        self.X_EQ = np.zeros(spaces.flatdim(self.state_space))
 
         # IROS 2022 - Load maze.
         self.OBSTACLES = []
@@ -318,7 +236,7 @@ class Quadrotor(BaseAviary):
 
         # Choose randomized or deterministic inertial properties.
         prop_values = {
-            "M": self.MASS,
+            "M": self.drone.params.mass,
             "Ixx": self.J[0, 0],
             "Iyy": self.J[1, 1],
             "Izz": self.J[2, 2],
@@ -343,8 +261,7 @@ class Quadrotor(BaseAviary):
 
         # Randomize initial state.
         init_values = {
-            init_name: self.__dict__[init_name.upper()]
-            for init_name in self.INIT_STATE_LABELS[self.QUAD_TYPE]
+            init_name: self.__dict__[init_name.upper()] for init_name in self.INIT_STATE_LABELS
         }
         if self._enable_init_state_randomization:
             init_values = self._randomize_values_by_info(
@@ -353,10 +270,7 @@ class Quadrotor(BaseAviary):
         INIT_XYZ = [init_values.get("init_" + k, 0.0) for k in ["x", "y", "z"]]
         INIT_VEL = [init_values.get("init_" + k + "_dot", 0.0) for k in ["x", "y", "z"]]
         INIT_RPY = [init_values.get("init_" + k, 0.0) for k in ["phi", "theta", "psi"]]
-        if self.QUAD_TYPE == QuadType.TWO_D:
-            INIT_ANG_VEL = [0, init_values.get("init_theta_dot", 0.0), 0]
-        else:
-            INIT_ANG_VEL = [init_values.get("init_" + k, 0.0) for k in ["p", "q", "r"]]
+        INIT_ANG_VEL = [init_values.get("init_" + k, 0.0) for k in ["p", "q", "r"]]
         p.resetBasePositionAndOrientation(
             self.DRONE_IDS[0],
             INIT_XYZ,
@@ -370,7 +284,6 @@ class Quadrotor(BaseAviary):
         # Update BaseAviary internal variables before calling self._get_observation().
         self._update_and_store_kinematic_information()
         obs, info = self._get_observation(), self._get_reset_info()
-        obs, info = super().after_reset(obs, info)
 
         # Return either an observation and dictionary or just the observation.
         return obs, info
@@ -392,7 +305,8 @@ class Quadrotor(BaseAviary):
 
         """
         # Get the preprocessed rpm for each motor
-        rpm = super().before_step(action)
+        self.current_raw_input_action = action
+        rpm = self._preprocess_control(action)  # Pre-process/clip the action
 
         # Determine disturbance force.
         disturb_force = None
@@ -435,7 +349,6 @@ class Quadrotor(BaseAviary):
             flags=p.ER_SEGMENTATION_MASK_OBJECT_AND_LINKINDEX,
             physicsClientId=self.PYB_CLIENT,
         )
-        # Image.fromarray(np.reshape(rgb, (h, w, 4)), 'RGBA').show()
         return np.reshape(rgb, (h, w, 4))
 
     def _setup_symbolic(self):
@@ -445,7 +358,7 @@ class Quadrotor(BaseAviary):
             SymbolicModel: CasADi symbolic model of the environment.
 
         """
-        m, g, l = self.MASS, self.GRAVITY_ACC, self.L
+        m, g, l = self.drone.params.mass, self.GRAVITY_ACC, self.L
         Iyy = self.J[1, 1]
         dt = 1 / self.sim_settings.ctrl_freq
         # Define states.
@@ -577,6 +490,7 @@ class Quadrotor(BaseAviary):
         obs = deepcopy(self.state)
         if "observation" in self.disturbances:
             obs = self.disturbances["observation"].apply(obs, self)
+        return {"pos": pos, "rpy": rpy, "vel": vel, "ang_vel": ang_v_body_frame}
         return obs
 
     def _get_reward(self):
@@ -729,20 +643,19 @@ class Quadrotor(BaseAviary):
         info = {}
         info["symbolic_model"] = self.symbolic
         info["nominal_physical_parameters"] = {
-            "quadrotor_mass": self.MASS,
+            "quadrotor_mass": self.drone.params.mass,
             "quadrotor_ixx_inertia": self.J[0, 0],
             "quadrotor_iyy_inertia": self.J[1, 1],
             "quadrotor_izz_inertia": self.J[2, 2],
         }
         if self.constraints is not None:
-            info["symbolic_constraints"] = self.constraints.get_all_symbolic_models()
+            info["symbolic_constraints"] = self.constraints.symbolic_model()
         else:
             info["symbolic_constraints"] = {}
 
         # IROS 2022 - Reset info.
         info["ctrl_timestep"] = 1 / self.sim_settings.ctrl_freq
         info["ctrl_freq"] = self.sim_settings.ctrl_freq
-        # info["episode_len_sec"] = self.EPISODE_LEN_SEC
         info["quadrotor_kf"] = self.KF
         info["quadrotor_km"] = self.KM
         info["gate_dimensions"] = {
@@ -772,6 +685,7 @@ class Quadrotor(BaseAviary):
         info["disturbances"] = self._disturbance_config
         info["pyb_client"] = self.PYB_CLIENT
         info["urdf_dir"] = self.URDF_DIR
+        info["constraint_values"] = self.constraints.value(self.state, only_state=True)
 
         info.update(self._get_info())
         return info
