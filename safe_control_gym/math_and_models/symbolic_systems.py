@@ -1,20 +1,18 @@
 """Symbolic Models."""
 
-import numpy as np
 import casadi as cs
 
 
 class SymbolicModel:
     """Implements the dynamics model with symbolic variables.
 
-    x_dot = f(x,u), y = g(x,u), with other pre-defined, symbolic functions
-    (e.g. cost, constraints), serve as priors for the controllers.
+    x_dot = f(x,u), y = g(x,u), with other pre-defined, symbolic functions (e.g. cost, constraints),
+    serve as priors for the controllers.
 
     Notes:
         * naming convention on symbolic variable and functions.
             * for single-letter symbol, use {}_sym, otherwise use underscore for delimiter.
             * for symbolic functions to be exposed, use {}_func.
-
     """
 
     def __init__(self, dynamics, cost, dt=1e-3, integration_algo="cvodes", funcs=None):

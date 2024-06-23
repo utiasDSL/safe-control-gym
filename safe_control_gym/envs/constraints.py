@@ -77,7 +77,7 @@ class Constraint:
     def reset(self):
         """Clears up the constraint state (if any)."""
 
-    def symbolic_model(self):
+    def symbolic(self):
         """Create the symbolic form of the constraint function."""
         raise NotImplementedError
 
@@ -203,7 +203,7 @@ class QuadraticContstraint(Constraint):
         )
         self.check_tolerance_shape()
 
-    def symbolic_model(self):
+    def symbolic(self):
         """Gets the symbolic form of the constraint function.
 
         Returns:
@@ -257,7 +257,7 @@ class LinearConstraint(Constraint):
         self.sym_func = lambda x: self.A @ self.constraint_filter @ x - self.b
         self.check_tolerance_shape()
 
-    def symbolic_model(self):
+    def symbolic(self):
         """Gets the symbolic form of the constraint function.
 
         Returns:
@@ -394,16 +394,14 @@ class ConstraintList:
         """Get the constraint list length."""
         return len(self.constraints)
 
-    def symbolic_model(
-        self, state_models: bool = True, input_models: bool = True
-    ) -> list[Callable]:
+    def symbolic(self, state_models: bool = True, input_models: bool = True) -> list[Callable]:
         """Return all the symbolic models the constraints."""
         assert state_models or input_models, "Select at least one of state_models or input_models."
         if state_models and input_models:
-            return [con.symbolic_model() for con in self.constraints]
+            return [con.symbolic() for con in self.constraints]
         if state_models:
-            return [con.symbolic_model() for con in self.state_constraints]
-        return [con.symbolic_model() for con in self.input_constraints]
+            return [con.symbolic() for con in self.state_constraints]
+        return [con.symbolic() for con in self.input_constraints]
 
     def value(
         self,
@@ -464,6 +462,6 @@ class ConstraintList:
             assert isinstance(constraint, dict), "Each constraint must be specified as a dict."
             assert "type" in constraint.keys(), "Each constraint must have a 'type' key"
             c_class = getattr(sys.modules[__name__], constraint["type"])
-            kwargs = {key: constraint[key] for key in constraint if key != "type"}
+            kwargs = {k: v for k, v in constraint.items() if k != "type"}
             constraint_list.append(c_class(state_space, action_space, **kwargs))
         return ConstraintList(constraint_list)

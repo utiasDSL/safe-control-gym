@@ -6,7 +6,7 @@ from typing import Literal
 from types import ModuleType
 from dataclasses import dataclass
 from pathlib import Path
-
+import copy
 from xml.etree import ElementTree
 
 import numpy as np
@@ -23,6 +23,7 @@ class Drone:
         self.firmware = self._load_firmware()
         self.firmware_freq = Constants.firmware_freq
         self.params = DroneParams.from_urdf(Path(__file__).resolve().parent / "assets/cf2x.urdf")
+        self.nominal_params = copy.deepcopy(self.params)  # Store parameters without disturbances
         # Initialize firmware states
         self._state = self.firmware.state_t()
         self._control = self.firmware.control_t()
@@ -34,7 +35,9 @@ class Drone:
         assert controller in ["pid", "mellinger"], f"Invalid controller {controller}."
         self._controller = controller
         # Helper variables for the controller
+        self.desired_thrust = np.zeros(4)  # Desired thrust for each motor
         self._pwms = np.zeros(4)  # PWM signals for each motor
+        self.rpm = np.zeros(4)  # RPM for each motor
         self._tick = 0  # Current controller tick
         self._n_tumble = 0  # Number of consecutive steps the drone is tumbling
         self._last_att_ctrl_call = 0  # Last time attitude controller was called
@@ -43,25 +46,38 @@ class Drone:
         self._last_rpy = np.zeros(3)
         self._fullstate_cmd = True  # Disables high level commander if True
 
+        self.init_state = {
+            "pos": np.zeros(3),
+            "rpy": np.zeros(3),
+            "vel": np.zeros(3),
+            "ang_vel": np.zeros(3),
+        }
+        self.state = self.init_state.copy()
+        self.id = -1
+
     def reset(
         self,
-        pos: npt.NDArray[np.float64] = np.array([0.0, 0.0, 0.0]),
-        rpy: npt.NDArray[np.float64] = np.array([0.0, 0.0, 0.0]),
-        vel: npt.NDArray[np.float64] = np.array([0.0, 0.0, 0.0]),
+        pos: npt.NDArray[np.float64] | None = None,
+        rpy: npt.NDArray[np.float64] | None = None,
+        vel: npt.NDArray[np.float64] | None = None,
     ):
         """Reset the drone state and controllers.
 
         Args:
-            pos: Initial position.
-            rpy: Initial roll, pitch, yaw.
-            vel: Initial velocity.
+            pos: Initial position of the drone. If None, uses the values from `init_state`.
+            rpy: Initial roll, pitch, yaw of the drone. If None, uses the values from `init_state`.
+            vel: Initial velocity of the drone. If None, uses the values from `init_state`.
         """
+        self.params = copy.deepcopy(self.nominal_params)
         self._reset_firmware_states()
         self._reset_low_pass_filters()
         self._reset_helper_variables()
         self._reset_controller()
         # Initilaize high level commander
         self.firmware.crtpCommanderHighLevelInit()
+        pos = self.init_state["pos"] if pos is None else pos
+        rpy = self.init_state["rpy"] if rpy is None else rpy
+        vel = self.init_state["vel"] if vel is None else vel
         self._update_state(0, pos, rpy * RAD_TO_DEG, vel, np.array([0, 0, 1.0]))
         self._last_vel[...], self._last_rpy[...] = vel, rpy
         self.firmware.crtpCommanderHighLevelTellState(self._state)
@@ -81,8 +97,7 @@ class Drone:
         # Estimate rates
         rotation_rates = (rpy - self._last_rpy) * Constants.firmware_freq  # body coord, rad/s
         self._last_rpy = rpy
-        # TODO: Convert to real acc, not multiple of g
-        acc = (vel - self._last_vel) * Constants.firmware_freq / 9.8 + np.array([0, 0, 1])
+        acc = (vel - self._last_vel) * Constants.firmware_freq / 9.81 + np.array([0, 0, 1])
         self._last_vel = vel
         # Update state
         timestamp = int(self._tick / Constants.firmware_freq * 1e3)
@@ -98,7 +113,7 @@ class Drone:
         if not success:
             self._pwms[...] = 0
             return np.zeros(4)
-        return self._pwms_to_action(self._pwms)
+        return self._pwms_to_thrust(self._pwms)
 
     @property
     def tick(self) -> int:
@@ -127,7 +142,7 @@ class Drone:
         for name, value in zip(("x", "y", "z"), acc):
             setattr(self._state.acc, name, value)
 
-    def _pwms_to_action(self, pwms: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+    def _pwms_to_thrust(self, pwms: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
         return self.params.kf * (self.params.pwm2rpm_scale * pwms + self.params.pwm2rpm_const) ** 2
 
     def full_state_cmd(
@@ -137,7 +152,6 @@ class Drone:
         acc: npt.NDArray[np.float64],
         yaw: float,
         rpy_rate: npt.NDArray[np.float64],
-        timestep: float,
     ):
         """Send a full state command to the controller.
 
@@ -150,9 +164,8 @@ class Drone:
             acc: [x, y, z] acceleration of the CF (m/s^2)
             yaw: yaw of the CF (rad)
             rpy_rate: roll, pitch, yaw rates (rad/s)
-            timestep: simulation time when command is sent (s)
         """
-        timestep = self._tick / Constants.firmware_freq  # TODO: Adopt for all commands, remove arg
+        timestep = self._tick / Constants.firmware_freq
         self.firmware.crtpCommanderHighLevelStop()  # Resets planner object
         self.firmware.crtpCommanderHighLevelUpdateTime(timestep)
 
@@ -269,6 +282,8 @@ class Drone:
         self._last_pos_ctrl_call = 0
         self._last_vel = np.zeros(3)
         self._last_rpy = np.zeros(3)
+        self.rpm[...] = 0
+        self.desired_thrust[...] = 0
 
     def _reset_controller(self):
         if self._controller == "pid":
@@ -367,8 +382,6 @@ class Drone:
             self.firmware.crtpCommanderHighLevelUpdateTime(timestep)
             self.firmware.crtpCommanderHighLevelGetSetpoint(self._setpoint, self._state)
 
-    # region Utils
-
     def _load_firmware(self) -> ModuleType:
         """Load the firmware module.
 
@@ -380,8 +393,6 @@ class Drone:
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         return mod
-
-    # endregion
 
 
 @dataclass
@@ -409,12 +420,23 @@ class DroneParams:
     # Defaults are calculated in __post_init__ according to the other parameters
     min_thrust: float = 0.0
     max_thrust: float = 0.0
+    min_rpm: float = 0.0
+    max_rpm: float = 0.0
+    gnd_eff_min_height_clip: float = 0.0
     J_inv: npt.NDArray[np.float64] = np.zeros((3, 3))
 
     def __post_init__(self):
         self.J_inv = np.linalg.inv(self.J)
-        self.min_thrust = self.kf * (self.pwm2rpm_scale * self.min_pwm + self.pwm2rpm_const) ** 2
-        self.max_thrust = self.kf * (self.pwm2rpm_scale * self.max_pwm + self.pwm2rpm_const) ** 2
+        self.min_rpm = self.pwm2rpm_scale * self.min_pwm + self.pwm2rpm_const
+        self.max_rpm = self.pwm2rpm_scale * self.max_pwm + self.pwm2rpm_const
+        # TODO: Check if this computation is correct. Some use kf, others 4*kf
+        self.min_thrust = self.kf * self.min_rpm**2
+        self.max_thrust = self.kf * self.max_rpm**2
+        self.gnd_eff_min_height_clip = (
+            0.25
+            * self.prop_radius
+            * np.sqrt((15 * self.max_rpm**2 * self.kf * self.gnd_eff_coeff) / self.max_thrust)
+        )
 
     @staticmethod
     def from_urdf(path: Path) -> DroneParams:

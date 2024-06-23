@@ -1,13 +1,30 @@
 <?xml version="1.0" ?>
 
-<robot name="architrave">
+<robot name="obstacle">
 
-  <link name="base_link"> 
+  <link name="base_link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.01"/>
+      <inertia ixx="0" ixy="0.0" ixz="0.0" iyy="0" iyz="0.0" izz="0"/>
+    </inertial>
 
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <sphere radius=".01" />
+      </geometry> 
+      <material name="grey">
+        <color rgba=".5 .5 .5 1"/>
+      </material>
+    </visual>
+  </link> 
+
+  <link name="cylinder_link">
     <inertial>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <mass value="2.0"/>
-      <inertia ixx="0" ixy="0.0" ixz="0.0" iyy="0" iyz="0.0" izz="0"/>
+      <inertia ixx="1" ixy="0.0" ixz="0.0" iyy="1" iyz="0.0" izz="1"/>
     </inertial>
 
     <visual>
@@ -26,34 +43,43 @@
         <cylinder length="0.8" radius="0.05" />
       </geometry>
     </collision>  
-
   </link>
 
   <link name="box_link"> 
     <inertial>
-      <origin rpy="0 0 0" xyz="0 0 -0.4"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
       <mass value="0.25"/>
       <inertia ixx="0" ixy="0.0" ixz="0.0" iyy="0" iyz="0.0" izz="0"/>
     </inertial>
+
     <visual>
-      <origin rpy="0 0 0" xyz="0 0 -0.4"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
         <box size=".15 .15 .25" />
       </geometry> 
-      <material name="brown">
-        <color rgba=".92 .87 .79 1"/>
+      <material name="gray">
+        <color rgba=".8 .8 .8 1"/>
       </material> 
     </visual>
+
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 -0.4"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
         <box size=".15 .15 .25" />
       </geometry>
     </collision>  
   </link>
+
   <joint name="box_joint" type="fixed">
-    <parent link="base_link"/>
+    <parent link="cylinder_link"/>
     <child link="box_link"/>
+    <origin rpy="0 0 0" xyz="0.0 0.0 -0.525"/>
+  </joint>
+
+  <joint name="cylinder_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="cylinder_link"/>
+    <origin rpy="0 0 0" xyz="0.0 0.0 -0.4"/>
   </joint>
 
 </robot>

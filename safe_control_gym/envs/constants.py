@@ -5,10 +5,6 @@ RAD_TO_DEG = 180 / math.pi
 
 
 @dataclass
-class SimConstants: ...
-
-
-@dataclass
 class DroneConstants:
     firmware_freq: int = 500  # Firmware frequency in Hz
     supply_voltage: float = 3.0  # Power supply voltage

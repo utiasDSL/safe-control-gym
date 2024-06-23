@@ -1,93 +1,58 @@
-"""Helper functions for the quadrotor environment.
+"""Helper functions for the quadrotor environment."""
 
-"""
 import math
-from enum import IntEnum
 import numpy as np
 import pybullet as p
 from scipy.spatial.transform import Rotation
+import numpy.typing as npt
 
 
-class QuadType(IntEnum):
-    """Quadrotor types numeration class.
-
-    """
-
-    ONE_D = 1  # One-dimensional (along z) movement.
-    TWO_D = 2  # Two-dimensional (in the x-z plane) movement.
-    THREE_D = 3  # Three-dimensional movement.
-
-
-def cmd2pwm(thrust, pwm2rpm_scale, pwm2rpm_const, ct, pwm_min, pwm_max):
-    """Generic cmd to pwm function.
-
-    For 1D, thrust is the total of all 4 motors; for 2D, 1st thrust is total of motor
-    1 & 4, 2nd thrust is total of motor 2 & 3; for 4D, thrust is thrust of each motor.
+def thrust2pwm(
+    thrust: npt.NDArray[np.float_],
+    pwm2rpm_scale: float,
+    pwm2rpm_const: float,
+    ct: float,
+    pwm_min: float,
+    pwm_max: float,
+) -> npt.NDArray[np.float_]:
+    """Compute motor PWMs from thrust.
 
     Args:
-        thrust (ndarray): array of length 1, 2 containing target thrusts.
-        pwm2rpm_scale (float): scaling factor between PWM and RPMs.
-        pwm2rpm_const (float): constant factor between PWM and RPMs.
-        ct (float): torque coefficient.
-        pwm_min (float): pwm lower bound.
-        pwm_max (float): pwm upper bound.
+        thrust: The desired thrusts for each motor.
+        pwm2rpm_scale: Scaling factor between PWM and RPMs.
+        pwm2rpm_const: Constant factor between PWM and RPMs.
+        ct: Torque coefficient.
+        pwm_min: Minimum PWM.
+        pwm_max: Maximum PWM.
 
     Returns:
-        ndarray: array of length 4 containing PWM.
-
+        The PWMs for each motor.
     """
-    n_motor = 4 // int(thrust.size)
     thrust = np.clip(thrust, np.zeros_like(thrust), None)  # Make sure thrust is not negative.
-    motor_pwm = (np.sqrt(thrust / n_motor / ct) - pwm2rpm_const) / pwm2rpm_scale
-    if thrust.size == 1:  # 1D case.
-        motor_pwm = np.repeat(motor_pwm, 4)
-    elif thrust.size == 2:  # 2D case.
-        motor_pwm = np.concatenate([motor_pwm, motor_pwm[::-1]], 0)
-    elif thrust.size == 4:  # 3D case.
-        motor_pwm = np.array(motor_pwm)
-    else:
-        raise ValueError("Input action shape not supported.")
-    motor_pwm = np.clip(motor_pwm, pwm_min, pwm_max)
-    return motor_pwm
+    motor_pwm = (np.sqrt(thrust / ct) - pwm2rpm_const) / pwm2rpm_scale
+    return np.clip(motor_pwm, pwm_min, pwm_max)
 
 
-def pwm2rpm(pwm, pwm2rpm_scale, pwm2rpm_const):
-    """Computes motor squared rpm from pwm.
+class PIDController:
+    """PID control class for Crazyflies."""
 
-    Args:
-        pwm (ndarray): Array of length 4 containing PWM.
-        pwm2rpm_scale (float): Scaling factor between PWM and RPMs.
-        pwm2rpm_const (float): Constant factor between PWM and RPMs.
-
-    Returns:
-        ndarray: Array of length 4 containing RPMs.
-
-    """
-    rpm = pwm2rpm_scale * pwm + pwm2rpm_const
-    return rpm
-
-
-class PIDController():
-    """PID control class for Crazyflies.
-
-    """
-
-    def __init__(self,
-                 g: float = 9.8,
-                 m: float = 0.027,
-                 kf: float = 3.16e-10,
-                 km: float = 7.94e-12,
-                 pwm2rpm_scale: float = 0.2685,
-                 pwm2rpm_const: float = 4070.3,
-                 min_pwm: float = 20000,
-                 max_pwm: float = 65535,
-                 p_coeff_for=np.array([.4, .4, 1.25]),
-                 i_coeff_for=np.array([.05, .05, .05]),
-                 d_coeff_for=np.array([.2, .2, .5]),
-                 p_coeff_tor=np.array([70000., 70000., 60000.]),
-                 i_coeff_tor=np.array([.0, .0, 500.]),
-                 d_coeff_tor=np.array([20000., 20000., 12000.]),
-                 ):
+    def __init__(
+        self,
+        g: float = 9.81,
+        m: float = 0.027,
+        kf: float = 3.16e-10,
+        km: float = 7.94e-12,
+        pwm2rpm_scale: float = 0.2685,
+        pwm2rpm_const: float = 4070.3,
+        min_pwm: float = 20000,
+        max_pwm: float = 65535,
+        p_coeff_for=np.array([0.4, 0.4, 1.25]),
+        i_coeff_for=np.array([0.05, 0.05, 0.05]),
+        d_coeff_for=np.array([0.2, 0.2, 0.5]),
+        p_coeff_tor=np.array([70000.0, 70000.0, 60000.0]),
+        i_coeff_tor=np.array([0.0, 0.0, 500.0]),
+        d_coeff_tor=np.array([20000.0, 20000.0, 12000.0]),
+    ):
         """Common control classes __init__ method.
 
         Args:
@@ -107,7 +72,7 @@ class PIDController():
             d_coeff_tor (ndarray, optional): attitude derivative coefficients.
 
         """
-        self.GRAVITY = g * m # The gravitational force (M*g) acting on each drone.
+        self.GRAVITY = g * m  # The gravitational force (M*g) acting on each drone.
         self.KF = kf
         self.KM = km
         self.P_COEFF_FOR = p_coeff_for
@@ -120,7 +85,9 @@ class PIDController():
         self.PWM2RPM_CONST = pwm2rpm_const
         self.MIN_PWM = min_pwm
         self.MAX_PWM = max_pwm
-        self.MIXER_MATRIX = np.array([[.5, -.5, 1], [.5, .5, -1], [-.5, .5, 1], [-.5, -.5, -1]])
+        self.MIXER_MATRIX = np.array(
+            [[0.5, -0.5, 1], [0.5, 0.5, -1], [-0.5, 0.5, 1], [-0.5, -0.5, -1]]
+        )
         self.reset()
 
     def reset(self):
@@ -136,17 +103,18 @@ class PIDController():
         self.last_rpy_e = np.zeros(3)
         self.integral_rpy_e = np.zeros(3)
 
-    def compute_control(self,
-                        control_timestep,
-                        cur_pos,
-                        cur_quat,
-                        cur_vel,
-                        cur_ang_vel,
-                        target_pos,
-                        target_rpy=np.zeros(3),
-                        target_vel=np.zeros(3),
-                        target_rpy_rates=np.zeros(3)
-                        ):
+    def compute_control(
+        self,
+        control_timestep,
+        cur_pos,
+        cur_quat,
+        cur_vel,
+        cur_ang_vel,
+        target_pos,
+        target_rpy=np.zeros(3),
+        target_vel=np.zeros(3),
+        target_rpy_rates=np.zeros(3),
+    ):
         """Computes the PID control action (as RPMs) for a single drone.
 
         This methods sequentially calls `_compute_force_and_euler()` and `_compute_rpms()`.
@@ -170,32 +138,18 @@ class PIDController():
 
         """
         self.control_counter += 1
-        thrust, computed_target_rpy, pos_e = self._compute_force_and_euler(control_timestep,
-                                                                           cur_pos,
-                                                                           cur_quat,
-                                                                           cur_vel,
-                                                                           target_pos,
-                                                                           target_rpy,
-                                                                           target_vel
-                                                                           )
-        rpm = self._compute_rpms(control_timestep,
-                                 thrust,
-                                 cur_quat,
-                                 computed_target_rpy,
-                                 target_rpy_rates
-                                 )
+        thrust, computed_target_rpy, pos_e = self._compute_force_and_euler(
+            control_timestep, cur_pos, cur_quat, cur_vel, target_pos, target_rpy, target_vel
+        )
+        rpm = self._compute_rpms(
+            control_timestep, thrust, cur_quat, computed_target_rpy, target_rpy_rates
+        )
         cur_rpy = p.getEulerFromQuaternion(cur_quat)
         return rpm, pos_e, computed_target_rpy[2] - cur_rpy[2]
 
-    def _compute_force_and_euler(self,
-                                 control_timestep,
-                                 cur_pos,
-                                 cur_quat,
-                                 cur_vel,
-                                 target_pos,
-                                 target_rpy,
-                                 target_vel
-                                 ):
+    def _compute_force_and_euler(
+        self, control_timestep, cur_pos, cur_quat, cur_vel, target_pos, target_rpy, target_vel
+    ):
         """DSL's CF2.x PID position control.
 
         Args:
@@ -216,33 +170,38 @@ class PIDController():
         cur_rotation = np.array(p.getMatrixFromQuaternion(cur_quat)).reshape(3, 3)
         pos_e = target_pos - cur_pos
         vel_e = target_vel - cur_vel
-        self.integral_pos_e = self.integral_pos_e + pos_e*control_timestep
-        self.integral_pos_e = np.clip(self.integral_pos_e, -2., 2.)
-        self.integral_pos_e[2] = np.clip(self.integral_pos_e[2], -0.15, .15)
+        self.integral_pos_e = self.integral_pos_e + pos_e * control_timestep
+        self.integral_pos_e = np.clip(self.integral_pos_e, -2.0, 2.0)
+        self.integral_pos_e[2] = np.clip(self.integral_pos_e[2], -0.15, 0.15)
         # PID target thrust.
-        target_thrust = np.multiply(self.P_COEFF_FOR, pos_e) \
-                        + np.multiply(self.I_COEFF_FOR, self.integral_pos_e) \
-                        + np.multiply(self.D_COEFF_FOR, vel_e) + np.array([0, 0, self.GRAVITY])
-        scalar_thrust = max(0., np.dot(target_thrust, cur_rotation[:, 2]))
-        thrust = (math.sqrt(scalar_thrust / (4*self.KF)) - self.PWM2RPM_CONST) / self.PWM2RPM_SCALE
+        target_thrust = (
+            np.multiply(self.P_COEFF_FOR, pos_e)
+            + np.multiply(self.I_COEFF_FOR, self.integral_pos_e)
+            + np.multiply(self.D_COEFF_FOR, vel_e)
+            + np.array([0, 0, self.GRAVITY])
+        )
+        scalar_thrust = max(0.0, np.dot(target_thrust, cur_rotation[:, 2]))
+        thrust = (
+            math.sqrt(scalar_thrust / (4 * self.KF)) - self.PWM2RPM_CONST
+        ) / self.PWM2RPM_SCALE
         target_z_ax = target_thrust / np.linalg.norm(target_thrust)
         target_x_c = np.array([math.cos(target_rpy[2]), math.sin(target_rpy[2]), 0])
-        target_y_ax = np.cross(target_z_ax, target_x_c) / np.linalg.norm(np.cross(target_z_ax, target_x_c))
+        target_y_ax = np.cross(target_z_ax, target_x_c) / np.linalg.norm(
+            np.cross(target_z_ax, target_x_c)
+        )
         target_x_ax = np.cross(target_y_ax, target_z_ax)
         target_rotation = (np.vstack([target_x_ax, target_y_ax, target_z_ax])).transpose()
         # Target rotation.
-        target_euler = (Rotation.from_matrix(target_rotation)).as_euler('XYZ', degrees=False)
+        target_euler = (Rotation.from_matrix(target_rotation)).as_euler("XYZ", degrees=False)
         if np.any(np.abs(target_euler) > math.pi):
-            raise ValueError("\n[ERROR] ctrl it", self.control_counter, "in Control._compute_force_and_euler(), values outside range [-pi,pi]")
+            raise ValueError(
+                "\n[ERROR] ctrl it",
+                self.control_counter,
+                "in Control._compute_force_and_euler(), values outside range [-pi,pi]",
+            )
         return thrust, target_euler, pos_e
 
-    def _compute_rpms(self,
-                      control_timestep,
-                      thrust,
-                      cur_quat,
-                      target_euler,
-                      target_rpy_rates
-                      ):
+    def _compute_rpms(self, control_timestep, thrust, cur_quat, target_euler, target_rpy_rates):
         """DSL's CF2.x PID attitude control.
 
         Args:
@@ -258,20 +217,24 @@ class PIDController():
         """
         cur_rotation = np.array(p.getMatrixFromQuaternion(cur_quat)).reshape(3, 3)
         cur_rpy = np.array(p.getEulerFromQuaternion(cur_quat))
-        target_quat = (Rotation.from_euler('XYZ', target_euler, degrees=False)).as_quat()
+        target_quat = (Rotation.from_euler("XYZ", target_euler, degrees=False)).as_quat()
         w, x, y, z = target_quat
         target_rotation = (Rotation.from_quat([w, x, y, z])).as_matrix()
-        rot_matrix_e = np.dot((target_rotation.transpose()), cur_rotation) - np.dot(cur_rotation.transpose(), target_rotation)
+        rot_matrix_e = np.dot((target_rotation.transpose()), cur_rotation) - np.dot(
+            cur_rotation.transpose(), target_rotation
+        )
         rot_e = np.array([rot_matrix_e[2, 1], rot_matrix_e[0, 2], rot_matrix_e[1, 0]])
-        rpy_rates_e = target_rpy_rates - (cur_rpy - self.last_rpy)/control_timestep
+        rpy_rates_e = target_rpy_rates - (cur_rpy - self.last_rpy) / control_timestep
         self.last_rpy = cur_rpy
-        self.integral_rpy_e = self.integral_rpy_e - rot_e*control_timestep
-        self.integral_rpy_e = np.clip(self.integral_rpy_e, -1500., 1500.)
-        self.integral_rpy_e[0:2] = np.clip(self.integral_rpy_e[0:2], -1., 1.)
+        self.integral_rpy_e = self.integral_rpy_e - rot_e * control_timestep
+        self.integral_rpy_e = np.clip(self.integral_rpy_e, -1500.0, 1500.0)
+        self.integral_rpy_e[0:2] = np.clip(self.integral_rpy_e[0:2], -1.0, 1.0)
         # PID target torques.
-        target_torques = - np.multiply(self.P_COEFF_TOR, rot_e) \
-                         + np.multiply(self.D_COEFF_TOR, rpy_rates_e) \
-                         + np.multiply(self.I_COEFF_TOR, self.integral_rpy_e)
+        target_torques = (
+            -np.multiply(self.P_COEFF_TOR, rot_e)
+            + np.multiply(self.D_COEFF_TOR, rpy_rates_e)
+            + np.multiply(self.I_COEFF_TOR, self.integral_rpy_e)
+        )
         target_torques = np.clip(target_torques, -3200, 3200)
         pwm = thrust + np.dot(self.MIXER_MATRIX, target_torques)
         pwm = np.clip(pwm, self.MIN_PWM, self.MAX_PWM)

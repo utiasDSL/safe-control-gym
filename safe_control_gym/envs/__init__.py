@@ -3,12 +3,12 @@
 from gymnasium import register
 
 register(
-    id="quadrotor",
-    entry_point="safe_control_gym.envs.quadrotor:Quadrotor",
+    id="drone_sim",
+    entry_point="safe_control_gym.envs.drone_sim:DroneSim",
 )
 
 register(
-    id="firmware",
-    entry_point="safe_control_gym.envs.firmware_wrapper:FirmwareWrapper",
+    id="drone_racing-v0",
+    entry_point="safe_control_gym.envs.drone_racing_env:DroneRacingEnv",
     max_episode_steps=900,  # 30 seconds * 30 Hz
 )
