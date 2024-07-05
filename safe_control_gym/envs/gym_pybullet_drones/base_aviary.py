@@ -307,7 +307,7 @@ class BaseAviary(BenchmarkEnv):
         # Update and store the drones kinematic information.
         self._update_and_store_kinematic_information()
         time_after_stepping = time.time()
-        print('time stepping', time_after_stepping - time_before_stepping)
+        # print('time stepping', time_after_stepping - time_before_stepping)
 
     def render(self, mode='human', close=False):
         '''Prints a textual output of the environment.
