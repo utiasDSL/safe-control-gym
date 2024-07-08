@@ -64,6 +64,30 @@ GPMPC_dict = {
 }
 
 
+iLQR_dict = {
+    'categorical': {
+        'max_iterations': [5, 10, 15, 20],
+        'lamb_factor': [5, 10, 15],
+        'lamb_max': [1000, 1500, 2000],  # number should lower 0.8 * MIN(num_samples) if 0,2 is test_data_ratio
+        'epsilon': [0.01, 0.005, 0.001],
+    },
+    'float': {  # note that in float type, you must specify the upper and lower bound   
+    
+    }
+}
+
+LINEAR_MPSC_dict = {
+    'categorical': {
+        'horizon': [10, 15, 20, 25, 30, 35, 40],
+        'n_samples': [400, 600, 800, 1000],
+    },
+    'float': {  # note that in float type, you must specify the upper and lower bound   
+        'tau': [0.95, 0.99], 
+    }
+}
+
+
+
 def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]:
     """Sampler for PPO hyperparameters.
 
