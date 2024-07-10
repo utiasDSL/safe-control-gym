@@ -93,7 +93,21 @@ class HPO(object):
                 # update the agent config with sample candidate hyperparameters
                 # new agent with the new hps
                 for hp in sampled_hyperparams:
-                    self.algo_config[hp] = sampled_hyperparams[hp]
+                    if hp == 'state_weight' or hp == 'state_dot_weight' or hp == 'action_weight':
+                        if self.algo == 'gp_mpc':
+                            if self.task == 'cartpole':
+                                self.algo_config['q_mpc'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
+                                self.algo_config['r_mpc'] = [sampled_hyperparams['action_weight']]
+                            else:
+                                raise ValueError('Only cartpole task is supported for gp_mpc.')
+                        else:
+                            if self.task == 'cartpole':
+                                self.task_config['rew_state_weight'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
+                                self.task_config['rew_action_weight'] = [sampled_hyperparams['action_weight']]
+                            else:
+                                raise ValueError('Only cartpole task is supported for rl.')
+                    else:
+                        self.algo_config[hp] = sampled_hyperparams[hp]
 
                 seeds.append(seed)
                 self.logger.info('Sample hyperparameters: {}'.format(sampled_hyperparams))

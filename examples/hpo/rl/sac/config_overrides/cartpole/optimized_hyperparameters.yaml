@@ -8,3 +8,6 @@ tau: 0.8819485349561447
 train_batch_size: 512
 train_interval: 10
 warm_up_steps: 4000
+state_weight: 10
+state_dot_weight: 0.1
+action_weight: 0.1
