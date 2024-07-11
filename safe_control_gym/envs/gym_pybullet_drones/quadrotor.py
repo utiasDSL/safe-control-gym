@@ -572,7 +572,7 @@ class Quadrotor(BaseAviary):
                                z_dot,
                                (18.112984649321753 * T + 3.7613154938448576) * cs.cos(theta) - g,
                                theta_dot,
-                               -60.00143727772195 * theta + 60.00143727772195 * P)
+                               -134.1 * theta - 5.522 * theta_dot + 107.7 * P)
             # Define observation.
             Y = cs.vertcat(x, x_dot, z, z_dot, theta, theta_dot)
         elif self.QUAD_TYPE == QuadType.THREE_D:
