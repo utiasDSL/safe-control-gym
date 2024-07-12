@@ -5,7 +5,7 @@ task_config:
   pyb_freq: 1000
   gui: False
   physics: pyb
-  quad_type: 2
+  quad_type: 4
 
   init_state_randomization_info:
     init_x:
