@@ -28,7 +28,8 @@ def run(gui=True, n_episodes=1, n_steps=None, save_data=False):
         save_data (bool): Whether to save the collected experiment data.
     '''
     # ALGO = 'ilqr'
-    ALGO = 'gp_mpc'
+    # ALGO = 'gp_mpc'
+    ALGO = 'gpmpc_acados'
     SYS = 'cartpole'
     TASK = 'stab'
     # PRIOR = '300'
@@ -134,6 +135,17 @@ def run(gui=True, n_episodes=1, n_steps=None, save_data=False):
         for key, value in trajs_data.items():
             all_trajs[key] += value
 
+    # calculate the cost of the trajectory
+    # Q = np.diag(config.algo_config.q_mpc)
+    # R = np.diag(config.algo_config.r_mpc)
+    # cost = 0
+    # for i in range(len(all_trajs['obs'][0]-1)):
+    #     obs = all_trajs['obs'][0][i]
+    #     action = all_trajs['action'][0][i]
+    #     cost += obs.T @ Q @ obs + action.T @ R @ action
+    # cost += all_trajs['obs'][0][-1].T @ Q @ all_trajs['obs'][0][-1]
+    # print(f'Total cost of the trajectory: {cost}')
+    
     ctrl.close()
     random_env.close()
     metrics = experiment.compute_metrics(all_trajs)

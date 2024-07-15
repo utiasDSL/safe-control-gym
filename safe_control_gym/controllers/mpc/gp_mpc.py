@@ -85,7 +85,6 @@ class GPMPC(MPC):
             horizon (int): MPC planning horizon.
             Q, R (np.array): cost weight matrix.
             constraint_tol (float): Tolerance to add the the constraint as sometimes solvers are not exact.
-            use_prev_start (bool): Warmstart mpc with the previous solution.
             train_iterations (int): the number of training examples to use for each dimension of the GP.
             overwrite_saved_data (bool): Overwrite the input and target data to the already saved data if it exists.
             optimization_iterations (list): the number of optimization iterations for each dimension of the GP.
@@ -122,6 +121,8 @@ class GPMPC(MPC):
         else:
             self.soft_constraints_params = soft_constraints
 
+        print('prior_info[prior_prop]', prior_info['prior_prop'])
+        # exit()
         # Initialize the method using linear MPC.
         self.prior_ctrl = LinearMPC(
             self.prior_env_func,
@@ -916,11 +917,11 @@ class GPMPC(MPC):
         test_envs = []
         if self.same_test_initial_state:
             for epoch in range(self.num_epochs):
-                test_envs.append(self.env_func(randomized_init=True, seed=self.seed * 111))
-                test_envs[epoch].action_space.seed(self.seed * 111)
+                test_envs.append(self.env_func(randomized_init=True, seed=self.seed))
+                test_envs[epoch].action_space.seed(self.seed)
         else:
-            test_env = self.env_func(randomized_init=True, seed=self.seed * 111)
-            test_env.action_space.seed(self.seed * 111)
+            test_env = self.env_func(randomized_init=True, seed=self.seed)
+            test_env.action_space.seed(self.seed)
             test_envs = [test_env] * self.num_epochs
 
         for episode in range(self.num_train_episodes_per_epoch):

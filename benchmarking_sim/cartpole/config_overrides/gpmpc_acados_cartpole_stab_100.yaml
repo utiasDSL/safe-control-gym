@@ -1,4 +1,4 @@
-algo: gp_mpc
+algo: gpmpc_acados
 algo_config:
   additional_constraints: null
   deque_size: 10
@@ -38,12 +38,11 @@ algo_config:
   r_mpc:
   - 0.1
   kernel: Matern
-  sparse_gp: true
   n_ind_points: 40
   inducing_point_selection_method: 'kmeans'
   recalc_inducing_points_at_every_step: false
   soft_constraints:
-    gp_soft_constraints: false
+    gp_soft_constraints: true
     gp_soft_constraints_coeff: 0
     prior_soft_constraints: true
     prior_soft_constraints_coeff: 10

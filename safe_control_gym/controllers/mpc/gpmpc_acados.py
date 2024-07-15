@@ -65,35 +65,37 @@ class GPMPC_ACADOS(GPMPC):
             **kwargs
     ):
         
-        if prior_info is None or prior_info == {}:
-            raise ValueError('GPMPC_ACADOS requires prior_prop to be defined. You may use the real mass properties and then use prior_param_coeff to modify them accordingly.')
-        prior_info['prior_prop'].update((prop, val * prior_param_coeff) for prop, val in prior_info['prior_prop'].items())
-        self.prior_env_func = partial(env_func, inertial_prop=prior_info['prior_prop'])
-        if soft_constraints is None:
-            self.soft_constraints_params = {'gp_soft_constraints': False,
-                                            'gp_soft_constraints_coeff': 0,
-                                            'prior_soft_constraints': False,
-                                            'prior_soft_constraints_coeff': 0}
-        else:
-            self.soft_constraints_params = soft_constraints
+        # if prior_info is None or prior_info == {}:
+        #     raise ValueError('GPMPC_ACADOS requires prior_prop to be defined. You may use the real mass properties and then use prior_param_coeff to modify them accordingly.')
+        # prior_info['prior_prop'].update((prop, val * prior_param_coeff) for prop, val in prior_info['prior_prop'].items())
+        # self.prior_env_func = partial(env_func, inertial_prop=prior_info['prior_prop'])
+        # if soft_constraints is None:
+        #     self.soft_constraints_params = {'gp_soft_constraints': False,
+        #                                     'gp_soft_constraints_coeff': 0,
+        #                                     'prior_soft_constraints': False,
+        #                                     'prior_soft_constraints_coeff': 0}
+        # else:
+        #     self.soft_constraints_params = soft_constraints
 
-        # Initialize the method using linear MPC.
-        self.prior_ctrl = LinearMPC(
-            self.prior_env_func,
-            horizon=horizon,
-            q_mpc=q_mpc,
-            r_mpc=r_mpc,
-            warmstart=warmstart,
-            soft_constraints=self.soft_constraints_params['prior_soft_constraints'],
-            terminate_run_on_done=terminate_run_on_done,
-            prior_info=prior_info,
-            # runner args
-            # shared/base args
-            output_dir=output_dir,
-            additional_constraints=additional_constraints,
-        )
-        self.prior_ctrl.reset()
-        self.sparse_gp = sparse_gp
+        # print('prior_info[prior_prop]', prior_info['prior_prop'])
+        # # exit()
+        # # Initialize the method using linear MPC.
+        # self.prior_ctrl = LinearMPC(
+        #     self.prior_env_func,
+        #     horizon=horizon,
+        #     q_mpc=q_mpc,
+        #     r_mpc=r_mpc,
+        #     warmstart=warmstart,
+        #     soft_constraints=self.soft_constraints_params['prior_soft_constraints'],
+        #     terminate_run_on_done=terminate_run_on_done,
+        #     prior_info=prior_info,
+        #     # runner args
+        #     # shared/base args
+        #     output_dir=output_dir,
+        #     additional_constraints=additional_constraints,
+        # )
+        # self.prior_ctrl.reset()
+        # self.sparse_gp = sparse_gp
         # super().__init__() # TODO: check the inheritance of the class
         super().__init__(
             env_func = env_func,
@@ -129,21 +131,6 @@ class GPMPC_ACADOS(GPMPC):
             terminate_run_on_done = terminate_run_on_done,
             output_dir = output_dir,
             **kwargs)
-        # self.prior_ctrl = LinearMPC(
-        #     self.prior_env_func,
-        #     horizon=horizon,
-        #     q_mpc=q_mpc,
-        #     r_mpc=r_mpc,
-        #     warmstart=warmstart,
-        #     soft_constraints=self.soft_constraints_params['prior_soft_constraints'],
-        #     terminate_run_on_done=terminate_run_on_done,
-        #     prior_info=prior_info,
-        #     # runner args
-        #     # shared/base args
-        #     output_dir=output_dir,
-        #     additional_constraints=additional_constraints,
-        # )
-        # self.prior_ctrl.reset()
         # # Setup environments.
         self.env_func = env_func
         self.env = env_func(randomized_init=False, seed=seed)
@@ -153,10 +140,9 @@ class GPMPC_ACADOS(GPMPC):
         self.data_inputs = None
         self.data_targets = None
         self.prior_dynamics_func = self.prior_ctrl.linear_dynamics_func
-        # self.prior_dynamics_func = self.prior_ctrl.dynamics_func # nonlinear prior 
         self.X_EQ = self.prior_ctrl.X_EQ
         self.U_EQ = self.prior_ctrl.U_EQ
-        print(f'X_EQ: {self.X_EQ}, U_EQ: {self.U_EQ}')
+        # print(f'X_EQ: {self.X_EQ}, U_EQ: {self.U_EQ}')
         # GP and training parameters.
         self.gaussian_process = None
         self.train_iterations = train_iterations
@@ -193,11 +179,13 @@ class GPMPC_ACADOS(GPMPC):
         self.x_prev = None
         self.u_prev = None
         self.use_RTI = use_RTI
+        print('prior_info[prior_prop]', prior_info['prior_prop'])
+        # exit()
 
-        self.setup_prior_dynamics()
-        self.setup_acados_model()
-        self.setup_acados_optimizer()
-        self.acados_ocp_solver = AcadosOcpSolver(self.ocp)
+        # self.setup_prior_dynamics()
+        # self.setup_acados_model()
+        # self.setup_acados_optimizer()
+        # self.acados_ocp_solver = AcadosOcpSolver(self.ocp)
     
     def setup_acados_model(self) -> AcadosModel:
 
@@ -211,20 +199,20 @@ class GPMPC_ACADOS(GPMPC):
         A_lin = self.discrete_dfdx
         B_lin = self.discrete_dfdu
 
-        if self.gaussian_process is None:
-            f_disc = self.prior_dynamics_func(x0=acados_model.x- self.X_EQ, 
-                                              p=acados_model.u- self.U_EQ)['xf'] \
-                + self.prior_ctrl.X_EQ[:, None]
+        # if self.gaussian_process is None:
+        #     f_disc = self.prior_dynamics_func(x0=acados_model.x- self.X_EQ, 
+        #                                       p=acados_model.u- self.U_EQ)['xf'] \
+        #         + self.prior_ctrl.X_EQ[:, None]
+        # else:
+        z = cs.vertcat(acados_model.x, acados_model.u) # GP prediction point
+        z = z[self.input_mask]
+        if self.sparse_gp:
+            raise NotImplementedError('Sparse GP not implemented for acados.')
         else:
-            z = cs.vertcat(acados_model.x, acados_model.u) # GP prediction point
-            z = z[self.input_mask]
-            if self.sparse_gp:
-                raise NotImplementedError('Sparse GP not implemented for acados.')
-            else:
-                f_disc = self.prior_dynamics_func(x0=acados_model.x- self.X_EQ, 
-                                                  p=acados_model.u- self.U_EQ)['xf'] \
-                + self.prior_ctrl.X_EQ[:, None]
-                + self.Bd @ self.gaussian_process.casadi_predict(z=z)['mean']
+            f_disc = self.prior_dynamics_func(x0=acados_model.x- self.X_EQ, 
+                                                p=acados_model.u- self.U_EQ)['xf'] \
+            + self.prior_ctrl.X_EQ[:, None]
+            + self.Bd @ self.gaussian_process.casadi_predict(z=z)['mean']
 
         acados_model.disc_dyn_expr = f_disc
 
@@ -307,7 +295,21 @@ class GPMPC_ACADOS(GPMPC):
 
         # slack costs for nonlinear constraints
         if self.gp_soft_constraints:
-            raise NotImplementedError('Soft constraints not implemented for acados.')
+            # slack variables for all constraints
+            ocp.constraints.Jsh_0 = np.eye(h0_expr.shape[0])
+            ocp.constraints.Jsh = np.eye(h_expr.shape[0])
+            ocp.constraints.Jsh_e = np.eye(he_expr.shape[0])
+            # slack penalty
+            L2_pen = 1e4
+            L1_pen = 1e4
+            ocp.cost.Zu = L2_pen * np.ones(h_expr.shape[0])
+            ocp.cost.Zl = L2_pen * np.ones(h_expr.shape[0])
+            ocp.cost.zl = L1_pen * np.ones(h_expr.shape[0]) 
+            ocp.cost.zu = L1_pen * np.ones(h_expr.shape[0])
+            ocp.cost.Zl_e = L2_pen * np.ones(he_expr.shape[0])
+            ocp.cost.Zu_e = L2_pen * np.ones(he_expr.shape[0])
+            ocp.cost.zl_e = L1_pen * np.ones(he_expr.shape[0])
+            ocp.cost.zu_e = L1_pen * np.ones(he_expr.shape[0])
         
 
         # placeholder initial state constraint
@@ -320,6 +322,7 @@ class GPMPC_ACADOS(GPMPC):
         ocp.solver_options.integrator_type = 'DISCRETE'
         ocp.solver_options.nlp_solver_type = 'SQP' if not self.use_RTI else 'SQP_RTI'
         ocp.solver_options.nlp_solver_max_iter = 5000
+        ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
         # prediction horizon
         ocp.solver_options.tf = self.T * self.dt
 
@@ -395,15 +398,17 @@ class GPMPC_ACADOS(GPMPC):
 
     def select_action(self, obs, info=None):
         print('current obs:', obs)
-        time_before = time.time()
         if self.gaussian_process is None:
             action = self.prior_ctrl.select_action(obs)
         else:
+            time_before = time.time()
             action = self.select_action_with_gp(obs)
-        time_after = time.time()
+            time_after = time.time()
+            print('gpmpc acados action selection time:', time_after - time_before)
+        
         self.last_obs = obs
         self.last_action = action
-        print('gpmpc acados action selection time:', time_after - time_before)
+        
         return action
     
     def select_action_with_gp(self, obs):
@@ -519,9 +524,12 @@ class GPMPC_ACADOS(GPMPC):
         # Dynamics model.
         
         if self.gaussian_process is not None:
-            self.set_gp_dynamics_func(self.n_ind_points)
-        self.setup_acados_model()
-        self.setup_acados_optimizer()
+            # self.set_gp_dynamics_func(self.n_ind_points)
+            self.setup_prior_dynamics()
+            self.setup_acados_model()
+            self.setup_acados_optimizer()
+            self.acados_ocp_solver = AcadosOcpSolver(self.ocp)
+        # self.setup_acados_optimizer()
             # n_ind_points = self.train_data['train_targets'].shape[0]
         print('=========== Resetting prior controller ===========')
         self.prior_ctrl.reset()
