@@ -1,0 +1,21 @@
+algo: mpc
+algo_config:
+  horizon: 30
+  r_mpc:
+    - 1.0
+    - 1.0
+  q_mpc:
+    - 5.0
+    - 0.1
+    - 5.0
+    - 0.1
+    - 0.5
+    # - 0.5
+  # Prior info
+  prior_info:
+    prior_prop: null
+    randomize_prior_prop: False
+    prior_prop_rand_info: null
+  warmstart: True
+
+
