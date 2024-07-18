@@ -12,7 +12,8 @@ from safe_control_gym.envs.benchmark_env import Task
 
 from copy import deepcopy
 
-class iLQR_C(LQR):
+class LQR_C(LQR):
+    '''A customized LQR for hardware experiments and the ability to compute the contraction metric.'''
     def __init__(self, env_func, 
                  q_lqr: list = None, 
                  r_lqr: list = None, 
@@ -25,6 +26,7 @@ class iLQR_C(LQR):
         self.env = env_func()
         # Controller params.
         self.model = self.get_prior(self.env)
+        self.discrete_dynamics = discrete_dynamics
         # print('self.model:', self.model)
 
         # self.discrete_dynamics = discrete_dynamics # not used since we are using continuous dynamics
@@ -165,7 +167,7 @@ class iLQR_C(LQR):
 
         if self.env.TASK == Task.STABILIZATION:
             # return -self.gain @ (obs - self.env.X_GOAL) + self.model.U_EQ
-            raise NotImplementedError('iLQR not implemented for stabilization task.')
+            raise NotImplementedError('LQR_C not implemented for stabilization task.')
         elif self.env.TASK == Task.TRAJ_TRACKING:
             self.traj_step += 1
             # get the liearzation points
@@ -180,13 +182,22 @@ class iLQR_C(LQR):
                 u_0 = self.goal_state[self.model.nx:, 0]
             # print('x_0:', x_0)
             # print('u_0:', u_0)
-            # Linearize continuous-time dynamics
+            
             df = self.model.df_func(x_0, u_0)
             A, B = df[0].toarray(), df[1].toarray()
             # print('A:\n', A)
             # print('B:\n', B)
-            P = scipy.linalg.solve_continuous_are(A, B, self.Q, self.R)
-            gain = np.dot(np.linalg.inv(self.R), np.dot(B.T, P))
+            if self.discrete_dynamics:
+                # Use the linearize continuous-time dynamics
+                P = scipy.linalg.solve_continuous_are(A, B, self.Q, self.R)
+                gain = np.dot(np.linalg.inv(self.R), np.dot(B.T, P))
+            else:
+                # Use the linearize discrete-time dynamics
+                A, B = discretize_linear_system(A, B, self.dt)
+                P = scipy.linalg.solve_discrete_are(A, B, self.Q, self.R)
+                btp = np.dot(B.T, P)
+                gain = np.dot(np.linalg.inv(self.R + np.dot(btp, B)),
+                              np.dot(btp, A))
             # control = -gain @ (obs - x_0) + u_0
             # action = -gain @ (obs - self.env.X_GOAL[step]) + self.model.U_EQ
             action = -gain @ (obs - x_0) + u_0

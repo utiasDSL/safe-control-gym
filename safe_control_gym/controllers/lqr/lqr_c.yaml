@@ -5,4 +5,4 @@ r_lqr: [0.1]
 # Model arguments
 # Note: Higher simulation frequency is required if using controller designed
 #       based on the continuous-time model
-discrete_dynamics: False
+discrete_dynamics: True

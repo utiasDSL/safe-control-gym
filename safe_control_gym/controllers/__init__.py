@@ -70,6 +70,6 @@ register(idx='gpmpc_acados',
             entry_point='safe_control_gym.controllers.mpc.gpmpc_acados:GPMPC_ACADOS',
             config_entry_point='safe_control_gym.controllers.mpc:gpmpc_acados.yaml')
 
-register(idx='ilqr_c',
-            entry_point='safe_control_gym.controllers.lqr.ilqr_c:iLQR_C',
-            config_entry_point='safe_control_gym.controllers.lqr:ilqr_c.yaml')
+register(idx='lqr_c',
+            entry_point='safe_control_gym.controllers.lqr.lqr_c:LQR_C',
+            config_entry_point='safe_control_gym.controllers.lqr:lqr_c.yaml')
