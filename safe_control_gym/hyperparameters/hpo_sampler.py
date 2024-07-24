@@ -77,11 +77,13 @@ iLQR_dict = {
     'categorical': {
         'max_iterations': [5, 10, 15, 20],
         'lamb_factor': [5, 10, 15],
-        'lamb_max': [1000, 1500, 2000],  # number should lower 0.8 * MIN(num_samples) if 0,2 is test_data_ratio
+        'lamb_max': [1000, 1500, 2000],
         'epsilon': [0.01, 0.005, 0.001],
     },
     'float': {  # note that in float type, you must specify the upper and lower bound   
-    
+        'state_weight': [0.001, 20],
+        'state_dot_weight': [0.001, 5],
+        'action_weight': [0.001, 5],
     }
 }
 
@@ -276,15 +278,52 @@ def gpmpc_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, An
 
     return hps_suggestion
 
+def ilqr_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]:
+    """Sampler for iLQR hyperparameters.
+
+    args:
+        hps_dict: the dict of hyperparameters that will be optimized over
+        trial: budget variable
+
+    """
+
+    max_iterations = trial.suggest_categorical('max_iterations', iLQR_dict['categorical']['max_iterations'])
+    lamb_factor = trial.suggest_categorical('lamb_factor', iLQR_dict['categorical']['lamb_factor'])
+    lamb_max = trial.suggest_categorical('lamb_max', iLQR_dict['categorical']['lamb_max'])
+    epsilon = trial.suggest_categorical('epsilon', iLQR_dict['categorical']['epsilon'])
+
+    # objective
+    state_weight = trial.suggest_float('state_weight', iLQR_dict['float']['state_weight'][0], iLQR_dict['float']['state_weight'][1], log=True)
+    state_dot_weight = trial.suggest_float('state_dot_weight', iLQR_dict['float']['state_dot_weight'][0], iLQR_dict['float']['state_dot_weight'][1], log=True)
+    action_weight = trial.suggest_float('action_weight', iLQR_dict['float']['action_weight'][0], iLQR_dict['float']['action_weight'][1], log=True)
+
+    hps_suggestion = {
+        'max_iterations': max_iterations,
+        'lamb_factor': lamb_factor,
+        'lamb_max': lamb_max,
+        'epsilon': epsilon,
+        'state_weight': state_weight,
+        'state_dot_weight': state_dot_weight,
+        'action_weight': action_weight,
+    }
+
+    assert len(hps_suggestion) == len(hps_dict), ValueError('We are optimizing over different number of HPs as you listed.')
+
+    return hps_suggestion
+
 
 HYPERPARAMS_SAMPLER = {
     'ppo': ppo_sampler,
     'sac': sac_sampler,
     'gp_mpc': gpmpc_sampler,
+    'gpmpc_acados': gpmpc_sampler,
+    'ilqr': ilqr_sampler,
 }
 
 HYPERPARAMS_DICT = {
     'ppo': PPO_dict,
     'sac': SAC_dict,
     'gp_mpc': GPMPC_dict,
+    'gpmpc_acados': GPMPC_dict,
+    'ilqr': iLQR_dict,
 }

@@ -54,6 +54,11 @@ def train(config):
         * to start training, use with `--func train`.
 
     """
+    # change the cost function for rl methods
+    if config.algo == 'ppo':
+        config.task_config.cost = 'rl_reward'
+    elif config.algo == 'gp_mpc' or config.algo == 'gpmpc_acados' or config.algo == 'ilqr':
+        pass
     # Override algo_config with given yaml file
     if config.opt_hps == '':
         # if no opt_hps file is given
@@ -125,7 +130,7 @@ def train(config):
     else:
         system = config.task
 
-    if True:
+    if False:
         if system == Environment.CARTPOLE:
             graph1_1 = 2
             graph1_2 = 3

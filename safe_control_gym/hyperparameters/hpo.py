@@ -94,12 +94,20 @@ class HPO(object):
                 # new agent with the new hps
                 for hp in sampled_hyperparams:
                     if hp == 'state_weight' or hp == 'state_dot_weight' or hp == 'action_weight':
-                        if self.algo == 'gp_mpc':
+                        if self.algo == 'gp_mpc' or self.algo == 'gpmpc_acados':
                             if self.task == 'cartpole':
                                 self.algo_config['q_mpc'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
                                 self.algo_config['r_mpc'] = [sampled_hyperparams['action_weight']]
                             else:
+                                #TODO if implemented for quadrotor, pitch rate penalty should be small.
                                 raise ValueError('Only cartpole task is supported for gp_mpc.')
+                        elif self.algo == 'ilqr':
+                            if self.task == 'cartpole':
+                                self.algo_config['q_lqr'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
+                                self.algo_config['r_lqr'] = [sampled_hyperparams['action_weight']]
+                            else:
+                                #TODO if implemented for quadrotor, pitch rate penalty should be small.
+                                raise ValueError('Only cartpole task is supported for ilqr.')
                         else:
                             if self.task == 'cartpole':
                                 self.task_config['rew_state_weight'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
@@ -231,6 +239,8 @@ class HPO(object):
                             )
 
         output_dir = os.path.join(self.output_dir, 'hpo')
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
         # save meta data
         self.study.trials_dataframe().to_csv(output_dir + '/trials.csv')
 
