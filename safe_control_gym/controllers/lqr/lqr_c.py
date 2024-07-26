@@ -13,7 +13,7 @@ from safe_control_gym.envs.benchmark_env import Task
 from copy import deepcopy
 
 class LQR_C(LQR):
-    '''A customized LQR for hardware experiments and the ability to compute the contraction metric.'''
+    '''A customized LQR for quadrotor hardware experiments and the ability to compute the contraction metric.'''
     def __init__(self, env_func, 
                  q_lqr: list = None, 
                  r_lqr: list = None, 
@@ -27,9 +27,7 @@ class LQR_C(LQR):
         # Controller params.
         self.model = self.get_prior(self.env)
         self.discrete_dynamics = discrete_dynamics
-        # print('self.model:', self.model)
 
-        # self.discrete_dynamics = discrete_dynamics # not used since we are using continuous dynamics
         self.Q = get_cost_weight_matrix(q_lqr, self.model.nx)
         self.R = get_cost_weight_matrix(r_lqr, self.model.nu)
         self.env.set_cost_function_param(self.Q, self.R)
@@ -53,7 +51,7 @@ class LQR_C(LQR):
         self.dynamics_func = self.model.fc_func
 
     def get_cl_jacobian(self, x_lin, u_lin):
-        '''Get the Jacobian of the closed-loop dynamics.'''
+        '''Get the Jacobian of the continuous-time closed-loop dynamics.'''
         # Linearize continuous-time dynamics
         df = self.model.df_func(x_lin, u_lin)
         A, B = df[0].toarray(), df[1].toarray()
@@ -101,6 +99,10 @@ class LQR_C(LQR):
 
 
     def compute_CM(self, alpha, d_bar):
+
+        if self.discrete_dynamics:
+            raise NotImplementedError('Contraction metric search not implemented for discrete dynamics.')
+        
         grid_search = True
         N_grid = 10
         x_dot_search_range  = np.array([-1, 1])
@@ -156,60 +158,40 @@ class LQR_C(LQR):
         Returns:
             action (ndarray): The action chosen by the controller.
         '''
-        # print('self.model.quad_mass:', self.model.quad_mass)
-        # print('self.model.quad_Iyy:', self.model.quad_Iyy)
-        # print('self.model:', self.model.__dir__())
-        # print(self.env_func().__dir__())
-        # exit()
-        # step = self.extract_step(info)
-        # self.goal_state = self.env.X_GOAL[self.traj_step]
         self.goal_state = self.get_references()
-
         if self.env.TASK == Task.STABILIZATION:
-            # return -self.gain @ (obs - self.env.X_GOAL) + self.model.U_EQ
             raise NotImplementedError('LQR_C not implemented for stabilization task.')
         elif self.env.TASK == Task.TRAJ_TRACKING:
             self.traj_step += 1
             # get the liearzation points
-            # x_0 = self.env.X_GOAL[step]
-            # x_0 = self.env.X_GOAL[self.traj_step]
             if self.optimal_reference_path is None:
-                x_0 = self.goal_state[:, 0]
-                # print('x_0:', x_0)
+                # x_0 = self.goal_state[:, 0]
+                x_0 = self.model.X_EQ
                 u_0 = self.model.U_EQ
             else:
                 x_0 = self.goal_state[:self.model.nx, 0]
                 u_0 = self.goal_state[self.model.nx:, 0]
-            # print('x_0:', x_0)
-            # print('u_0:', u_0)
             
             df = self.model.df_func(x_0, u_0)
             A, B = df[0].toarray(), df[1].toarray()
-            # print('A:\n', A)
-            # print('B:\n', B)
             if self.discrete_dynamics:
-                # Use the linearize continuous-time dynamics
-                P = scipy.linalg.solve_continuous_are(A, B, self.Q, self.R)
-                gain = np.dot(np.linalg.inv(self.R), np.dot(B.T, P))
-            else:
                 # Use the linearize discrete-time dynamics
                 A, B = discretize_linear_system(A, B, self.dt)
                 P = scipy.linalg.solve_discrete_are(A, B, self.Q, self.R)
                 btp = np.dot(B.T, P)
                 gain = np.dot(np.linalg.inv(self.R + np.dot(btp, B)),
                               np.dot(btp, A))
-            # control = -gain @ (obs - x_0) + u_0
-            # action = -gain @ (obs - self.env.X_GOAL[step]) + self.model.U_EQ
-            action = -gain @ (obs - x_0) + u_0
+            else:
+                 # Use the linearize continuous-time dynamics
+                P = scipy.linalg.solve_continuous_are(A, B, self.Q, self.R)
+                gain = np.dot(np.linalg.inv(self.R), np.dot(B.T, P))
 
-        # print('self.traj_step:', self.traj_step)
+        action = -gain @ (obs - self.env.X_GOAL[self.traj_step]) + u_0
+        # munually set the action bound for the quadrotor
         action_bound_high = [ 0.4767, 0.4]
         action_bound_low = [ 0.079, -0.4]
         action = np.clip(action, action_bound_low, action_bound_high)
-        # print('action:', action)
         return action
-        pass
-            # return -self.gain @ (obs - self.env.X_GOAL[step]) + self.model.U_EQ
     
     def get_references(self):
         '''Constructs reference states along mpc horizon.(nx, T+1).'''
@@ -221,13 +203,10 @@ class LQR_C(LQR):
             start = min(self.traj_step, self.traj.shape[-1])
             end = min(self.traj_step + self.T + 1, self.traj.shape[-1])
             remain = max(0, self.T + 1 - (end - start))
-            # end = start + 1
-            # remain = max(0, 1 - (end - start))
             goal_states = np.concatenate([
                 self.traj[:, start:end],
                 np.tile(self.traj[:, -1:], (1, remain))
             ], -1)
-            # goal_states = self.traj[:, start:end]
         else:
             raise Exception('Reference for this mode is not implemented.')
         return goal_states  # (nx, T+1).
@@ -281,9 +260,6 @@ class LQR_C(LQR):
         if not env.initial_reset:
             env.set_cost_function_param(self.Q, self.R)
         obs, info = env.reset()
-        # obs = env.reset()
-        # print('Init State:')
-        # print(obs)
         ep_returns, ep_lengths = [], []
         frames = []
         self.setup_results_dict()
@@ -297,8 +273,7 @@ class LQR_C(LQR):
                 MAX_STEPS = max_steps
         elif env.TASK == Task.TRAJ_TRACKING:
             if max_steps is None:
-                MAX_STEPS = self.traj.shape[1] - 1 #TODO: why I have to subtract 1?
-                # print('MAX_STEPS:', MAX_STEPS)
+                MAX_STEPS = self.traj.shape[1] - 1 #TODO: why have to subtract 1?
             else:
                 MAX_STEPS = max_steps
         else:
@@ -309,7 +284,7 @@ class LQR_C(LQR):
         while not (done and terminate_run_on_done) and i < MAX_STEPS and not (self.terminate_loop):
             action = self.select_action(obs)
             if self.terminate_loop:
-                print('Infeasible MPC Problem')
+                print('Infeasible Problem')
                 break
             # Repeat input for more efficient control.
             obs, reward, done, info = env.step(action)
@@ -320,12 +295,8 @@ class LQR_C(LQR):
             self.results_dict['action'].append(action)
             self.results_dict['state'].append(env.state)
             self.results_dict['state_mse'].append(info['mse'])
-            # self.results_dict['state_error'].append(env.state - env.X_GOAL[i,:])
 
             common_metric += info['mse']
-            # print(i, '-th step.')
-            # print('action:', action)
-            # print('obs', obs)
             if render:
                 env.render()
                 frames.append(env.render('rgb_array'))
