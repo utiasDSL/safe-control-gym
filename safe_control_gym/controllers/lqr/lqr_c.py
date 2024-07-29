@@ -9,6 +9,7 @@ from safe_control_gym.controllers.lqr.lqr_utils import (compute_lqr_gain, discre
 from safe_control_gym.controllers.mpc.mpc_utils import compute_state_rmse
 from safe_control_gym.controllers.lqr.lqr import LQR
 from safe_control_gym.envs.benchmark_env import Task
+from safe_control_gym.envs.gym_pybullet_drones.quadrotor_utils import QuadType
 
 from copy import deepcopy
 
@@ -162,7 +163,6 @@ class LQR_C(LQR):
         if self.env.TASK == Task.STABILIZATION:
             raise NotImplementedError('LQR_C not implemented for stabilization task.')
         elif self.env.TASK == Task.TRAJ_TRACKING:
-            self.traj_step += 1
             # get the liearzation points
             if self.optimal_reference_path is None:
                 # x_0 = self.goal_state[:, 0]
@@ -186,11 +186,14 @@ class LQR_C(LQR):
                 P = scipy.linalg.solve_continuous_are(A, B, self.Q, self.R)
                 gain = np.dot(np.linalg.inv(self.R), np.dot(B.T, P))
 
-        action = -gain @ (obs - self.env.X_GOAL[self.traj_step]) + u_0
+            action = -gain @ (obs - self.env.X_GOAL[self.traj_step]) + u_0
+            self.traj_step += 1
+            
         # munually set the action bound for the quadrotor
-        action_bound_high = [ 0.4767, 0.4]
-        action_bound_low = [ 0.079, -0.4]
-        action = np.clip(action, action_bound_low, action_bound_high)
+        if self.env.QUAD_TYPE == QuadType.TWO_D_ATTITUDE or self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE_5S:
+            action_bound_high = [ 0.4767, 0.4]
+            action_bound_low = [ 0.079, -0.4]
+            action = np.clip(action, action_bound_low, action_bound_high)
         return action
     
     def get_references(self):
