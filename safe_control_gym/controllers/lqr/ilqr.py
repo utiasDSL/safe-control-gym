@@ -39,7 +39,11 @@ class iLQR(BaseController):
             max_iterations (int): The number of iterations to train iLQR.
             lamb_factor (float): The amount for which to increase lambda when training fails.
             lamb_max (float): The maximum lambda allowed.
-            epsilon (float): The convergence tolerance.
+            epsilon (float): The convergence tolerance of the cost function.
+        
+        Note: This implementaion has a Hessian regularization term self.lamb 
+        to make sure H is well-conditioned for inversion. It is related to 
+        lamb_factor and lamb_max. See [1] for more details.
         '''
 
         super().__init__(env_func, **kwargs)
@@ -98,9 +102,12 @@ class iLQR(BaseController):
         # Initialize previous cost
         self.previous_total_cost = -float('inf')
 
+        # determin the maximum number of steps
+        max_steps = int(self.env.CTRL_FREQ * self.env.EPISODE_LEN_SEC)\
+        
         # Loop through iLQR iterations
         while self.ite_counter < self.max_iterations:
-            self.run(env=env, training=True)
+            self.run(env=env, max_steps=max_steps, training=True)
 
             # Save data and update policy if iteration is finished.
             self.state_stack = np.vstack((self.state_stack, self.final_obs))
