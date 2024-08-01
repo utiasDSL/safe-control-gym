@@ -20,7 +20,7 @@ import pybullet_data
 import casadi as cs
 
 from safe_control_gym.envs.benchmark_env import BenchmarkEnv
-from safe_control_gym.math_and_models.transformations import csRotXYZ
+from safe_control_gym.math_and_models.transformations import csRotXYZ, get_angularvelocity_rpy
 
 egl = pkgutil.get_loader('eglRenderer')
 
@@ -41,7 +41,8 @@ class Physics(str, Enum):
     PYB_DW = 'pyb_dw'  # PyBullet physics update with downwash.
     PYB_GND_DRAG_DW = 'pyb_gnd_drag_dw'  # PyBullet physics update with ground effect, drag, and downwash.
     RK4 = 'rk4'  # Update with a Runge-Kutta 4th order integrator.
-    DYN_2D = 'dyn_2d'  # Update with SysId 5 state dynamics model
+    DYN_2D = 'dyn_2d'  # Update with Physics 5 state dynamics model
+    DYN_SI = 'dyn_si'  # Update with SysId 6 state dynamics model
 
 
 class ImageType(int, Enum):
@@ -188,6 +189,8 @@ class BaseAviary(BenchmarkEnv):
             self.setup_rk4_dynamics_expression()
         elif physics == Physics.DYN_2D:
             self.setup_dynamics_2d_expression()
+        elif physics == Physics.DYN_SI:
+            self.setup_dynamics_si_expression()
 
     def close(self):
         '''Terminates the environment.'''
@@ -220,8 +223,11 @@ class BaseAviary(BenchmarkEnv):
         self.rpy = np.zeros((self.NUM_DRONES, 3))
         self.vel = np.zeros((self.NUM_DRONES, 3))
         self.ang_v = np.zeros((self.NUM_DRONES, 3))
-        if self.PHYSICS == Physics.DYN or self.PHYSICS == Physics.RK4 or self.PHYSICS == Physics.DYN_2D:
-            self.rpy_rates = np.zeros((self.NUM_DRONES, 3))
+        self.rpy_rates = np.zeros((self.NUM_DRONES, 3))
+        # if (self.PHYSICS == Physics.DYN or self.PHYSICS == Physics.RK4
+        #         or self.PHYSICS == Physics.DYN_2D or self.PHYSICS == Physics.DYN_SI):
+        #     self.rpy_rates = np.zeros((self.NUM_DRONES, 3))
+
         # Set PyBullet's parameters.
         p.resetSimulation(physicsClientId=self.PYB_CLIENT)
         p.setGravity(0, 0, -self.GRAVITY_ACC, physicsClientId=self.PYB_CLIENT)
@@ -271,7 +277,7 @@ class BaseAviary(BenchmarkEnv):
             # Between aggregate steps for certain types of update.
             if self.PYB_STEPS_PER_CTRL > 1 and self.PHYSICS in [
                 Physics.DYN, Physics.PYB_GND, Physics.PYB_DRAG,
-                Physics.PYB_DW, Physics.PYB_GND_DRAG_DW, Physics.RK4, Physics.DYN_2D
+                Physics.PYB_DW, Physics.PYB_GND_DRAG_DW, Physics.RK4 #, Physics.DYN_2D
             ]:
                 self._update_and_store_kinematic_information()
             # Step the simulation using the desired physics update.
@@ -283,6 +289,8 @@ class BaseAviary(BenchmarkEnv):
                     self._dynamics(clipped_action[i, :], i)
                 elif self.PHYSICS == Physics.DYN_2D:
                     self._dynamics_2d(rpm, i)
+                elif self.PHYSICS == Physics.DYN_SI:
+                    self._dynamics_si(clipped_action[i, :], i)
                 elif self.PHYSICS == Physics.RK4:
                     self._dynamics_rk4(clipped_action[i, :], i)
                 elif self.PHYSICS == Physics.PYB_GND:
@@ -314,6 +322,8 @@ class BaseAviary(BenchmarkEnv):
                 p.stepSimulation(physicsClientId=self.PYB_CLIENT)
             # Save the last applied action (e.g. to compute drag).
             self.last_clipped_action = clipped_action
+        if self.PHYSICS == Physics.DYN_2D or self.PHYSICS == Physics.DYN_SI:
+            self._set_pybullet_information()
         # Update and store the drones kinematic information.
         self._update_and_store_kinematic_information()
 
@@ -355,6 +365,20 @@ class BaseAviary(BenchmarkEnv):
                     '——— angular velocity {:+06.4f}, {:+06.4f}, {:+06.4f} ——— '.
                     format(self.ang_v[i, 0], self.ang_v[i, 1], self.ang_v[i,
                                                                           2]))
+
+    def _set_pybullet_information(self):
+        """Set pybullet state information from external simulation"""
+        for i in range(self.NUM_DRONES):
+            # Set PyBullet's state.
+            p.resetBasePositionAndOrientation(self.DRONE_IDS[i],
+                                              self.pos[i, :],
+                                              p.getQuaternionFromEuler(self.rpy[i, :]),
+                                              physicsClientId=self.PYB_CLIENT)
+            # Note: the base's velocity only stored and not used #
+            p.resetBaseVelocity(self.DRONE_IDS[i],
+                                self.vel[i, :],
+                                self.ang_v[i, :],  # ang_vel not computed by DYN
+                                physicsClientId=self.PYB_CLIENT)
 
     def _update_and_store_kinematic_information(self):
         '''Updates and stores the drones kinematic information.
@@ -401,7 +425,7 @@ class BaseAviary(BenchmarkEnv):
         state = np.hstack([
             self.pos[nth_drone, :], self.quat[nth_drone, :],
             self.rpy[nth_drone, :], self.vel[nth_drone, :],
-            self.ang_v[nth_drone, :], self.last_clipped_action[nth_drone, :]
+            self.ang_v[nth_drone, :], self.rpy_rates[nth_drone, :], self.last_clipped_action[nth_drone, :]
         ])
         # state.reshape(20, )
         return state.copy()
@@ -664,8 +688,7 @@ class BaseAviary(BenchmarkEnv):
 
     def _dynamics_2d(self, rpm, nth_drone):
         '''Explicit dynamics implementation.
-
-        Based on the identified model.
+        Based on the physics model.
 
         Args:
             rpm (ndarray): (4)-shaped array of ints containing the RPMs values of the 4 motors.
@@ -679,6 +702,7 @@ class BaseAviary(BenchmarkEnv):
         ang_v = self.ang_v[nth_drone, :]
         rpy_rates = self.rpy_rates[nth_drone, :]
         # rotation = np.array(p.getMatrixFromQuaternion(quat)).reshape(3, 3)
+
         # Compute forces and torques.
         forces = np.array(rpm ** 2) * self.KF
         # Update state with discrete time dynamics.
@@ -691,22 +715,27 @@ class BaseAviary(BenchmarkEnv):
         X_dot = self.X_dot_fun(state, action).full()[:, 0]
         next_state = state + X_dot*self.PYB_TIMESTEP
 
+        # Updated information
         pos = np.array([next_state[0], 0, next_state[4]])
         rpy = np.array([0, next_state[7], 0])
         vel = np.array([next_state[1], 0, next_state[5]])
         ang_v = np.array([0, next_state[10], 0])
         ang_v = np.squeeze(ang_v)
 
-        # Set PyBullet's state.
-        p.resetBasePositionAndOrientation(self.DRONE_IDS[nth_drone],
-                                          pos,
-                                          p.getQuaternionFromEuler(rpy),
-                                          physicsClientId=self.PYB_CLIENT)
-        # Note: the base's velocity only stored and not used #
-        p.resetBaseVelocity(self.DRONE_IDS[nth_drone],
-                            vel,
-                            ang_v,  # ang_vel not computed by DYN
-                            physicsClientId=self.PYB_CLIENT)
+        # # Set PyBullet's state.
+        # p.resetBasePositionAndOrientation(self.DRONE_IDS[nth_drone],
+        #                                   pos,
+        #                                   p.getQuaternionFromEuler(rpy),
+        #                                   physicsClientId=self.PYB_CLIENT)
+        # # Note: the base's velocity only stored and not used #
+        # p.resetBaseVelocity(self.DRONE_IDS[nth_drone],
+        #                     vel,
+        #                     ang_v,  # ang_vel not computed by DYN
+        #                     physicsClientId=self.PYB_CLIENT)
+        self.pos[nth_drone, :] = pos.copy()
+        self.rpy[nth_drone, :] = rpy.copy()
+        self.vel[nth_drone, :] = vel.copy()
+        self.ang_v[nth_drone, :] = ang_v.copy()
         # Store the roll, pitch, yaw rates for the next step #
         self.rpy_rates[nth_drone, :] = X_dot[6:9]
 
@@ -756,6 +785,67 @@ class BaseAviary(BenchmarkEnv):
                                [0, cs.sin(phi) / cs.cos(theta), cs.cos(phi) / cs.cos(theta)]]) @
                    cs.vertcat(p_body, q_body, r_body))
         X_dot = cs.vertcat(pos_dot[0], pos_ddot[0], pos_dot[1], pos_ddot[1], pos_dot[2], pos_ddot[2], ang_dot, rate_dot)
+        self.X_dot_fun = cs.Function("X_dot", [X, U], [X_dot])
+
+    def _dynamics_si(self, action, nth_drone):
+        '''Explicit dynamics implementation from the identified model.
+
+        Args:
+            action (ndarray): (2)-shaped array of ints containing the desired collective thrust and pitch.
+            nth_drone (int): The ordinal number/position of the desired drone in list self.DRONE_IDS.
+        '''
+        # Current state.
+        pos = self.pos[nth_drone, :]
+        # quat = self.quat[nth_drone, :]
+        rpy = self.rpy[nth_drone, :]
+        vel = self.vel[nth_drone, :]
+        ang_v = self.ang_v[nth_drone, :]
+        rpy_rates = self.rpy_rates[nth_drone, :]
+
+        # Compute forces and torques.
+        # Update state with discrete time dynamics.
+        state = np.hstack([pos[0], vel[0], pos[2], vel[2], rpy[1], rpy_rates[1]])
+
+        # update state with RK4
+        # next_state = self.fd_func(x0=state, p=input)['xf'].full()[:, 0]
+        X_dot = self.X_dot_fun(state, action).full()[:, 0]
+        next_state = state + X_dot*self.PYB_TIMESTEP
+
+        # Updated information
+        pos = np.array([next_state[0], 0, next_state[2]])
+        rpy = np.array([0, next_state[4], 0])
+        vel = np.array([next_state[1], 0, next_state[3]])
+        rpy_rates = np.array([0, next_state[5], 0])
+
+        self.pos[nth_drone, :] = pos.copy()
+        self.rpy[nth_drone, :] = rpy.copy()
+        self.vel[nth_drone, :] = vel.copy()
+        self.rpy_rates[nth_drone, :] = rpy_rates.copy()
+        self.ang_v[nth_drone, :] = get_angularvelocity_rpy(self.rpy[nth_drone, :], self.rpy_rates[nth_drone, :])
+
+    def setup_dynamics_si_expression(self):
+        # Casadi states
+        z = cs.MX.sym('z')
+        x = cs.MX.sym('x')
+        z_dot = cs.MX.sym('z_dot')
+        x_dot = cs.MX.sym('x_dot')
+        theta = cs.MX.sym('theta')  # Pitch
+        theta_dot = cs.MX.sym('theta_dot')  # Pitch
+        X = cs.vertcat(x, x_dot, z, z_dot, theta, theta_dot)
+        g = self.GRAVITY_ACC
+
+        # Define inputs.
+        Thrust = cs.MX.sym('T')
+        Pitch = cs.MX.sym('P')
+        U = cs.vertcat(Thrust, Pitch)
+        X_dot = cs.vertcat(x_dot,
+                           (18.112984649321753 * Thrust + 3.7613154938448576) * cs.sin(theta),
+                           z_dot,
+                           (18.112984649321753 * Thrust + 3.7613154938448576) * cs.cos(theta) - g,
+                           theta_dot,
+                           # 60 * (60 * (P - theta) - theta_dot)
+                           -143.9 * theta - 13.02 * theta_dot + 122.5 * Pitch
+                           )
         self.X_dot_fun = cs.Function("X_dot", [X, U], [X_dot])
 
     def _show_drone_local_axes(self, nth_drone):
