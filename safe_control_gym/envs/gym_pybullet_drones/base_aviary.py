@@ -835,17 +835,15 @@ class BaseAviary(BenchmarkEnv):
         g = self.GRAVITY_ACC
 
         # Define inputs.
-        Thrust = cs.MX.sym('T')
-        Pitch = cs.MX.sym('P')
-        U = cs.vertcat(Thrust, Pitch)
+        T = cs.MX.sym('T') # normlized thrust [N]
+        P = cs.MX.sym('P')  # desired pitch angle [rad]
+        U = cs.vertcat(T, P)
         X_dot = cs.vertcat(x_dot,
-                           (18.112984649321753 * Thrust + 3.7613154938448576) * cs.sin(theta),
-                           z_dot,
-                           (18.112984649321753 * Thrust + 3.7613154938448576) * cs.cos(theta) - g,
-                           theta_dot,
-                           # 60 * (60 * (P - theta) - theta_dot)
-                           -143.9 * theta - 13.02 * theta_dot + 122.5 * Pitch
-                           )
+                            (18.112984649321753 * T+ 3.6800) * cs.sin(theta) + -0.008,
+                            z_dot,
+                            (18.112984649321753 * T + 3.6800) * cs.cos(theta) - g,
+                            theta_dot,
+                            -140.8 * theta - 13.4 * theta_dot + 124.8 * P)
         self.X_dot_fun = cs.Function("X_dot", [X, U], [X_dot])
 
     def _show_drone_local_axes(self, nth_drone):
