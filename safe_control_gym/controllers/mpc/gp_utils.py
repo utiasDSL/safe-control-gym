@@ -219,12 +219,12 @@ class GaussianProcessCollection:
         self.target_mask = target_mask
         self.parallel = parallel
         if parallel:
-            self.gps = GaussianProcesses(model_type,
-                                         likelihood,
-                                         input_mask=input_mask,
-                                         target_mask=target_mask,
-                                         normalize=normalize,
-                                         kernel=kernel)
+            self.gps = BatchGPModel(model_type,
+                                    likelihood,
+                                    input_mask=input_mask,
+                                    target_mask=target_mask,
+                                    normalize=normalize,
+                                    kernel=kernel)
         else:
             for _ in range(target_dim):
                 self.gp_list.append(GaussianProcess(model_type,
@@ -568,7 +568,7 @@ class GaussianProcessCollection:
         return torch.stack(non_lazy_tensors)
 
 
-class GaussianProcesses:
+class BatchGPModel:
     '''Gaussian Processes decorator for batch GP in gpytorch.
 
     '''
