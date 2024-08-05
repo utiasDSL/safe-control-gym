@@ -12,13 +12,14 @@ from matplotlib.ticker import FormatStrFormatter
 
 from safe_control_gym.envs.benchmark_env import Task
 from safe_control_gym.experiments.base_experiment import BaseExperiment
+from safe_control_gym.experiments.epoch_experiments import EpochExperiment
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
-from safe_control_gym.utils.utils import mkdirs
+from safe_control_gym.utils.utils import mkdirs, set_dir_from_config
 
 script_path = os.path.dirname(os.path.realpath(__file__))
 
-def run(gui=True, n_episodes=1, n_steps=None, save_data=False):
+def run(gui=True, n_episodes=1, n_steps=None, save_data=True):
     '''The main function running experiments for model-based methods.
 
     Args:
@@ -29,10 +30,12 @@ def run(gui=True, n_episodes=1, n_steps=None, save_data=False):
     '''
     # ALGO = 'ilqr'
     # ALGO = 'gp_mpc'
-    # ALGO = 'gpmpc_acados'
+    ALGO = 'gpmpc_acados'
     # ALGO = 'mpc'
-    ALGO = 'mpc_acados'
+    # ALGO = 'mpc_acados'
+    # ALGO = 'linear_mpc'
     # ALGO = 'lqr'
+    # ALGO = 'lqr_c'
     # ALGO = 'pid'
     SYS = 'quadrotor_2D_attitude'
     TASK = 'tracking'
@@ -57,7 +60,7 @@ def run(gui=True, n_episodes=1, n_steps=None, save_data=False):
                             ]
     else:
         MPSC_COST='one_step_cost'
-        assert ALGO != 'gp_mpc', 'Safety filter only supported for gp_mpc'
+        assert ALGO != 'gp_mpc', 'Safety filter not supported for gp_mpc'
         assert os.path.exists(f'./config_overrides/{SAFETY_FILTER}_{SYS}_{TASK}_{PRIOR}.yaml'), f'./config_overrides/{SAFETY_FILTER}_{SYS}_{TASK}_{PRIOR}.yaml does not exist'
         sys.argv[1:] = ['--algo', ALGO,
                         '--task', agent,
@@ -74,8 +77,11 @@ def run(gui=True, n_episodes=1, n_steps=None, save_data=False):
     fac = ConfigFactory()
     fac.add_argument('--func', type=str, default='train', help='main function to run.')
     fac.add_argument('--n_episodes', type=int, default=1, help='number of episodes to run.')
-    # merge config
+    # merge config and create output directory
     config = fac.merge()
+    set_dir_from_config(config)
+    config.algo_config.output_dir = config.output_dir
+    mkdirs(config.output_dir)
 
     # Create an environment
     env_func = partial(make,
@@ -112,9 +118,18 @@ def run(gui=True, n_episodes=1, n_steps=None, save_data=False):
         static_train_env = env_func(gui=False, randomized_init=False, init_state=init_state)
 
         # Create experiment, train, and run evaluation
-        if SAFETY_FILTER is None:
-            experiment = BaseExperiment(env=static_env, ctrl=ctrl, train_env=static_train_env)
-            experiment.launch_training()
+        if SAFETY_FILTER is None:  
+            if ALGO in ['gpmpc_acados', 'gp_mpc'] :
+                experiment = EpochExperiment(env=static_env, ctrl=ctrl, train_env=static_train_env)
+                if config.algo_config.num_epochs == 1:
+                    print('Evaluating prior controller')
+                elif config.algo_config.gp_model_path is not None:
+                    ctrl.load(config.algo_config.gp_model_path)
+                else:
+                    experiment.launch_training()
+            else:   
+                experiment = BaseExperiment(env=static_env, ctrl=ctrl, train_env=static_train_env)
+                experiment.launch_training()
         else:
             safety_filter.learn(env=static_train_env)
             mkdirs(f'{script_path}/models/')
@@ -127,8 +142,8 @@ def run(gui=True, n_episodes=1, n_steps=None, save_data=False):
         else:
             trajs_data, _ = experiment.run_evaluation(training=True, n_steps=n_steps)
 
-        if gui:
-            post_analysis(trajs_data['obs'][0], trajs_data['action'][0], ctrl.env)
+        plot_quad_eval(trajs_data['obs'][0], trajs_data['action'][0], ctrl.env, config.output_dir)
+
 
         # Close environments
         static_env.close()
@@ -143,28 +158,15 @@ def run(gui=True, n_episodes=1, n_steps=None, save_data=False):
     metrics = experiment.compute_metrics(all_trajs)
     all_trajs = dict(all_trajs)
 
-    # # calculate the cost of the trajectory
-    # Q = np.diag(config.algo_config.q_lqr)
-    # R = np.diag(config.algo_config.r_lqr)
-    # cost = 0
-    # for i in range(len(all_trajs['obs'][0])-1):
-    #     obs = all_trajs['obs'][0][i]
-    #     action = all_trajs['action'][0][i]
-    #     cost += obs.T @ Q @ obs + action.T @ R @ action
-    # cost += all_trajs['obs'][0][-1].T @ Q @ all_trajs['obs'][0][-1]
-    # print(f'Total cost of the trajectory: {cost}')
-
     if save_data:
         results = {'trajs_data': all_trajs, 'metrics': metrics}
-        path_dir = os.path.dirname('./temp-data/')
-        os.makedirs(path_dir, exist_ok=True)
-        with open(f'./temp-data/{config.algo}_data_{config.task}_{config.task_config.task}.pkl', 'wb') as file:
+        with open(f'./{config.output_dir}/{config.algo}_data_{config.task}_{config.task_config.task}.pkl', 'wb') as file:
             pickle.dump(results, file)
 
     print('FINAL METRICS - ' + ', '.join([f'{key}: {value}' for key, value in metrics.items()]))
 
 
-def post_analysis(state_stack, input_stack, env):
+def plot_quad_eval(state_stack, input_stack, env, save_path=None):
     '''Plots the input and states to determine iLQR's success.
 
     Args:
@@ -194,6 +196,9 @@ def post_analysis(state_stack, input_stack, env):
     axs[-1].legend(ncol=3, bbox_transform=fig.transFigure, bbox_to_anchor=(1, 0), loc='lower right')
     axs[-1].set(xlabel='time (sec)')
 
+    if save_path is not None:
+        plt.savefig(os.path.join(save_path, 'state_trajectories.png'))
+
     # Plot inputs
     _, axs = plt.subplots(model.nu)
     if model.nu == 1:
@@ -206,7 +211,22 @@ def post_analysis(state_stack, input_stack, env):
     axs[0].set_title('Input Trajectories')
     axs[-1].set(xlabel='time (sec)')
 
-    plt.show()
+    if save_path is not None:
+        plt.savefig(os.path.join(save_path, 'input_trajectories.png'))
+
+    # plot the figure-eight
+    _, axs = plt.subplots(1)
+    axs.plot(np.array(state_stack).transpose()[0, 0:plot_length], 
+             np.array(state_stack).transpose()[2, 0:plot_length], label='actual')
+    axs.plot(reference.transpose()[0, 0:plot_length], 
+             reference.transpose()[2, 0:plot_length], color='r', label='desired')
+    axs.set_xlabel('x [m]')
+    axs.set_ylabel('z [m]')
+    axs.set_title('State path in x-z plane')
+    
+    if save_path is not None:
+        plt.savefig(os.path.join(save_path, 'state_path.png'))
+        print(f'Plots saved to {save_path}')
 
 
 def wrap2pi_vec(angle_vec):
