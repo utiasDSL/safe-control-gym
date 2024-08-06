@@ -60,7 +60,7 @@ def plot_runtime(runtime, num_points_per_epoch, dir):
     np.savetxt( fname,
                 data,
                 delimiter=',',
-                header='Train Steps (s),Mean,Std,Max')
+                header='Train Steps, Mean, Std, Max')
 
 def plot_runs(all_runs, num_epochs, episode=0, ind=0, ylabel='x position', dir=None, traj = None):
     # plot the reference trajectory
@@ -247,7 +247,25 @@ def get_quad_average_rmse_error_xz_only(runs, ref):
     mean_cost = np.mean(costs, axis=1)
     return mean_cost
 
-def make_plots(test_runs, train_runs, num_inds, dir):
+def plot_xz_trajectory(runs, ref, dir):
+    num_epochs = len(runs)
+    plt.figure()
+    plt.plot(ref[:, 0], ref[:, 2], label='Reference', color='gray', linestyle='--')
+    plt.plot(runs[0][0]['obs'][:, 0], runs[0][0]['obs'][:, 2], label='Linear MPC')
+    for epoch in range(1, num_epochs):
+        plt.plot(runs[epoch][0]['obs'][:, 0], runs[epoch][0]['obs'][:, 2], label='GP-MPC %s' % epoch)
+    plt.title('X-Z plane path')
+    plt.xlabel('X [m]')
+    plt.ylabel('Z [m]')
+    plt.legend()
+    save_str = os.path.join(dir, 'xz_path.png')
+    plt.savefig(save_str)
+    plt.cla()
+    plt.clf()
+
+def make_plots(test_runs, train_runs, dir):
+    nx = test_runs[0][0]['state'].shape[1]
+    nu = test_runs[0][0]['action'].shape[1]
     num_epochs = len(test_runs)
     num_episodes = len(test_runs[0])
     fig_dir = os.path.join(dir,'figs')
@@ -256,9 +274,12 @@ def make_plots(test_runs, train_runs, num_inds, dir):
     # Make plot of all trajectories.
     num_points_per_epoch = []
     for episode_i in range(num_episodes):
-        for ind in range(num_inds):
+        for ind in range(nx):
             ylabel = 'x%s' % ind
             plot_runs(test_runs, num_epochs, episode=episode_i, ind=ind, ylabel=ylabel, dir=fig_dir)
+        for ind in range(nu):
+            ylabel = 'u%s' % ind
+            plot_runs_input(test_runs, num_epochs, episode=episode_i, ind=ind, ylabel=ylabel, dir=fig_dir)
 
     # Compute the number of training points (x-axis for most figures).
     num_points = 0
@@ -268,7 +289,6 @@ def make_plots(test_runs, train_runs, num_inds, dir):
         for episode in range(num_train_episodes):
             num_points += train_runs[epoch][episode]['obs'].shape[0]
         num_points_per_epoch.append(num_points)
-
 
     # Plot violation data
     # TODO: check why this breaks the evaluation
@@ -292,6 +312,7 @@ def make_quad_plots(test_runs, train_runs, trajectory, dir):
     mkdirs(fig_dir)
     num_points_per_epoch = []
     for episode_i in range(num_episodes):
+        plot_xz_trajectory(test_runs, trajectory, fig_dir)
         for ind in range(nx):
             ylabel = 'x%s' % ind
             plot_runs(test_runs, num_epochs, episode=episode_i, ind=ind, ylabel=ylabel, dir=fig_dir, traj=trajectory)

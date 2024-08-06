@@ -39,7 +39,6 @@ class EpochExperiment(BaseExperiment):
             elif isinstance(self.env.env, CartPole):
                 make_plots(test_runs=test_runs, 
                            train_runs=train_runs, 
-                           trajectory=None,
                             dir=self.ctrl.output_dir)
         print('Training done.')
 

@@ -1,4 +1,3 @@
-'''A LQR and iLQR example.'''
 
 import os
 import sys
@@ -16,10 +15,12 @@ from safe_control_gym.experiments.epoch_experiments import EpochExperiment
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.utils import mkdirs, set_dir_from_config
+from safe_control_gym.envs.gym_pybullet_drones.quadrotor import Quadrotor
+from safe_control_gym.utils.gpmpc_plotting import make_quad_plots
 
 script_path = os.path.dirname(os.path.realpath(__file__))
 
-def run(gui=True, n_episodes=1, n_steps=None, save_data=True):
+def run(gui=False, n_episodes=1, n_steps=None, save_data=True):
     '''The main function running experiments for model-based methods.
 
     Args:
@@ -30,8 +31,8 @@ def run(gui=True, n_episodes=1, n_steps=None, save_data=True):
     '''
     # ALGO = 'ilqr'
     # ALGO = 'gp_mpc'
-    ALGO = 'gpmpc_acados'
-    # ALGO = 'mpc'
+    # ALGO = 'gpmpc_acados'
+    ALGO = 'mpc'
     # ALGO = 'mpc_acados'
     # ALGO = 'linear_mpc'
     # ALGO = 'lqr'
@@ -120,13 +121,16 @@ def run(gui=True, n_episodes=1, n_steps=None, save_data=True):
         # Create experiment, train, and run evaluation
         if SAFETY_FILTER is None:  
             if ALGO in ['gpmpc_acados', 'gp_mpc'] :
-                experiment = EpochExperiment(env=static_env, ctrl=ctrl, train_env=static_train_env)
+                experiment = BaseExperiment(env=static_env, ctrl=ctrl, train_env=static_train_env)
                 if config.algo_config.num_epochs == 1:
                     print('Evaluating prior controller')
                 elif config.algo_config.gp_model_path is not None:
                     ctrl.load(config.algo_config.gp_model_path)
                 else:
-                    experiment.launch_training()
+                    # manually launch training 
+                    # (NOTE: not using launch_training method since calling plotting before eval will break the eval)
+                    experiment.reset()
+                    train_runs, test_runs = ctrl.learn(env=static_train_env)
             else:   
                 experiment = BaseExperiment(env=static_env, ctrl=ctrl, train_env=static_train_env)
                 experiment.launch_training()
@@ -142,6 +146,16 @@ def run(gui=True, n_episodes=1, n_steps=None, save_data=True):
         else:
             trajs_data, _ = experiment.run_evaluation(training=True, n_steps=n_steps)
 
+        # plotting training and evaluation results
+        # training
+        if ALGO in ['gpmpc_acados', 'gp_mpc'] and \
+           config.algo_config.gp_model_path is None and \
+           config.algo_config.num_epochs > 1:
+                if isinstance(static_env, Quadrotor):
+                    make_quad_plots(test_runs=test_runs, 
+                                    train_runs=train_runs, 
+                                    trajectory=ctrl.traj.T,
+                                    dir=ctrl.output_dir)
         plot_quad_eval(trajs_data['obs'][0], trajs_data['action'][0], ctrl.env, config.output_dir)
 
 
@@ -223,6 +237,7 @@ def plot_quad_eval(state_stack, input_stack, env, save_path=None):
     axs.set_xlabel('x [m]')
     axs.set_ylabel('z [m]')
     axs.set_title('State path in x-z plane')
+    axs.legend()
     
     if save_path is not None:
         plt.savefig(os.path.join(save_path, 'state_path.png'))
