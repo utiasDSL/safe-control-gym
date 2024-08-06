@@ -88,8 +88,8 @@ class MPC(BaseController):
         self.init_solver = 'ipopt'
         # self.init_solver = 'qrsqp'
         # self.solver = 'sqpmethods'
-        # self.solver = 'ipopt'
-        self.solver = 'qrsqp'
+        self.solver = 'ipopt'
+        # self.solver = 'qrsqp'
         # logging
         # self.logger = ExperimentLogger(output_dir)
 
@@ -374,9 +374,6 @@ class MPC(BaseController):
                 self.terminate_loop = True
                 u_val = opti.debug.value(u_var)
                 x_val = opti.debug.value(x_var)
-        skip = 8
-        print('x_val: ', x_val[:,::skip])
-        print('u_val: ', u_val[::skip])
         self.x_prev = x_val
         self.u_prev = u_val
         self.results_dict['horizon_states'].append(deepcopy(self.x_prev))
@@ -494,13 +491,12 @@ class MPC(BaseController):
             self.results_dict['state'].append(env.state)
             self.results_dict['state_mse'].append(info['mse'])
             # self.results_dict['state_error'].append(env.state - env.X_GOAL[i,:])
-
             common_metric += info['mse']
             print(i, '-th step.')
-            print('action:', action)
-            print('obs', obs)
-            print('reward', reward)
-            print('done', done)
+            # print('action:', action)
+            # print('obs', obs)
+            # print('reward', reward)
+            # print('done', done)
             print(info)
             print()
             if render:

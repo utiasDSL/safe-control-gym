@@ -310,7 +310,11 @@ class GPMPC(MPC):
         if self.x_prev is not None and self.u_prev is not None:
             # cov_x = np.zeros((nx, nx))
             cov_x = np.diag([self.initial_rollout_std**2] * nx)
-            z_batch = np.hstack((self.x_prev[:, :-1].T, self.u_prev.T)) # (T, input_dim)
+            if nu == 1:
+                z_batch = np.hstack((self.x_prev[:, :-1].T, self.u_prev.reshape(1, -1).T))  # (T, input_dim)
+            else:
+                z_batch = np.hstack((self.x_prev[:, :-1].T, self.u_prev.T)) # (T, input_dim)
+            
             # Compute the covariance of the dynamics at each time step.
             _, cov_d_tensor_batch = self.gaussian_process.predict(z_batch, return_pred=False)
             cov_d_batch = cov_d_tensor_batch.detach().numpy()
@@ -320,7 +324,10 @@ class GPMPC(MPC):
                 cov_u = self.lqr_gain @ cov_x @ self.lqr_gain.T
                 input_covariances[i] = cov_u
                 cov_xu = cov_x @ self.lqr_gain.T
-                z = np.hstack((self.x_prev[:, i], self.u_prev[:, i]))
+                # if nu == 1:
+                #     z = np.hstack((self.x_prev[:, i], self.u_prev[i]))
+                # else:
+                #     z = np.hstack((self.x_prev[:, i], self.u_prev[:, i]))
                 if self.gp_approx == 'taylor':
                     raise NotImplementedError('Taylor GP approximation is currently not working.')
                 elif self.gp_approx == 'mean_eq':
@@ -965,6 +972,25 @@ class GPMPC(MPC):
                 train_runs[epoch].update({episode: munch.munchify(run_results)})
 
             lengthscale, outputscale, noise, kern = self.gaussian_process.get_hyperparameters(as_numpy=True)
+            # TODO: fix data logging
+            np.savez(os.path.join(self.output_dir, 'data_%s'% epoch),
+                    data_inputs=training_results['train_inputs'],
+                    data_targets=training_results['train_targets'],
+                    train_runs=train_runs,
+                    test_runs=test_runs,
+                    num_epochs=self.num_epochs,
+                    num_train_episodes_per_epoch=self.num_train_episodes_per_epoch,
+                    num_test_episodes_per_epoch=self.num_test_episodes_per_epoch,
+                    num_samples=self.num_samples,
+                    # trajectory=self.trajectory,
+                    # ctrl_freq=self.config.task_config.ctrl_freq,
+                    # lengthscales=lengthscale,
+                    # outputscale=outputscale,
+                    # noise=noise,
+                    # kern=kern,
+                    train_data=self.train_data,
+                    test_data=self.test_data,
+                    )
 
         if training_results:
             np.savez(os.path.join(self.output_dir, 'data'),
@@ -1051,6 +1077,7 @@ class GPMPC(MPC):
         self.results_dict['gp_mean_eq_pred'] = []
         self.results_dict['gp_pred'] = []
         self.results_dict['linear_pred'] = []
+        self.results_dict['runtime'] = []
         if self.sparse_gp:
             self.results_dict['inducing_points'] = []
 
