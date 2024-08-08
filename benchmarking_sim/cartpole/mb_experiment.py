@@ -86,6 +86,7 @@ def run(gui=False, n_episodes=1, n_steps=None, save_data=False):
     # Create an environment
     env_func = partial(make,
                        config.task,
+                       seed=config.seed,
                        **config.task_config
                        )
     random_env = env_func(gui=False)
@@ -93,6 +94,7 @@ def run(gui=False, n_episodes=1, n_steps=None, save_data=False):
     # Create controller.
     ctrl = make(config.algo,
                 env_func,
+                seed=config.seed,
                 **config.algo_config
                 )
     
@@ -100,9 +102,11 @@ def run(gui=False, n_episodes=1, n_steps=None, save_data=False):
     if SAFETY_FILTER is not None:
         env_func_filter = partial(make,
                                 config.task,
+                                seed=config.seed,
                                 **config.task_config)
         safety_filter = make(config.safety_filter,
                             env_func_filter,
+                            seed=config.seed,
                             **config.sf_config)
         safety_filter.reset()
 

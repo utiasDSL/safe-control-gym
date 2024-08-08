@@ -14,12 +14,13 @@ from safe_control_gym.experiments.base_experiment import BaseExperiment
 from safe_control_gym.experiments.epoch_experiments import EpochExperiment
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
-from safe_control_gym.utils.utils import mkdirs, set_dir_from_config
+from safe_control_gym.utils.utils import mkdirs, set_dir_from_config, timing
 from safe_control_gym.envs.gym_pybullet_drones.quadrotor import Quadrotor
 from safe_control_gym.utils.gpmpc_plotting import make_quad_plots
 
 script_path = os.path.dirname(os.path.realpath(__file__))
 
+@timing
 def run(gui=False, n_episodes=1, n_steps=None, save_data=True):
     '''The main function running experiments for model-based methods.
 
@@ -31,8 +32,8 @@ def run(gui=False, n_episodes=1, n_steps=None, save_data=True):
     '''
     # ALGO = 'ilqr'
     # ALGO = 'gp_mpc'
-    # ALGO = 'gpmpc_acados'
-    ALGO = 'mpc'
+    ALGO = 'gpmpc_acados'
+    # ALGO = 'mpc'
     # ALGO = 'mpc_acados'
     # ALGO = 'linear_mpc'
     # ALGO = 'lqr'
@@ -40,8 +41,8 @@ def run(gui=False, n_episodes=1, n_steps=None, save_data=True):
     # ALGO = 'pid'
     SYS = 'quadrotor_2D_attitude'
     TASK = 'tracking'
-    # PRIOR = '300'
-    PRIOR = '100'
+    PRIOR = '200'
+    # PRIOR = '100'
     agent = 'quadrotor' if SYS == 'quadrotor_2D' or SYS == 'quadrotor_2D_attitude' else SYS
     SAFETY_FILTER = None
     # SAFETY_FILTER='linear_mpsc'
@@ -80,6 +81,9 @@ def run(gui=False, n_episodes=1, n_steps=None, save_data=True):
     fac.add_argument('--n_episodes', type=int, default=1, help='number of episodes to run.')
     # merge config and create output directory
     config = fac.merge()
+    num_data_max = config.algo_config.num_epochs * config.algo_config.num_samples
+    config.output_dir = os.path.join(config.output_dir, PRIOR + '_' + repr(num_data_max))
+    print('output_dir',  config.algo_config.output_dir)
     set_dir_from_config(config)
     config.algo_config.output_dir = config.output_dir
     mkdirs(config.output_dir)
@@ -87,6 +91,7 @@ def run(gui=False, n_episodes=1, n_steps=None, save_data=True):
     # Create an environment
     env_func = partial(make,
                        config.task,
+                       seed=config.seed,
                        **config.task_config
                        )
     random_env = env_func(gui=False)
@@ -94,6 +99,7 @@ def run(gui=False, n_episodes=1, n_steps=None, save_data=True):
     # Create controller.
     ctrl = make(config.algo,
                 env_func,
+                seed=config.seed,
                 **config.algo_config
                 )
     
@@ -101,9 +107,11 @@ def run(gui=False, n_episodes=1, n_steps=None, save_data=True):
     if SAFETY_FILTER is not None:
         env_func_filter = partial(make,
                                 config.task,
+                                seed=config.seed,
                                 **config.task_config)
         safety_filter = make(config.safety_filter,
                             env_func_filter,
+                            seed=config.seed,
                             **config.sf_config)
         safety_filter.reset()
 

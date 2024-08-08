@@ -41,8 +41,8 @@ def run(gui=False, n_episodes=1, n_steps=None, save_data=True, seed=2):
     # ALGO = 'pid'
     SYS = 'quadrotor_2D_attitude'
     TASK = 'tracking'
-    # PRIOR = '300'
-    PRIOR = '100'
+    PRIOR = '200'
+    # PRIOR = '100'
     agent = 'quadrotor' if SYS == 'quadrotor_2D' or SYS == 'quadrotor_2D_attitude' else SYS
     SAFETY_FILTER = None
     # SAFETY_FILTER='linear_mpsc'
@@ -81,6 +81,9 @@ def run(gui=False, n_episodes=1, n_steps=None, save_data=True, seed=2):
     fac.add_argument('--n_episodes', type=int, default=1, help='number of episodes to run.')
     # merge config and create output directory
     config = fac.merge()
+    num_data_max = config.algo_config.num_epochs * config.algo_config.num_samples
+    config.output_dir = os.path.join(config.output_dir, PRIOR + '_' + repr(num_data_max))
+    print('output_dir',  config.algo_config.output_dir)
     set_dir_from_config(config)
     config.algo_config.output_dir = config.output_dir
     mkdirs(config.output_dir)
@@ -88,6 +91,7 @@ def run(gui=False, n_episodes=1, n_steps=None, save_data=True, seed=2):
     # Create an environment
     env_func = partial(make,
                        config.task,
+                       seed=config.seed,
                        **config.task_config
                        )
     random_env = env_func(gui=False)
@@ -95,6 +99,7 @@ def run(gui=False, n_episodes=1, n_steps=None, save_data=True, seed=2):
     # Create controller.
     ctrl = make(config.algo,
                 env_func,
+                seed=config.seed,
                 **config.algo_config
                 )
     
@@ -102,9 +107,11 @@ def run(gui=False, n_episodes=1, n_steps=None, save_data=True, seed=2):
     if SAFETY_FILTER is not None:
         env_func_filter = partial(make,
                                 config.task,
+                                seed=config.seed,
                                 **config.task_config)
         safety_filter = make(config.safety_filter,
                             env_func_filter,
+                            seed=config.seed,
                             **config.sf_config)
         safety_filter.reset()
 
@@ -210,7 +217,6 @@ def plot_quad_eval(state_stack, input_stack, env, save_path=None):
     axs[0].set_title('State Trajectories')
     axs[-1].legend(ncol=3, bbox_transform=fig.transFigure, bbox_to_anchor=(1, 0), loc='lower right')
     axs[-1].set(xlabel='time (sec)')
-    axs.legend()
 
     if save_path is not None:
         plt.savefig(os.path.join(save_path, 'state_trajectories.png'))
@@ -263,8 +269,10 @@ def wrap2pi_vec(angle_vec):
 
 if __name__ == '__main__':
     runtime_list = []
-    for seed in range(1, 6):
+    num_seed = 10
+    for seed in range(1, num_seed + 1):
         run(seed=seed)
         runtime_list.append(run.elapsed_time)
-    print(f'Average runtime for 5 runs: {np.mean(runtime_list):.3f} sec')
+    print(f'Average runtime for {num_seed} runs: \
+          {np.mean(runtime_list):.3f} sec')
 
