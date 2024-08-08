@@ -306,6 +306,9 @@ def make_plots(test_runs, train_runs, dir):
 def make_quad_plots(test_runs, train_runs, trajectory, dir):
     nx = test_runs[0][0]['state'].shape[1]
     nu = test_runs[0][0]['action'].shape[1]
+    # trim the traj steps to mach the evaluation steps
+    num_steps = test_runs[0][0]['obs'].shape[0]
+    trajectory = trajectory[0:num_steps, :]
     num_epochs = len(test_runs)
     num_episodes = len(test_runs[0])
     fig_dir = os.path.join(dir,'figs')
