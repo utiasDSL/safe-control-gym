@@ -7,6 +7,7 @@ import numpy as np
 import scipy
 
 from safe_control_gym.controllers.base_controller import BaseController
+from safe_control_gym.controllers.lqr.lqr_utils import discretize_linear_system
 from safe_control_gym.controllers.mpc.mpc_utils import (compute_discrete_lqr_gain_from_cont_linear_system,
                                                         compute_state_rmse, get_cost_weight_matrix,
                                                         reset_constraints, rk_discrete)
@@ -165,6 +166,20 @@ class MPC_ACADOS(BaseController):
         #                                    'ode': self.model.x_dot
         #                                    },
         #                                   {'tf': self.dt})
+        dfdxdfdu = self.model.df_func(x=self.X_EQ, u=self.U_EQ)
+        dfdx = dfdxdfdu['dfdx'].toarray()
+        dfdu = dfdxdfdu['dfdu'].toarray()
+        delta_x = cs.MX.sym('delta_x', self.model.nx, 1)
+        delta_u = cs.MX.sym('delta_u', self.model.nu, 1)
+        Ad, Bd = discretize_linear_system(dfdx, dfdu, self.dt, exact=True)
+        x_dot_lin = Ad @ delta_x + Bd @ delta_u
+        self.linear_dynamics_func = cs.Function('linear_discrete_dynamics',
+                                                [delta_x, delta_u],
+                                                [x_dot_lin],
+                                                ['x0', 'p'],
+                                                ['xf'])
+        self.dfdx = dfdx
+        self.dfdu = dfdu
         self.dynamics_func = rk_discrete(self.model.fc_func,
                                          self.model.nx,
                                          self.model.nu,
@@ -228,6 +243,8 @@ class MPC_ACADOS(BaseController):
 
         self.x_guess = x_val
         self.u_guess = u_val
+        self.u_prev = u_val
+        self.x_prev = x_val
         time_after = time.time()
         print(f'MPC _compute_initial_guess time:{time_after-time_before:.3f}')
 
@@ -313,7 +330,9 @@ class MPC_ACADOS(BaseController):
         ocp.solver_options.tf = self.T * self.dt
 
         # c code generation
-        ocp.code_export_directory = self.output_dir + '/c_generated_code'
+        # NOTE: when using GP-MPC, a separated directory is needed; 
+        # otherwise, Acados solver can read the wrong c code
+        ocp.code_export_directory = self.output_dir + '/mpc_c_generated_code'
 
         self.ocp = ocp
 
@@ -471,8 +490,11 @@ class MPC_ACADOS(BaseController):
 
         # get the open-loop solution
         time_before_saving = time.time()
-        self.x_prev = np.zeros((nx, self.T + 1))
-        self.u_prev = np.zeros((nu, self.T))
+        if self.x_prev is None and self.u_prev is None:
+            self.x_prev = np.zeros((nx, self.T + 1))
+            self.u_prev = np.zeros((nu, self.T))
+        if self.u_prev is not None and nu == 1:
+            self.u_prev = self.u_prev.reshape((1, -1))
         for i in range(self.T + 1):
             self.x_prev[:, i] = self.acados_ocp_solver.get(i, "x")
         for i in range(self.T):
@@ -649,8 +671,8 @@ class MPC_ACADOS(BaseController):
         self.u_prev = None
         if not env.initial_reset:
             env.set_cost_function_param(self.Q, self.R)
-        # obs, info = env.reset()
-        obs = env.reset()
+        obs, info = env.reset()
+        # obs = env.reset()
         print('Init State:')
         print(obs)
         ep_returns, ep_lengths = [], []

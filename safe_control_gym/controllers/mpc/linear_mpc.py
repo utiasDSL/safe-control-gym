@@ -14,7 +14,7 @@ import numpy as np
 
 from safe_control_gym.controllers.lqr.lqr_utils import discretize_linear_system
 from safe_control_gym.controllers.mpc.mpc import MPC
-from safe_control_gym.controllers.mpc.mpc_utils import compute_discrete_lqr_gain_from_cont_linear_system
+from safe_control_gym.controllers.mpc.mpc_utils import compute_discrete_lqr_gain_from_cont_linear_system, rk_discrete
 from safe_control_gym.envs.benchmark_env import Task
 
 
@@ -108,6 +108,11 @@ class LinearMPC(MPC):
         self.dfdx = dfdx
         self.dfdu = dfdu
 
+        self.dynamics_func = rk_discrete(self.model.fc_func,
+                                         self.model.nx,
+                                         self.model.nu,
+                                         self.dt)
+
     def compute_initial_guess(self, init_state, goal_states, x_lin, u_lin):
         '''Use LQR to get an initial guess of the '''
         dfdxdfdu = self.model.df_func(x=x_lin, u=u_lin)
@@ -167,8 +172,14 @@ class LinearMPC(MPC):
                           Ur=np.zeros((nu, 1)),
                           Q=self.Q,
                           R=self.R)['l']
+        
+        dynamics_residuals = []
         for i in range(self.T):
             # Dynamics constraints.
+            # NOTE: This implementation doesn't consider the dynamics residuals.
+            # To consider the residuals, uncomment the following line.
+            # dynamics_residuals.append(self.dynamics_func(x0=self.X_EQ, p=self.U_EQ)['xf'] - self.X_EQ)
+            # next_state = self.linear_dynamics_func(x0=x_var[:, i], p=u_var[:, i])['xf'] + dynamics_residuals[-1]
             next_state = self.linear_dynamics_func(x0=x_var[:, i], p=u_var[:, i])['xf']
             opti.subject_to(x_var[:, i + 1] == next_state)
 

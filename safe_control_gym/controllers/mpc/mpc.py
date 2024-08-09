@@ -6,6 +6,7 @@ import casadi as cs
 import numpy as np
 
 from safe_control_gym.controllers.base_controller import BaseController
+from safe_control_gym.controllers.lqr.lqr_utils import discretize_linear_system
 from safe_control_gym.controllers.mpc.mpc_utils import (compute_discrete_lqr_gain_from_cont_linear_system,
                                                         compute_state_rmse, get_cost_weight_matrix,
                                                         reset_constraints, rk_discrete)
@@ -32,6 +33,7 @@ class MPC(BaseController):
             additional_constraints: list = None,
             use_gpu: bool = False,
             seed: int = 0,
+            compute_ipopt_initial_guess: bool = False,
             **kwargs
     ):
         '''Creates task and controller.
@@ -90,6 +92,7 @@ class MPC(BaseController):
         # self.solver = 'sqpmethods'
         self.solver = 'ipopt'
         # self.solver = 'qrsqp'
+        self.compute_ipopt_initial_guess = compute_ipopt_initial_guess
         # logging
         # self.logger = ExperimentLogger(output_dir)
 
@@ -152,6 +155,30 @@ class MPC(BaseController):
         #                                    'ode': self.model.x_dot
         #                                    },
         #                                   {'tf': self.dt})
+        dfdxdfdu = self.model.df_func(x=self.X_EQ, u=self.U_EQ)
+        dfdx = dfdxdfdu['dfdx'].toarray()
+        dfdu = dfdxdfdu['dfdu'].toarray()
+        delta_x = cs.MX.sym('delta_x', self.model.nx, 1)
+        delta_u = cs.MX.sym('delta_u', self.model.nu, 1)
+        # x_dot_lin_vec = dfdx @ delta_x + dfdu @ delta_u
+        # self.linear_dynamics_func = cs.integrator(
+        #    'linear_discrete_dynamics', self.model.integration_algo,
+        #    {
+        #        'x': delta_x,
+        #        'p': delta_u,
+        #        'ode': x_dot_lin_vec
+        #    }, {'tf': self.dt}
+        # )
+        Ad, Bd = discretize_linear_system(dfdx, dfdu, self.dt, exact=True)
+        x_dot_lin = Ad @ delta_x + Bd @ delta_u
+        self.linear_dynamics_func = cs.Function('linear_discrete_dynamics',
+                                                [delta_x, delta_u],
+                                                [x_dot_lin],
+                                                ['x0', 'p'],
+                                                ['xf'])
+        self.dfdx = dfdx
+        self.dfdu = dfdu
+
         self.dynamics_func = rk_discrete(self.model.fc_func,
                                          self.model.nx,
                                          self.model.nu,
@@ -204,6 +231,8 @@ class MPC(BaseController):
 
         x_guess = x_val
         u_guess = u_val
+        self.x_prev = x_guess
+        self.u_prev = u_guess
 
         # set the solver back
         self.setup_optimizer(solver=self.solver)
@@ -318,6 +347,7 @@ class MPC(BaseController):
         Returns:
             action (ndarray): Input/action to the task/env.
         '''
+        print('cart mass:', self.model.cart_mass)
         time_before = time.time()
         opti_dict = self.opti_dict
         opti = opti_dict['opti']
@@ -334,13 +364,13 @@ class MPC(BaseController):
         if self.mode == 'tracking':
             self.traj_step += 1
 
-        if self.warmstart and self.x_prev is None and self.u_prev is None:
+        if self.compute_ipopt_initial_guess and self.x_prev is None and self.u_prev is None:
         #    x_guess, u_guess = self.compute_lqr_initial_guess(obs, goal_states, self.X_EQ, self.U_EQ)
-           print(f'computing initial guess with {self.init_solver}')
-           x_guess, u_guess = self.compute_initial_guess(obs, goal_states)
-           opti.set_initial(x_var, x_guess)
-           opti.set_initial(u_var, u_guess) # Initial guess for optimization problem.
-        elif self.warmstart and self.x_prev is not None and self.u_prev is not None:
+            print(f'computing initial guess with {self.init_solver}')
+            x_guess, u_guess = self.compute_initial_guess(obs, goal_states)
+            opti.set_initial(x_var, x_guess)
+            opti.set_initial(u_var, u_guess) # Initial guess for optimization problem.
+        if self.warmstart and self.x_prev is not None and self.u_prev is not None:
         # if self.warmstart and self.x_prev is not None and self.u_prev is not None:
             # shift previous solutions by 1 step
             x_guess = deepcopy(self.x_prev)
@@ -355,25 +385,27 @@ class MPC(BaseController):
             x_val, u_val = sol.value(x_var), sol.value(u_var)
         except RuntimeError:
             print('=============Infeasible MPC Problem=============')
-            # x_val, u_val = opti.debug.value(x_var), opti.debug.value(u_var)
-            return_status = opti.return_status()
-            print(f'Optimization failed with status: {return_status}')
-            if return_status == 'unknown':
-                # self.terminate_loop = True
-                u_val = self.u_prev
-                x_val = self.x_prev
-                if u_val is None:
-                    print('[WARN]: MPC Infeasible first step.')
-                    u_val = u_guess
-                    x_val = x_guess
-            elif return_status == 'Maximum_Iterations_Exceeded':
-                self.terminate_loop = True
-                u_val = opti.debug.value(u_var)
-                x_val = opti.debug.value(x_var)
-            elif return_status == 'Search_Direction_Becomes_Too_Small':
-                self.terminate_loop = True
-                u_val = opti.debug.value(u_var)
-                x_val = opti.debug.value(x_var)
+            if self.solver == 'ipopt':
+                x_val, u_val = opti.debug.value(x_var), opti.debug.value(u_var)
+            else:
+                return_status = opti.return_status()
+                print(f'Optimization failed with status: {return_status}')
+                if return_status == 'unknown':
+                    # self.terminate_loop = True
+                    u_val = self.u_prev
+                    x_val = self.x_prev
+                    if u_val is None:
+                        print('[WARN]: MPC Infeasible first step.')
+                        u_val = u_guess
+                        x_val = x_guess
+                elif return_status == 'Maximum_Iterations_Exceeded':
+                    self.terminate_loop = True
+                    u_val = opti.debug.value(u_var)
+                    x_val = opti.debug.value(x_var)
+                elif return_status == 'Search_Direction_Becomes_Too_Small':
+                    self.terminate_loop = True
+                    u_val = opti.debug.value(u_var)
+                    x_val = opti.debug.value(x_var)
         self.x_prev = x_val
         self.u_prev = u_val
         self.results_dict['horizon_states'].append(deepcopy(self.x_prev))
