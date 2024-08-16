@@ -155,7 +155,8 @@ class MPC(BaseController):
         #                                    'ode': self.model.x_dot
         #                                    },
         #                                   {'tf': self.dt})
-        dfdxdfdu = self.model.df_func(x=self.X_EQ, u=self.U_EQ)
+        dfdxdfdu = self.model.df_func(x=np.atleast_2d(self.model.X_EQ)[0, :].T,
+                                      u=np.atleast_2d(self.model.U_EQ)[0, :].T)
         dfdx = dfdxdfdu['dfdx'].toarray()
         dfdu = dfdxdfdu['dfdu'].toarray()
         delta_x = cs.MX.sym('delta_x', self.model.nx, 1)
@@ -347,7 +348,6 @@ class MPC(BaseController):
         Returns:
             action (ndarray): Input/action to the task/env.
         '''
-        print('cart mass:', self.model.cart_mass)
         time_before = time.time()
         opti_dict = self.opti_dict
         opti = opti_dict['opti']

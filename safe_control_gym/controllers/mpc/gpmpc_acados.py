@@ -1,5 +1,7 @@
 
 
+import os
+import shutil
 import time
 from copy import deepcopy
 from functools import partial
@@ -622,6 +624,11 @@ class GPMPC_ACADOS(GPMPC):
             self.acados_model = None
             self.ocp = None
             self.acados_ocp_solver = None
+            # delete the generated c code directory        
+            if os.path.exists(self.output_dir + '/gpmpc_c_generated_code'):
+                print('deleting the generated c code directory')
+                shutil.rmtree(self.output_dir + '/gpmpc_c_generated_code', ignore_errors=False)
+                assert not os.path.exists(self.output_dir + '/gpmpc_c_generated_code')
 
             # reinitialize the acados model and solver
             self.setup_acados_model(n_ind_points)

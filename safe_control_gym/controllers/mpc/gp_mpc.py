@@ -769,7 +769,7 @@ class GPMPC(MPC):
                  target_data=None,
                  gp_model=None,
                  overwrite_saved_data: bool = None,
-                 train_hardware_data: bool = False
+                 train_hardware_data: bool = False,
                  ):
         '''Performs GP training.
 
@@ -777,7 +777,7 @@ class GPMPC(MPC):
             input_data, target_data (optiona, np.array): data to use for training
             gp_model (str): if not None, this is the path to pretrained models to use instead of training new ones.
             overwrite_saved_data (bool): Overwrite the input and target data to the already saved data if it exists.
-            train_hardware_data (bool): True to train on hardware data.
+            train_hardware_data (bool): True to train on hardware data. If true, will load the data and perform training.
         Returns:
             training_results (dict): Dictionary of the training results.
         '''
