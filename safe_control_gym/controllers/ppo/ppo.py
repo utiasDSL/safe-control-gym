@@ -1,4 +1,4 @@
-'''Proximal Policy Optimization (PPO)
+"""Proximal Policy Optimization (PPO)
 
 Based on:
     * https://github.com/openai/spinningup/blob/master/spinup/algos/pytorch/ppo/ppo.py
@@ -10,7 +10,7 @@ Additional references:
     * pytorch-a2c-ppo-acktr-gail - https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail
     * openai spinning up - ppo - https://github.com/openai/spinningup/tree/master/spinup/algos/pytorch/ppo
     * stable baselines3 - ppo - https://github.com/DLR-RM/stable-baselines3/tree/master/stable_baselines3/ppo
-'''
+"""
 
 import os
 import time
@@ -30,7 +30,7 @@ from safe_control_gym.utils.utils import get_random_state, is_wrapped, set_rando
 
 
 class PPO(BaseController):
-    '''Proximal policy optimization.'''
+    """Proximal policy optimization."""
 
     def __init__(self,
                  env_func,
@@ -85,7 +85,7 @@ class PPO(BaseController):
         self.logger = ExperimentLogger(output_dir, log_file_out=log_file_out, use_tensorboard=use_tensorboard)
 
     def reset(self):
-        '''Do initializations for training or evaluation.'''
+        """Do initializations for training or evaluation."""
         if self.training:
             # set up stats tracking
             self.env.add_tracker('constraint_violation', 0)
@@ -103,7 +103,7 @@ class PPO(BaseController):
             self.env.add_tracker('mse', 0, mode='queue')
 
     def close(self):
-        '''Shuts down and cleans up lingering resources.'''
+        """Shuts down and cleans up lingering resources."""
         self.env.close()
         if self.training:
             self.eval_env.close()
@@ -112,7 +112,7 @@ class PPO(BaseController):
     def save(self,
              path
              ):
-        '''Saves model params and experiment state to checkpoint path.'''
+        """Saves model params and experiment state to checkpoint path."""
         path_dir = os.path.dirname(path)
         os.makedirs(path_dir, exist_ok=True)
         state_dict = {
@@ -133,7 +133,7 @@ class PPO(BaseController):
     def load(self,
              path
              ):
-        '''Restores model and experiment given checkpoint path.'''
+        """Restores model and experiment given checkpoint path."""
         state = torch.load(path)
         # Restore policy.
         self.agent.load_state_dict(state['agent'])
@@ -151,7 +151,15 @@ class PPO(BaseController):
               env=None,
               **kwargs
               ):
-        '''Performs learning (pre-training, training, fine-tuning, etc).'''
+        """Performs learning (pre-training, training, fine-tuning, etc.)."""
+
+        # Initial Evaluation.
+        eval_results = self.run(env=self.eval_env, n_episodes=self.eval_batch_size)
+        self.logger.info('Eval | ep_lengths {:.2f} +/- {:.2f} | ep_return {:.3f} +/- {:.3f}'.format(
+            eval_results['ep_lengths'].mean(),
+            eval_results['ep_lengths'].std(),
+            eval_results['ep_returns'].mean(),
+            eval_results['ep_returns'].std()))
 
         if self.num_checkpoints > 0:
             step_interval = np.linspace(0, self.max_env_steps, self.num_checkpoints)
@@ -159,7 +167,8 @@ class PPO(BaseController):
         while self.total_steps < self.max_env_steps:
             results = self.train_step()
             # Checkpoint.
-            if self.total_steps >= self.max_env_steps or (self.save_interval and self.total_steps % self.save_interval == 0):
+            if (self.total_steps >= self.max_env_steps
+                    or (self.save_interval and self.total_steps % self.save_interval == 0)):
                 # Latest/final checkpoint.
                 self.save(self.checkpoint_path)
                 self.logger.info(f'Checkpoint | {self.checkpoint_path}')
@@ -176,10 +185,11 @@ class PPO(BaseController):
             if self.eval_interval and self.total_steps % self.eval_interval == 0:
                 eval_results = self.run(env=self.eval_env, n_episodes=self.eval_batch_size)
                 results['eval'] = eval_results
-                self.logger.info('Eval | ep_lengths {:.2f} +/- {:.2f} | ep_return {:.3f} +/- {:.3f}'.format(eval_results['ep_lengths'].mean(),
-                                                                                                            eval_results['ep_lengths'].std(),
-                                                                                                            eval_results['ep_returns'].mean(),
-                                                                                                            eval_results['ep_returns'].std()))
+                self.logger.info('Eval | ep_lengths {:.2f} +/- {:.2f} | ep_return {:.3f} +/- {:.3f}'.format(
+                    eval_results['ep_lengths'].mean(),
+                    eval_results['ep_lengths'].std(),
+                    eval_results['ep_returns'].mean(),
+                    eval_results['ep_returns'].std()))
                 # Save best model.
                 eval_score = eval_results['ep_returns'].mean()
                 eval_best_score = getattr(self, 'eval_best_score', -np.infty)
@@ -191,7 +201,7 @@ class PPO(BaseController):
                 self.log_step(results)
 
     def select_action(self, obs, info=None):
-        '''Determine the action to take at the current timestep.
+        """Determine the action to take at the current timestep.
 
         Args:
             obs (ndarray): The observation at this timestep.
@@ -199,21 +209,20 @@ class PPO(BaseController):
 
         Returns:
             action (ndarray): The action chosen by the controller.
-        '''
+        """
 
         with torch.no_grad():
             obs = torch.FloatTensor(obs).to(self.device)
             action = self.agent.ac.act(obs)
-
         return action
 
     def run(self,
             env=None,
             render=False,
-            n_episodes=10,
+            n_episodes=1,
             verbose=False,
             ):
-        '''Runs evaluation with current policy.'''
+        """Runs evaluation with current policy."""
         self.agent.eval()
         self.obs_normalizer.set_read_only()
         if env is None:
@@ -228,11 +237,13 @@ class PPO(BaseController):
 
         obs, info = env.reset()
         obs = self.obs_normalizer(obs)
-        ep_returns, ep_lengths = [], []
+        ep_returns, ep_lengths, eval_return = [], [], 0.0
         frames = []
+        mse, ep_rmse_mean, ep_rmse_std = [], [], []
         while len(ep_returns) < n_episodes:
             action = self.select_action(obs=obs, info=info)
             obs, _, done, info = env.step(action)
+            mse.append(info["mse"])
             if render:
                 env.render()
                 frames.append(env.render('rgb_array'))
@@ -240,6 +251,9 @@ class PPO(BaseController):
                 print(f'obs {obs} | act {action}')
             if done:
                 assert 'episode' in info
+                ep_rmse_mean.append(np.array(mse).mean()**0.5)
+                ep_rmse_std.append(np.array(mse).std())
+                mse = []
                 ep_returns.append(info['episode']['r'])
                 ep_lengths.append(info['episode']['l'])
                 obs, _ = env.reset()
@@ -247,7 +261,9 @@ class PPO(BaseController):
         # Collect evaluation results.
         ep_lengths = np.asarray(ep_lengths)
         ep_returns = np.asarray(ep_returns)
-        eval_results = {'ep_returns': ep_returns, 'ep_lengths': ep_lengths}
+        eval_results = {'ep_returns': ep_returns, 'ep_lengths': ep_lengths,
+                        'rmse': np.array(ep_rmse_mean).mean(),
+                        'rmse_std': np.array(ep_rmse_std).mean()}
         if len(frames) > 0:
             eval_results['frames'] = frames
         # Other episodic stats from evaluation env.
@@ -257,7 +273,7 @@ class PPO(BaseController):
         return eval_results
 
     def train_step(self):
-        '''Performs a training/fine-tuning step.'''
+        """Performs a training/fine-tuning step."""
         self.agent.train()
         self.obs_normalizer.unset_read_only()
         rollouts = PPOBuffer(self.env.observation_space, self.env.action_space, self.rollout_steps, self.rollout_batch_size)
@@ -305,7 +321,7 @@ class PPO(BaseController):
     def log_step(self,
                  results
                  ):
-        '''Does logging after a training step.'''
+        """Does logging after a training step."""
         step = results['step']
         # runner stats
         self.logger.add_scalars(
@@ -332,6 +348,7 @@ class PPO(BaseController):
             {
                 'ep_length': ep_lengths.mean(),
                 'ep_return': ep_returns.mean(),
+                'ep_return_std': ep_returns.std(),
                 'ep_reward': (ep_returns / ep_lengths).mean(),
                 'ep_constraint_violation': ep_constraint_violation.mean()
             },
@@ -344,14 +361,17 @@ class PPO(BaseController):
             eval_ep_lengths = results['eval']['ep_lengths']
             eval_ep_returns = results['eval']['ep_returns']
             eval_constraint_violation = results['eval']['constraint_violation']
-            eval_mse = results['eval']['mse']
+            eval_rmse = results['eval']['rmse']
+            eval_rmse_std = results['eval']['rmse_std']
             self.logger.add_scalars(
                 {
                     'ep_length': eval_ep_lengths.mean(),
                     'ep_return': eval_ep_returns.mean(),
+                    'ep_return_std': eval_ep_returns.std(),
                     'ep_reward': (eval_ep_returns / eval_ep_lengths).mean(),
                     'constraint_violation': eval_constraint_violation.mean(),
-                    'mse': eval_mse.mean()
+                    'rmse': eval_rmse,
+                    'rmse_std': eval_rmse_std
                 },
                 step,
                 prefix='stat_eval')
