@@ -1,4 +1,4 @@
-'''Model Predictive Control.'''
+'''Model Predictive Control using Acados.'''
 import time
 from copy import deepcopy
 
@@ -7,6 +7,7 @@ import numpy as np
 import scipy
 
 from safe_control_gym.controllers.base_controller import BaseController
+from safe_control_gym.controllers.lqr.lqr_utils import discretize_linear_system
 from safe_control_gym.controllers.mpc.mpc_utils import (compute_discrete_lqr_gain_from_cont_linear_system,
                                                         compute_state_rmse, get_cost_weight_matrix,
                                                         reset_constraints, rk_discrete)
@@ -52,14 +53,13 @@ class MPC_ACADOS(BaseController):
             additional_constraints (list): List of additional constraints
             use_gpu (bool): False (use cpu) True (use cuda).
             seed (int): random seed.
+            use_RTI (bool): Real-time iteration for acados.
         '''
         super().__init__(env_func, output_dir, use_gpu, seed, **kwargs)
         for k, v in locals().items():
             if k != 'self' and k != 'kwargs' and '__' not in k:
                 self.__dict__.update({k: v})
 
-        # if prior_info is None:
-        #    self.prior_info = {}
         # Task.
         self.env = env_func()
         if additional_constraints is not None:
@@ -95,12 +95,7 @@ class MPC_ACADOS(BaseController):
         self.u_guess = None
 
         # acados settings
-        self.use_RTI = use_RTI
-        self.set_dynamics_func()
-        self.setup_acados_model()
-        self.setup_acados_optimizer()
-        self.acados_ocp_solver = AcadosOcpSolver(self.ocp) # , \
-                                    # json_file=f'acados_{self.ocp.model.name}.json')
+        self.use_RTI = use_RTI 
 
 
     def add_constraints(self,
@@ -145,12 +140,16 @@ class MPC_ACADOS(BaseController):
             self.traj = self.env.X_GOAL.T
             # Step along the reference.
             self.traj_step = 0
+
+        self.acados_model = None
+        self.ocp = None
+        self.acados_ocp_solver = None
         # Dynamics model.
         self.set_dynamics_func()
         self.setup_acados_model()
-        # CasADi optimizer.
-        # self.setup_optimizer()
+        # Acados optimizer.
         self.setup_acados_optimizer()
+        self.acados_ocp_solver = AcadosOcpSolver(self.ocp)
         # Previously solved states & inputs, useful for warm start.
         self.x_prev = None
         self.u_prev = None
@@ -167,6 +166,21 @@ class MPC_ACADOS(BaseController):
         #                                    'ode': self.model.x_dot
         #                                    },
         #                                   {'tf': self.dt})
+        dfdxdfdu = self.model.df_func(x=np.atleast_2d(self.model.X_EQ)[0, :].T,
+                                      u=np.atleast_2d(self.model.U_EQ)[0, :].T)
+        dfdx = dfdxdfdu['dfdx'].toarray()
+        dfdu = dfdxdfdu['dfdu'].toarray()
+        delta_x = cs.MX.sym('delta_x', self.model.nx, 1)
+        delta_u = cs.MX.sym('delta_u', self.model.nu, 1)
+        Ad, Bd = discretize_linear_system(dfdx, dfdu, self.dt, exact=True)
+        x_dot_lin = Ad @ delta_x + Bd @ delta_u
+        self.linear_dynamics_func = cs.Function('linear_discrete_dynamics',
+                                                [delta_x, delta_u],
+                                                [x_dot_lin],
+                                                ['x0', 'p'],
+                                                ['xf'])
+        self.dfdx = dfdx
+        self.dfdu = dfdu
         self.dynamics_func = rk_discrete(self.model.fc_func,
                                          self.model.nx,
                                          self.model.nu,
@@ -178,7 +192,6 @@ class MPC_ACADOS(BaseController):
         
         acados_model = AcadosModel()
         acados_model.x = self.model.x_sym
-        # acados_model.xdot = self.model.x_dot_acados # must be symbolic
         acados_model.u = self.model.u_sym
         acados_model.name = model_name
 
@@ -190,11 +203,13 @@ class MPC_ACADOS(BaseController):
         f_disc = acados_model.x + self.dt/6 * (k1 + 2*k2 + 2*k3 + k4)
 
         acados_model.disc_dyn_expr = f_disc
-        # f_expl = self.model.x_dot
-        # f_impl = self.model.x_dot_acados - f_expl
-        # model.f_impl_expr = f_impl
-        # model.f_expl_expr = f_expl
-
+        '''
+        Other options to set up the model:
+        f_expl = self.model.x_dot
+        f_impl = self.model.x_dot_acados - f_expl
+        model.f_impl_expr = f_impl
+        model.f_expl_expr = f_expl
+        '''
         # store meta information # NOTE: unit is missing
         acados_model.x_labels = self.env.STATE_LABELS
         acados_model.u_labels = self.env.ACTION_LABELS
@@ -202,23 +217,6 @@ class MPC_ACADOS(BaseController):
 
         self.acados_model = acados_model
         
-    # def compute_lqr_initial_guess(self, init_state, goal_states, x_lin, u_lin):
-    #     '''Use LQR to get an initial guess of the '''
-    #     dfdxdfdu = self.model.df_func(x=x_lin, u=u_lin)
-    #     dfdx = dfdxdfdu['dfdx'].toarray()
-    #     dfdu = dfdxdfdu['dfdu'].toarray()
-    #     lqr_gain, _, _ = compute_discrete_lqr_gain_from_cont_linear_system(dfdx, dfdu, self.Q, self.R, self.dt)
-        
-    #     # initialize the guess solutions
-    #     x_guess = np.zeros((self.model.nx, self.T + 1))
-    #     u_guess = np.zeros((self.model.nu, self.T))
-    #     x_guess[:, 0] = init_state
-    #     # add the lqr gain and states to the guess
-    #     for i in range(self.T):
-    #         u = lqr_gain @ (x_guess[:, i] - goal_states[:, i]) + u_lin
-    #         u_guess[:, i] = u
-    #         x_guess[:, i + 1, None] = self.dynamics_func(x0=x_guess[:, i], p=u)['xf'].toarray()
-    #     return x_guess, u_guess
     
     def compute_initial_guess(self, init_state, goal_states):
         time_before = time.time()
@@ -236,8 +234,6 @@ class MPC_ACADOS(BaseController):
         # Assign reference trajectory within horizon.
         goal_states = self.get_references()
         opti.set_value(x_ref, goal_states)
-        # if self.mode == 'tracking':
-        #     self.traj_step += 1
          # Solve the optimization problem.
         try:
             sol = opti.solve()
@@ -248,8 +244,10 @@ class MPC_ACADOS(BaseController):
 
         self.x_guess = x_val
         self.u_guess = u_val
+        self.u_prev = u_val
+        self.x_prev = x_val
         time_after = time.time()
-        print('MPC _compute_initial_guess time: ', time_after - time_before)
+        print(f'MPC _compute_initial_guess time:{time_after-time_before:.3f}')
 
     def setup_acados_optimizer(self):
         '''Sets up nonlinear optimization problem.'''
@@ -280,24 +278,6 @@ class MPC_ACADOS(BaseController):
         ocp.cost.yref_e = np.zeros((ny_e, ))
 
         # Constraints
-        # # bounded input constraints
-        # idxbu = np.where(np.sum(self.env.constraints.input_constraints[0].constraint_filter, axis=0) != 0)[0]
-        # ocp.constraints.Jbu = np.eye(nu)
-        # ocp.constraints.lbu = self.env.constraints.input_constraints[0].lower_bounds
-        # ocp.constraints.ubu = self.env.constraints.input_constraints[0].upper_bounds 
-        # ocp.constraints.idxbu = idxbu # active constraints dimension
-        # # bounded state constraints
-        # idxbx = np.where(np.sum(self.env.constraints.state_constraints[0].constraint_filter, axis=0) != 0)[0]
-        # ocp.constraints.Jbx = np.eye(nx)
-        # ocp.constraints.lbx = self.env.constraints.state_constraints[0].lower_bounds
-        # ocp.constraints.ubx = self.env.constraints.state_constraints[0].upper_bounds
-        # ocp.constraints.idxbx = idxbx
-        # # bounded terminal state constraints
-        # ocp.constraints.Jbx_e = np.eye(nx)
-        # ocp.constraints.lbx_e = self.env.constraints.state_constraints[0].lower_bounds
-        # ocp.constraints.ubx_e = self.env.constraints.state_constraints[0].upper_bounds
-        # ocp.constraints.idxbx_e = idxbx
-
         # general constraint expressions
         state_constraint_expr_list = []
         input_constraint_expr_list = []
@@ -320,8 +300,12 @@ class MPC_ACADOS(BaseController):
             ocp.constraints.Jsh = np.eye(h_expr.shape[0])
             ocp.constraints.Jsh_e = np.eye(he_expr.shape[0])
             # slack penalty
-            L2_pen = 1e4
-            L1_pen = 1e4
+            L2_pen = 1e3
+            L1_pen = 1e3
+            ocp.cost.Zl_0 = L2_pen * np.ones(h0_expr.shape[0])
+            ocp.cost.Zu_0 = L2_pen * np.ones(h0_expr.shape[0])
+            ocp.cost.zl_0 = L1_pen * np.ones(h0_expr.shape[0])
+            ocp.cost.zu_0 = L1_pen * np.ones(h0_expr.shape[0])
             ocp.cost.Zu = L2_pen * np.ones(h_expr.shape[0])
             ocp.cost.Zl = L2_pen * np.ones(h_expr.shape[0])
             ocp.cost.zl = L1_pen * np.ones(h_expr.shape[0]) 
@@ -340,9 +324,16 @@ class MPC_ACADOS(BaseController):
         ocp.solver_options.hessian_approx = 'GAUSS_NEWTON'
         ocp.solver_options.integrator_type = 'DISCRETE'
         ocp.solver_options.nlp_solver_type = 'SQP' if not self.use_RTI else 'SQP_RTI'
-        ocp.solver_options.nlp_solver_max_iter = 5000 if not self.use_RTI else 1000
+        ocp.solver_options.nlp_solver_max_iter = 25 if not self.use_RTI else 1
+        # ocp.solver_options.globalization = 'FUNNEL_L1PEN_LINESEARCH' if not self.use_RTI else 'MERIT_BACKTRACKING'
+        # ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
         # prediction horizon
         ocp.solver_options.tf = self.T * self.dt
+
+        # c code generation
+        # NOTE: when using GP-MPC, a separated directory is needed; 
+        # otherwise, Acados solver can read the wrong c code
+        ocp.code_export_directory = self.output_dir + '/mpc_c_generated_code'
 
         self.ocp = ocp
 
@@ -500,8 +491,11 @@ class MPC_ACADOS(BaseController):
 
         # get the open-loop solution
         time_before_saving = time.time()
-        self.x_prev = np.zeros((nx, self.T + 1))
-        self.u_prev = np.zeros((nu, self.T))
+        if self.x_prev is None and self.u_prev is None:
+            self.x_prev = np.zeros((nx, self.T + 1))
+            self.u_prev = np.zeros((nu, self.T))
+        if self.u_prev is not None and nu == 1:
+            self.u_prev = self.u_prev.reshape((1, -1))
         for i in range(self.T + 1):
             self.x_prev[:, i] = self.acados_ocp_solver.get(i, "x")
         for i in range(self.T):
@@ -520,16 +514,19 @@ class MPC_ACADOS(BaseController):
 
 
         time_after = time.time()
-        print('Initialization time: ', time_after_init - time_before_init)
-        print('Warm-starting time: ', time_after_warmstart - time_before_warmstart)
-        print('Getting reference time: ', time_after_get_ref - time_before_get_ref)
-        print('setting for loop time: ', time_after_for_loop - time_before_for_loop)
-        print('Setting final reference time: ', time_after_set_final_ref - time_before_set_final_ref)
-        if self.use_RTI:
-            print('Preparation phase time: ', time_after_prep - time_before_prep)
-            print('Feedback phase time: ', time_after_feedback - time_before_feedback)
-        print('Saving time: ', time_after_saving - time_before_saving)
-        print('Acados MPC _select_action time: ', time_after - time_before)
+        # print('Initialization time: ', time_after_init - time_before_init)
+        # print('Warm-starting time: ', time_after_warmstart - time_before_warmstart)
+        # print('Getting reference time: ', time_after_get_ref - time_before_get_ref)
+        # print('setting for loop time: ', time_after_for_loop - time_before_for_loop)
+        # print('Setting final reference time: ', time_after_set_final_ref - time_before_set_final_ref)
+        # if self.use_RTI:
+        #     print('Preparation phase time: ', time_after_prep - time_before_prep)
+        #     print('Feedback phase time: ', time_after_feedback - time_before_feedback)
+        # print('Saving time: ', time_after_saving - time_before_saving)
+        # print('Acados MPC _select_action time: ', time_after - time_before)
+        print(f'mpc acados sol time: {time_after - time_before:.3f}; sol status {status}; nlp iter {self.acados_ocp_solver.get_stats("sqp_iter")}; qp iter {self.acados_ocp_solver.get_stats("qp_iter")}')
+        if time_after - time_before > 0.02:
+            print(f'========= Warning: MPC ACADOS took {time_after - time_before:.3f} seconds =========')
         return action
 
     def get_references(self):
@@ -675,8 +672,8 @@ class MPC_ACADOS(BaseController):
         self.u_prev = None
         if not env.initial_reset:
             env.set_cost_function_param(self.Q, self.R)
-        # obs, info = env.reset()
-        obs = env.reset()
+        obs, info = env.reset()
+        # obs = env.reset()
         print('Init State:')
         print(obs)
         ep_returns, ep_lengths = [], []

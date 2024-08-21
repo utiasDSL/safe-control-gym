@@ -93,7 +93,29 @@ class HPO(object):
                 # update the agent config with sample candidate hyperparameters
                 # new agent with the new hps
                 for hp in sampled_hyperparams:
-                    self.algo_config[hp] = sampled_hyperparams[hp]
+                    if hp == 'state_weight' or hp == 'state_dot_weight' or hp == 'action_weight':
+                        if self.algo == 'gp_mpc' or self.algo == 'gpmpc_acados':
+                            if self.task == 'cartpole':
+                                self.algo_config['q_mpc'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
+                                self.algo_config['r_mpc'] = [sampled_hyperparams['action_weight']]
+                            else:
+                                #TODO if implemented for quadrotor, pitch rate penalty should be small.
+                                raise ValueError('Only cartpole task is supported for gp_mpc.')
+                        elif self.algo == 'ilqr':
+                            if self.task == 'cartpole':
+                                self.algo_config['q_lqr'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
+                                self.algo_config['r_lqr'] = [sampled_hyperparams['action_weight']]
+                            else:
+                                #TODO if implemented for quadrotor, pitch rate penalty should be small.
+                                raise ValueError('Only cartpole task is supported for ilqr.')
+                        else:
+                            if self.task == 'cartpole':
+                                self.task_config['rew_state_weight'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
+                                self.task_config['rew_action_weight'] = [sampled_hyperparams['action_weight']]
+                            else:
+                                raise ValueError('Only cartpole task is supported for rl.')
+                    else:
+                        self.algo_config[hp] = sampled_hyperparams[hp]
 
                 seeds.append(seed)
                 self.logger.info('Sample hyperparameters: {}'.format(sampled_hyperparams))
@@ -213,10 +235,12 @@ class HPO(object):
 
         self.study.optimize(self.objective,
                             catch=(RuntimeError,),
-                            callbacks=[MaxTrialsCallback(self.hpo_config.trials, states=(TrialState.COMPLETE,))],
+                            callbacks=[MaxTrialsCallback(self.hpo_config.trials-1, states=(TrialState.COMPLETE,))],
                             )
 
         output_dir = os.path.join(self.output_dir, 'hpo')
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
         # save meta data
         self.study.trials_dataframe().to_csv(output_dir + '/trials.csv')
 

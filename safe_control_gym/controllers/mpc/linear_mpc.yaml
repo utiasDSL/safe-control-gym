@@ -4,7 +4,6 @@ r_mpc:
   - 1.
 q_mpc:
   - 1.
-use_prev_start: True
 prior_info: null
 solver: sqpmethod
 # Runner args

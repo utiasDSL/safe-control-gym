@@ -5,3 +5,6 @@ num_epochs: 5
 num_samples: 75
 optimization_iterations: [2800, 2800, 2800, 2800]
 learning_rate: [0.023172075157730145, 0.023172075157730145, 0.023172075157730145, 0.023172075157730145]
+state_weight: 10
+state_dot_weight: 0.1
+action_weight: 0.1

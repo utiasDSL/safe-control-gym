@@ -11,3 +11,6 @@ mini_batch_size: 128
 opt_epochs: 5
 rollout_steps: 150
 target_kl: 1.587713889686473e-07
+state_weight: 10
+state_dot_weight: 0.1
+action_weight: 0.1

@@ -54,6 +54,11 @@ def train(config):
         * to start training, use with `--func train`.
 
     """
+    # change the cost function for rl methods
+    if config.algo == 'ppo':
+        config.task_config.cost = 'rl_reward'
+    elif config.algo == 'gp_mpc' or config.algo == 'gpmpc_acados' or config.algo == 'ilqr':
+        pass
     # Override algo_config with given yaml file
     if config.opt_hps == '':
         # if no opt_hps file is given
@@ -63,7 +68,20 @@ def train(config):
         with open(config.opt_hps, 'r') as f:
             opt_hps = yaml.load(f, Loader=yaml.FullLoader)
         for hp in opt_hps:
-            if isinstance(config.algo_config[hp], list) and not isinstance(opt_hps[hp], list):
+            if hp == 'state_weight' or hp == 'state_dot_weight' or hp == 'action_weight':
+                    if config.algo == 'gp_mpc':
+                        if config.task == 'cartpole':
+                            config.algo_config['q_mpc'] = [opt_hps['state_weight'], opt_hps['state_dot_weight'], opt_hps['state_weight'], opt_hps['state_dot_weight']]
+                            config.algo_config['r_mpc'] = [opt_hps['action_weight']]
+                        else:
+                            raise ValueError('Only cartpole task is supported for gp_mpc.')
+                    else:
+                        if config.task == 'cartpole':
+                            config.task_config['rew_state_weight'] = [opt_hps['state_weight'], opt_hps['state_dot_weight'], opt_hps['state_weight'], opt_hps['state_dot_weight']]
+                            config.task_config['rew_action_weight'] = [opt_hps['action_weight']]
+                        else:
+                            raise ValueError('Only cartpole task is supported for rl.')
+            elif isinstance(config.algo_config[hp], list) and not isinstance(opt_hps[hp], list):
                 config.algo_config[hp] = [opt_hps[hp]] * len(config.algo_config[hp])
             else:
                 config.algo_config[hp] = opt_hps[hp]
@@ -112,7 +130,7 @@ def train(config):
     else:
         system = config.task
 
-    if True:
+    if False:
         if system == Environment.CARTPOLE:
             graph1_1 = 2
             graph1_2 = 3

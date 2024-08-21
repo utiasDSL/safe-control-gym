@@ -1,0 +1,11 @@
+algo: lqr_c
+algo_config:
+  # Cost parameters
+  q_lqr: [5, 0.1, 5, 0.1, 1.0, 1.0]
+  r_lqr: [1.0, 1.0]
+
+  # Model arguments
+  # Note: Higher simulation frequency is required if using controller designed
+  #       based on the continuous-time model
+  discrete_dynamics: True
+

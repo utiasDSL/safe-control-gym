@@ -241,3 +241,13 @@ def npRotXYZ(phi, theta, psi):
     '''
     R = npRotZ(psi) @ npRotY(theta) @ npRotX(phi)
     return R
+
+def get_angularvelocity_rpy(rpy, rpy_rates):
+    """
+    Convert rpy and rpy_rates to body-frame angular velocity
+    """
+    phi, theta, psi = rpy[0], rpy[1], rpy[2]
+    ang_v = np.array([[1, 0, -np.sin(theta)],
+                      [0, np.cos(phi), np.sin(phi) * np.cos(theta)],
+                      [0, -np.sin(phi), np.cos(phi) * np.cos(theta)]]) @ rpy_rates
+    return ang_v
