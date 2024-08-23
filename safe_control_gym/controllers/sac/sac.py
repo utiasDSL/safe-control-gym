@@ -236,11 +236,12 @@ class SAC(BaseController):
         obs = self.obs_normalizer(obs)
         ep_returns, ep_lengths = [], []
         frames = []
-
+        mse, ep_rmse_mean, ep_rmse_std = [], [], []
         while len(ep_returns) < n_episodes:
             action = self.select_action(obs=obs, info=info)
 
             obs, _, done, info = env.step(action)
+            mse.append(info["mse"])
             if render:
                 env.render()
                 frames.append(env.render('rgb_array'))
@@ -249,6 +250,9 @@ class SAC(BaseController):
 
             if done:
                 assert 'episode' in info
+                ep_rmse_mean.append(np.array(mse).mean()**0.5)
+                ep_rmse_std.append(np.array(mse).std())
+                mse = []
                 ep_returns.append(info['episode']['r'])
                 ep_lengths.append(info['episode']['l'])
                 obs, info = env.reset()
@@ -257,7 +261,9 @@ class SAC(BaseController):
         # collect evaluation results
         ep_lengths = np.asarray(ep_lengths)
         ep_returns = np.asarray(ep_returns)
-        eval_results = {'ep_returns': ep_returns, 'ep_lengths': ep_lengths}
+        eval_results = {'ep_returns': ep_returns, 'ep_lengths': ep_lengths,
+                        'rmse': np.array(ep_rmse_mean).mean(),
+                        'rmse_std': np.array(ep_rmse_std).mean()}
         if len(frames) > 0:
             eval_results['frames'] = frames
         # Other episodic stats from evaluation env.
@@ -368,6 +374,7 @@ class SAC(BaseController):
             {
                 'ep_length': ep_lengths.mean(),
                 'ep_return': ep_returns.mean(),
+                'ep_return_std': ep_returns.std(),
                 'ep_reward': (ep_returns / ep_lengths).mean(),
                 'ep_constraint_violation': ep_constraint_violation.mean()
             },
@@ -382,14 +389,17 @@ class SAC(BaseController):
             eval_ep_lengths = results['eval']['ep_lengths']
             eval_ep_returns = results['eval']['ep_returns']
             eval_constraint_violation = results['eval']['constraint_violation']
-            eval_mse = results['eval']['mse']
+            eval_rmse = results['eval']['rmse']
+            eval_rmse_std = results['eval']['rmse_std']
             self.logger.add_scalars(
                 {
                     'ep_length': eval_ep_lengths.mean(),
                     'ep_return': eval_ep_returns.mean(),
+                    'ep_return_std': eval_ep_returns.std(),
                     'ep_reward': (eval_ep_returns / eval_ep_lengths).mean(),
                     'constraint_violation': eval_constraint_violation.mean(),
-                    'mse': eval_mse.mean()
+                    'rmse': eval_rmse,
+                    'rmse_std': eval_rmse_std
                 },
                 step,
                 prefix='stat_eval')
