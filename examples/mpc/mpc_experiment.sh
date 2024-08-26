@@ -9,8 +9,8 @@ SYS='quadrotor_3D'
 #TASK='stabilization'
 TASK='tracking'
 
-#ALGO='mpc'
-#ALGO='mpc_acados'
+# ALGO='mpc'
+# ALGO='mpc_acados'
 ALGO='linear_mpc'
 
 if [ "$SYS" == 'cartpole' ]; then

@@ -121,8 +121,8 @@ class MPC(BaseController):
 
     def reset(self):
         print(colored('Resetting MPC', 'green'))
-        '''Prepares for training or evaluation.'''
         # Setup reference input.
+        '''Prepares for training or evaluation.'''
         if self.env.TASK == Task.STABILIZATION:
             self.mode = 'stabilization'
             self.x_goal = self.env.X_GOAL

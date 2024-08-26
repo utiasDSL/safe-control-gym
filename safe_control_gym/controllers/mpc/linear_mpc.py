@@ -126,7 +126,7 @@ class LinearMPC(MPC):
 
         return x_guess, u_guess
 
-    def setup_optimizer(self):
+    def setup_optimizer(self, solver='qrqp'):
         '''Sets up convex optimization problem.
 
         Including cost objective, variable bounds and dynamics constraints.
@@ -134,7 +134,7 @@ class LinearMPC(MPC):
         nx, nu = self.model.nx, self.model.nu
         T = self.T
         # Define optimizer and variables.
-        if self.solver in ['qrqp', 'qpoases']:
+        if solver in ['qrqp', 'qpoases']:
             opti = cs.Opti('conic')
         else:
             opti = cs.Opti()
@@ -206,7 +206,7 @@ class LinearMPC(MPC):
         opts = {'expand': True}
         if platform == 'linux':
             opts.update({'print_time': 1, 'print_header': 0})
-            opti.solver(self.solver, opts)
+            opti.solver(solver, opts)
         elif platform == 'darwin':
             opts.update({'ipopt.max_iter': 100})
             opti.solver('ipopt', opts)
