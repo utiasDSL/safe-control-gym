@@ -16,6 +16,7 @@ from safe_control_gym.controllers.lqr.lqr_utils import discretize_linear_system
 from safe_control_gym.controllers.mpc.mpc import MPC
 from safe_control_gym.controllers.mpc.mpc_utils import compute_discrete_lqr_gain_from_cont_linear_system
 from safe_control_gym.envs.benchmark_env import Task
+from safe_control_gym.utils.utils import timing
 
 
 class LinearMPC(MPC):
@@ -222,6 +223,7 @@ class LinearMPC(MPC):
             'cost': cost
         }
 
+    @timing
     def select_action(self,
                       obs,
                       info=None

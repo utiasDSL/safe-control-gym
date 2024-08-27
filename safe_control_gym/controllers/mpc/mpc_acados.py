@@ -11,7 +11,14 @@ from safe_control_gym.controllers.mpc.mpc import MPC
 from safe_control_gym.envs.benchmark_env import Task
 from safe_control_gym.utils.utils import timing
 
-from acados_template import AcadosOcp, AcadosOcpSolver, AcadosModel
+try:
+    from acados_template import AcadosOcp, AcadosOcpSolver, AcadosModel
+except ImportError as e:
+    print(colored('acados not installed, cannot use acados-based controller. Exiting.', 'red'))
+    print(colored('- To build and install acados, follow the instructions at https://docs.acados.org/installation/index.html', 'yellow'))
+    print(colored('- To set up the acados python interface, follow the instructions at https://docs.acados.org/python_interface/index.html', 'yellow'))
+    print()
+    exit()
 
 class MPC_ACADOS(MPC):
     '''MPC with full nonlinear model.'''
