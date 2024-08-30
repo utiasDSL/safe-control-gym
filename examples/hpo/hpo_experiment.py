@@ -15,7 +15,7 @@ from safe_control_gym.hyperparameters.hpo import HPO
 from safe_control_gym.experiments.base_experiment import BaseExperiment
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
-from safe_control_gym.utils.utils import set_device_from_config, set_dir_from_config, set_seed_from_config
+from safe_control_gym.utils.utils import set_device_from_config, set_dir_from_config, set_seed_from_config, mkdirs
 
 
 def hpo(config):
@@ -32,6 +32,11 @@ def hpo(config):
     set_seed_from_config(config)
     set_device_from_config(config)
 
+    # initialize safety filter
+    if 'safety_filter' not in config:
+        config.safety_filter = None
+        config.sf_config = None
+
     # HPO
     hpo = HPO(config.algo,
               config.task,
@@ -40,7 +45,10 @@ def hpo(config):
               config.output_dir,
               config.task_config,
               config.hpo_config,
-              **config.algo_config)
+              config.algo_config,
+              config.safety_filter,
+              config.sf_config,
+              )
 
     if config.hpo_config.hpo:
         hpo.hyperparameter_optimization()
@@ -109,6 +117,20 @@ def train(config):
 
     eval_env = env_func(seed=config.seed * 111)
 
+    # Setup safety filter
+    # check if config has key safety_filter
+    if 'safety_filter' in config:
+        if config.safety_filter != '':
+            env_func_filter = partial(make,
+                                    config.task,
+                                    seed=config.seed,
+                                    **config.task_config)
+            safety_filter = make(config.safety_filter,
+                                env_func_filter,
+                                seed=config.seed,
+                                **config.sf_config)
+            safety_filter.reset()
+
     if config.plot_best:
         ## rl
         control_agent.load('/home/tueilsy-st01/safe-control-gym/examples/hpo/results/2D_attitude/seed6_May-31-21-55-42_v0.5.0-623-g8229ba3/model_latest.pt')
@@ -118,8 +140,15 @@ def train(config):
         #control_agent.load('/home/tueilsy-st01/safe-control-gym/examples/hpo/results/temp/seed2_May-29-11-31-10_v0.5.0-619-gdbfb011')
         experiment = BaseExperiment(eval_env, control_agent)
     else:
-        experiment = BaseExperiment(eval_env, control_agent)
-        experiment.launch_training()
+        if 'safety_filter' in config:
+            if config.safety_filter != '':
+                safety_filter.learn()
+                mkdirs(f'{config.output_dir}/models/')
+                safety_filter.save(path=f'{config.output_dir}/models/{config.safety_filter}.pkl')
+                experiment = BaseExperiment(eval_env, control_agent, safety_filter=safety_filter)
+        else:
+            experiment = BaseExperiment(eval_env, control_agent)
+            experiment.launch_training()
     results, metrics = experiment.run_evaluation(n_episodes=config.n_episodes, n_steps=None, done_on_max_steps=True)
     control_agent.close()
 

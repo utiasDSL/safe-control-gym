@@ -87,13 +87,27 @@ iLQR_dict = {
     }
 }
 
-LINEAR_MPSC_dict = {
+iLQR_SF_dict = {
     'categorical': {
+        'max_iterations': [5, 10, 15, 20],
+        'lamb_factor': [5, 10, 15],
+        'lamb_max': [1000, 1500, 2000],
+        'epsilon': [0.01, 0.005, 0.001],
+
+        # safety filter hps
         'horizon': [10, 15, 20, 25, 30, 35, 40],
         'n_samples': [400, 600, 800, 1000],
     },
-    'float': {  # note that in float type, you must specify the upper and lower bound   
+    'float': {  # note that in float type, you must specify the upper and lower bound 
+        'state_weight': [0.001, 20],
+        'state_dot_weight': [0.001, 5],
+        'action_weight': [0.001, 5],
+
+        # safety filter hps
         'tau': [0.95, 0.99], 
+        'sf_state_weight': [0.001, 20],
+        'sf_state_dot_weight': [0.001, 5],
+        'sf_action_weight': [0.001, 5],
     }
 }
 
@@ -311,6 +325,52 @@ def ilqr_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any
 
     return hps_suggestion
 
+def ilqr_sf_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]:
+    """Sampler for iLQR hyperparameters with safety filter.
+
+    args:
+        hps_dict: the dict of hyperparameters that will be optimized over
+        trial: budget variable
+
+    """
+
+    max_iterations = trial.suggest_categorical('max_iterations', iLQR_SF_dict['categorical']['max_iterations'])
+    lamb_factor = trial.suggest_categorical('lamb_factor', iLQR_SF_dict['categorical']['lamb_factor'])
+    lamb_max = trial.suggest_categorical('lamb_max', iLQR_SF_dict['categorical']['lamb_max'])
+    epsilon = trial.suggest_categorical('epsilon', iLQR_SF_dict['categorical']['epsilon'])
+
+    # safety filter
+    horizon = trial.suggest_categorical('horizon', iLQR_SF_dict['categorical']['horizon'])
+    n_samples = trial.suggest_categorical('n_samples', iLQR_SF_dict['categorical']['n_samples'])
+
+    # objective
+    state_weight = trial.suggest_float('state_weight', iLQR_SF_dict['float']['state_weight'][0], iLQR_SF_dict['float']['state_weight'][1], log=True)
+    state_dot_weight = trial.suggest_float('state_dot_weight', iLQR_SF_dict['float']['state_dot_weight'][0], iLQR_SF_dict['float']['state_dot_weight'][1], log=True)
+    action_weight = trial.suggest_float('action_weight', iLQR_SF_dict['float']['action_weight'][0], iLQR_SF_dict['float']['action_weight'][1], log=True)
+
+    # safety filter
+    tau = trial.suggest_float('tau', iLQR_SF_dict['float']['tau'][0], iLQR_SF_dict['float']['tau'][1], log=False)
+    sf_state_weight = trial.suggest_float('sf_state_weight', iLQR_SF_dict['float']['sf_state_weight'][0], iLQR_SF_dict['float']['sf_state_weight'][1], log=True)
+    sf_state_dot_weight = trial.suggest_float('sf_state_dot_weight', iLQR_SF_dict['float']['sf_state_dot_weight'][0], iLQR_SF_dict['float']['sf_state_dot_weight'][1], log=True)
+    sf_action_weight = trial.suggest_float('sf_action_weight', iLQR_SF_dict['float']['sf_action_weight'][0], iLQR_SF_dict['float']['sf_action_weight'][1], log=True)
+
+    hps_suggestion = {
+        'max_iterations': max_iterations,
+        'lamb_factor': lamb_factor,
+        'lamb_max': lamb_max,
+        'epsilon': epsilon,
+        'horizon': horizon,
+        'n_samples': n_samples,
+        'state_weight': state_weight,
+        'state_dot_weight': state_dot_weight,
+        'action_weight': action_weight,
+        'tau': tau,
+        'sf_state_weight': sf_state_weight,
+        'sf_state_dot_weight': sf_state_dot_weight,
+        'sf_action_weight': sf_action_weight,
+    }
+
+    return hps_suggestion
 
 HYPERPARAMS_SAMPLER = {
     'ppo': ppo_sampler,
@@ -318,6 +378,7 @@ HYPERPARAMS_SAMPLER = {
     'gp_mpc': gpmpc_sampler,
     'gpmpc_acados': gpmpc_sampler,
     'ilqr': ilqr_sampler,
+    'ilqr_sf': ilqr_sf_sampler,
 }
 
 HYPERPARAMS_DICT = {
@@ -326,4 +387,5 @@ HYPERPARAMS_DICT = {
     'gp_mpc': GPMPC_dict,
     'gpmpc_acados': GPMPC_dict,
     'ilqr': iLQR_dict,
+    'ilqr_sf': iLQR_SF_dict,
 }

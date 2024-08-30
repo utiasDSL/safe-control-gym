@@ -56,8 +56,10 @@ def compute_RPI_set(Acl,
         if 'optimal' not in prob.status:
             raise cp.SolverError
     except cp.SolverError:
-        print('[ERROR] RPI Computation failed. Ensure you have the MOSEK solver. Otherwise, error unknown.')
-        exit()
+        msg = '[ERROR] RPI Computation failed. Ensure you have the MOSEK solver. Otherwise, error unknown.'
+        print(msg)
+        raise Exception(msg) from None 
+        # exit()
     return P.value
 
 

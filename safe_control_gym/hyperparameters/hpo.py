@@ -26,11 +26,12 @@ from safe_control_gym.experiments.base_experiment import BaseExperiment
 from safe_control_gym.hyperparameters.hpo_sampler import HYPERPARAMS_SAMPLER
 from safe_control_gym.utils.logging import ExperimentLogger
 from safe_control_gym.utils.registration import make
+from safe_control_gym.utils.utils import mkdirs
 
 
 class HPO(object):
 
-    def __init__(self, algo, task, sampler, load_study, output_dir, task_config, hpo_config, **algo_config):
+    def __init__(self, algo, task, sampler, load_study, output_dir, task_config, hpo_config, algo_config, safety_filter=None, sf_config=None):
         """ Hyperparameter optimization class
 
         args:
@@ -39,7 +40,7 @@ class HPO(object):
             output_dir: output directory
             hpo_config: hyperparameter optimization configuration
             algo_config: algorithm configuration
-
+            config: other configurations
         """
 
         self.algo = algo
@@ -51,6 +52,8 @@ class HPO(object):
         self.hps_config = hpo_config.hps_config
         self.output_dir = output_dir
         self.algo_config = algo_config
+        self.safety_filter = safety_filter
+        self.sf_config = sf_config
         self.logger = ExperimentLogger(output_dir, log_file_out=False)
         self.total_runs = 0
         # init sampler
@@ -72,7 +75,10 @@ class HPO(object):
         """
 
         # sample candidate hyperparameters
-        sampled_hyperparams = HYPERPARAMS_SAMPLER[self.algo](self.hps_config, trial)
+        if self.algo == 'ilqr' and self.safety_filter == 'linear_mpsc':
+            sampled_hyperparams = HYPERPARAMS_SAMPLER['ilqr_sf'](self.hps_config, trial)
+        else:
+            sampled_hyperparams = HYPERPARAMS_SAMPLER[self.algo](self.hps_config, trial)
 
         # log trial number
         self.logger.info('Trial number: {}'.format(trial.number))
@@ -88,7 +94,7 @@ class HPO(object):
             if first_iteration:
                 Gs = np.inf
             for i in range(self.hpo_config.repetitions):
-
+                np.random.seed()
                 seed = np.random.randint(0, 10000)
                 # update the agent config with sample candidate hyperparameters
                 # new agent with the new hps
@@ -115,7 +121,20 @@ class HPO(object):
                             else:
                                 raise ValueError('Only cartpole task is supported for rl.')
                     else:
-                        self.algo_config[hp] = sampled_hyperparams[hp]
+                        # check key in algo_config
+                        if hp in self.algo_config:
+                            self.algo_config[hp] = sampled_hyperparams[hp]
+                        elif hp in self.sf_config or hp == 'sf_state_weight' or hp == 'sf_state_dot_weight' or hp == 'sf_action_weight':
+                            if self.task == 'cartpole':
+                                if hp == 'sf_state_weight' or hp == 'sf_state_dot_weight' or hp == 'sf_action_weight':
+                                    self.sf_config['q_lin'] = [sampled_hyperparams['sf_state_weight'], sampled_hyperparams['sf_state_dot_weight'], sampled_hyperparams['sf_state_weight'], sampled_hyperparams['sf_state_dot_weight']]
+                                    self.sf_config['r_lin'] = [sampled_hyperparams['sf_action_weight']] 
+                                else:
+                                    self.sf_config[hp] = sampled_hyperparams[hp]
+                            else:
+                                raise ValueError('Only cartpole task is supported for linear_mpsc.')
+                        else:
+                            raise ValueError('Unknown hyperparameter: {}'.format(hp))
 
                 seeds.append(seed)
                 self.logger.info('Sample hyperparameters: {}'.format(sampled_hyperparams))
@@ -135,10 +154,38 @@ class HPO(object):
 
                     self.agent.reset()
                     eval_env = self.env_func(seed=seed * 111)
-                    experiment = BaseExperiment(eval_env, self.agent)
+                    # Setup safety filter
+                    if self.safety_filter is not None:
+                        env_func_filter = partial(make,
+                                                self.task,
+                                                **self.task_config)
+                        safety_filter = make(self.safety_filter,
+                                            env_func_filter,
+                                            **self.sf_config)
+                        safety_filter.reset()
+                        try: 
+                            safety_filter.learn()
+                        except Exception as e:
+                            self.logger.info(f'Exception occurs when constructing safety filter: {e}')
+                            self.logger.info('Safety filter config: {}'.format(self.sf_config))
+                            self.agent.close()
+                            # delete instances
+                            del self.agent
+                            del self.env_func
+                            return None
+                        mkdirs(f'{self.output_dir}/models/')
+                        safety_filter.save(path=f'{self.output_dir}/models/{self.safety_filter}.pkl')
+                        experiment = BaseExperiment(eval_env, self.agent, safety_filter=safety_filter)
+                    else:
+                        experiment = BaseExperiment(eval_env, self.agent)
                 except Exception as e:
                     # catch exception
                     self.logger.info(f'Exception occurs when constructing agent: {e}')
+                    self.agent.close()
+                    # delete instances
+                    del self.agent
+                    del self.env_func
+                    return None
 
                 # return objective estimate
                 # TODO: report intermediate results to Optuna for pruning
@@ -157,8 +204,11 @@ class HPO(object):
                     print(e)
                     print('Sampled hyperparameters:')
                     print(sampled_hyperparams)
-                    returns.append(0.0)
-                    break
+                    self.agent.close()
+                    # delete instances
+                    del self.agent
+                    del self.env_func
+                    return None
 
                 # avg_return = self.agent._run()
                 # TODO: add n_episondes to the config

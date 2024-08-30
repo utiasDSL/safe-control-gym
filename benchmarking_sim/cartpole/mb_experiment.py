@@ -31,18 +31,17 @@ def run(gui=False, n_episodes=1, n_steps=None, save_data=False):
         n_steps (int): The total number of steps to execute.
         save_data (bool): Whether to save the collected experiment data.
     '''
-    # ALGO = 'ilqr'
+    ALGO = 'ilqr'
     # ALGO = 'gp_mpc'
-    ALGO = 'gpmpc_acados'
-    # ALGO = 'mpc_acados'
+    # ALGO = 'gpmpc_acados'
     SYS = 'cartpole'
     TASK = 'stab'
     # TASK = 'track'
     PRIOR = '200'
     # PRIOR = '100'
     agent = 'quadrotor' if SYS == 'quadrotor_2D' or SYS == 'quadrotor_2D_attitude' else SYS
-    SAFETY_FILTER = None
-    # SAFETY_FILTER='linear_mpsc'
+    # SAFETY_FILTER = None
+    SAFETY_FILTER='linear_mpsc'
 
     
     # check if the config file exists
@@ -60,7 +59,7 @@ def run(gui=False, n_episodes=1, n_steps=None, save_data=False):
                             ]
     else:
         MPSC_COST='one_step_cost'
-        assert ALGO != 'gp_mpc', 'Safety filter only supported for gp_mpc'
+        assert ALGO != 'gp_mpc', 'Safety filter is not supported for gp_mpc'
         assert os.path.exists(f'./config_overrides/{SAFETY_FILTER}_{SYS}_{TASK}_{PRIOR}.yaml'), f'./config_overrides/{SAFETY_FILTER}_{SYS}_{TASK}_{PRIOR}.yaml does not exist'
         sys.argv[1:] = ['--algo', ALGO,
                         '--task', agent,
