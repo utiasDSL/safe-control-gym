@@ -159,7 +159,7 @@ def train(config):
     else:
         system = config.task
 
-    if False:
+    if config.task == Environment.QUADROTOR:
         if system == Environment.CARTPOLE:
             graph1_1 = 2
             graph1_2 = 3
