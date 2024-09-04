@@ -69,4 +69,4 @@ task_config:
   disturbances:
     observation:
       - disturbance_func: white_noise
-        std: [5.6e-05, 1.5e-02, 2.9e-05, 8.0e-03, 1.3e-03, 3.5e-03]
+        std: [5.6e-05, 1.5e-02, 2.9e-05, 8.0e-03, 1.3e-03, 3.5e-03, 0, 0, 0, 0, 0, 0]

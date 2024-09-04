@@ -1,0 +1,28 @@
+hpo_config:
+
+  hpo: True # do hyperparameter optimization
+  load_if_exists: True # this should set to True if hpo is run in parallel
+  use_database: True # this is set to true if MySQL is used
+  objective: [average_rmse] # [other metrics defined in base_experiment.py]
+  direction: [minimize] # [maximize, maximize]
+  dynamical_runs: False # if True, dynamically increase runs
+  warm_trials: 20 # number of trials to run before dyamical runs
+  approximation_threshold: 5 # this is only used when dynamical_runs is True
+  repetitions: 5 # number of samples of performance for each objective query
+  alpha: 1 # significance level for CVaR
+  use_gpu: True
+  dashboard: False
+  seed: 24
+  save_n_best_hps: 3
+  # budget
+  trials: 40
+
+  # hyperparameters
+  hps_config:
+    max_iterations: 15
+    lamb_factor: 10
+    lamb_max: 1000
+    epsilon: 0.01
+    state_weight: 1
+    state_dot_weight: 0.1
+    action_weight: 0.1

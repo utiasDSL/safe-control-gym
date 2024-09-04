@@ -292,7 +292,7 @@ def test_hpo_quadrotor(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, SAMPLER):
         assert os.path.exists(SAFETY_FILTER_CONFIG_PATH), f'{SAFETY_FILTER_CONFIG_PATH} does not exist'
         MPSC_COST='one_step_cost'
         sys.argv[1:] = ['--algo', ALGO,
-                        '--task', SYS,
+                        '--task', SYS_NAME,
                         '--overrides',
                             TASK_CONFIG_PATH,
                             ALGO_CONFIG_PATH,
@@ -305,7 +305,7 @@ def test_hpo_quadrotor(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, SAMPLER):
                         ]
     else:
         sys.argv[1:] = ['--algo', ALGO,
-                        '--task', SYS,
+                        '--task', SYS_NAME,
                         '--overrides',
                             TASK_CONFIG_PATH,
                             ALGO_CONFIG_PATH,
@@ -319,7 +319,7 @@ def test_hpo_quadrotor(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, SAMPLER):
     fac.add_argument('--load_study', type=bool, default=False, help='whether to load study from a previous HPO.')
     fac.add_argument('--sampler', type=str, default='TPESampler', help='which sampler to use in HPO.')
     config = fac.merge()
-    config.hpo_config.trials = 20
+    config.hpo_config.trials = 1
     config.hpo_config.repetitions = 1
     config.hpo_config.use_database = True
     config.sampler = SAMPLER

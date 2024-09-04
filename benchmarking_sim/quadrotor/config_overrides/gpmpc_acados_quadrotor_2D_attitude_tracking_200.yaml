@@ -37,7 +37,7 @@
     warmstart: True
     kernel: RBF
     gp_approx: 'mean_eq' # 'taylor'
-    sparse_gp: false # true
+    sparse_gp: true # true
     n_ind_points: 40
     inducing_point_selection_method: 'kmeans'
     overwrite_saved_data: false
@@ -58,6 +58,8 @@
     use_RTI: False
     # output_dir: ./gpmpc_acados/results
     # use_ancillary_gain: True
-    # soft_constraints_params:
-    #   gp_soft_constraints: true
-    #   gp_soft_constraints_coeff: 10000
+    soft_constraints_params:
+      prior_soft_constraints: true
+      prior_soft_constraints_coeff: 100000
+      gp_soft_constraints: true
+      gp_soft_constraints_coeff: 100000
