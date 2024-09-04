@@ -32,6 +32,15 @@ def hpo(config):
     set_seed_from_config(config)
     set_device_from_config(config)
 
+    # change the cost function for rl methods
+    if config.algo == 'ppo':
+        config.task_config.cost = 'rl_reward'
+        config.task_config.obs_goal_horizon = 1
+    elif config.algo == 'gp_mpc' or config.algo == 'gpmpc_acados' or config.algo == 'ilqr':
+        pass
+    else:
+        raise ValueError('Only ppo, gp_mpc, gpmpc_acados, and ilqr are supported for now.')
+
     # initialize safety filter
     if 'safety_filter' not in config:
         config.safety_filter = None
@@ -65,8 +74,11 @@ def train(config):
     # change the cost function for rl methods
     if config.algo == 'ppo':
         config.task_config.cost = 'rl_reward'
+        config.task_config.obs_goal_horizon = 1
     elif config.algo == 'gp_mpc' or config.algo == 'gpmpc_acados' or config.algo == 'ilqr':
         pass
+    else:
+        raise ValueError('Only ppo, gp_mpc, gpmpc_acados, and ilqr are supported for now.')
     # Override algo_config with given yaml file
     if config.opt_hps == '':
         # if no opt_hps file is given
