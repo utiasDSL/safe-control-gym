@@ -639,43 +639,49 @@ class Quadrotor(BaseAviary):
         self.phi_threshold_radians = 85 * math.pi / 180
         self.theta_threshold_radians = 85 * math.pi / 180
         self.psi_threshold_radians = 180 * math.pi / 180  # Do not bound yaw.
+        self.x_dot_threshold = 15
+        self.y_dot_threshold = 15
+        self.z_dot_threshold = 15
+        self.phi_dot_threshold_radians = 500 * math.pi / 180
+        self.theta_dot_threshold_radians = 500 * math.pi / 180
+        self.psi_dot_threshold_radians = 500 * math.pi / 180
 
         # Define obs/state bounds, labels and units.
         if self.QUAD_TYPE == QuadType.ONE_D:
             # obs/state = {z, z_dot}.
-            low = np.array([self.GROUND_PLANE_Z, -np.finfo(np.float32).max])
-            high = np.array([self.z_threshold, np.finfo(np.float32).max])
+            low = np.array([self.GROUND_PLANE_Z, -self.z_dot_threshold])
+            high = np.array([self.z_threshold, self.z_dot_threshold])
             self.STATE_LABELS = ['z', 'z_dot']
             self.STATE_UNITS = ['m', 'm/s']
         elif self.QUAD_TYPE == QuadType.TWO_D:
             # obs/state = {x, x_dot, z, z_dot, theta, theta_dot}.
             low = np.array([
-                -self.x_threshold, -np.finfo(np.float32).max,
-                self.GROUND_PLANE_Z, -np.finfo(np.float32).max,
-                -self.theta_threshold_radians, -np.finfo(np.float32).max
+                -self.x_threshold, -self.x_dot_threshold,
+                self.GROUND_PLANE_Z, -self.z_dot_threshold,
+                -self.theta_threshold_radians, -self.theta_dot_threshold_radians
             ])
             high = np.array([
-                self.x_threshold, np.finfo(np.float32).max,
-                self.z_threshold, np.finfo(np.float32).max,
-                self.theta_threshold_radians, np.finfo(np.float32).max
+                self.x_threshold, self.x_dot_threshold,
+                self.z_threshold, self.z_dot_threshold,
+                self.theta_threshold_radians, self.theta_dot_threshold_radians
             ])
             self.STATE_LABELS = ['x', 'x_dot', 'z', 'z_dot', 'theta', 'theta_dot']
             self.STATE_UNITS = ['m', 'm/s', 'm', 'm/s', 'rad', 'rad/s']
         elif self.QUAD_TYPE == QuadType.THREE_D:
             # obs/state = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p_body, q_body, r_body}.
             low = np.array([
-                -self.x_threshold, -np.finfo(np.float32).max,
-                -self.y_threshold, -np.finfo(np.float32).max,
-                self.GROUND_PLANE_Z, -np.finfo(np.float32).max,
+                -self.x_threshold, -self.x_dot_threshold,
+                -self.y_threshold, -self.y_dot_threshold,
+                self.GROUND_PLANE_Z, -self.z_dot_threshold,
                 -self.phi_threshold_radians, -self.theta_threshold_radians, -self.psi_threshold_radians,
-                -np.finfo(np.float32).max, -np.finfo(np.float32).max, -np.finfo(np.float32).max
+                -self.phi_dot_threshold_radians, -self.theta_dot_threshold_radians, -self.psi_dot_threshold_radians
             ])
             high = np.array([
-                self.x_threshold, np.finfo(np.float32).max,
-                self.y_threshold, np.finfo(np.float32).max,
-                self.z_threshold, np.finfo(np.float32).max,
+                self.x_threshold, self.x_dot_threshold,
+                self.y_threshold, self.y_dot_threshold,
+                self.z_threshold, self.z_dot_threshold,
                 self.phi_threshold_radians, self.theta_threshold_radians, self.psi_threshold_radians,
-                np.finfo(np.float32).max, np.finfo(np.float32).max, np.finfo(np.float32).max
+                self.phi_dot_threshold_radians, self.theta_dot_threshold_radians, self.psi_dot_threshold_radians
             ])
             self.STATE_LABELS = ['x', 'x_dot', 'y', 'y_dot', 'z', 'z_dot',
                                  'phi', 'theta', 'psi', 'p', 'q', 'r']
