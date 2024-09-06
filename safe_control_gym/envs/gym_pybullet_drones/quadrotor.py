@@ -14,11 +14,11 @@ from gymnasium import spaces
 
 from safe_control_gym.envs.benchmark_env import Cost, Task
 from safe_control_gym.envs.constraints import GENERAL_CONSTRAINTS
-from safe_control_gym.envs.gym_pybullet_drones.base_aviary import BaseAviary
+from safe_control_gym.envs.gym_pybullet_drones.base_aviary import BaseAviary, Physics
 from safe_control_gym.envs.gym_pybullet_drones.quadrotor_utils import (AttitudeControl, QuadType, cmd2pwm,
                                                                        pwm2rpm)
 from safe_control_gym.math_and_models.symbolic_systems import SymbolicModel
-from safe_control_gym.math_and_models.transformations import csRotXYZ, transform_trajectory
+from safe_control_gym.math_and_models.transformations import csRotXYZ, transform_trajectory, get_quaternion_from_euler
 
 
 class Quadrotor(BaseAviary):
@@ -908,7 +908,11 @@ class Quadrotor(BaseAviary):
             # self.quat[0], np.array([0, pitch, 0])) # input thrust is in Newton
             # print(f"collective_thrust: {collective_thrust}, pitch: {pitch}")
 
-            _, quat = p.getBasePositionAndOrientation(self.DRONE_IDS[0], physicsClientId=self.PYB_CLIENT)
+            if self.PHYSICS == Physics.DYN_2D:
+                # _, quat = p.getBasePositionAndOrientation(self.DRONE_IDS[0], physicsClientId=self.PYB_CLIENT)
+                quat = get_quaternion_from_euler(self.rpy[0, :])
+            else:
+                _, quat = p.getBasePositionAndOrientation(self.DRONE_IDS[0], physicsClientId=self.PYB_CLIENT)
             thrust_action = self.attitude_control._dslPIDAttitudeControl(collective_thrust / 4,
                                                                          quat, np.array([0, pitch, 0]))
             # input thrust is in Newton

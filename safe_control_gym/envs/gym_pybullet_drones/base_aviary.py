@@ -18,6 +18,7 @@ import numpy as np
 import pybullet as p
 import pybullet_data
 import casadi as cs
+from termcolor import colored
 
 from safe_control_gym.envs.benchmark_env import BenchmarkEnv
 from safe_control_gym.math_and_models.transformations import csRotXYZ, get_angularvelocity_rpy
@@ -290,7 +291,7 @@ class BaseAviary(BenchmarkEnv):
                 elif self.PHYSICS == Physics.DYN_2D:
                     self._dynamics_2d(rpm, i)
                 elif self.PHYSICS == Physics.DYN_SI:
-                    self._dynamics_si(clipped_action[i, :], i)
+                    self._dynamics_si(clipped_action[i, :], i, disturbance_force)
                 elif self.PHYSICS == Physics.RK4:
                     self._dynamics_rk4(clipped_action[i, :], i)
                 elif self.PHYSICS == Physics.PYB_GND:
@@ -310,6 +311,13 @@ class BaseAviary(BenchmarkEnv):
                 # Apply disturbance
                 if disturbance_force is not None:
                     pos = self._get_drone_state_vector(i)[:3]
+                    print('disturbance_force', disturbance_force)
+                    print(colored(f'pos before applyExternalForce {pos}', 'green'))
+                    '''
+                    NOTE: applyExternalForce only works when explicitly 
+                    stepping the simulation with p.stepSimulation().
+                    Therefore, 
+                    '''
                     p.applyExternalForce(
                         self.DRONE_IDS[i],
                         linkIndex=4,  # Link attached to the quadrotor's center of mass.
@@ -318,17 +326,15 @@ class BaseAviary(BenchmarkEnv):
                         flags=p.WORLD_FRAME,
                         physicsClientId=self.PYB_CLIENT)
             # PyBullet computes the new state, unless Physics.DYN.
-            if self.PHYSICS != Physics.DYN and self.PHYSICS != Physics.RK4 and self.PHYSICS != Physics.DYN_2D:
+            if self.PHYSICS not in [Physics.DYN, Physics.RK4, Physics.DYN_2D, Physics.DYN_SI]:
                 p.stepSimulation(physicsClientId=self.PYB_CLIENT)
             # Save the last applied action (e.g. to compute drag).
             self.last_clipped_action = clipped_action
         if self.PHYSICS == Physics.DYN_2D or self.PHYSICS == Physics.DYN_SI:
+            # set the state of the drone after stepping with the analytical model
             self._set_pybullet_information()
         # Update and store the drones kinematic information.
         self._update_and_store_kinematic_information()
-
-        time_after_stepping = time.time()
-        # print('time stepping', time_after_stepping - time_before_stepping)
 
     def render(self, mode='human', close=False):
         '''Prints a textual output of the environment.
@@ -787,12 +793,15 @@ class BaseAviary(BenchmarkEnv):
         X_dot = cs.vertcat(pos_dot[0], pos_ddot[0], pos_dot[1], pos_ddot[1], pos_dot[2], pos_ddot[2], ang_dot, rate_dot)
         self.X_dot_fun = cs.Function("X_dot", [X, U], [X_dot])
 
-    def _dynamics_si(self, action, nth_drone):
+    def _dynamics_si(self, action, nth_drone, disturbance_force=None):
         '''Explicit dynamics implementation from the identified model.
+           NOTE: The dynamcis update is independent of the pybullet simulation.
 
         Args:
             action (ndarray): (2)-shaped array of ints containing the desired collective thrust and pitch.
             nth_drone (int): The ordinal number/position of the desired drone in list self.DRONE_IDS.
+            disturbance_force (ndarray): (3)-shaped array of floats containing the disturbance force.
+                                         with the format [f_x, 0, f_z].
         '''
         # Current state.
         pos = self.pos[nth_drone, :]
@@ -809,6 +818,11 @@ class BaseAviary(BenchmarkEnv):
         # update state with RK4
         # next_state = self.fd_func(x0=state, p=input)['xf'].full()[:, 0]
         X_dot = self.X_dot_fun(state, action).full()[:, 0]
+        next_state_no_disturbance = state + X_dot*self.PYB_TIMESTEP
+        if disturbance_force is not None:
+            X_dot[1] += disturbance_force[0] / self.MASS
+            X_dot[3] += disturbance_force[2] / self.MASS
+        # perform euler integration
         next_state = state + X_dot*self.PYB_TIMESTEP
 
         # Updated information
