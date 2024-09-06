@@ -403,6 +403,7 @@ class MetricExtractor:
             'average_returns': np.asarray(self.get_episode_returns()),
             'exponentiated_avg_return': np.asarray(self.get_episode_returns(exponentiate=True)).mean(),
             'exponentiated_avg_returns': np.asarray(self.get_episode_returns(exponentiate=True)),
+            'exponentiated_rmse': np.asarray(self.get_episode_exponentiated_rmse()).mean(),
             'average_rmse': np.asarray(self.get_episode_rmse()).mean(),
             'rmse': np.asarray(self.get_episode_rmse()) if len(self.get_episode_rmse()) > 1 else self.get_episode_rmse()[0],
             'rmse_std': np.asarray(self.get_episode_rmse()).std(),
@@ -465,6 +466,11 @@ class MetricExtractor:
             episode_rewards (list): The total reward of each episode.
         '''
         return self.get_episode_data('reward', postprocess_func=sum, exponentiate=exponentiate)
+    
+    def get_episode_exponentiated_rmse(self):
+        '''Total exponentiated rmse of episodes.'''
+
+        return self.get_episode_data('mse', postprocess_func=lambda x: float(np.exp(-np.sqrt(np.mean(x)))))
     
     def get_episode_exponentiated_returns(self):
         '''Total reward/return of episodes.

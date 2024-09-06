@@ -1,0 +1,7 @@
+action_weight: 0.0010892973728266885
+epsilon: 0.01
+lamb_factor: 5
+lamb_max: 1000
+max_iterations: 15
+state_dot_weight: 0.0017193039140489647
+state_weight: 17.95968891089803
