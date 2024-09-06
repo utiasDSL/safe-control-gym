@@ -91,7 +91,7 @@ def test_train_cartpole(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, HYPERPARAMETER):
 @pytest.mark.parametrize('ALGO', ['ilqr', 'gp_mpc', 'gpmpc_acados','ppo'])
 @pytest.mark.parametrize('PRIOR', [''])
 @pytest.mark.parametrize('SAFETY_FILTER', ['', 'linear_mpsc'])
-@pytest.mark.parametrize('HYPERPARAMETER', ['default'])
+@pytest.mark.parametrize('HYPERPARAMETER', ['default', 'optimized'])
 def test_train_quadrotor(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, HYPERPARAMETER):
     '''Test training rl/lbc given a set of hyperparameters.
     '''
@@ -108,8 +108,8 @@ def test_train_quadrotor(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, HYPERPARAMETER):
     if ALGO == 'ilqr' or ALGO == 'linear_mpsc':
         if HYPERPARAMETER == 'default':
             opt_hp_path = ''
-        else:
-            raise ValueError('HYPERPARAMETER must be default')
+        elif HYPERPARAMETER == 'optimized':
+            opt_hp_path = './benchmarking_sim/quadrotor/config_overrides/ilqr_optimized_hyperparameters.yaml'
         PRIOR = '100'
     elif ALGO == 'gp_mpc' or ALGO == 'gpmpc_acados':
         if HYPERPARAMETER == 'default':
@@ -138,6 +138,7 @@ def test_train_quadrotor(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, HYPERPARAMETER):
                             ALGO_CONFIG_PATH,
                             SAFETY_FILTER_CONFIG_PATH,
                         '--kv_overrides', f'sf_config.cost_function={MPSC_COST}',
+                        '--opt_hps', opt_hp_path,
                         '--seed', '2',
                         '--use_gpu', 'True',
                         '--output_dir', output_dir,
@@ -148,6 +149,7 @@ def test_train_quadrotor(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, HYPERPARAMETER):
                         '--overrides',
                             TASK_CONFIG_PATH,
                             ALGO_CONFIG_PATH,
+                        '--opt_hps', opt_hp_path,
                         '--seed', '2',
                         '--use_gpu', 'True',
                         '--output_dir', output_dir,
@@ -292,7 +294,7 @@ def test_hpo_quadrotor(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, SAMPLER):
         assert os.path.exists(SAFETY_FILTER_CONFIG_PATH), f'{SAFETY_FILTER_CONFIG_PATH} does not exist'
         MPSC_COST='one_step_cost'
         sys.argv[1:] = ['--algo', ALGO,
-                        '--task', SYS,
+                        '--task', SYS_NAME,
                         '--overrides',
                             TASK_CONFIG_PATH,
                             ALGO_CONFIG_PATH,
@@ -305,7 +307,7 @@ def test_hpo_quadrotor(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, SAMPLER):
                         ]
     else:
         sys.argv[1:] = ['--algo', ALGO,
-                        '--task', SYS,
+                        '--task', SYS_NAME,
                         '--overrides',
                             TASK_CONFIG_PATH,
                             ALGO_CONFIG_PATH,
@@ -319,7 +321,7 @@ def test_hpo_quadrotor(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, SAMPLER):
     fac.add_argument('--load_study', type=bool, default=False, help='whether to load study from a previous HPO.')
     fac.add_argument('--sampler', type=str, default='TPESampler', help='which sampler to use in HPO.')
     config = fac.merge()
-    config.hpo_config.trials = 20
+    config.hpo_config.trials = 1
     config.hpo_config.repetitions = 1
     config.hpo_config.use_database = True
     config.sampler = SAMPLER

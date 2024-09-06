@@ -1021,10 +1021,7 @@ class Quadrotor(BaseAviary):
         #             '[WARNING]: observation was clipped in Quadrotor._get_observation().'
         #         )
 
-        # Apply observation disturbance.
         obs = deepcopy(self.state)
-        if 'observation' in self.disturbances:
-            obs = self.disturbances['observation'].apply(obs, self)
 
         # Concatenate goal info (references state(s)) for RL.
         # Plus two because ctrl_step_counter has not incremented yet, and we want to return the obs (which would be
@@ -1034,6 +1031,10 @@ class Quadrotor(BaseAviary):
             obs = self.extend_obs(obs, 1)
         else:
             obs = self.extend_obs(obs, self.ctrl_step_counter + 2)
+
+        # Apply observation disturbance.
+        if 'observation' in self.disturbances:
+            obs = self.disturbances['observation'].apply(obs, self)
         return obs
 
     def _get_reward(self):

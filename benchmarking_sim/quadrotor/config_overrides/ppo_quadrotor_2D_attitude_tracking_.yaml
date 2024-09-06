@@ -8,7 +8,7 @@ algo_config:
   use_gae: True
   entropy_coef: 0.01
 
-  # optim args
+  # optim args`
   opt_epochs: 20
   mini_batch_size: 256
   actor_lr: 0.001
@@ -20,7 +20,7 @@ algo_config:
   rollout_steps: 1000
 
   # misc
-  log_interval: 10000
+  log_interval: 1000000
   save_interval: 0
   num_checkpoints: 0
   eval_interval: 2000000000

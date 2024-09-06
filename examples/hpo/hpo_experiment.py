@@ -32,6 +32,17 @@ def hpo(config):
     set_seed_from_config(config)
     set_device_from_config(config)
 
+    # change the cost function for rl methods
+    if config.algo == 'ppo':
+        config.task_config.cost = 'rl_reward'
+        config.task_config.obs_goal_horizon = 1
+        config.normalized_rl_action_space = True
+        config.task_config.disturbances.observation[0]['std'] += [0, 0, 0, 0, 0, 0]
+    elif config.algo == 'gp_mpc' or config.algo == 'gpmpc_acados' or config.algo == 'ilqr':
+        pass
+    else:
+        raise ValueError('Only ppo, gp_mpc, gpmpc_acados, and ilqr are supported for now.')
+
     # initialize safety filter
     if 'safety_filter' not in config:
         config.safety_filter = None
@@ -65,8 +76,13 @@ def train(config):
     # change the cost function for rl methods
     if config.algo == 'ppo':
         config.task_config.cost = 'rl_reward'
+        config.task_config.obs_goal_horizon = 1
+        config.normalized_rl_action_space = True
+        config.task_config.disturbances.observation[0]['std'] += [0, 0, 0, 0, 0, 0]
     elif config.algo == 'gp_mpc' or config.algo == 'gpmpc_acados' or config.algo == 'ilqr':
         pass
+    else:
+        raise ValueError('Only ppo, gp_mpc, gpmpc_acados, and ilqr are supported for now.')
     # Override algo_config with given yaml file
     if config.opt_hps == '':
         # if no opt_hps file is given
@@ -77,12 +93,26 @@ def train(config):
             opt_hps = yaml.load(f, Loader=yaml.FullLoader)
         for hp in opt_hps:
             if hp == 'state_weight' or hp == 'state_dot_weight' or hp == 'action_weight':
-                    if config.algo == 'gp_mpc':
+                    if config.algo == 'gp_mpc' or config.algo == 'gpmpc_acados':
                         if config.task == 'cartpole':
                             config.algo_config['q_mpc'] = [opt_hps['state_weight'], opt_hps['state_dot_weight'], opt_hps['state_weight'], opt_hps['state_dot_weight']]
                             config.algo_config['r_mpc'] = [opt_hps['action_weight']]
+                        elif config.task == 'quadrotor':
+                            config.algo_config['q_mpc'] = [opt_hps['state_weight'], opt_hps['state_dot_weight'], opt_hps['state_weight'], opt_hps['state_dot_weight'], opt_hps['state_weight'], opt_hps['state_dot_weight']]
+                            config.algo_config['r_mpc'] = [opt_hps['action_weight'], opt_hps['action_weight']]
                         else:
-                            raise ValueError('Only cartpole task is supported for gp_mpc.')
+                            raise ValueError('Only cartpole and quadrotor tasks are supported for gp_mpc.')
+                    elif config.algo == 'ilqr':
+                        if config.task == 'cartpole':
+                            config.algo_config['q_lqr'] = [opt_hps['state_weight'], opt_hps['state_dot_weight'], opt_hps['state_weight'], opt_hps['state_dot_weight']]
+                            config.algo_config['r_lqr'] = [opt_hps['action_weight']]
+                        elif config.task == 'quadrotor':
+                            #TODO if implemented for quadrotor, pitch rate penalty should be small.
+                            # raise ValueError('Only cartpole task is supported for ilqr.')
+                            config.algo_config['q_lqr'] = [opt_hps['state_weight'], opt_hps['state_dot_weight'], opt_hps['state_weight'], opt_hps['state_dot_weight'], opt_hps['state_weight'], opt_hps['state_dot_weight']]
+                            config.algo_config['r_lqr'] = [opt_hps['action_weight'], opt_hps['action_weight']]
+                        else:
+                            raise ValueError('Only cartpole and quadrotor tasks are supported for ilqr.')
                     else:
                         if config.task == 'cartpole':
                             config.task_config['rew_state_weight'] = [opt_hps['state_weight'], opt_hps['state_dot_weight'], opt_hps['state_weight'], opt_hps['state_dot_weight']]

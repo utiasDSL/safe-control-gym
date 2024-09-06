@@ -94,7 +94,7 @@ class HPO(object):
             if first_iteration:
                 Gs = np.inf
             for i in range(self.hpo_config.repetitions):
-                np.random.seed()
+                # np.random.seed()
                 seed = np.random.randint(0, 10000)
                 # update the agent config with sample candidate hyperparameters
                 # new agent with the new hps
@@ -104,22 +104,27 @@ class HPO(object):
                             if self.task == 'cartpole':
                                 self.algo_config['q_mpc'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
                                 self.algo_config['r_mpc'] = [sampled_hyperparams['action_weight']]
-                            else:
+                            elif self.task == 'quadrotor':
                                 #TODO if implemented for quadrotor, pitch rate penalty should be small.
-                                raise ValueError('Only cartpole task is supported for gp_mpc.')
+                                # raise ValueError('Only cartpole task is supported for gp_mpc.')
+                                self.algo_config['q_mpc'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
+                                self.algo_config['r_mpc'] = [sampled_hyperparams['action_weight'], sampled_hyperparams['action_weight']]
                         elif self.algo == 'ilqr':
                             if self.task == 'cartpole':
                                 self.algo_config['q_lqr'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
                                 self.algo_config['r_lqr'] = [sampled_hyperparams['action_weight']]
-                            else:
+                            elif self.task == 'quadrotor':
                                 #TODO if implemented for quadrotor, pitch rate penalty should be small.
-                                raise ValueError('Only cartpole task is supported for ilqr.')
+                                # raise ValueError('Only cartpole task is supported for ilqr.')
+                                self.algo_config['q_lqr'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
+                                self.algo_config['r_lqr'] = [sampled_hyperparams['action_weight'], sampled_hyperparams['action_weight']]
                         else:
                             if self.task == 'cartpole':
                                 self.task_config['rew_state_weight'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
                                 self.task_config['rew_action_weight'] = [sampled_hyperparams['action_weight']]
-                            else:
-                                raise ValueError('Only cartpole task is supported for rl.')
+                            elif self.task == 'quadrotor':
+                                self.task_config['rew_state_weight'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
+                                self.task_config['rew_action_weight'] = [sampled_hyperparams['action_weight'], sampled_hyperparams['action_weight']]
                     else:
                         # check key in algo_config
                         if hp in self.algo_config:
@@ -169,7 +174,6 @@ class HPO(object):
                             self.logger.info(f'Exception occurs when constructing safety filter: {e}')
                             self.logger.info('Safety filter config: {}'.format(self.sf_config))
                             self.agent.close()
-                            # delete instances
                             del self.agent
                             del self.env_func
                             return None
@@ -181,9 +185,9 @@ class HPO(object):
                 except Exception as e:
                     # catch exception
                     self.logger.info(f'Exception occurs when constructing agent: {e}')
-                    self.agent.close()
-                    # delete instances
-                    del self.agent
+                    if hasattr(self, 'agent'):
+                        self.agent.close()
+                        del self.agent
                     del self.env_func
                     return None
 
@@ -192,8 +196,6 @@ class HPO(object):
                 try:
                     # self.agent.learn()
                     experiment.launch_training()
-                    self.total_runs += 1
-
                 except Exception as e:
                     # catch the NaN generated by the sampler
                     self.agent.close()
@@ -204,15 +206,24 @@ class HPO(object):
                     print(e)
                     print('Sampled hyperparameters:')
                     print(sampled_hyperparams)
-                    self.agent.close()
-                    # delete instances
-                    del self.agent
-                    del self.env_func
                     return None
 
                 # avg_return = self.agent._run()
                 # TODO: add n_episondes to the config
-                _, metrics = experiment.run_evaluation(n_episodes=5, n_steps=None, done_on_max_steps=True)
+                try:
+                    _, metrics = experiment.run_evaluation(n_episodes=5, n_steps=None, done_on_max_steps=True)
+                    self.total_runs += 1
+                except Exception as e:
+                    self.agent.close()
+                    # delete instances
+                    del self.agent
+                    del self.env_func
+                    del experiment
+                    self.logger.info(f'Exception occurs during evaluation: {e}')
+                    print(e)
+                    print('Sampled hyperparameters:')
+                    print(sampled_hyperparams)
+                    return None
 
                 # at the moment, only single-objective optimization is supported
                 returns.append(metrics[self.hpo_config.objective[0]])

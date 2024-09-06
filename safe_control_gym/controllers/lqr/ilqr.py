@@ -61,7 +61,7 @@ class iLQR(BaseController):
         self.epsilon = epsilon
         self.prior_info = prior_info
 
-        self.env = env_func(info_in_reset=True, done_on_out_of_bound=True)
+        self.env = env_func(info_in_reset=True, done_on_out_of_bound=True, seed=self.seed)
 
         # Controller params.
         self.model = self.get_prior(self.env,)

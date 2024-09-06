@@ -18,11 +18,12 @@ seed3=$((seed1+200))
 seed4=$((seed1+300))
 sampler=$3 # RandomSampler or TPESampler
 localOrHost=$4
-sys=$5 # cartpole, or quadrotor
-algo=$6
+sys=$5 # cartpole, or quadrotor_2D_attitude
+sys_name=${sys%%_*} # cartpole, or quadrotor
+algo=$6 # ilqr, gpmpc_acados
 prior=$7
 safety_filter=$8 # True or False
-task=$9 # stab, or track
+task=$9 # stab, or tracking
 resume=${10} # True or False
 
 
@@ -45,6 +46,11 @@ python ./safe_control_gym/hyperparameters/database.py --func drop --tag ${algo}_
 # create database
 python ./safe_control_gym/hyperparameters/database.py --func create --tag ${algo}_hpo
 
+# echo config path
+echo "task config path: ./benchmarking_sim/${sys_name}/config_overrides/${sys}_${task}.yaml"
+echo "algo config path: ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_${task}_${prior}.yaml"
+echo "hpo config path: ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_hpo.yaml"
+
 # if resume is False, create a study
 if [ "$resume" == 'False' ]; then
 
@@ -52,13 +58,13 @@ if [ "$resume" == 'False' ]; then
 
         python ./examples/hpo/hpo_experiment.py \
                             --algo $algo \
-                            --overrides ./benchmarking_sim/${sys}/config_overrides/${sys}_${task}.yaml \
-                                        ./benchmarking_sim/${sys}/config_overrides/${algo}_${sys}_${task}_${prior}.yaml \
-                                        ./benchmarking_sim/${sys}/config_overrides/${algo}_${sys}_hpo.yaml \
+                            --overrides ./benchmarking_sim/${sys_name}/config_overrides/${sys}_${task}.yaml \
+                                        ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_${task}_${prior}.yaml \
+                                        ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_hpo.yaml \
                             --output_dir ./benchmarking_sim/hpo/${algo} \
                             --sampler $sampler \
                             --use_gpu True \
-                            --task ${sys} --func hpo --tag ${experiment_name} --seed $seed1 &
+                            --task ${sys_name} --func hpo --tag ${experiment_name} --seed $seed1 &
         pid1=$!
 
         # wait until the first study is created
@@ -67,13 +73,13 @@ if [ "$resume" == 'False' ]; then
         # set load_study to True
         python ./examples/hpo/hpo_experiment.py \
                             --algo $algo \
-                            --overrides ./benchmarking_sim/${sys}/config_overrides/${sys}_${task}.yaml \
-                                        ./benchmarking_sim/${sys}/config_overrides/${algo}_${sys}_${task}_${prior}.yaml \
-                                        ./benchmarking_sim/${sys}/config_overrides/${algo}_${sys}_hpo.yaml \
+                            --overrides ./benchmarking_sim/${sys_name}/config_overrides/${sys}_${task}.yaml \
+                                        ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_${task}_${prior}.yaml \
+                                        ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_hpo.yaml \
                             --output_dir ./benchmarking_sim/hpo/${algo} \
                             --sampler $sampler \
                             --use_gpu True \
-                            --task ${sys} --func hpo --load_study True --tag ${experiment_name} --seed $seed2 &
+                            --task ${sys_name} --func hpo --load_study True --tag ${experiment_name} --seed $seed2 &
         pid2=$!
 
     fi
@@ -83,15 +89,15 @@ if [ "$resume" == 'False' ]; then
 
         python ./examples/hpo/hpo_experiment.py \
                             --algo $algo \
-                            --overrides ./benchmarking_sim/${sys}/config_overrides/${sys}_${task}.yaml \
-                                        ./benchmarking_sim/${sys}/config_overrides/${algo}_${sys}_${task}_${prior}.yaml \
-                                        ./benchmarking_sim/${sys}/config_overrides/${algo}_${sys}_hpo.yaml \
-                                        ./benchmarking_sim/${sys}/config_overrides/linear_mpsc_${sys}_${task}_${prior}.yaml \
+                            --overrides ./benchmarking_sim/${sys_name}/config_overrides/${sys}_${task}.yaml \
+                                        ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_${task}_${prior}.yaml \
+                                        ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_hpo.yaml \
+                                        ./benchmarking_sim/${sys_name}/config_overrides/linear_mpsc_${sys}_${task}_${prior}.yaml \
                             --kv_overrides sf_config.cost_function=one_step_cost \
                             --output_dir ./benchmarking_sim/hpo/${algo} \
                             --sampler $sampler \
                             --use_gpu True \
-                            --task ${sys} --func hpo --tag ${experiment_name} --seed $seed1 &
+                            --task ${sys_name} --func hpo --tag ${experiment_name} --seed $seed1 &
         pid1=$!
 
         # wait until the first study is created
@@ -100,15 +106,15 @@ if [ "$resume" == 'False' ]; then
         # set load_study to True
         python ./examples/hpo/hpo_experiment.py \
                             --algo $algo \
-                            --overrides ./benchmarking_sim/${sys}/config_overrides/${sys}_${task}.yaml \
-                                        ./benchmarking_sim/${sys}/config_overrides/${algo}_${sys}_${task}_${prior}.yaml \
-                                        ./benchmarking_sim/${sys}/config_overrides/${algo}_${sys}_hpo.yaml \
-                                        ./benchmarking_sim/${sys}/config_overrides/linear_mpsc_${sys}_${task}_${prior}.yaml \
+                            --overrides ./benchmarking_sim/${sys_name}/config_overrides/${sys}_${task}.yaml \
+                                        ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_${task}_${prior}.yaml \
+                                        ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_hpo.yaml \
+                                        ./benchmarking_sim/${sys_name}/config_overrides/linear_mpsc_${sys}_${task}_${prior}.yaml \
                             --kv_overrides sf_config.cost_function=one_step_cost \
                             --output_dir ./benchmarking_sim/hpo/${algo} \
                             --sampler $sampler \
                             --use_gpu True \
-                            --task ${sys} --func hpo --load_study True --tag ${experiment_name} --seed $seed2 &
+                            --task ${sys_name} --func hpo --load_study True --tag ${experiment_name} --seed $seed2 &
         pid2=$!
 
     fi
@@ -125,25 +131,25 @@ if [ "$resume" == 'True' ]; then
     # set load_study to True
     python ./examples/hpo/hpo_experiment.py \
                         --algo $algo \
-                        --overrides ./benchmarking_sim/${sys}/config_overrides/${sys}_${task}.yaml \
-                                    ./benchmarking_sim/${sys}/config_overrides/${algo}_${sys}_${task}_${prior}.yaml \
-                                    ./benchmarking_sim/${sys}/config_overrides/${algo}_${sys}_hpo.yaml \
+                        --overrides ./benchmarking_sim/${sys_name}/config_overrides/${sys}_${task}.yaml \
+                                    ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_${task}_${prior}.yaml \
+                                    ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_hpo.yaml \
                         --output_dir ./benchmarking_sim/hpo/${algo} \
                         --sampler $sampler \
                         --use_gpu True \
-                        --task ${sys} --func hpo --tag ${experiment_name} --seed $seed3 &
+                        --task ${sys_name} --func hpo --tag ${experiment_name} --seed $seed3 &
     pid1=$!
 
     # set load_study to True
     python ./examples/hpo/hpo_experiment.py \
                         --algo $algo \
-                        --overrides ./benchmarking_sim/${sys}/config_overrides/${sys}_${task}.yaml \
-                                    ./benchmarking_sim/${sys}/config_overrides/${algo}_${sys}_${task}_${prior}.yaml \
-                                    ./benchmarking_sim/${sys}/config_overrides/${algo}_${sys}_hpo.yaml \
+                        --overrides ./benchmarking_sim/${sys_name}/config_overrides/${sys}_${task}.yaml \
+                                    ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_${task}_${prior}.yaml \
+                                    ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_hpo.yaml \
                         --output_dir ./benchmarking_sim/hpo/${algo} \
                         --sampler $sampler \
                         --use_gpu True \
-                        --task ${sys} --func hpo --load_study True --tag ${experiment_name} --seed $seed3 &
+                        --task ${sys_name} --func hpo --load_study True --tag ${experiment_name} --seed $seed3 &
     pid2=$!
 
 fi

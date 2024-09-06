@@ -53,7 +53,6 @@
     terminate_test_on_done: True
     parallel: True
     use_RTI: False
-    output_dir: ./gpmpc_acados/results
     # use_ancillary_gain: True
     soft_constraints_params:
       gp_soft_constraints: true
