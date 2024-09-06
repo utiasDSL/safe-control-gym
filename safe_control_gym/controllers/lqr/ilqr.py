@@ -28,6 +28,7 @@ class iLQR(BaseController):
             lamb_factor: float = 10,
             lamb_max: float = 1000,
             epsilon: float = 0.01,
+            prior_info: dict = None,
             **kwargs):
         '''Creates task and controller.
 
@@ -58,11 +59,12 @@ class iLQR(BaseController):
         self.lamb_factor = lamb_factor
         self.lamb_max = lamb_max
         self.epsilon = epsilon
+        self.prior_info = prior_info
 
         self.env = env_func(info_in_reset=True, done_on_out_of_bound=True)
 
         # Controller params.
-        self.model = self.get_prior(self.env)
+        self.model = self.get_prior(self.env,)
         self.Q = get_cost_weight_matrix(self.q_lqr, self.model.nx)
         self.R = get_cost_weight_matrix(self.r_lqr, self.model.nu)
         self.env.set_cost_function_param(self.Q, self.R)
@@ -276,7 +278,7 @@ class iLQR(BaseController):
             else:
                 self.update_unstable = True
 
-    def select_action(self, obs, info=None, training=False):
+    def select_action(self, obs, info=None, training=False, hardware=False):
         '''Determine the action to take at the current timestep.
 
         Args:
@@ -287,7 +289,10 @@ class iLQR(BaseController):
             action (ndarray): The action chosen by the controller.
         '''
 
-        step = self.extract_step(info)
+        if not hardware:
+            step = self.extract_step(info)
+        else:
+            step = self.traj_step
 
         if training:
             if self.ite_counter == 0:
@@ -305,6 +310,9 @@ class iLQR(BaseController):
             action = self.gains_fb_best[step].dot(obs) + self.input_ff_best[:, step]
         else:
             action, _, _ = self.calculate_lqr_action(obs, step)
+
+        if hardware and self.traj_step < self.num_steps - 1:
+            self.traj_step += 1 
 
         return action
 
@@ -379,3 +387,4 @@ class iLQR(BaseController):
         self.final_obs = obs
         self.final_info = info
         self.total_cost = total_cost
+        self.traj_step = 0
