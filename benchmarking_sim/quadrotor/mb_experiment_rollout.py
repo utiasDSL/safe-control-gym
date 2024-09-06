@@ -19,9 +19,13 @@ from safe_control_gym.envs.gym_pybullet_drones.quadrotor import Quadrotor
 from safe_control_gym.utils.gpmpc_plotting import make_quad_plots
 
 script_path = os.path.dirname(os.path.realpath(__file__))
+gp_model_path = '/home/mingxuan/Repositories/scg_tsung/benchmarking_sim/quadrotor/gpmpc_acados/results/200_300_rti/temp'
+# get all directories in the gp_model_path
+gp_model_dirs = [d for d in os.listdir(gp_model_path) if os.path.isdir(os.path.join(gp_model_path, d))]
+gp_model_dirs = [os.path.join(gp_model_path, d) for d in gp_model_dirs]
 
 @timing
-def run(gui=False, n_episodes=1, n_steps=None, save_data=True):
+def run(gui=False, n_episodes=1, n_steps=None, save_data=True, seed=2):
     '''The main function running experiments for model-based methods.
 
     Args:
@@ -30,38 +34,33 @@ def run(gui=False, n_episodes=1, n_steps=None, save_data=True):
         n_steps (int): The total number of steps to execute.
         save_data (bool): Whether to save the collected experiment data.
     '''
-    # read the additional arguments
-    if len(sys.argv) > 1:
-        ALGO = sys.argv[1]
-    else:
-        # ALGO = 'ilqr'
-        # ALGO = 'gp_mpc'
-        ALGO = 'gpmpc_acados'
-        # ALGO = 'mpc'
-        # ALGO = 'mpc_acados'
-        # ALGO = 'linear_mpc'
-        # ALGO = 'lqr'
-        # ALGO = 'lqr_c'
-        # ALGO = 'pid'
+    ALGO = 'ilqr'
+    # ALGO = 'gp_mpc'
+    # ALGO = 'gpmpc_acados'
+    # ALGO = 'mpc'
+    # ALGO = 'mpc_acados'
+    # ALGO = 'linear_mpc'
+    # ALGO = 'lqr'
+    # ALGO = 'lqr_c'
+    # ALGO = 'pid'
     SYS = 'quadrotor_2D_attitude'
     TASK = 'tracking'
-    PRIOR = '200'
-    # PRIOR = '150'
-    # PRIOR = '100'
+    # PRIOR = '200'
+    PRIOR = '100'
     agent = 'quadrotor' if SYS == 'quadrotor_2D' or SYS == 'quadrotor_2D_attitude' else SYS
     SAFETY_FILTER = None
     # SAFETY_FILTER='linear_mpsc'
 
     # check if the config file exists
-    assert os.path.exists(f'./config_overrides/{SYS}_{TASK}.yaml'), f'./config_overrides/{SYS}_{TASK}.yaml does not exist'
+    assert os.path.exists(f'./config_overrides/{SYS}_{TASK}_slow.yaml'), f'./config_overrides/{SYS}_{TASK}_slow.yaml does not exist'
     assert os.path.exists(f'./config_overrides/{ALGO}_{SYS}_{TASK}_{PRIOR}.yaml'), f'./config_overrides/{ALGO}_{SYS}_{TASK}_{PRIOR}.yaml does not exist'
     if SAFETY_FILTER is None:
         sys.argv[1:] = ['--algo', ALGO,
                         '--task', agent,
                         '--overrides',
-                            f'./config_overrides/{SYS}_{TASK}.yaml',
+                            f'./config_overrides/{SYS}_{TASK}_slow.yaml',
                             f'./config_overrides/{ALGO}_{SYS}_{TASK}_{PRIOR}.yaml',
-                        '--seed', '2',
+                        '--seed', repr(seed),
                         '--use_gpu', 'True',
                         '--output_dir', f'./{ALGO}/results',
                             ]
@@ -73,11 +72,11 @@ def run(gui=False, n_episodes=1, n_steps=None, save_data=True):
                         '--task', agent,
                         '--safety_filter', SAFETY_FILTER,
                         '--overrides',
-                            f'./config_overrides/{SYS}_{TASK}.yaml',
+                            f'./config_overrides/{SYS}_{TASK}_slow.yaml',
                             f'./config_overrides/{ALGO}_{SYS}_{TASK}_{PRIOR}.yaml',
                             f'./config_overrides/{SAFETY_FILTER}_{SYS}_{TASK}_{PRIOR}.yaml',
                         '--kv_overrides', f'sf_config.cost_function={MPSC_COST}',
-                        '--seed', '2',
+                        '--seed', repr(seed),
                         '--use_gpu', 'True',
                         '--output_dir', f'./{ALGO}/results',
                             ]
@@ -88,11 +87,14 @@ def run(gui=False, n_episodes=1, n_steps=None, save_data=True):
     config = fac.merge()
     if ALGO in ['gpmpc_acados', 'gp_mpc']:
         num_data_max = config.algo_config.num_epochs * config.algo_config.num_samples
-        config.output_dir = os.path.join(config.output_dir, PRIOR + '_' + repr(num_data_max))
+        config.output_dir = os.path.join(config.output_dir, PRIOR + '_' + repr(num_data_max) + '_rti_rollout')
+    else:
+        config.output_dir = config.output_dir + '_rollout'
     print('output_dir',  config.algo_config.output_dir)
     set_dir_from_config(config)
     config.algo_config.output_dir = config.output_dir
     mkdirs(config.output_dir)
+    config.algo_config.gp_model_path = gp_model_dirs[seed-1] if ALGO == 'gpmpc_acados' else None
 
     # Create an environment
     env_func = partial(make,
@@ -190,6 +192,7 @@ def run(gui=False, n_episodes=1, n_steps=None, save_data=True):
         results = {'trajs_data': all_trajs, 'metrics': metrics}
         with open(f'./{config.output_dir}/{config.algo}_data_{config.task}_{config.task_config.task}.pkl', 'wb') as file:
             pickle.dump(results, file)
+        
         # save rmse to a file
         with open(f'./{config.output_dir}/metrics.txt', 'w') as f:
             for key, value in metrics.items():
@@ -279,4 +282,11 @@ def wrap2pi_vec(angle_vec):
 
 
 if __name__ == '__main__':
-    run()
+    runtime_list = []
+    num_seed = 10
+    for seed in range(1, num_seed + 1):
+        run(seed=seed)
+        runtime_list.append(run.elapsed_time)
+    print(f'Average runtime for {num_seed} runs: \
+          {np.mean(runtime_list):.3f} sec')
+
