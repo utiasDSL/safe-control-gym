@@ -311,8 +311,6 @@ class BaseAviary(BenchmarkEnv):
                 # Apply disturbance
                 if disturbance_force is not None:
                     pos = self._get_drone_state_vector(i)[:3]
-                    print('disturbance_force', disturbance_force)
-                    print(colored(f'pos before applyExternalForce {pos}', 'green'))
                     '''
                     NOTE: applyExternalForce only works when explicitly 
                     stepping the simulation with p.stepSimulation().
@@ -815,15 +813,19 @@ class BaseAviary(BenchmarkEnv):
         # Update state with discrete time dynamics.
         state = np.hstack([pos[0], vel[0], pos[2], vel[2], rpy[1], rpy_rates[1]])
 
-        # update state with RK4
-        # next_state = self.fd_func(x0=state, p=input)['xf'].full()[:, 0]
-        X_dot = self.X_dot_fun(state, action).full()[:, 0]
-        next_state_no_disturbance = state + X_dot*self.PYB_TIMESTEP
+        # update state
         if disturbance_force is not None:
-            X_dot[1] += disturbance_force[0] / self.MASS
-            X_dot[3] += disturbance_force[2] / self.MASS
+            d = np.array([disturbance_force[0], disturbance_force[2]])
+        else: 
+            d = np.array([0, 0])
         # perform euler integration
-        next_state = state + X_dot*self.PYB_TIMESTEP
+        # next_state = state + self.PYB_TIMESTEP * self.X_dot_fun(state, action, d).full()[:, 0]
+        # perform RK4 integration
+        k1 = self.X_dot_fun(state, action, d).full()[:, 0]
+        k2 = self.X_dot_fun(state + 0.5 * self.PYB_TIMESTEP * k1, action, d).full()[:, 0]
+        k3 = self.X_dot_fun(state + 0.5 * self.PYB_TIMESTEP * k2, action, d).full()[:, 0]
+        k4 = self.X_dot_fun(state + self.PYB_TIMESTEP * k3, action, d).full()[:, 0]
+        next_state = state + (self.PYB_TIMESTEP / 6) * (k1 + 2*k2 + 2*k3 + k4)
 
         # Updated information
         pos = np.array([next_state[0], 0, next_state[2]])
@@ -847,18 +849,19 @@ class BaseAviary(BenchmarkEnv):
         theta_dot = cs.MX.sym('theta_dot')  # Pitch
         X = cs.vertcat(x, x_dot, z, z_dot, theta, theta_dot)
         g = self.GRAVITY_ACC
+        d = cs.MX.sym('d', 2, 1) # disturbance force
 
         # Define inputs.
         T = cs.MX.sym('T') # normlized thrust [N]
         P = cs.MX.sym('P')  # desired pitch angle [rad]
         U = cs.vertcat(T, P)
         X_dot = cs.vertcat(x_dot,
-                            (18.112984649321753 * T+ 3.6800) * cs.sin(theta) + -0.008,
+                            (18.112984649321753 * T+ 3.6800) * cs.sin(theta) + -0.008 + d[0] / self.MASS,
                             z_dot,
-                            (18.112984649321753 * T + 3.6800) * cs.cos(theta) - g,
+                            (18.112984649321753 * T + 3.6800) * cs.cos(theta) - g + d[1] / self.MASS,
                             theta_dot,
                             -140.8 * theta - 13.4 * theta_dot + 124.8 * P)
-        self.X_dot_fun = cs.Function("X_dot", [X, U], [X_dot])
+        self.X_dot_fun = cs.Function("X_dot", [X, U, d], [X_dot])
 
     def _show_drone_local_axes(self, nth_drone):
         '''Draws the local frame of the n-th drone in PyBullet's GUI.
