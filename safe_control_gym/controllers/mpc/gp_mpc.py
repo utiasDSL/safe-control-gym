@@ -19,6 +19,7 @@ Implementation details:
 import time, os
 from copy import deepcopy
 from functools import partial
+from termcolor import colored
 
 import casadi as cs
 import gpytorch
@@ -31,7 +32,7 @@ from sklearn.model_selection import train_test_split
 from skopt.sampler import Lhs
 
 from safe_control_gym.controllers.mpc.gp_utils import (GaussianProcessCollection, ZeroMeanIndependentGPModel,
-                                                       covMatern52ard, covSEard, kmeans_centriods)
+                                                       covMatern52ard, covSEard, covSE_single, kmeans_centriods)
 from safe_control_gym.controllers.mpc.linear_mpc import MPC, LinearMPC
 from safe_control_gym.controllers.lqr.lqr_utils import discretize_linear_system
 from safe_control_gym.envs.benchmark_env import Task
@@ -225,8 +226,8 @@ class GPMPC(MPC):
         self.gp_soft_constraints_coeff = self.soft_constraints_params['gp_soft_constraints_coeff']
 
         self.init_solver = 'ipopt'
-        # self.sqp_solver = 'qrsqp'
-        self.sqp_solver = 'ipopt'
+        # self.solver = 'qrsqp'
+        self.solver = 'ipopt'
 
     def setup_prior_dynamics(self):
         '''Computes the LQR gain used for propograting GP uncertainty from the prior model dynamics.'''
@@ -277,12 +278,21 @@ class GPMPC(MPC):
                                 [covSEard(z1, z2, ell_s, sf2_s)])
             for i in range(n_ind_points):
                 ks[i] = covSE(z1, z_ind[i, :], ell_s, sf2_s)
+        elif self.kernel == 'RBF_single':
+            covSE = cs.Function('covSE', [z1, z2, ell_s, sf2_s],
+                                [covSE_single(z1, z2, ell_s, sf2_s)])
+            for i in range(n_ind_points):
+                ks[i] = covSE(z1, z_ind[i, :], ell_s, sf2_s)
         else:
             raise NotImplementedError('Kernel type not implemented.')
         ks_func = cs.Function('K_s', [z1, z_ind, ell_s, sf2_s], [ks])
         K_z_zind = cs.SX.zeros(Ny, n_ind_points)
         for i in range(Ny):
-            K_z_zind[i, :] = ks_func(z1, z_ind, self.length_scales[i, :], self.signal_var[i])
+            if self.kernel == 'RBF_single':
+                K_z_zind[i, :] = ks_func(z1, z_ind, self.length_scales[i], self.signal_var[i])
+            else:
+                K_z_zind[i, :] = ks_func(z1, z_ind, self.length_scales[i, :], self.signal_var[i])
+
         # This will be mulitplied by the mean_post_factor computed at every time step to compute the approximate mean.
         self.K_z_zind_func = cs.Function('K_z_zind', [z1, z_ind], [K_z_zind], ['z1', 'z2'], ['K'])
 
@@ -529,7 +539,7 @@ class GPMPC(MPC):
                           u=np.zeros((nu, 1)),
                           Xr=x_ref[:, -1],
                           Ur=np.zeros((nu, 1)),
-                          Q=self.Q,
+                          Q=self.P if hasattr(self, 'P') else self.Q,
                           R=self.R)['l']
         z = cs.vertcat(x_var[:, :-1], u_var)
         z = z[self.input_mask, :]
@@ -696,7 +706,7 @@ class GPMPC(MPC):
                 x_guess, u_guess = self.compute_initial_guess(obs, goal_states)
                 # set the solver back
                 self.setup_gp_optimizer(n_ind_points=n_ind_points,
-                                        solver=self.sqp_solver)
+                                        solver=self.solver)
             opti.set_initial(x_var, x_guess)
             opti.set_initial(u_var, u_guess)  # Initial guess for optimization problem.
         elif self.warmstart and self.x_prev is not None and self.u_prev is not None:
@@ -715,7 +725,7 @@ class GPMPC(MPC):
             self.x_prev = x_val
         except RuntimeError:
             # sol = opti.solve()
-            if self.sqp_solver == 'ipopt':
+            if self.solver == 'ipopt':
                 x_val, u_val = opti.debug.value(x_var), opti.debug.value(u_var)
             else:
                 return_status = opti.return_status()
@@ -762,6 +772,9 @@ class GPMPC(MPC):
         else:
             action = np.array([u_val[0]])
         self.prev_action = action,
+        # use the ancillary gain
+        if hasattr(self, 'K'):
+            action += self.K @ (x_val[:, 0] - obs) 
         return action
 
     def train_gp(self,
@@ -906,6 +919,7 @@ class GPMPC(MPC):
             self.gaussian_process.init_with_hyperparam(train_inputs_tensor,
                                                        train_targets_tensor,
                                                        gp_model)
+            print(colored(f'Loaded pretrained model from {gp_model}', 'green'))
         else:
             # Train the GP.
             self.gaussian_process.train(train_inputs_tensor,
@@ -943,7 +957,10 @@ class GPMPC(MPC):
             model_path (str): Path to the pretrained model.
         '''
         data = np.load(f'{model_path}/data.npz')
-        gp_model_path = f'{model_path}/best_model.pth'
+        if self.parallel:
+            gp_model_path = f'{model_path}/best_model.pth'
+        else:
+            gp_model_path = f'{model_path}'
         self.train_gp(input_data=data['data_inputs'], target_data=data['data_targets'], gp_model=gp_model_path)
 
     def learn(self, env=None):
@@ -1135,6 +1152,8 @@ class GPMPC(MPC):
             self.traj_step = 0
         # Dynamics model.
         if self.gaussian_process is not None:
+            # if self.kernel in ['RBF', 'RBF_single']:
+            #     self.compute_terminal_cost_and_ancillary_gain()
             if self.sparse_gp and self.train_data['train_targets'].shape[0] <= self.n_ind_points:
                 n_ind_points = self.train_data['train_targets'].shape[0]
             elif self.sparse_gp:
@@ -1224,3 +1243,29 @@ class GPMPC(MPC):
 
         return x_guess, u_guess
     
+    def compute_terminal_cost_and_ancillary_gain(self):
+        '''
+        Computes the terminal cost and ancillary gain with LQR.
+        NOTE: This is only supported for the smooth kernel.
+        '''
+        
+        # linearization point
+        x_lin = self.X_EQ[:, None]
+        u_lin = self.U_EQ[:, None]
+        # prior model linearization
+        dfdxdfdu = self.model.df_func(x=x_lin, u=u_lin)
+        dfdx = dfdxdfdu['dfdx'].toarray()
+        dfdu = dfdxdfdu['dfdu'].toarray()
+        Ad, Bd = discretize_linear_system(dfdx, dfdu, self.dt, exact=True) 
+        # GP linearization
+        z = np.vstack((x_lin, u_lin))
+        A_gp = self.gaussian_process.casadi_linearized_predict(z=z)['A'].toarray()
+        B_gp = self.gaussian_process.casadi_linearized_predict(z=z)['B'].toarray()
+        assert A_gp.shape == (self.model.nx, self.model.nx)
+        assert B_gp.shape == (self.model.nx, self.model.nu)
+        A = Ad + A_gp
+        B = Bd + B_gp
+        # compute LQR gain and Gramian as the ancillary gain and terminal cost
+        self.P = scipy.linalg.solve_discrete_are(A, B, self.Q, self.R)
+        btp = np.dot(B.T, self.P)
+        self.K = np.dot(scipy.linalg.inv(self.R + np.dot(B.T, np.dot(self.P, B))), btp)
