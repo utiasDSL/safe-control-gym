@@ -15,14 +15,15 @@ algo_config:
   critic_lr: 0.001
 
   # runner args
-  max_env_steps: 200000
+  max_env_steps: 480000
   rollout_batch_size: 4
-  rollout_steps: 1000
+  rollout_steps: 540
+  eval_batch_size: 10
 
   # misc
-  log_interval: 2000
-  save_interval: 0
+  log_interval: 10800
+  save_interval: 540000
   num_checkpoints: 0
-  eval_interval: 2000
+  eval_interval: 10800
   eval_save_best: True
   tensorboard: False
