@@ -26,12 +26,6 @@ def hpo(config):
 
     """
 
-    # Experiment setup.
-    if config.hpo_config.hpo:
-        set_dir_from_config(config)
-    set_seed_from_config(config)
-    set_device_from_config(config)
-
     # change the cost function for rl methods
     if config.algo == 'ppo':
         config.task_config.cost = 'rl_reward'
@@ -42,6 +36,12 @@ def hpo(config):
         pass
     else:
         raise ValueError('Only ppo, gp_mpc, gpmpc_acados, and ilqr are supported for now.')
+    
+    # Experiment setup.
+    if config.hpo_config.hpo:
+        set_dir_from_config(config)
+    set_seed_from_config(config)
+    set_device_from_config(config)
 
     # initialize safety filter
     if 'safety_filter' not in config:
