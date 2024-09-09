@@ -3,6 +3,7 @@ task_config:
   ctrl_freq: 60
   pyb_freq: 60
   physics: dyn_si
+  # physics: pyb
   quad_type: 4
 
   init_state:
@@ -67,6 +68,11 @@ task_config:
   done_on_out_of_bound: True
   done_on_violation: False
   disturbances:
+    # dynamics: # disturbance force in newton
+    #   - disturbance_func: uniform
+    #     low:  1.
+    #     high: 1.
+    #     mask: [1, 0, 0, 0]
     observation:
       - disturbance_func: white_noise
         std: [5.6e-05, 1.5e-02, 2.9e-05, 8.0e-03, 1.3e-03, 3.5e-03]

@@ -16,7 +16,7 @@ import munch
 import numpy as np
 import torch
 import yaml
-
+from termcolor import colored
 
 def mkdirs(*paths):
     '''Makes a list of directories.'''
@@ -206,6 +206,6 @@ def timing(f):
         result = f(*args, **kw)
         te = time.time()
         wrap.elapsed_time = te - ts
-        print(f'func:{f.__name__} took: {wrap.elapsed_time:.3f} sec')
+        print(colored(f'func:{f.__name__} took: {wrap.elapsed_time:.3f} sec', 'blue' ))
         return result
     return wrap

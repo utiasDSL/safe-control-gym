@@ -30,18 +30,23 @@ def run(gui=False, n_episodes=1, n_steps=None, save_data=True):
         n_steps (int): The total number of steps to execute.
         save_data (bool): Whether to save the collected experiment data.
     '''
-    # ALGO = 'ilqr'
-    # ALGO = 'gp_mpc'
-    ALGO = 'gpmpc_acados'
-    # ALGO = 'mpc'
-    # ALGO = 'mpc_acados'
-    # ALGO = 'linear_mpc'
-    # ALGO = 'lqr'
-    # ALGO = 'lqr_c'
-    # ALGO = 'pid'
+    # read the additional arguments
+    if len(sys.argv) > 1:
+        ALGO = sys.argv[1]
+    else:
+        # ALGO = 'ilqr'
+        # ALGO = 'gp_mpc'
+        ALGO = 'gpmpc_acados'
+        # ALGO = 'mpc'
+        # ALGO = 'mpc_acados'
+        # ALGO = 'linear_mpc'
+        # ALGO = 'lqr'
+        # ALGO = 'lqr_c'
+        # ALGO = 'pid'
     SYS = 'quadrotor_2D_attitude'
     TASK = 'tracking'
     PRIOR = '200'
+    # PRIOR = '150'
     # PRIOR = '100'
     agent = 'quadrotor' if SYS == 'quadrotor_2D' or SYS == 'quadrotor_2D_attitude' else SYS
     SAFETY_FILTER = None
@@ -81,8 +86,9 @@ def run(gui=False, n_episodes=1, n_steps=None, save_data=True):
     fac.add_argument('--n_episodes', type=int, default=1, help='number of episodes to run.')
     # merge config and create output directory
     config = fac.merge()
-    num_data_max = config.algo_config.num_epochs * config.algo_config.num_samples
-    config.output_dir = os.path.join(config.output_dir, PRIOR + '_' + repr(num_data_max))
+    if ALGO in ['gpmpc_acados', 'gp_mpc']:
+        num_data_max = config.algo_config.num_epochs * config.algo_config.num_samples
+        config.output_dir = os.path.join(config.output_dir, PRIOR + '_' + repr(num_data_max))
     print('output_dir',  config.algo_config.output_dir)
     set_dir_from_config(config)
     config.algo_config.output_dir = config.output_dir
@@ -184,6 +190,11 @@ def run(gui=False, n_episodes=1, n_steps=None, save_data=True):
         results = {'trajs_data': all_trajs, 'metrics': metrics}
         with open(f'./{config.output_dir}/{config.algo}_data_{config.task}_{config.task_config.task}.pkl', 'wb') as file:
             pickle.dump(results, file)
+        # save rmse to a file
+        with open(f'./{config.output_dir}/metrics.txt', 'w') as f:
+            for key, value in metrics.items():
+                f.write(f'{key}: {value}\n')
+            print(f'Metrics saved to ./{config.output_dir}/metrics.txt')
 
     print('FINAL METRICS - ' + ', '.join([f'{key}: {value}' for key, value in metrics.items()]))
 

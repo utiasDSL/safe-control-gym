@@ -227,6 +227,7 @@ def get_quad_average_rmse_error(runs, ref):
 def get_quad_cost(test_runs, ref):
     num_epochs = len(test_runs)
     num_episodes = len(test_runs[0])
+    test_runs = match_runs_by_append_last(test_runs, ref)
     costs = np.zeros((num_epochs, num_episodes))
     for epoch in range(num_epochs):
         for episode in range(num_episodes):
@@ -238,6 +239,7 @@ def get_quad_cost(test_runs, ref):
 def get_quad_average_rmse_error_xz_only(runs, ref):
     num_epochs = len(runs)
     num_episodes = len(runs[0])
+    runs = match_runs_by_append_last(runs, ref)
     costs = np.zeros((num_epochs, num_episodes))
     for epoch in range(num_epochs):
         for episode in range(num_episodes):
@@ -340,3 +342,15 @@ def make_quad_plots(test_runs, train_runs, trajectory, dir):
     runtime_result = get_runtime(test_runs, train_runs)
     plot_runtime(runtime_result, num_points_per_epoch, fig_dir)
     
+def match_runs_by_append_last(test_runs, ref):
+    num_epochs = len(test_runs)
+    num_episodes = len(test_runs[0])
+    ref_length = ref.shape[0]
+    # if any of the runs has a different length, append the last state to match the length
+    for epoch in range(num_epochs):
+        for episode in range(num_episodes):
+            if test_runs[epoch][episode]['obs'].shape[0] != ref_length:
+                last_state = test_runs[epoch][episode]['obs'][-1, :]
+                for i in range(ref_length - test_runs[epoch][episode]['obs'].shape[0]):
+                    test_runs[epoch][episode]['obs'] = np.vstack((test_runs[epoch][episode]['obs'], last_state))
+    return test_runs
