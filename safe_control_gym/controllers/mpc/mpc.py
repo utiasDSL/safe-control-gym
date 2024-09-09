@@ -243,7 +243,7 @@ class MPC(BaseController):
 
         return x_guess, u_guess
 
-    def setup_optimizer(self, solver='qrsqp'):
+    def setup_optimizer(self, solver='ipopt'):
         '''Sets up nonlinear optimization problem.'''
         print(f'=================Setting up optimizer with {solver}=================')
         nx, nu = self.model.nx, self.model.nu
