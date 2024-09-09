@@ -56,11 +56,6 @@ task_config:
   episode_len_sec: 9
   cost: quadratic
 
-  # RL Reward
-  rew_state_weight: [1, 0.01, 1, 0.01, 0.01]
-  rew_act_weight: 0.01
-  rew_exponential: True
-
   constraints:
     - constraint_form: default_constraint
       constrained_variable: state

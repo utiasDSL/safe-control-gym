@@ -173,6 +173,7 @@ class HPO(object):
                         except Exception as e:
                             self.logger.info(f'Exception occurs when constructing safety filter: {e}')
                             self.logger.info('Safety filter config: {}'.format(self.sf_config))
+                            self.logger.std_out_logger.logger.exception("Full exception traceback")
                             self.agent.close()
                             del self.agent
                             del self.env_func
@@ -185,6 +186,7 @@ class HPO(object):
                 except Exception as e:
                     # catch exception
                     self.logger.info(f'Exception occurs when constructing agent: {e}')
+                    self.logger.std_out_logger.logger.exception("Full exception traceback")
                     if hasattr(self, 'agent'):
                         self.agent.close()
                         del self.agent
@@ -203,6 +205,7 @@ class HPO(object):
                     del self.env_func
                     del experiment
                     self.logger.info(f'Exception occurs during learning: {e}')
+                    self.logger.std_out_logger.logger.exception("Full exception traceback")
                     print(e)
                     print('Sampled hyperparameters:')
                     print(sampled_hyperparams)
@@ -220,6 +223,7 @@ class HPO(object):
                     del self.env_func
                     del experiment
                     self.logger.info(f'Exception occurs during evaluation: {e}')
+                    self.logger.std_out_logger.logger.exception("Full exception traceback")
                     print(e)
                     print('Sampled hyperparameters:')
                     print(sampled_hyperparams)
