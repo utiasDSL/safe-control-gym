@@ -898,6 +898,12 @@ class Quadrotor(BaseAviary):
             self.current_physical_action = self.current_physical_action + self.adv_action
         self.current_noisy_physical_action = self.current_physical_action
 
+        # Identified dynamics model works with collective thrust and pitch directly
+        # No need to compute RPMs, (save compute)
+        if self.PHYSICS == Physics.DYN_SI:
+            return None
+
+        # Compute motor RPM (depending on quad_type)
         if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE or self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE_5S:
             collective_thrust, pitch = action
 
