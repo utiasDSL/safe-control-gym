@@ -900,6 +900,9 @@ class Quadrotor(BaseAviary):
 
         # Identified dynamics model works with collective thrust and pitch directly
         # No need to compute RPMs, (save compute)
+        self.current_clipped_action = np.clip(self.current_noisy_physical_action,
+                                              self.physical_action_bounds[0],
+                                              self.physical_action_bounds[1])[0]
         if self.PHYSICS == Physics.DYN_SI:
             return None
 
@@ -989,7 +992,7 @@ class Quadrotor(BaseAviary):
         """
 
         full_state = self._get_drone_state_vector(0)
-        pos, _, rpy, vel, ang_v, _ = np.split(full_state, [3, 7, 10, 13, 16])
+        pos, _, rpy, vel, ang_v, rpy_rate, _ = np.split(full_state, [3, 7, 10, 13, 16, 19])
         # print(rpy)
         # if rpy[1] > 0.2:
         #     print([pos, rpy, vel, ang_v])
@@ -1004,7 +1007,7 @@ class Quadrotor(BaseAviary):
         elif self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
             # {x, x_dot, z, z_dot, theta, theta_dot}.
             self.state = np.hstack(
-                [pos[0], vel[0], pos[2], vel[2], rpy[1], ang_v[1]]
+                [pos[0], vel[0], pos[2], vel[2], rpy[1], rpy_rate[1]]
             ).reshape((6,))
         elif self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE_5S:
             # {x, x_dot, z, z_dot, theta, theta_dot}.
@@ -1052,7 +1055,7 @@ class Quadrotor(BaseAviary):
         # RL cost.
         if self.COST == Cost.RL_REWARD:
             state = self.state
-            act = np.asarray(self.current_noisy_physical_action)
+            act = np.asarray(self.current_clipped_action)
             act_error = act - self.U_GOAL
             # Quadratic costs w.r.t state and action
             # TODO: consider using multiple future goal states for cost in tracking
