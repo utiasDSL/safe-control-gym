@@ -4,9 +4,11 @@ import casadi as cs
 import numpy as np
 import scipy
 import scipy.linalg
+import matplotlib.pyplot as plt
 
 from safe_control_gym.controllers.lqr.lqr_utils import discretize_linear_system
 from safe_control_gym.envs.constraints import ConstraintList
+from termcolor import colored
 
 
 def get_cost_weight_matrix(weights,
@@ -90,3 +92,39 @@ def reset_constraints(constraints):
     if len(constraints_list.input_state_constraints) > 0:
         raise NotImplementedError('[Error] Cannot handle combined state input constraints yet.')
     return constraints_list, state_constraints_sym, input_constraints_sym
+
+def plot_open_loop_sol(ctrl):
+    ''' Plot the open loop predction of the MPC controller.
+    
+    Args:
+        ctrl (MPC): MPC controller object.
+    '''
+    if ctrl.x_prev is not None and ctrl.u_prev is not None:
+        nx = ctrl.x_prev.shape[0] # state dim
+        nu = ctrl.u_prev.shape[0] # input dim
+        steps = ctrl.T # prediction horizon
+        dt = ctrl.dt # ctrl frequency
+        
+        x = ctrl.x_prev # open loop state (nx, steps + 1)
+        u = ctrl.u_prev # open loop input (nu, steps)
+
+        # get the reference trajectory
+        goal_states = ctrl.get_references()
+
+        # Plot the open loop prediction
+        fig, axs = plt.subplots(nx + nu, 1, figsize=(5, 8))
+        fig.tight_layout()
+        for i in range(nx):
+            axs[i].plot(np.arange(steps + 1) * dt, x[i, :], 'b', label='pred')
+            axs[i].plot(np.arange(steps + 1) * dt, goal_states[i, :], 'r--', label='ref', )
+            axs[i].set_ylabel(f'$x_{i}$')
+            axs[i].legend()
+        for i in range(nu):
+            axs[nx + i].plot(np.arange(steps) * dt, u[i, :], 'b', label='pred')
+            axs[nx + i].set_ylabel(f'$u_{i}$')
+
+        plt.xlabel('Time [s]')
+        plt.show()
+    else:
+        print(colored('[Warning] No open loop solution to plot.', 'yellow'))
+    

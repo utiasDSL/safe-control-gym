@@ -28,6 +28,7 @@ from acados_template import AcadosOcp, AcadosOcpSolver, AcadosSimSolver, AcadosM
 
 import csv
 import matplotlib.pyplot as plt
+from termcolor import colored
 
 class GPMPC_ACADOS(GPMPC):
     '''Implements a GP-MPC controller with Acados optimization.'''
@@ -242,8 +243,11 @@ class GPMPC_ACADOS(GPMPC):
         # set cost 
         ocp.cost.cost_type = 'LINEAR_LS'
         ocp.cost.cost_type_e = 'LINEAR_LS'
+        # cost weight matrices
         ocp.cost.W = scipy.linalg.block_diag(self.Q, self.R)
-        ocp.cost.W_e = self.Q
+        ocp.cost.W_e = self.P if hasattr(self, 'P') else self.Q
+        # ocp.cost.W_e = self.Q
+
         ocp.cost.Vx = np.zeros((ny, nx))
         ocp.cost.Vx[:nx, :nx] = np.eye(nx)
         ocp.cost.Vu = np.zeros((ny, nu))
@@ -559,19 +563,19 @@ class GPMPC_ACADOS(GPMPC):
                 raise Exception(f'acados returned status {status}. Exiting.')
                 # print(f"acados returned status {status}. ")
             # if status == 2:
-            #     print(f"acados returned status {status}. ")
-            
-            action = self.acados_ocp_solver.get(0, "u")
+            #     print(f"acados returned status {status}. ")            
 
         else:
             status = self.acados_ocp_solver.solve()
             if status not in [0, 2]:
                 self.acados_ocp_solver.print_statistics()
-                raise Exception(f'acados returned status {status}. Exiting.')
+                # raise Exception(f'acados returned status {status}. Exiting.')
+                print(colored(f"acados returned status {status}. ", 'red'))
                 # print(f"acados returned status {status}. ")
             # if status == 2:
             #     print(f"acados returned status {status}. ")
-            action = self.acados_ocp_solver.get(0, "u")
+
+        action = self.acados_ocp_solver.get(0, "u")
         # time_after_solve = time.time()
         # print('acados solve time:', time_after_solve - time_before_solve)
         # get the open-loop solution
@@ -593,9 +597,15 @@ class GPMPC_ACADOS(GPMPC):
         time_after = time.time()
         print(f'gpmpc acados sol time: {time_after - time_before:.3f}; sol status {status}; nlp iter {self.acados_ocp_solver.get_stats("sqp_iter")}; qp iter {self.acados_ocp_solver.get_stats("qp_iter")}')
         if time_after - time_before > 1/60:
-            print(f'========= Warning: GPMPC ACADOS took {time_after - time_before:.3f} seconds =========')
+            print(colored(f'========= Warning: GPMPC ACADOS took {time_after - time_before:.3f} seconds =========', 'yellow'))
 
-        return action
+        if hasattr(self, 'K'):
+            action += self.K @ (self.x_prev[:, 0] - obs) 
+            # self.u_prev = self.u_prev + self.K @ (self.x_prev - obs)
+            # self.u_guess = self.u_prev
+            # action = self.u_prev[0] if nu == 1 else self.u_prev[:, 0]
+
+        return action 
  
     def reset(self):
         '''Reset the controller before running.'''
@@ -610,6 +620,7 @@ class GPMPC_ACADOS(GPMPC):
         # Dynamics model.
         self.setup_prior_dynamics()
         if self.gaussian_process is not None:
+            # self.compute_terminal_cost_and_ancillary_gain()
             # sparse GP
             if self.sparse_gp and self.train_data['train_targets'].shape[0] <= self.n_ind_points:
                 n_ind_points = self.train_data['train_targets'].shape[0]

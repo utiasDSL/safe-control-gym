@@ -239,7 +239,7 @@ class PPO(BaseController):
         obs = self.obs_normalizer(obs)
         ep_returns, ep_lengths, eval_return = [], [], 0.0
         frames = []
-        mse, ep_rmse_mean, ep_rmse_std = [], [], []
+        mse, ep_rmse = [], []
         while len(ep_returns) < n_episodes:
             action = self.select_action(obs=obs, info=info)
             obs, _, done, info = env.step(action)
@@ -251,8 +251,7 @@ class PPO(BaseController):
                 print(f'obs {obs} | act {action}')
             if done:
                 assert 'episode' in info
-                ep_rmse_mean.append(np.array(mse).mean()**0.5)
-                ep_rmse_std.append(np.array(mse).std())
+                ep_rmse.append((np.array(mse).mean())**0.5)
                 mse = []
                 ep_returns.append(info['episode']['r'])
                 ep_lengths.append(info['episode']['l'])
@@ -262,8 +261,8 @@ class PPO(BaseController):
         ep_lengths = np.asarray(ep_lengths)
         ep_returns = np.asarray(ep_returns)
         eval_results = {'ep_returns': ep_returns, 'ep_lengths': ep_lengths,
-                        'rmse': np.array(ep_rmse_mean).mean(),
-                        'rmse_std': np.array(ep_rmse_std).mean()}
+                        'rmse': np.array(ep_rmse).mean(),
+                        'rmse_std': np.array(ep_rmse).std()}
         if len(frames) > 0:
             eval_results['frames'] = frames
         # Other episodic stats from evaluation env.

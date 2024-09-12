@@ -10,6 +10,7 @@ import numpy as np
 import torch
 from sklearn import preprocessing
 from sklearn.cluster import KMeans
+from termcolor import colored
 
 from safe_control_gym.utils.utils import mkdirs
 
@@ -37,6 +38,13 @@ def covSEard(x,
     dist = ca.sum1((x - z)**2 / ell**2)
     return sf2 * ca.SX.exp(-.5 * dist)
 
+def covSE_single(x,
+          z,
+          ell,
+          sf2
+          ):
+    dist = ca.sum1((x - z) ** 2 / ell ** 2)
+    return sf2 * ca.exp(-.5 * dist)
 
 def covMatern52ard(x,
                    z,
@@ -93,6 +101,11 @@ class ZeroMeanIndependentMultitaskGPModel(gpytorch.models.ExactGP):
                                            ard_num_dims=train_x.shape[1]),
                 batch_shape=torch.Size([self.n]),
                 ard_num_dims=train_x.shape[1]
+            )
+        elif kernel == 'RBF_single':
+            self.covar_module = gpytorch.kernels.ScaleKernel(
+                gpytorch.kernels.RBFKernel(batch_shape=torch.Size([self.n])),
+                batch_shape=torch.Size([self.n])
             )
         elif kernel == 'Matern':
             self.covar_module = gpytorch.kernels.ScaleKernel(
@@ -174,6 +187,11 @@ class BatchIndependentMultitaskGPModel(gpytorch.models.ExactGP):
             self.covar_module = gpytorch.kernels.ScaleKernel(
                 gpytorch.kernels.RBFKernel(ard_num_dims=train_x.shape[-1], batch_shape=torch.Size([train_y.shape[0]])),
                 batch_shape=torch.Size([train_y.shape[0]]), ard_num_dims=train_x.shape[-1]
+            )
+        elif kernel == 'RBF_single':
+            self.covar_module = gpytorch.kernels.ScaleKernel(
+                gpytorch.kernels.RBFKernel(batch_shape=torch.Size([train_y.shape[0]])),
+                batch_shape=torch.Size([train_y.shape[0]])
             )
         elif kernel == 'Matern':
             self.covar_module = gpytorch.kernels.ScaleKernel(
@@ -287,6 +305,7 @@ class GaussianProcessCollection:
         self.K_plus_noise = gp_K_plus_noise
         self.K_plus_noise_inv = gp_K_plus_noise_inv
         self.casadi_predict = self.make_casadi_predict_func()
+        self.casadi_linearized_predict = self.make_casadi_linearized_predict_func()
 
     def get_hyperparameters(self,
                             as_numpy=False
@@ -361,9 +380,9 @@ class GaussianProcessCollection:
             self.K_plus_noise_inv = gp_K_plus_noise_inv
         else:
             for i in range(len(learning_rate)):
-                assert learning_rate[i] == learning_rate[0], ValueError('Learning rate must be the same for all GPs.')
+                assert learning_rate[i] == learning_rate[0], ValueError('Learning rate must be the same for all GPs when using parallel GPs.')
             for i in range(len(n_train)):
-                assert n_train[i] == n_train[0], ValueError('Training iterations must be the same for all GPs.')
+                assert n_train[i] == n_train[0], ValueError('Training iterations must be the same for all GPs when using parallel GPs.')
             lr = learning_rate[0]
             n_t = n_train[0]
             self.gps.train(train_x_raw,
@@ -466,8 +485,11 @@ class GaussianProcessCollection:
         Ny = len(self.target_mask)
         z = ca.SX.sym('z1', Nz)
         dmu = ca.SX.zeros(Nz, Ny)
-        for gp_ind, gp in enumerate(self.gp_list):
-            dmu[:, gp_ind] = gp.casadi_linearized_predict(z=z)['mean']
+        if not self.parallel:
+            for gp_ind, gp in enumerate(self.gp_list):
+                dmu[:, gp_ind] = gp.casadi_linearized_predict(z=z)['mean']
+        else:
+            dmu = self.gps.casadi_linearized_predict(z=z)['mean']
         A, B = dmu.T[:, :Ny], dmu.T[:, Ny:]
         assert A.shape == (Ny, Ny), ValueError('A matrix has wrong shape.')
         assert B.shape == (Ny, Nz-Ny), ValueError('B matrix has wrong shape.')
@@ -487,16 +509,20 @@ class GaussianProcessCollection:
     def plot_trained_gp(self,
                         inputs,
                         targets,
-                        fig_count=0
+                        fig_count=0,
+                        output_dir=None,
+                        title=None,
                         ):
         '''Plot the trained GP given the input and target data.'''
-        assert self.parallel is False, ValueError('Parallel GP not supported yet.')
-        for gp_ind, gp in enumerate(self.gp_list):
-            fig_count = gp.plot_trained_gp(inputs,
-                                           targets[:, self.target_mask[gp_ind], None],
-                                           self.target_mask[gp_ind],
-                                           fig_count=fig_count)
-            fig_count += 1
+        if not self.parallel:
+            for gp_ind, gp in enumerate(self.gp_list):
+                fig_count = gp.plot_trained_gp(inputs,
+                                            targets[:, self.target_mask[gp_ind], None],
+                                            self.target_mask[gp_ind],
+                                            fig_count=fig_count)
+                fig_count += 1
+        else:
+            self.gps.plot_trained_gp(inputs, targets, output_dir, title)
 
     def _kernel_list(self,
                      x1,
@@ -650,10 +676,24 @@ class BatchGPModel:
         state_dict = torch.load(path_to_statedict, map_location=device)
         self._init_model(train_inputs, train_targets)
 
+        # print('state_dict: ', state_dict)
+        # # manually modify the lengthscale and outputscale
+        # # state_dict['covar_module.raw_outputscale'] 
+        # print('outputscale: ', state_dict['covar_module.raw_outputscale'])
+        # print('lengthscale: ', state_dict['covar_module.base_kernel.raw_lengthscale'])
+        # length_scale_copy = deepcopy(state_dict['covar_module.base_kernel.raw_lengthscale'])
+        # # length_scale_copy[3] = 1.0 # 1.4
+
+        # state_dict['covar_module.base_kernel.raw_lengthscale'] = length_scale_copy
+        
+
         self.model.load_state_dict(state_dict)
         self.model.double()  # needed otherwise loads state_dict as float32
+        print('outputscale: ', self.model.covar_module.outputscale)
+        print('lengthscale: ', self.model.covar_module.base_kernel.lengthscale)
         self._compute_GP_covariances(train_inputs)
         self.casadi_predict = self.make_casadi_prediction_func(train_inputs, train_targets)
+        self.casadi_linearized_predict = self.make_casadi_linearized_predict_func(train_inputs, train_targets)  
 
     def train(self,
               train_input_data,
@@ -702,37 +742,75 @@ class BatchGPModel:
         self.likelihood.train()
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
         mll = gpytorch.mlls.ExactMarginalLogLikelihood(self.likelihood, self.model)
-        last_loss = 99999999
-        best_loss = 99999999
-        loss = torch.tensor(0)
-        i = 0
-        while i < n_train and torch.abs(loss - last_loss) > 1e-2:
-            with torch.no_grad():
-                self.model.eval()
-                self.likelihood.eval()
-                test_output = self.model(test_x.unsqueeze(0).repeat(self.output_dimension, 1, 1))
-                test_loss = -mll(test_output, test_y.T).sum()
-            self.model.train()
-            self.likelihood.train()
-            self.optimizer.zero_grad()
-            output = self.model(train_x.unsqueeze(0).repeat(self.output_dimension, 1, 1))
-            loss = -mll(output, train_y.T).sum()
-            loss.backward()
-            if i % 100 == 0:
-                print('Iter %d/%d - MLL trian Loss: %.3f, Posterior Test Loss: %0.3f' % (i + 1, n_train, loss.item(), test_loss.item()))
 
-            self.optimizer.step()
+        # initialize with different length scales and output scales;
+        # use the results with the lowest test loss.
+        max_trial = 1
+        opti_result = []
+        loss_result = []
+        
+        for trial_idx in range(max_trial):
+            self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
+            mll = gpytorch.mlls.ExactMarginalLogLikelihood(self.likelihood, self.model)
 
-            if test_loss < best_loss:
-                best_loss = test_loss
-                state_dict = self.model.state_dict()
-                torch.save(state_dict, fname)
-                best_epoch = i
+            init_output_scale = torch.rand(self.output_dimension).requires_grad_(False) * 3
+            if self.kernel != 'RBF_single':
+                init_length_scale = torch.rand(self.output_dimension, 1, 1).requires_grad_(False) * 3
+            else:
+                init_length_scale = torch.rand(self.output_dimension, 1, 1).requires_grad_(False) * 3
+            if gpu:
+                init_output_scale = init_output_scale.cuda()
+                init_length_scale = init_length_scale.cuda()
+            self.model.covar_module.initialize(outputscale=init_output_scale)
+            self.model.covar_module.base_kernel.initialize(lengthscale=init_length_scale)
+            print('init outputscale: ', self.model.covar_module.outputscale)
+            print('init lengthscale: ', self.model.covar_module.base_kernel.lengthscale)
+            last_loss = 99999999
+            best_loss = 99999999
+            loss = torch.tensor(0)
+            i = 0
+            while i < n_train and torch.abs(loss - last_loss) > 1e-2:
+                with torch.no_grad():
+                    self.model.eval()
+                    self.likelihood.eval()
+                    test_output = self.model(test_x.unsqueeze(0).repeat(self.output_dimension, 1, 1))
+                    test_loss = -mll(test_output, test_y.T).sum()
+                self.model.train()
+                self.likelihood.train()
+                self.optimizer.zero_grad()
+                output = self.model(train_x.unsqueeze(0).repeat(self.output_dimension, 1, 1))
+                loss = -mll(output, train_y.T).sum()
+                loss.backward()
+                if i % 100 == 0:
+                    print('Iter %d/%d - MLL trian Loss: %.3f, Posterior Test Loss: %0.3f' % (i + 1, n_train, loss.item(), test_loss.item()))
+                    # print the kernel hyperparameters
+                    output_scale = self.model.covar_module.outputscale.cpu().detach().numpy()
+                    length_scale = self.model.covar_module.base_kernel.lengthscale.cpu().detach().numpy()
+                    # print(f'Output Scale: {output_scale}')
+                    # print(f'Length Scale: {length_scale}')
+                self.optimizer.step()
 
-            i += 1
-        print('Training Complete')
-        print('Lowest epoch: %s' % best_epoch)
-        print('Lowest Loss: %s' % best_loss)
+                if test_loss < best_loss:
+                    # will save the model with the best test loss.
+                    best_loss = test_loss
+                    state_dict = self.model.state_dict() # HPs for modules, e.g. mean, covar_module, noise
+                    torch.save(state_dict, fname)
+                    best_epoch = i
+
+                i += 1
+            print('Training Complete')
+            print('Lowest epoch: %s' % best_epoch)
+            print('Lowest Loss: %s' % best_loss)
+            opti_result.append(state_dict)
+            loss_result.append(best_loss.cpu().detach().numpy())
+        # find and save the best model among the trials.
+        best_idx = np.argmin(loss_result)
+        torch.save(opti_result[best_idx], fname)
+        print(colored(f'Best loss in {max_trial} trials: {loss_result[best_idx]}', 'green'))
+        print(colored(f'Best model saved at {fname}', 'green'))
+        print('Final Output Scale: ', self.model.covar_module.outputscale.cpu().detach().numpy())
+        print('Final Length Scale: ', self.model.covar_module.base_kernel.lengthscale.cpu().detach().numpy())
+
         self.model = self.model.cpu()
         self.likelihood = self.likelihood.cpu()
         train_x = train_x.cpu()
@@ -740,7 +818,8 @@ class BatchGPModel:
         self.model.load_state_dict(torch.load(fname))
         self._compute_GP_covariances(train_x)
         self.casadi_predict = self.make_casadi_prediction_func(train_x, train_y)
-
+        self.casadi_linearized_predict = self.make_casadi_linearized_predict_func(train_x, train_y)
+        
         return
 
     def predict(self,
@@ -827,6 +906,12 @@ class BatchGPModel:
                                          [covSEard(z, train_inputs.T, lengthscale.T, output_scale)],
                                          ['z'],
                                          ['K'])
+            elif self.kernel == 'RBF_single':
+                K_z_ztrain = ca.Function('k_z_ztrain',
+                                         [z],
+                                         [covSE_single(z, train_inputs.T, lengthscale.T, output_scale)],
+                                         ['z'],
+                                         ['K'])
             elif self.kernel == 'Matern':
                 K_z_ztrain = ca.Function('k_z_ztrain',
                                          [z],
@@ -841,14 +926,74 @@ class BatchGPModel:
 
         return y
 
+    def make_casadi_linearized_predict_func(self, train_inputs, train_targets):
+        Nz = len(self.input_mask)
+        Ny = len(self.target_mask)
+        z = ca.SX.sym('z', Nz)
+        dmu = ca.SX.zeros(Nz, Ny)
+
+        train_inputs = train_inputs.numpy() if type(train_inputs) is torch.Tensor else train_inputs
+        train_targets = train_targets.numpy() if type(train_targets) is torch.Tensor else train_targets
+        lengthscale = self.model.covar_module.base_kernel.lengthscale.detach().numpy() # shape (Ny, 1, Nz)
+        lengthscale = np.squeeze(lengthscale) 
+        output_scale = self.model.covar_module.outputscale.detach().numpy()
+        num_data = train_inputs.shape[0]
+        # set up the prediction function
+        for gp_idx in self.target_mask:
+            if self.kernel == 'RBF_single':
+                lengthscale_i = lengthscale[gp_idx]
+                M = lengthscale_i
+                M_inv = 1/M
+            else:
+                lengthscale_i = lengthscale[gp_idx, :]
+                M = np.diag(lengthscale_i)
+                M_inv = ca.DM(np.linalg.inv(M))    
+                assert M.shape[0] == train_inputs.shape[1], ValueError('M matrix has wrong shape.')
+            dkdx = ca.SX.zeros(len(self.input_mask), num_data)
+            for j in range(num_data):
+                dkdx[:, j] = (train_inputs[j] - z) * covSEard(z, train_inputs[j].T, lengthscale_i.T, output_scale[gp_idx])
+            dkdx = M_inv**2 @ dkdx
+            dmu[:, gp_idx] = dkdx @ self.gp_K_plus_noise_inv[gp_idx, :, :].detach().numpy() @ train_targets[:, gp_idx]
+        
+        casadi_linearized_predict = ca.Function('linearized_pred',
+                                             [z],
+                                             [dmu],
+                                             ['z'],
+                                             ['mean'])
+        return casadi_linearized_predict
+
     def plot_trained_gp(self,
                         inputs,
                         targets,
-                        output_label,
-                        fig_count=0
+                        output_dir,
+                        title=None,
                         ):
-        raise NotImplementedError
+        if self.target_mask is not None:
+            targets = targets[:, self.target_mask]
+        means, covs, preds = self.predict(inputs, return_pred=True)
+        t = np.arange(inputs.shape[0])
+        lower, upper = preds.confidence_region()
 
+        # plot the test results
+        fig, axs = plt.subplots(self.output_dimension, 1, figsize=(10, 10))
+        fig.tight_layout()
+        fig.suptitle(f'GP Validation {title}', fontsize=16)
+        # adjust the space between the sup title and the plots
+        plt.subplots_adjust(top=0.92)
+        plt.subplots_adjust(hspace=0.5)
+        for i in range(self.output_dimension):
+            # compute the percentage of test points within 2 std
+            num_within_2std = torch.sum((targets[:, i] > lower[i, :]) & (targets[:, i] < upper[i, :])).numpy()
+            percentage_within_2std = num_within_2std / len(targets[:, i]) * 100
+            print(f'Percentage of test points within 2 std for dim {i}: {percentage_within_2std:.2f}%')
+            axs[i].scatter(t, targets[:, i], color='r', label='True')
+            axs[i].plot(t, means[i, :], 'b', label='Predicted')
+            axs[i].fill_between(t, lower[i, :], upper[i, :], alpha=0.5, label=r'2-$\sigma$')
+            axs[i].set_title(f'GP dim {i}, {percentage_within_2std:.2f}% within 2-$\sigma$')
+            axs[i].legend(ncol=4)
+        if output_dir is not None:
+            fig.savefig(f'{output_dir}/gp_validation_{title}.png')
+            print(f'Figure saved at {output_dir}/gp_validation_{title}.png')
 
 class GaussianProcess:
     '''Gaussian Process decorator for gpytorch.'''
@@ -1003,7 +1148,7 @@ class GaussianProcess:
             loss = -mll(output, train_y)
             loss.backward()
             if i % 100 == 0:
-                print('Iter %d/%d - MLL trian Loss: %.3f, Posterior Test Loss: %0.3f' % (i + 1, n_train, loss.item(), test_loss.item()))
+                print('Iter %d/%d - MLL train Loss: %.3f, Posterior Test Loss: %0.3f' % (i + 1, n_train, loss.item(), test_loss.item()))
 
             self.optimizer.step()
             # if test_loss < best_loss:
@@ -1091,6 +1236,12 @@ class GaussianProcess:
                                      [covSEard(z, train_inputs.T, lengthscale.T, output_scale)],
                                      ['z'],
                                      ['K'])
+        elif self.kernel == 'RBF_single':
+            K_z_ztrain = ca.Function('k_z_ztrain',
+                                        [z],
+                                        [covSE_single(z, train_inputs.T, lengthscale.T, output_scale)],
+                                        ['z'],
+                                        ['K'])
         elif self.kernel == 'Matern':
             K_z_ztrain = ca.Function('k_z_ztrain',
                                      [z],

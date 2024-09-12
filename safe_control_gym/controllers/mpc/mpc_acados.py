@@ -1,6 +1,7 @@
 '''Model Predictive Control using Acados.'''
 import time
 from copy import deepcopy
+from termcolor import colored
 
 import casadi as cs
 import numpy as np
@@ -300,8 +301,8 @@ class MPC_ACADOS(BaseController):
             ocp.constraints.Jsh = np.eye(h_expr.shape[0])
             ocp.constraints.Jsh_e = np.eye(he_expr.shape[0])
             # slack penalty
-            L2_pen = 1e3
-            L1_pen = 1e3
+            L2_pen = 1e6
+            L1_pen = 1e6
             ocp.cost.Zl_0 = L2_pen * np.ones(h0_expr.shape[0])
             ocp.cost.Zu_0 = L2_pen * np.ones(h0_expr.shape[0])
             ocp.cost.zl_0 = L1_pen * np.ones(h0_expr.shape[0])
@@ -480,28 +481,38 @@ class MPC_ACADOS(BaseController):
             action = self.acados_ocp_solver.get(0, "u")
 
         elif not self.use_RTI:
-            status = self.acados_ocp_solver.solve()
-            if status not in [0, 2]:
+            try:
+                status = self.acados_ocp_solver.solve()
+                action = self.acados_ocp_solver.get(0, "u")
+                # get the open-loop solution
+                if self.x_prev is None and self.u_prev is None:
+                    self.x_prev = np.zeros((nx, self.T + 1))
+                    self.u_prev = np.zeros((nu, self.T))
+                if self.u_prev is not None and nu == 1:
+                    self.u_prev = self.u_prev.reshape((1, -1))
+                for i in range(self.T + 1):
+                    self.x_prev[:, i] = self.acados_ocp_solver.get(i, "x")
+                for i in range(self.T):
+                    self.u_prev[:, i] = self.acados_ocp_solver.get(i, "u")
+                if nu == 1:
+                    self.u_prev = self.u_prev.flatten()
+            except Exception as e:
+                print(colored('Infeasible MPC Problem', 'red'))
+                # get the solver status
                 self.acados_ocp_solver.print_statistics()
-                raise Exception(f'acados returned status {status}. Exiting.')
-                # print(f"acados returned status {status}. ")
-            if status == 2:
+                status = self.acados_ocp_solver.get_stats("status")
                 print(f"acados returned status {status}. ")
-            action = self.acados_ocp_solver.get(0, "u")
-
-        # get the open-loop solution
-        time_before_saving = time.time()
-        if self.x_prev is None and self.u_prev is None:
-            self.x_prev = np.zeros((nx, self.T + 1))
-            self.u_prev = np.zeros((nu, self.T))
-        if self.u_prev is not None and nu == 1:
-            self.u_prev = self.u_prev.reshape((1, -1))
-        for i in range(self.T + 1):
-            self.x_prev[:, i] = self.acados_ocp_solver.get(i, "x")
-        for i in range(self.T):
-            self.u_prev[:, i] = self.acados_ocp_solver.get(i, "u")
-        if nu == 1:
-            self.u_prev = self.u_prev.flatten()
+                # shift the x_prev and u_prev and copy the last state
+                self.x_prev = np.concatenate((self.x_guess[:, 1:], np.atleast_2d(self.x_guess[:, -1]).T), axis=1)
+                self.u_prev = np.concatenate((self.u_guess[:, 1:], np.atleast_2d(self.u_guess[:, -1]).T), axis=1)
+            # print(f'u_prev: {self.u_prev}')
+            # if status not in [0, 2]:
+            #     self.acados_ocp_solver.print_statistics()
+            #     # raise Exception(f'acados returned status {status}. Exiting.')
+            #     print(f"acados returned status {status}. ")
+            # if status == 2:
+            #     print(f"acados returned status {status}. ")
+            # action = self.acados_ocp_solver.get(0, "u")
 
         self.x_guess = self.x_prev
         self.u_guess = self.u_prev
@@ -510,7 +521,6 @@ class MPC_ACADOS(BaseController):
         self.results_dict['goal_states'].append(deepcopy(goal_states))
 
         self.prev_action = action
-        time_after_saving = time.time()
 
 
         time_after = time.time()
