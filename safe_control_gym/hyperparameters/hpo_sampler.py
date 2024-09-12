@@ -19,7 +19,7 @@ PPO_dict = {
         'clip_param': [0.1, 0.2, 0.3, 0.4],
         'opt_epochs': [1, 5, 10, 20],
         'mini_batch_size': [32, 64, 128, 256],
-        'rollout_steps': [50, 100, 150, 200], # steps increment by rollout_steps * n_envs
+        'rollout_steps': [100, 250, 400, 550], # steps increment by rollout_steps * n_envs
         'max_env_steps': [30000, 72000, 114000, 156000, 216000],  # to make sure having the checkpoint at these steps [30000, 72000, 216000]
     },
     'float': {  # note that in float type, you must specify the upper and lower bound
