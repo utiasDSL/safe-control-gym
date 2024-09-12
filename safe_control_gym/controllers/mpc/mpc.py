@@ -1,9 +1,9 @@
 '''Model Predictive Control.'''
 from copy import deepcopy
-from termcolor import colored
 
 import casadi as cs
 import numpy as np
+from termcolor import colored
 
 from safe_control_gym.controllers.base_controller import BaseController
 from safe_control_gym.controllers.lqr.lqr_utils import discretize_linear_system
@@ -13,6 +13,7 @@ from safe_control_gym.controllers.mpc.mpc_utils import (compute_discrete_lqr_gai
 from safe_control_gym.envs.benchmark_env import Task
 from safe_control_gym.envs.constraints import GENERAL_CONSTRAINTS, create_constraint_list
 from safe_control_gym.utils.utils import timing
+
 
 class MPC(BaseController):
     '''MPC with full nonlinear model.'''
@@ -170,7 +171,7 @@ class MPC(BaseController):
         dfdx = dfdxdfdu['dfdx'].toarray()
         dfdu = dfdxdfdu['dfdu'].toarray()
         lqr_gain, _, _ = compute_discrete_lqr_gain_from_cont_linear_system(dfdx, dfdu, self.Q, self.R, self.dt)
-        
+
         # initialize the guess solutions
         x_guess = np.zeros((self.model.nx, self.T + 1))
         u_guess = np.zeros((self.model.nu, self.T))
@@ -182,7 +183,7 @@ class MPC(BaseController):
             x_guess[:, i + 1, None] = self.dynamics_func(x0=x_guess[:, i], p=u)['xf'].toarray()
 
         return x_guess, u_guess
-    
+
     @timing
     def compute_initial_guess(self, init_state, goal_states):
         '''Use IPOPT to get an initial guess of the '''
@@ -190,24 +191,24 @@ class MPC(BaseController):
         self.setup_optimizer(solver=self.init_solver)
         opti_dict = self.opti_dict
         opti = opti_dict['opti']
-        x_var = opti_dict['x_var'] # optimization variables
-        u_var = opti_dict['u_var'] # optimization variables
-        x_init = opti_dict['x_init'] # initial state
-        x_ref = opti_dict['x_ref'] # reference state/trajectory
+        x_var = opti_dict['x_var']  # optimization variables
+        u_var = opti_dict['u_var']  # optimization variables
+        x_init = opti_dict['x_init']  # initial state
+        x_ref = opti_dict['x_ref']  # reference state/trajectory
 
         # Assign the initial state.
-        opti.set_value(x_init, init_state) # initial state should have dim (nx,)
+        opti.set_value(x_init, init_state)  # initial state should have dim (nx,)
         # Assign reference trajectory within horizon.
         goal_states = self.get_references()
         opti.set_value(x_ref, goal_states)
         if self.mode == 'tracking':
             self.traj_step += 1
-         # Solve the optimization problem.
+        # Solve the optimization problem.
         try:
             sol = opti.solve()
             x_val, u_val = sol.value(x_var), sol.value(u_var)
         except RuntimeError:
-            print(colored('Warm-starting fails','red'))
+            print(colored('Warm-starting fails', 'red'))
             x_val, u_val = opti.debug.value(x_var), opti.debug.value(u_var)
 
         x_guess = x_val
@@ -293,7 +294,7 @@ class MPC(BaseController):
         # Create solver
         opts = {'expand': True, 'error_on_fail': False}
         opti.solver(solver, opts)
-        
+
         self.opti_dict = {
             'opti': opti,
             'x_var': x_var,
@@ -319,10 +320,10 @@ class MPC(BaseController):
         '''
         opti_dict = self.opti_dict
         opti = opti_dict['opti']
-        x_var = opti_dict['x_var'] # optimization variables
-        u_var = opti_dict['u_var'] # optimization variables
-        x_init = opti_dict['x_init'] # initial state
-        x_ref = opti_dict['x_ref'] # reference state/trajectory
+        x_var = opti_dict['x_var']  # optimization variables
+        u_var = opti_dict['u_var']  # optimization variables
+        x_init = opti_dict['x_init']  # initial state
+        x_ref = opti_dict['x_ref']  # reference state/trajectory
 
         # Assign the initial state.
         opti.set_value(x_init, obs)
@@ -333,11 +334,11 @@ class MPC(BaseController):
             self.traj_step += 1
 
         if self.compute_ipopt_initial_guess and self.x_prev is None and self.u_prev is None:
-        #    x_guess, u_guess = self.compute_lqr_initial_guess(obs, goal_states, self.X_EQ, self.U_EQ)
+            #    x_guess, u_guess = self.compute_lqr_initial_guess(obs, goal_states, self.X_EQ, self.U_EQ)
             print(colored(f'computing initial guess with {self.init_solver}', 'green'))
             x_guess, u_guess = self.compute_initial_guess(obs, goal_states)
             opti.set_initial(x_var, x_guess)
-            opti.set_initial(u_var, u_guess) # Initial guess for optimization problem.
+            opti.set_initial(u_var, u_guess)  # Initial guess for optimization problem.
         if self.warmstart and self.x_prev is not None and self.u_prev is not None:
             # shift previous solutions by 1 step
             x_guess = deepcopy(self.x_prev)
@@ -489,7 +490,7 @@ class MPC(BaseController):
             self.results_dict['state'].append(env.state)
             self.results_dict['state_mse'].append(info['mse'])
             if self.solver == 'ipopt':
-                self.results_dict['state_error'].append(env.state - env.X_GOAL[i,:])
+                self.results_dict['state_error'].append(env.state - env.X_GOAL[i, :])
             common_metric += info['mse']
             print(i, '-th step.')
             print('action:', action)

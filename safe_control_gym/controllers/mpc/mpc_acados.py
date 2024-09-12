@@ -8,17 +8,20 @@ import scipy
 from termcolor import colored
 
 from safe_control_gym.controllers.mpc.mpc import MPC
+from safe_control_gym.controllers.mpc.mpc_utils import set_acados_constraint_bound
 from safe_control_gym.envs.benchmark_env import Task
 from safe_control_gym.utils.utils import timing
 
 try:
-    from acados_template import AcadosOcp, AcadosOcpSolver, AcadosModel
+    from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
 except ImportError as e:
+    print(colored(f'Error: {e}', 'red'))
     print(colored('acados not installed, cannot use acados-based controller. Exiting.', 'red'))
     print(colored('- To build and install acados, follow the instructions at https://docs.acados.org/installation/index.html', 'yellow'))
     print(colored('- To set up the acados python interface, follow the instructions at https://docs.acados.org/python_interface/index.html', 'yellow'))
     print()
     exit()
+
 
 class MPC_ACADOS(MPC):
     '''MPC with full nonlinear model.'''
@@ -83,7 +86,7 @@ class MPC_ACADOS(MPC):
         self.x_guess = None
         self.u_guess = None
         # acados settings
-        self.use_RTI = use_RTI 
+        self.use_RTI = use_RTI
 
     @timing
     def reset(self):
@@ -114,7 +117,7 @@ class MPC_ACADOS(MPC):
         self.setup_results_dict()
 
     def setup_acados_model(self) -> AcadosModel:
-        
+
         acados_model = AcadosModel()
         acados_model.x = self.model.x_sym
         acados_model.u = self.model.u_sym
@@ -122,10 +125,10 @@ class MPC_ACADOS(MPC):
 
         # set up rk4 (acados need symbolic expression of dynamics, not function)
         k1 = self.model.fc_func(acados_model.x, acados_model.u)
-        k2 = self.model.fc_func(acados_model.x + self.dt/2 * k1, acados_model.u)
-        k3 = self.model.fc_func(acados_model.x + self.dt/2 * k2, acados_model.u)
+        k2 = self.model.fc_func(acados_model.x + self.dt / 2 * k1, acados_model.u)
+        k3 = self.model.fc_func(acados_model.x + self.dt / 2 * k2, acados_model.u)
         k4 = self.model.fc_func(acados_model.x + self.dt * k3, acados_model.u)
-        f_disc = acados_model.x + self.dt/6 * (k1 + 2*k2 + 2*k3 + k4)
+        f_disc = acados_model.x + self.dt / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
 
         acados_model.disc_dyn_expr = f_disc
         '''
@@ -141,25 +144,25 @@ class MPC_ACADOS(MPC):
         acados_model.t_label = 'time'
 
         self.acados_model = acados_model
-        
+
     @timing
     def compute_initial_guess(self, init_state, goal_states):
         '''Use IPOPT to get an initial guess of the solution.'''
-        print(colored('Computing initial guess','green'))
+        print(colored('Computing initial guess', 'green'))
         self.setup_optimizer(solver=self.init_solver)
         opti_dict = self.opti_dict
         opti = opti_dict['opti']
-        x_var = opti_dict['x_var'] # optimization variables
-        u_var = opti_dict['u_var'] # optimization variables
-        x_init = opti_dict['x_init'] # initial state
-        x_ref = opti_dict['x_ref'] # reference state/trajectory
+        x_var = opti_dict['x_var']  # optimization variables
+        u_var = opti_dict['u_var']  # optimization variables
+        x_init = opti_dict['x_init']  # initial state
+        x_ref = opti_dict['x_ref']  # reference state/trajectory
 
         # Assign the initial state.
-        opti.set_value(x_init, init_state) # initial state should have dim (nx,)
+        opti.set_value(x_init, init_state)  # initial state should have dim (nx,)
         # Assign reference trajectory within horizon.
         goal_states = self.get_references()
         opti.set_value(x_ref, goal_states)
-         # Solve the optimization problem.
+        # Solve the optimization problem.
         try:
             sol = opti.solve()
             x_val, u_val = sol.value(x_var), sol.value(u_var)
@@ -183,7 +186,7 @@ class MPC_ACADOS(MPC):
         ocp.model = self.acados_model
 
         # set dimensions
-        ocp.dims.N = self.T # prediction horizon
+        ocp.dims.N = self.T  # prediction horizon
 
         # set cost (NOTE: safe-control-gym uses quadratic cost)
         ocp.cost.cost_type = 'LINEAR_LS'
@@ -193,7 +196,7 @@ class MPC_ACADOS(MPC):
         ocp.cost.Vx = np.zeros((ny, nx))
         ocp.cost.Vx[:nx, :nx] = np.eye(nx)
         ocp.cost.Vu = np.zeros((ny, nu))
-        ocp.cost.Vu[nx:(nx+nu), :nu] = np.eye(nu)
+        ocp.cost.Vu[nx:(nx + nu), :nu] = np.eye(nu)
         ocp.cost.Vx_e = np.eye(nx)
         # placeholder y_ref and y_ref_e (will be set in select_action)
         ocp.cost.yref = np.zeros((ny, ))
@@ -211,7 +214,7 @@ class MPC_ACADOS(MPC):
         h_expr_list = state_constraint_expr_list + input_constraint_expr_list
         h_expr = cs.vertcat(*h_expr_list)
         h0_expr = cs.vertcat(*h_expr_list)
-        he_expr = cs.vertcat(*state_constraint_expr_list) # terminal constraints are only state constraints
+        he_expr = cs.vertcat(*state_constraint_expr_list)  # terminal constraints are only state constraints
         # pass the constraints to the ocp object
         ocp = self.processing_acados_constraints_expression(ocp, h0_expr, h_expr, he_expr)
 
@@ -230,13 +233,13 @@ class MPC_ACADOS(MPC):
             ocp.cost.zu_0 = L1_pen * np.ones(h0_expr.shape[0])
             ocp.cost.Zu = L2_pen * np.ones(h_expr.shape[0])
             ocp.cost.Zl = L2_pen * np.ones(h_expr.shape[0])
-            ocp.cost.zl = L1_pen * np.ones(h_expr.shape[0]) 
+            ocp.cost.zl = L1_pen * np.ones(h_expr.shape[0])
             ocp.cost.zu = L1_pen * np.ones(h_expr.shape[0])
             ocp.cost.Zl_e = L2_pen * np.ones(he_expr.shape[0])
             ocp.cost.Zu_e = L2_pen * np.ones(he_expr.shape[0])
             ocp.cost.zl_e = L1_pen * np.ones(he_expr.shape[0])
             ocp.cost.zu_e = L1_pen * np.ones(he_expr.shape[0])
-        
+
         # placeholder initial state constraint
         x_init = np.zeros((nx))
         ocp.constraints.x0 = x_init
@@ -252,7 +255,7 @@ class MPC_ACADOS(MPC):
         ocp.solver_options.tf = self.T * self.dt  # prediction horizon
 
         # c code generation
-        # NOTE: when using GP-MPC, a separated directory is needed; 
+        # NOTE: when using GP-MPC, a separated directory is needed;
         # otherwise, Acados solver can read the wrong c code
         ocp.code_export_directory = self.output_dir + '/mpc_c_generated_code'
 
@@ -260,35 +263,32 @@ class MPC_ACADOS(MPC):
 
     def processing_acados_constraints_expression(self, ocp: AcadosOcp, h0_expr, h_expr, he_expr) -> AcadosOcp:
         '''Preprocess the constraints to be compatible with acados.
-            Args: 
+            Args:
                 ocp (AcadosOcp): acados ocp object
                 h0_expr (casadi expression): initial state constraints
                 h_expr (casadi expression): state and input constraints
                 he_expr (casadi expression): terminal state constraints
             Returns:
                 ocp (AcadosOcp): acados ocp object with constraints set.
-        
-        Note:
-        all constraints in safe-control-gym are defined as g(x, u) <= constraint_tol
-        However, acados requires the constraints to be defined as lb <= g(x, u) <= ub
-        Thus, a large negative number (-1e8) is used as the lower bound.
-        See: https://github.com/acados/acados/issues/650 
 
         An alternative way to set the constraints is to use bounded constraints of acados:
         # bounded input constraints
         idxbu = np.where(np.sum(self.env.constraints.input_constraints[0].constraint_filter, axis=0) != 0)[0]
         ocp.constraints.Jbu = np.eye(nu)
         ocp.constraints.lbu = self.env.constraints.input_constraints[0].lower_bounds
-        ocp.constraints.ubu = self.env.constraints.input_constraints[0].upper_bounds 
+        ocp.constraints.ubu = self.env.constraints.input_constraints[0].upper_bounds
         ocp.constraints.idxbu = idxbu # active constraints dimension
         '''
-        # lambda functions to set the upper and lower bounds of the constraints
-        constraint_ub = lambda constraint: -self.constraint_tol * np.ones(constraint.shape)
-        constraint_lb = lambda constraint: -1e8 * np.ones(constraint.shape) 
-        ub = {'h': constraint_ub(h_expr), 'h0': constraint_ub(h0_expr), 'he': constraint_ub(he_expr)}
-        lb = {'h': constraint_lb(h_expr), 'h0': constraint_lb(h0_expr), 'he': constraint_lb(he_expr)}
 
-        # make sure all the ub and lb are 1D numpy arrays 
+        ub = {'h': set_acados_constraint_bound(h_expr, 'ub', self.constraint_tol),
+              'h0': set_acados_constraint_bound(h0_expr, 'ub', self.constraint_tol),
+              'he': set_acados_constraint_bound(he_expr, 'ub', self.constraint_tol), }
+
+        lb = {'h': set_acados_constraint_bound(h_expr, 'lb'),
+              'h0': set_acados_constraint_bound(h0_expr, 'lb'),
+              'he': set_acados_constraint_bound(he_expr, 'lb'), }
+
+        # make sure all the ub and lb are 1D numpy arrays
         # (see: https://discourse.acados.org/t/infeasible-qps-when-using-nonlinear-casadi-constraint-expressions/1595/5?u=mxche)
         for key in ub.keys():
             ub[key] = ub[key].flatten() if ub[key].ndim != 1 else ub[key]
@@ -301,9 +301,9 @@ class MPC_ACADOS(MPC):
 
         # pass the constraints to the ocp object
         ocp.model.con_h_expr_0, ocp.model.con_h_expr, ocp.model.con_h_expr_e = \
-                                                            h0_expr, h_expr, he_expr
+            h0_expr, h_expr, he_expr
         ocp.dims.nh_0, ocp.dims.nh, ocp.dims.nh_e = \
-                                h0_expr.shape[0], h_expr.shape[0], he_expr.shape[0]
+            h0_expr.shape[0], h_expr.shape[0], he_expr.shape[0]
         # assign constraints upper and lower bounds
         ocp.constraints.uh_0 = ub['h0']
         ocp.constraints.lh_0 = lb['h0']
@@ -329,39 +329,37 @@ class MPC_ACADOS(MPC):
             action (ndarray): Input/action to the task/env.
         '''
         nx, nu = self.model.nx, self.model.nu
-        ny = nx + nu
-        ny_e = nx
         # set initial condition (0-th state)
-        self.acados_ocp_solver.set(0, "lbx", obs)
-        self.acados_ocp_solver.set(0, "ubx", obs)
+        self.acados_ocp_solver.set(0, 'lbx', obs)
+        self.acados_ocp_solver.set(0, 'ubx', obs)
 
-        # warm-starting solver 
-        # NOTE: only for ipopt warm-starting; since acados 
+        # warm-starting solver
+        # NOTE: only for ipopt warm-starting; since acados
         # has a built-in warm-starting mechanism.
         if self.warmstart:
-            if self.x_guess is None or self.u_guess is None:   
-                # compute initial guess with IPOPT 
-                self.compute_initial_guess(obs, self.get_references()) 
+            if self.x_guess is None or self.u_guess is None:
+                # compute initial guess with IPOPT
+                self.compute_initial_guess(obs, self.get_references())
             for idx in range(self.T + 1):
                 init_x = self.x_guess[:, idx]
-                self.acados_ocp_solver.set(idx, "x", init_x)
+                self.acados_ocp_solver.set(idx, 'x', init_x)
             for idx in range(self.T):
                 if nu == 1:
                     init_u = np.array([self.u_guess[idx]])
                 else:
                     init_u = self.u_guess[:, idx]
-                self.acados_ocp_solver.set(idx, "u", init_u)
+                self.acados_ocp_solver.set(idx, 'u', init_u)
 
         # set reference for the control horizon
         goal_states = self.get_references()
         if self.mode == 'tracking':
             self.traj_step += 1
-        
+
         y_ref = np.concatenate((goal_states[:, :-1], np.zeros((nu, self.T))))
-        for idx in range(self.T): 
-            self.acados_ocp_solver.set(idx, "yref", y_ref[:, idx])
-        y_ref_e = goal_states[:, -1] 
-        self.acados_ocp_solver.set(self.T, "yref", y_ref_e)
+        for idx in range(self.T):
+            self.acados_ocp_solver.set(idx, 'yref', y_ref[:, idx])
+        y_ref_e = goal_states[:, -1]
+        self.acados_ocp_solver.set(self.T, 'yref', y_ref_e)
 
         # solve the optimization problem
         if self.use_RTI:
@@ -370,16 +368,16 @@ class MPC_ACADOS(MPC):
             status = self.acados_ocp_solver.solve()
 
             # feedback phase
-            self.acados_ocp_solver.options_set('rti_phase', 2) 
+            self.acados_ocp_solver.options_set('rti_phase', 2)
             status = self.acados_ocp_solver.solve()
 
             if status not in [0, 2]:
                 self.acados_ocp_solver.print_statistics()
                 raise Exception(f'acados returned status {status}. Exiting.')
             if status == 2:
-                print(f"acados returned status {status}. ")
-            
-            action = self.acados_ocp_solver.get(0, "u")
+                print(f'acados returned status {status}. ')
+
+            action = self.acados_ocp_solver.get(0, 'u')
 
         elif not self.use_RTI:
             status = self.acados_ocp_solver.solve()
@@ -387,8 +385,8 @@ class MPC_ACADOS(MPC):
                 self.acados_ocp_solver.print_statistics()
                 raise Exception(f'acados returned status {status}. Exiting.')
             if status == 2:
-                print(f"acados returned status {status}. ")
-            action = self.acados_ocp_solver.get(0, "u")
+                print(f'acados returned status {status}. ')
+            action = self.acados_ocp_solver.get(0, 'u')
 
         # get the open-loop solution
         if self.x_prev is None and self.u_prev is None:
@@ -397,9 +395,9 @@ class MPC_ACADOS(MPC):
         if self.u_prev is not None and nu == 1:
             self.u_prev = self.u_prev.reshape((1, -1))
         for i in range(self.T + 1):
-            self.x_prev[:, i] = self.acados_ocp_solver.get(i, "x")
+            self.x_prev[:, i] = self.acados_ocp_solver.get(i, 'x')
         for i in range(self.T):
-            self.u_prev[:, i] = self.acados_ocp_solver.get(i, "u")
+            self.u_prev[:, i] = self.acados_ocp_solver.get(i, 'u')
         if nu == 1:
             self.u_prev = self.u_prev.flatten()
 
@@ -412,4 +410,3 @@ class MPC_ACADOS(MPC):
         self.prev_action = action
 
         return action
-    

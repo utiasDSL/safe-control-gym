@@ -1,8 +1,8 @@
 '''General MPC utility functions.'''
 
 import casadi as cs
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import scipy
 import scipy.linalg
 from termcolor import colored
@@ -114,19 +114,20 @@ def set_acados_constraint_bound(constraint,
 
     return bound_value * np.ones(constraint.shape)
 
+
 def plot_open_loop_sol(ctrl):
     ''' Plot the open loop predction of the MPC controller.
-    
+
     Args:
         ctrl (MPC): MPC controller object.
     '''
     if ctrl.x_prev is not None and ctrl.u_prev is not None:
-        nx = ctrl.x_prev.shape[0] # state dim
-        nu = ctrl.u_prev.shape[0] # input dim
-        steps = ctrl.T # prediction horizon
-        dt = ctrl.dt # ctrl frequency
-        x = ctrl.x_prev # open loop state (nx, steps + 1)
-        u = ctrl.u_prev # open loop input (nu, steps)
+        nx = ctrl.x_prev.shape[0]  # state dim
+        nu = ctrl.u_prev.shape[0]  # input dim
+        steps = ctrl.T  # prediction horizon
+        dt = ctrl.dt  # ctrl frequency
+        x = ctrl.x_prev  # open loop state (nx, steps + 1)
+        u = ctrl.u_prev  # open loop input (nu, steps)
 
         # get the reference trajectory
         goal_states = ctrl.get_references()
@@ -147,4 +148,3 @@ def plot_open_loop_sol(ctrl):
         plt.show()
     else:
         print(colored('[Warning] No open loop solution to plot.', 'yellow'))
-    

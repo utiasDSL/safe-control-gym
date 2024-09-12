@@ -15,4 +15,3 @@ algo_config:
     prior_prop_rand_info: null
   warmstart: True
   use_RTI: False
-

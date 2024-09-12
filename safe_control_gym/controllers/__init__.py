@@ -51,5 +51,5 @@ register(idx='rap',
          config_entry_point='safe_control_gym.controllers.rarl:rap.yaml')
 
 register(idx='mpc_acados',
-            entry_point='safe_control_gym.controllers.mpc.mpc_acados:MPC_ACADOS',
-            config_entry_point='safe_control_gym.controllers.mpc:mpc_acados.yaml')
+         entry_point='safe_control_gym.controllers.mpc.mpc_acados:MPC_ACADOS',
+         config_entry_point='safe_control_gym.controllers.mpc:mpc_acados.yaml')

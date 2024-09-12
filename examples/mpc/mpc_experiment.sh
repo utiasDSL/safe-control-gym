@@ -2,8 +2,8 @@
 
 # MPC and Linear MPC Experiment.
 
-#SYS='cartpole'
-#SYS='quadrotor_2D'
+# SYS='cartpole'
+# SYS='quadrotor_2D'
 SYS='quadrotor_3D'
 
 #TASK='stabilization'
