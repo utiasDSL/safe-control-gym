@@ -1,16 +1,16 @@
 #!/bin/bash
 
-SYS='cartpole'
+#SYS='cartpole'
 # SYS='quadrotor_2D'
-#SYS='quadrotor_2D_attitude'
+SYS='quadrotor_2D_attitude'
 # SYS='quadrotor_3D'
 
 # TASK='stab'
 TASK='track'
 
-#ALGO='ppo'
+ALGO='ppo'
 # ALGO='sac'
-ALGO='td3'
+#ALGO='td3'
 # ALGO='ddpg'
 
 # ALGO='safe_explorer_ppo'
