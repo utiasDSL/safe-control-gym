@@ -14,3 +14,8 @@ algo_config:
   lamb_factor: 10
   lamb_max: 1000
   epsilon: 0.01
+
+  prior_info:
+    prior_prop: null
+    randomize_prior_prop: False
+    prior_prop_rand_info: null
