@@ -77,6 +77,7 @@ class GPMPC(MPC):
             terminate_run_on_done: bool = True,
             output_dir: str = 'results/temp',
             use_linear_prior: bool = True,
+            plot_trained_gp: bool = False,
             **kwargs
     ):
         '''Initialize GP-MPC.
@@ -218,16 +219,18 @@ class GPMPC(MPC):
         self.inducing_point_selection_method = inducing_point_selection_method
         self.recalc_inducing_points_at_every_step = recalc_inducing_points_at_every_step
         self.online_learning = online_learning
-        self.last_obs = None
-        self.last_action = None
         self.initial_rollout_std = initial_rollout_std
+        self.plot_trained_gp = plot_trained_gp 
+
         # MPC params
         self.gp_soft_constraints = self.soft_constraints_params['gp_soft_constraints']
         self.gp_soft_constraints_coeff = self.soft_constraints_params['gp_soft_constraints_coeff']
-
         self.init_solver = 'ipopt'
         # self.solver = 'qrsqp'
         self.solver = 'ipopt'
+
+        self.last_obs = None
+        self.last_action = None
 
     def setup_prior_dynamics(self):
         '''Computes the LQR gain used for propograting GP uncertainty from the prior model dynamics.'''
@@ -1010,7 +1013,12 @@ class GPMPC(MPC):
                 x_seq, actions, x_next_seq = self.gather_training_samples(train_runs, epoch - 1, self.num_samples)
             train_inputs, train_outputs = self.preprocess_training_data(x_seq, actions, x_next_seq)
             training_results = self.train_gp(input_data=train_inputs, target_data=train_outputs)
-
+            # plot training results
+            if self.plot_trained_gp:
+                self.gaussian_process.plot_trained_gp(train_inputs, train_outputs,
+                                                      output_dir=self.output_dir,
+                                                      title=f'epoch_{epoch}'
+                                                      )
             # Test new policy.
             test_runs[epoch] = {}
             for test_ep in range(self.num_test_episodes_per_epoch):
