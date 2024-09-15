@@ -1,17 +1,17 @@
 #!/bin/bash
 
 #SYS='cartpole'
-# SYS='quadrotor_2D'
+#SYS='quadrotor_2D'
 SYS='quadrotor_2D_attitude'
-# SYS='quadrotor_3D'
+#SYS='quadrotor_3D'
 
 #TASK='stab'
- TASK='track'
+TASK='track'
 
- ALGO='ppo'
-# ALGO='sac'
+ALGO='ppo'
+#ALGO='sac'
 #ALGO='td3'
-# ALGO='safe_explorer_ppo'
+#ALGO='safe_explorer_ppo'
 
 if [ "$SYS" == 'cartpole' ]; then
     SYS_NAME=$SYS
@@ -28,4 +28,4 @@ python3 ./rl_experiment.py \
         ./config_overrides/${SYS}/${ALGO}_${SYS}.yaml \
     --kv_overrides \
         algo_config.training=False \
-        task_config.randomized_init=False
+        task_config.randomized_init=True

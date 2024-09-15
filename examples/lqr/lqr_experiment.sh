@@ -2,16 +2,17 @@
 
 # LQR Experiment.
 
-# SYS='cartpole'
-SYS='quadrotor_2D'
-# SYS='quadrotor_3D'
+#SYS='cartpole'
+#SYS='quadrotor_2D'
+SYS='quadrotor_2D_attitude'
+#SYS='quadrotor_3D'
 
-# TASK='stabilization'
-TASK='tracking'
+#TASK='stab'
+TASK='track'
 
-# ALGO='lqr'
-# ALGO='ilqr'
-ALGO='ilqr_c'
+#ALGO='lqr'
+ALGO='ilqr'
+#ALGO='ilqr_c'
 
 if [ "$SYS" == 'cartpole' ]; then
     SYS_NAME=$SYS

@@ -302,14 +302,22 @@ class Quadrotor(BaseAviary):
                     0.0, 0.0, 0.0, 0.0, 0.0, 0.0
                 ])  # x = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p_body, q_body, r_body}.
         elif self.TASK == Task.TRAJ_TRACKING:
-            POS_REF, VEL_REF, _ = self._generate_trajectory(traj_type=self.TASK_INFO['trajectory_type'],
-                                                            traj_length=self.EPISODE_LEN_SEC,
-                                                            num_cycles=self.TASK_INFO['num_cycles'],
-                                                            traj_plane=self.TASK_INFO['trajectory_plane'],
-                                                            position_offset=self.TASK_INFO['trajectory_position_offset'],
-                                                            scaling=self.TASK_INFO['trajectory_scale'],
-                                                            sample_time=self.CTRL_TIMESTEP
-                                                            )  # Each of the 3 returned values is of shape (Ctrl timesteps, 3)
+            if 'ilqr_ref' in self.TASK_INFO.keys() and self.TASK_INFO['ilqr_ref']:
+                traj_data = np.load(self.TASK_INFO['ilqr_traj_data'], allow_pickle=True).item()
+                POS_REF = np.array(
+                    [traj_data['obs'][0][:, 0], 0 * traj_data['obs'][0][:, 0], traj_data['obs'][0][:, 2]]).T
+                VEL_REF = np.array(
+                    [traj_data['obs'][0][:, 1], 0 * traj_data['obs'][0][:, 1], traj_data['obs'][0][:, 3]]).T
+            else:
+                POS_REF, VEL_REF, _ = self._generate_trajectory(traj_type=self.TASK_INFO['trajectory_type'],
+                                                                traj_length=self.EPISODE_LEN_SEC,
+                                                                num_cycles=self.TASK_INFO['num_cycles'],
+                                                                traj_plane=self.TASK_INFO['trajectory_plane'],
+                                                                position_offset=self.TASK_INFO['trajectory_position_offset'],
+                                                                scaling=self.TASK_INFO['trajectory_scale'],
+                                                                sample_time=self.CTRL_TIMESTEP
+                                                                )
+                # Each of the 3 returned values is of shape (Ctrl timesteps, 3)
             if self.QUAD_TYPE == QuadType.ONE_D:
                 self.X_GOAL = np.vstack([
                     POS_REF[:, 2],  # z
@@ -1030,12 +1038,11 @@ class Quadrotor(BaseAviary):
         #             '[WARNING]: observation was clipped in Quadrotor._get_observation().'
         #         )
 
-        obs = deepcopy(self.state)
-
         # Concatenate goal info (references state(s)) for RL.
         # Plus two because ctrl_step_counter has not incremented yet, and we want to return the obs (which would be
         # ctrl_step_counter + 1 as the action has already been applied), and the next state (+ 2) for the RL to see
         # the next state.
+        obs = deepcopy(self.state)
         if self.at_reset:
             obs = self.extend_obs(obs, 1)
         else:

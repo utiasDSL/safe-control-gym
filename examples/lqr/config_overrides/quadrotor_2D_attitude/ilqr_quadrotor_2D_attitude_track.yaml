@@ -1,7 +1,7 @@
 algo: ilqr
 algo_config:
   # Cost parameters
-  q_lqr: [19.9, 0.004, 19.9, 0.004, 19.9, 0.004]
+  q_lqr: [18.0, 0.0017, 18.0, 0.004, 18.0, 0.0017]
   r_lqr: [0.001, 0.001]
 
   # Model arguments
@@ -16,6 +16,6 @@ algo_config:
   epsilon: 0.01
 
   prior_info:
-    prior_prop: null
-    randomize_prior_prop: False
-    prior_prop_rand_info: null
+    prior_prop:
+      M: 0.027 # Must be capital M
+      Iyy: 1.4e-05
