@@ -53,9 +53,12 @@ class HPO(object):
                 for hp_name, hp_range in hps.items():
                     self.problem.search_space.root.add_float_param(hp_name, hp_range[0], hp_range[1])
             elif cat == 'categorical':
-                #TODO: distinguish between discrete and categorical
                 for hp_name, hp_choices in hps.items():
-                    self.problem.search_space.root.add_discrete_param(hp_name, hp_choices)
+                    # check if the choices are strings
+                    if isinstance(hp_choices[0], str):
+                        self.problem.search_space.root.add_categorical_param(hp_name, hp_choices)
+                    else:
+                        self.problem.search_space.root.add_discrete_param(hp_name, hp_choices)
             else:
                 raise ValueError('Invalid hyperparameter category')
         
