@@ -12,6 +12,7 @@ import numpy as np
 from safe_control_gym.envs.benchmark_env import Environment, Task
 
 from safe_control_gym.hyperparameters.hpo import HPO
+from safe_control_gym.hyperparameters.hpo_vizier import HPO as HPO_vizier
 from safe_control_gym.experiments.base_experiment import BaseExperiment
 from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
@@ -49,17 +50,31 @@ def hpo(config):
         config.sf_config = None
 
     # HPO
-    hpo = HPO(config.algo,
-              config.task,
-              config.sampler,
-              config.load_study,
-              config.output_dir,
-              config.task_config,
-              config.hpo_config,
-              config.algo_config,
-              config.safety_filter,
-              config.sf_config,
-              )
+    if config.sampler == 'Optuna':
+        hpo = HPO(config.algo,
+                config.task,
+                config.load_study,
+                config.output_dir,
+                config.task_config,
+                config.hpo_config,
+                config.algo_config,
+                config.safety_filter,
+                config.sf_config,
+                )
+    elif config.sampler == 'Vizier':
+        hpo = HPO_vizier(config.algo,
+                        config.task,
+                        config.load_study,
+                        config.output_dir,
+                        config.task_config,
+                        config.hpo_config,
+                        config.algo_config,
+                        config.safety_filter,
+                        config.sf_config,
+                        )
+    else:
+        raise ValueError('Only Optuna and Vizier are supported for now.')
+
 
     if config.hpo_config.hpo:
         hpo.hyperparameter_optimization()
@@ -117,8 +132,9 @@ def train(config):
                         if config.task == 'cartpole':
                             config.task_config['rew_state_weight'] = [opt_hps['state_weight'], opt_hps['state_dot_weight'], opt_hps['state_weight'], opt_hps['state_dot_weight']]
                             config.task_config['rew_action_weight'] = [opt_hps['action_weight']]
-                        else:
-                            raise ValueError('Only cartpole task is supported for rl.')
+                        elif config.task == 'quadrotor':
+                            config.task_config['rew_state_weight'] = [opt_hps['state_weight'], opt_hps['state_dot_weight'], opt_hps['state_weight'], opt_hps['state_dot_weight'], opt_hps['state_weight'], opt_hps['state_dot_weight']]
+                            config.task_config['rew_action_weight'] = [opt_hps['action_weight'], opt_hps['action_weight']]
             elif isinstance(config.algo_config[hp], list) and not isinstance(opt_hps[hp], list):
                 config.algo_config[hp] = [opt_hps[hp]] * len(config.algo_config[hp])
             else:
@@ -270,6 +286,9 @@ def train(config):
     with open(os.path.join(config.output_dir, 'metrics.pkl'), 'wb') as f:
         import pickle
         pickle.dump(metrics, f)
+    with open(os.path.join(config.output_dir, 'results.pkl'), 'wb') as f:
+        import pickle
+        pickle.dump(results, f)
     
     return eval_env.X_GOAL, results, metrics
 
@@ -284,7 +303,7 @@ if __name__ == '__main__':
     fac.add_argument('--func', type=str, default='train', help='main function to run.')
     fac.add_argument('--opt_hps', type=str, default='', help='yaml file as a result of HPO.')
     fac.add_argument('--load_study', type=bool, default=False, help='whether to load study from a previous HPO.')
-    fac.add_argument('--sampler', type=str, default='TPESampler', help='which sampler to use in HPO.')
+    fac.add_argument('--sampler', type=str, default='Optuna', help='which sampler to use in HPO.')
     fac.add_argument('--n_episodes', type=int, default=1, help='number of episodes to run.')
     fac.add_argument('--plot_best', type=bool, default=False, help='plot best agent trajectory.')
     # merge config
