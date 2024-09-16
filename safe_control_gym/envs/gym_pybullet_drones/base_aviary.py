@@ -270,7 +270,6 @@ class BaseAviary(BenchmarkEnv):
         time_before_stepping = time.time()
         # clipped_action = np.reshape(clipped_action, (self.NUM_DRONES, 4))
         clipped_action = np.expand_dims(clipped_action, axis=0)
-        # rpm = self._preprocess_control(clipped_action[0, :])
 
         # Repeat for as many as the aggregate physics steps.
         for _ in range(self.PYB_STEPS_PER_CTRL):

@@ -271,7 +271,17 @@ class Quadrotor(BaseAviary):
 
         # Create X_GOAL and U_GOAL references for the assigned task.
         if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE or self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE_5S:
-            self.U_GOAL = np.array([self.MASS * self.GRAVITY_ACC, 0.0])
+            if 'ilqr_ref' in self.TASK_INFO.keys() \
+            and self.TASK_INFO['ilqr_ref']:
+                # load the trajectory data
+                traj_data = np.load(self.TASK_INFO['ilqr_traj_data'], allow_pickle=True).item()
+                THRUST_REF = traj_data['action'][0][:, 0]
+                PITCH_REF = traj_data['action'][0][:, 1]
+                U_GOAL = np.vstack([THRUST_REF, PITCH_REF]).transpose()
+                # clip the U_GOAL to the self.action_space bounds
+                self.U_GOAL = np.clip(U_GOAL, self.action_space.low, self.action_space.high)
+            else:
+                self.U_GOAL = np.array([self.MASS * self.GRAVITY_ACC, 0.0])
         else:
             self.U_GOAL = np.ones(self.action_dim) * self.MASS * self.GRAVITY_ACC / self.action_dim
         if self.TASK == Task.STABILIZATION:
@@ -302,14 +312,29 @@ class Quadrotor(BaseAviary):
                     0.0, 0.0, 0.0, 0.0, 0.0, 0.0
                 ])  # x = {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p_body, q_body, r_body}.
         elif self.TASK == Task.TRAJ_TRACKING:
-            POS_REF, VEL_REF, _ = self._generate_trajectory(traj_type=self.TASK_INFO['trajectory_type'],
-                                                            traj_length=self.EPISODE_LEN_SEC,
-                                                            num_cycles=self.TASK_INFO['num_cycles'],
-                                                            traj_plane=self.TASK_INFO['trajectory_plane'],
-                                                            position_offset=self.TASK_INFO['trajectory_position_offset'],
-                                                            scaling=self.TASK_INFO['trajectory_scale'],
-                                                            sample_time=self.CTRL_TIMESTEP
-                                                            )  # Each of the 3 returned values is of shape (Ctrl timesteps, 3)
+            if 'ilqr_ref' in self.TASK_INFO.keys() \
+                and self.TASK_INFO['ilqr_ref']\
+                and self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
+                traj_data = np.load(self.TASK_INFO['ilqr_traj_data'], allow_pickle=True).item()
+                POS_REF = np.array(
+                    [traj_data['obs'][0][:, 0], 
+                     np.zeros_like(traj_data['obs'][0][:, 0]), 
+                     traj_data['obs'][0][:, 2]]).T
+                VEL_REF = np.array(
+                    [traj_data['obs'][0][:, 1], 
+                     np.zeros_like(traj_data['obs'][0][:, 0]), 
+                     traj_data['obs'][0][:, 3]]).T
+                PITCH_REF = np.array([traj_data['obs'][0][:, 4], traj_data['obs'][0][:, 5]]).T
+            else:
+                POS_REF, VEL_REF, _ = self._generate_trajectory(traj_type=self.TASK_INFO['trajectory_type'],
+                                                                traj_length=self.EPISODE_LEN_SEC,
+                                                                num_cycles=self.TASK_INFO['num_cycles'],
+                                                                traj_plane=self.TASK_INFO['trajectory_plane'],
+                                                                position_offset=self.TASK_INFO['trajectory_position_offset'],
+                                                                scaling=self.TASK_INFO['trajectory_scale'],
+                                                                sample_time=self.CTRL_TIMESTEP
+                                                                )
+                # Each of the 3 returned values is of shape (Ctrl timesteps, 3)
             if self.QUAD_TYPE == QuadType.ONE_D:
                 self.X_GOAL = np.vstack([
                     POS_REF[:, 2],  # z
@@ -325,14 +350,25 @@ class Quadrotor(BaseAviary):
                     np.zeros(VEL_REF.shape[0])
                 ]).transpose()
             elif self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
-                self.X_GOAL = np.vstack([
-                    POS_REF[:, 0],  # x
-                    VEL_REF[:, 0],  # x_dot
-                    POS_REF[:, 2],  # z
-                    VEL_REF[:, 2],  # z_dot
-                    np.zeros(POS_REF.shape[0]),  # zeros
-                    np.zeros(VEL_REF.shape[0])
-                ]).transpose()
+                if 'ilqr_ref' in self.TASK_INFO.keys() \
+                    and self.TASK_INFO['ilqr_ref']:
+                    self.X_GOAL = np.vstack([
+                        POS_REF[:, 0],  # x
+                        VEL_REF[:, 0],  # x_dot
+                        POS_REF[:, 2],  # z
+                        VEL_REF[:, 2],  # z_dot
+                        PITCH_REF[:, 0],  # pitch
+                        PITCH_REF[:, 1]  # pitch_dot
+                    ]).transpose()
+                else:
+                    self.X_GOAL = np.vstack([
+                        POS_REF[:, 0],  # x
+                        VEL_REF[:, 0],  # x_dot
+                        POS_REF[:, 2],  # z
+                        VEL_REF[:, 2],  # z_dot
+                        np.zeros(POS_REF.shape[0]),  # zeros
+                        np.zeros(VEL_REF.shape[0])
+                    ]).transpose()
             elif self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE_5S:
                 self.X_GOAL = np.vstack([
                     POS_REF[:, 0],  # x
@@ -898,6 +934,15 @@ class Quadrotor(BaseAviary):
             self.current_physical_action = self.current_physical_action + self.adv_action
         self.current_noisy_physical_action = self.current_physical_action
 
+        # Identified dynamics model works with collective thrust and pitch directly
+        # No need to compute RPMs, (save compute)
+        self.current_clipped_action = np.clip(self.current_noisy_physical_action,
+                                              self.physical_action_bounds[0],
+                                              self.physical_action_bounds[1])[0]
+        if self.PHYSICS == Physics.DYN_SI:
+            return None
+
+        # Compute motor RPM (depending on quad_type)
         if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE or self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE_5S:
             collective_thrust, pitch = action
 
@@ -983,7 +1028,7 @@ class Quadrotor(BaseAviary):
         """
 
         full_state = self._get_drone_state_vector(0)
-        pos, _, rpy, vel, ang_v, _ = np.split(full_state, [3, 7, 10, 13, 16])
+        pos, _, rpy, vel, ang_v, rpy_rate, _ = np.split(full_state, [3, 7, 10, 13, 16, 19])
         # print(rpy)
         # if rpy[1] > 0.2:
         #     print([pos, rpy, vel, ang_v])
@@ -998,7 +1043,7 @@ class Quadrotor(BaseAviary):
         elif self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE:
             # {x, x_dot, z, z_dot, theta, theta_dot}.
             self.state = np.hstack(
-                [pos[0], vel[0], pos[2], vel[2], rpy[1], ang_v[1]]
+                [pos[0], vel[0], pos[2], vel[2], rpy[1], rpy_rate[1]]
             ).reshape((6,))
         elif self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE_5S:
             # {x, x_dot, z, z_dot, theta, theta_dot}.
@@ -1021,12 +1066,11 @@ class Quadrotor(BaseAviary):
         #             '[WARNING]: observation was clipped in Quadrotor._get_observation().'
         #         )
 
-        obs = deepcopy(self.state)
-
         # Concatenate goal info (references state(s)) for RL.
         # Plus two because ctrl_step_counter has not incremented yet, and we want to return the obs (which would be
         # ctrl_step_counter + 1 as the action has already been applied), and the next state (+ 2) for the RL to see
         # the next state.
+        obs = deepcopy(self.state)
         if self.at_reset:
             obs = self.extend_obs(obs, 1)
         else:
@@ -1046,7 +1090,7 @@ class Quadrotor(BaseAviary):
         # RL cost.
         if self.COST == Cost.RL_REWARD:
             state = self.state
-            act = np.asarray(self.current_noisy_physical_action)
+            act = np.asarray(self.current_clipped_action)
             act_error = act - self.U_GOAL
             # Quadratic costs w.r.t state and action
             # TODO: consider using multiple future goal states for cost in tracking
@@ -1075,12 +1119,23 @@ class Quadrotor(BaseAviary):
                                                      Q=self.Q,
                                                      R=self.R)['l'])
             if self.TASK == Task.TRAJ_TRACKING:
-                return float(-1 * self.symbolic.loss(x=self.state,
-                                                     Xr=self.X_GOAL[self.ctrl_step_counter + 1, :],  # +1 because state has already advanced but counter not incremented.
-                                                     u=self.current_clipped_action,
-                                                     Ur=self.U_GOAL,
-                                                     Q=self.Q,
-                                                     R=self.R)['l'])
+                if 'ilqr_ref' in self.TASK_INFO.keys() \
+                and self.TASK_INFO['ilqr_ref']:
+                    return float(-1 * self.symbolic.loss(x=self.state,
+                                                        Xr=self.X_GOAL[self.ctrl_step_counter + 1, :],  # +1 because state has already advanced but counter not incremented.
+                                                        u=self.current_clipped_action,
+                                                        Ur=self.U_GOAL[self.ctrl_step_counter + 1, :] \
+                                                                        if self.U_GOAL.shape[0] > self.ctrl_step_counter + 1 else self.U_GOAL[-1, :],
+                                                                        # TODO: still tentative
+                                                        Q=self.Q,
+                                                        R=self.R)['l'])
+                else:
+                    return float(-1 * self.symbolic.loss(x=self.state,
+                                                        Xr=self.X_GOAL[self.ctrl_step_counter + 1, :],  # +1 because state has already advanced but counter not incremented.
+                                                        u=self.current_clipped_action,
+                                                        Ur=self.U_GOAL,
+                                                        Q=self.Q,
+                                                        R=self.R)['l'])
 
     def _get_done(self):
         """Computes the conditions for termination of an episode.

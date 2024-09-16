@@ -13,7 +13,7 @@ task_config:
     init_z_dot: 0
     init_theta: 0
     init_theta_dot: 0
-  randomized_init: True
+  randomized_init: False
   randomized_inertial_prop: False
 
   init_state_randomization_info:
@@ -49,26 +49,24 @@ task_config:
     trajectory_plane: 'xz'
     trajectory_position_offset: [0, 1.]
     trajectory_scale: 0.5
-    ilqr_ref: True
-    ilqr_traj_data: '../lqr/ilqr_ref_traj.npy'
 
   inertial_prop:
     M: 0.027
     Iyy: 1.4e-05
 
   episode_len_sec: 9
-  cost: rl_reward
-  obs_goal_horizon: 1
+  cost: quadratic
+  obs_goal_horizon: 0
 
   # RL Reward
   rew_state_weight: [10.0, 0.1, 10.0, 0.1, 0.1, 0.001]
   rew_act_weight: 0.1
   rew_exponential: True
 
-  disturbances:
-    observation:
-      - disturbance_func: white_noise
-        std: [5.6e-05, 1.5e-02, 2.9e-05, 8.0e-03, 1.3e-03, 3.6e-01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+#  disturbances:
+#    observation:
+#      - disturbance_func: white_noise
+#        std: [5.6e-05, 1.5e-02, 2.9e-05, 8.0e-03, 1.3e-03, 3.6e-01]
 
   constraints:
     - constraint_form: default_constraint

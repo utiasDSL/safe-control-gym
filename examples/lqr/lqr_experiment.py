@@ -15,7 +15,7 @@ from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 
 
-def run(gui=True, n_episodes=1, n_steps=None, save_data=False):
+def run(gui=False, n_episodes=1, n_steps=None, save_data=False):
     '''The main function running LQR and iLQR experiments.
 
     Args:
@@ -61,7 +61,7 @@ def run(gui=True, n_episodes=1, n_steps=None, save_data=False):
         else:
             trajs_data, _ = experiment.run_evaluation(training=True, n_steps=n_steps)
 
-        if gui:
+        if True:
             post_analysis(trajs_data['obs'][0], trajs_data['action'][0], ctrl.env)
 
         # Close environments
@@ -76,6 +76,7 @@ def run(gui=True, n_episodes=1, n_steps=None, save_data=False):
     random_env.close()
     metrics = experiment.compute_metrics(all_trajs)
     all_trajs = dict(all_trajs)
+    np.save('./ilqr_ref_traj.npy', all_trajs, allow_pickle=True)
 
     if save_data:
         results = {'trajs_data': all_trajs, 'metrics': metrics}

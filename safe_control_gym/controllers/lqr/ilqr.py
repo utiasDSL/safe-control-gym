@@ -42,7 +42,7 @@ class iLQR(BaseController):
             lamb_max (float): The maximum lambda allowed.
             epsilon (float): The convergence tolerance of the cost function.
         
-        Note: This implementaion has a Hessian regularization term self.lamb 
+        Note: This implementation has a Hessian regularization term self.lamb
         to make sure H is well-conditioned for inversion. It is related to 
         lamb_factor and lamb_max. See [1] for more details.
         '''
@@ -104,7 +104,7 @@ class iLQR(BaseController):
         # Initialize previous cost
         self.previous_total_cost = -float('inf')
 
-        # determin the maximum number of steps
+        # determine the maximum number of steps
         max_steps = int(self.env.CTRL_FREQ * self.env.EPISODE_LEN_SEC)\
         
         # Loop through iLQR iterations
