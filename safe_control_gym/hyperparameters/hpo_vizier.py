@@ -51,14 +51,18 @@ class HPO(object):
         for cat, hps in self.search_space.items():
             if cat == 'float':
                 for hp_name, hp_range in hps.items():
-                    self.problem.search_space.root.add_float_param(hp_name, hp_range[0], hp_range[1])
+                    # if it is learning rate, use log scale
+                    if 'lr' in hp_name or 'learning_rate' in hp_name:
+                        self.problem.search_space.root.add_float_param(hp_name, hp_range[0], hp_range[1], scale_type=vz.ScaleType.LOG)
+                    else:
+                        self.problem.search_space.root.add_float_param(hp_name, hp_range[0], hp_range[1])
             elif cat == 'categorical':
                 for hp_name, hp_choices in hps.items():
                     # check if the choices are strings
                     if isinstance(hp_choices[0], str):
                         self.problem.search_space.root.add_categorical_param(hp_name, hp_choices)
                     else:
-                        self.problem.search_space.root.add_discrete_param(hp_name, hp_choices)
+                        self.problem.search_space.root.add_discrete_param(hp_name, hp_choices, auto_cast=True)
             else:
                 raise ValueError('Invalid hyperparameter category')
         
@@ -116,7 +120,11 @@ class HPO(object):
                 else:
                     # check key in algo_config
                     if hp in self.algo_config:
-                        self.algo_config[hp] = sampled_hyperparams[hp]
+                        # cast to int if the value is an integer
+                        if isinstance(self.algo_config[hp], int):
+                            self.algo_config[hp] = int(sampled_hyperparams[hp])
+                        else:
+                            self.algo_config[hp] = sampled_hyperparams[hp]
                     elif hp in self.sf_config or hp == 'sf_state_weight' or hp == 'sf_state_dot_weight' or hp == 'sf_action_weight':
                         if self.task == 'cartpole':
                             if hp == 'sf_state_weight' or hp == 'sf_state_dot_weight' or hp == 'sf_action_weight':

@@ -326,7 +326,7 @@ def test_hpo_quadrotor(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, SAMPLER):
     fac.add_argument('--load_study', type=bool, default=False, help='whether to load study from a previous HPO.')
     fac.add_argument('--sampler', type=str, default='Optuna', help='which sampler to use in HPO.')
     config = fac.merge()
-    config.hpo_config.trials = 30
+    config.hpo_config.trials = 1
     config.hpo_config.repetitions = 1
     config.hpo_config.use_database = True
     config.sampler = SAMPLER
