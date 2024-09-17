@@ -31,7 +31,7 @@ from safe_control_gym.utils.utils import mkdirs
 
 class HPO(object):
 
-    def __init__(self, algo, task, sampler, load_study, output_dir, task_config, hpo_config, algo_config, safety_filter=None, sf_config=None):
+    def __init__(self, algo, task, load_study, output_dir, task_config, hpo_config, algo_config, safety_filter=None, sf_config=None):
         """ Hyperparameter optimization class
 
         args:
@@ -57,12 +57,7 @@ class HPO(object):
         self.logger = ExperimentLogger(output_dir, log_file_out=False)
         self.total_runs = 0
         # init sampler
-        if sampler == 'RandomSampler':
-            self.sampler = RandomSampler(seed=self.hpo_config.seed)
-        elif sampler == 'TPESampler':
-            self.sampler = TPESampler(seed=self.hpo_config.seed)
-        else:
-            raise ValueError('Unknown sampler.')
+        self.sampler = TPESampler(seed=self.hpo_config.seed)
 
         assert len(hpo_config.objective) == len(hpo_config.direction), 'objective and direction must have the same length'
 
@@ -107,7 +102,7 @@ class HPO(object):
                             elif self.task == 'quadrotor':
                                 #TODO if implemented for quadrotor, pitch rate penalty should be small.
                                 # raise ValueError('Only cartpole task is supported for gp_mpc.')
-                                self.algo_config['q_mpc'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
+                                self.algo_config['q_mpc'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], 0.001]
                                 self.algo_config['r_mpc'] = [sampled_hyperparams['action_weight'], sampled_hyperparams['action_weight']]
                         elif self.algo == 'ilqr':
                             if self.task == 'cartpole':
@@ -116,14 +111,14 @@ class HPO(object):
                             elif self.task == 'quadrotor':
                                 #TODO if implemented for quadrotor, pitch rate penalty should be small.
                                 # raise ValueError('Only cartpole task is supported for ilqr.')
-                                self.algo_config['q_lqr'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
+                                self.algo_config['q_lqr'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], 0.001]
                                 self.algo_config['r_lqr'] = [sampled_hyperparams['action_weight'], sampled_hyperparams['action_weight']]
                         else:
                             if self.task == 'cartpole':
                                 self.task_config['rew_state_weight'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
                                 self.task_config['rew_action_weight'] = [sampled_hyperparams['action_weight']]
                             elif self.task == 'quadrotor':
-                                self.task_config['rew_state_weight'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
+                                self.task_config['rew_state_weight'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], 0.001]
                                 self.task_config['rew_action_weight'] = [sampled_hyperparams['action_weight'], sampled_hyperparams['action_weight']]
                     else:
                         # check key in algo_config

@@ -64,7 +64,7 @@ class iLQR(BaseController):
         self.env = env_func(info_in_reset=True, done_on_out_of_bound=True, seed=self.seed)
 
         # Controller params.
-        self.model = self.get_prior(self.env,)
+        self.model = self.get_prior(self.env)
         self.Q = get_cost_weight_matrix(self.q_lqr, self.model.nx)
         self.R = get_cost_weight_matrix(self.r_lqr, self.model.nu)
         self.env.set_cost_function_param(self.Q, self.R)

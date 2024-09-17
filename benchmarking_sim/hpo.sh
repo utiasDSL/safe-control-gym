@@ -4,27 +4,25 @@
 # This script is used to run HPO in parallel.
 # 1. Adjust hpo config.
 # 2. Remove or backup the database if needed.
-# 3. Create a screen session `screen`, and detach it `Ctrl+a d`.
-# 4. Run this script by giving experiment name as the first arg. and the seed as the second.
-# 5. If you want to kill them, run `pkill -f "python ./.py"`. 
+# 3. Create a screen session screen, and detach it Ctrl+a d.
+# 4. Run this script by giving experiment name as the first arg, seed as the second, and number of parallel jobs as the third arg.
+# 5. If you want to kill them, run pkill -f "python ./.py". 
 #####################
 
 cd ~/safe-control-gym
 
 experiment_name=$1
 seed1=$2
-seed2=$((seed1+100))
-seed3=$((seed1+200))
-seed4=$((seed1+300))
-sampler=$3 # RandomSampler or TPESampler
-localOrHost=$4
-sys=$5 # cartpole, or quadrotor_2D_attitude
+parallel_jobs=$3 # Number of parallel jobs
+sampler=$4 # Optuna or Vizier
+localOrHost=$5
+sys=$6 # cartpole, or quadrotor_2D_attitude
 sys_name=${sys%%_*} # cartpole, or quadrotor
-algo=$6 # ilqr, gpmpc_acados
-prior=$7
-safety_filter=$8 # True or False
-task=$9 # stab, or tracking
-resume=${10} # True or False
+algo=$7 # ilqr, gpmpc_acados
+prior=$8
+safety_filter=$9 # True or False
+task=${10} # stab, or tracking
+resume=${11} # True or False
 
 
 # activate the environment
@@ -51,11 +49,16 @@ echo "task config path: ./benchmarking_sim/${sys_name}/config_overrides/${sys}_$
 echo "algo config path: ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_${task}_${prior}.yaml"
 echo "hpo config path: ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_hpo.yaml"
 
-# if resume is False, create a study
+# Adjust the seed for each parallel job
+seeds=()
+for ((i=0; i<parallel_jobs; i++)); do
+    seeds[$i]=$((seed1 + i * 100))
+done
+
+# if resume is False, create a study for the first job and load it for the remaining jobs
 if [ "$resume" == 'False' ]; then
-
+    # First job creates the study
     if [ "$safety_filter" == 'False' ]; then
-
         python ./examples/hpo/hpo_experiment.py \
                             --algo $algo \
                             --overrides ./benchmarking_sim/${sys_name}/config_overrides/${sys}_${task}.yaml \
@@ -64,29 +67,28 @@ if [ "$resume" == 'False' ]; then
                             --output_dir ./benchmarking_sim/hpo/${algo} \
                             --sampler $sampler \
                             --use_gpu True \
-                            --task ${sys_name} --func hpo --tag ${experiment_name} --seed $seed1 &
+                            --task ${sys_name} --func hpo --tag ${experiment_name} --seed ${seeds[0]} &
         pid1=$!
 
         # wait until the first study is created
         sleep 3
 
-        # set load_study to True
-        python ./examples/hpo/hpo_experiment.py \
-                            --algo $algo \
-                            --overrides ./benchmarking_sim/${sys_name}/config_overrides/${sys}_${task}.yaml \
-                                        ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_${task}_${prior}.yaml \
-                                        ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_hpo.yaml \
-                            --output_dir ./benchmarking_sim/hpo/${algo} \
-                            --sampler $sampler \
-                            --use_gpu True \
-                            --task ${sys_name} --func hpo --load_study True --tag ${experiment_name} --seed $seed2 &
-        pid2=$!
-
+        # Remaining jobs load the study
+        for ((i=1; i<parallel_jobs; i++)); do
+            python ./examples/hpo/hpo_experiment.py \
+                                --algo $algo \
+                                --overrides ./benchmarking_sim/${sys_name}/config_overrides/${sys}_${task}.yaml \
+                                            ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_${task}_${prior}.yaml \
+                                            ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_hpo.yaml \
+                                --output_dir ./benchmarking_sim/hpo/${algo} \
+                                --sampler $sampler \
+                                --use_gpu True \
+                                --task ${sys_name} --func hpo --load_study True --tag ${experiment_name} --seed ${seeds[$i]} &
+            pids[$i]=$!
+        done
     fi
 
-
     if [ "$safety_filter" == 'True' ]; then
-
         python ./examples/hpo/hpo_experiment.py \
                             --algo $algo \
                             --overrides ./benchmarking_sim/${sys_name}/config_overrides/${sys}_${task}.yaml \
@@ -97,72 +99,63 @@ if [ "$resume" == 'False' ]; then
                             --output_dir ./benchmarking_sim/hpo/${algo} \
                             --sampler $sampler \
                             --use_gpu True \
-                            --task ${sys_name} --func hpo --tag ${experiment_name} --seed $seed1 &
+                            --task ${sys_name} --func hpo --tag ${experiment_name} --seed ${seeds[0]} &
         pid1=$!
 
         # wait until the first study is created
         sleep 3
 
-        # set load_study to True
-        python ./examples/hpo/hpo_experiment.py \
-                            --algo $algo \
-                            --overrides ./benchmarking_sim/${sys_name}/config_overrides/${sys}_${task}.yaml \
-                                        ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_${task}_${prior}.yaml \
-                                        ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_hpo.yaml \
-                                        ./benchmarking_sim/${sys_name}/config_overrides/linear_mpsc_${sys}_${task}_${prior}.yaml \
-                            --kv_overrides sf_config.cost_function=one_step_cost \
-                            --output_dir ./benchmarking_sim/hpo/${algo} \
-                            --sampler $sampler \
-                            --use_gpu True \
-                            --task ${sys_name} --func hpo --load_study True --tag ${experiment_name} --seed $seed2 &
-        pid2=$!
-
+        for ((i=1; i<parallel_jobs; i++)); do
+            python ./examples/hpo/hpo_experiment.py \
+                                --algo $algo \
+                                --overrides ./benchmarking_sim/${sys_name}/config_overrides/${sys}_${task}.yaml \
+                                            ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_${task}_${prior}.yaml \
+                                            ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_hpo.yaml \
+                                            ./benchmarking_sim/${sys_name}/config_overrides/linear_mpsc_${sys}_${task}_${prior}.yaml \
+                                --kv_overrides sf_config.cost_function=one_step_cost \
+                                --output_dir ./benchmarking_sim/hpo/${algo} \
+                                --sampler $sampler \
+                                --use_gpu True \
+                                --task ${sys_name} --func hpo --load_study True --tag ${experiment_name} --seed ${seeds[$i]} &
+            pids[$i]=$!
+            sleep 3
+        done
     fi
 fi
 
-# if resume is True, load the study
+# if resume is True, load the study for all jobs
 if [ "$resume" == 'True' ]; then
-
     cd ./benchmarking_sim/hpo/${algo}/${experiment_name}
     mysql -u optuna ${algo}_hpo < ${algo}_hpo.sql
 
     cd ~/safe-control-gym
 
-    # set load_study to True
-    python ./examples/hpo/hpo_experiment.py \
-                        --algo $algo \
-                        --overrides ./benchmarking_sim/${sys_name}/config_overrides/${sys}_${task}.yaml \
-                                    ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_${task}_${prior}.yaml \
-                                    ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_hpo.yaml \
-                        --output_dir ./benchmarking_sim/hpo/${algo} \
-                        --sampler $sampler \
-                        --use_gpu True \
-                        --task ${sys_name} --func hpo --tag ${experiment_name} --seed $seed3 &
-    pid1=$!
-
-    # set load_study to True
-    python ./examples/hpo/hpo_experiment.py \
-                        --algo $algo \
-                        --overrides ./benchmarking_sim/${sys_name}/config_overrides/${sys}_${task}.yaml \
-                                    ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_${task}_${prior}.yaml \
-                                    ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_hpo.yaml \
-                        --output_dir ./benchmarking_sim/hpo/${algo} \
-                        --sampler $sampler \
-                        --use_gpu True \
-                        --task ${sys_name} --func hpo --load_study True --tag ${experiment_name} --seed $seed3 &
-    pid2=$!
-
+    for ((i=0; i<parallel_jobs; i++)); do
+        python ./examples/hpo/hpo_experiment.py \
+                            --algo $algo \
+                            --overrides ./benchmarking_sim/${sys_name}/config_overrides/${sys}_${task}.yaml \
+                                        ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_${task}_${prior}.yaml \
+                                        ./benchmarking_sim/${sys_name}/config_overrides/${algo}_${sys}_hpo.yaml \
+                            --output_dir ./benchmarking_sim/hpo/${algo} \
+                            --sampler $sampler \
+                            --use_gpu True \
+                            --task ${sys_name} --func hpo --load_study True --tag ${experiment_name} --seed ${seeds[$i]} &
+        pids[$i]=$!
+        sleep 3
+    done
 fi
 
-# move the database from . into output_dir after both commands finish
-wait $pid1
-echo "job1 finished"
-wait $pid2
-echo "job2 finished"
+# Wait for all jobs to finish
+for pid in ${pids[*]}; do
+    wait $pid
+    echo "Job $pid finished"
+done
 
-# back up first
+# back up the database after all jobs finish
 echo "backing up the database"
 mysqldump --no-tablespaces -u optuna ${algo}_hpo > ${algo}_hpo.sql
 mv ${algo}_hpo.sql ./benchmarking_sim/hpo/${algo}/${experiment_name}/${algo}_hpo.sql
+mv ${algo}_hpo.db ./benchmarking_sim/hpo/${algo}/${experiment_name}/${algo}_hpo.db
+mv ${algo}_hpo_endpoint.yaml ./benchmarking_sim/hpo/${algo}/${experiment_name}/${algo}_hpo_endpoint.yaml
 # remove the database
 python ./safe_control_gym/hyperparameters/database.py --func drop --tag ${algo}_hpo

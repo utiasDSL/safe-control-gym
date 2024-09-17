@@ -114,9 +114,14 @@ def test_train_quadrotor(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, HYPERPARAMETER):
     elif ALGO == 'gp_mpc' or ALGO == 'gpmpc_acados':
         if HYPERPARAMETER == 'default':
             opt_hp_path = ''
-        else:
-            raise ValueError('HYPERPARAMETER must be default')
+        elif HYPERPARAMETER == 'optimized':
+            opt_hp_path = './benchmarking_sim/quadrotor/config_overrides/gpmpc_acados_optimized_hyperparameters.yaml'
         PRIOR = '200'
+    elif ALGO == 'ppo':
+        if HYPERPARAMETER == 'default':
+            opt_hp_path = ''
+        else:
+            opt_hp_path = './benchmarking_sim/quadrotor/config_overrides/ppo_optimized_hyperparameters.yaml'
     
     # check if the config file exists
     TASK_CONFIG_PATH = f'./benchmarking_sim/{SYS_NAME}/config_overrides/{SYS}_{TASK}.yaml'
@@ -172,7 +177,7 @@ def test_train_quadrotor(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, HYPERPARAMETER):
 @pytest.mark.parametrize('ALGO', ['ilqr', 'gp_mpc', 'gpmpc_acados', 'ppo'])
 @pytest.mark.parametrize('PRIOR', [''])
 @pytest.mark.parametrize('SAFETY_FILTER', ['', 'linear_mpsc'])
-@pytest.mark.parametrize('SAMPLER', ['TPESampler'])
+@pytest.mark.parametrize('SAMPLER', ['Optuna', 'Vizier'])
 def test_hpo_cartpole(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, SAMPLER):
     '''Test HPO for one single trial using MySQL database.
         (create a study from scratch)
@@ -233,9 +238,9 @@ def test_hpo_cartpole(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, SAMPLER):
 
     fac = ConfigFactory()
     fac.add_argument('--load_study', type=bool, default=False, help='whether to load study from a previous HPO.')
-    fac.add_argument('--sampler', type=str, default='TPESampler', help='which sampler to use in HPO.')
+    fac.add_argument('--sampler', type=str, default='Optuna', help='which sampler to use in HPO.')
     config = fac.merge()
-    config.hpo_config.trials = 20
+    config.hpo_config.trials = 1
     config.hpo_config.repetitions = 1
     config.hpo_config.use_database = True
     config.sampler = SAMPLER
@@ -256,7 +261,7 @@ def test_hpo_cartpole(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, SAMPLER):
 @pytest.mark.parametrize('ALGO', ['ilqr', 'gp_mpc', 'gpmpc_acados', 'ppo'])
 @pytest.mark.parametrize('PRIOR', [''])
 @pytest.mark.parametrize('SAFETY_FILTER', ['', 'linear_mpsc'])
-@pytest.mark.parametrize('SAMPLER', ['TPESampler'])
+@pytest.mark.parametrize('SAMPLER', ['Optuna', 'Vizier'])
 def test_hpo_quadrotor(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, SAMPLER):
     '''Test HPO for one single trial using MySQL database.
         (create a study from scratch)
@@ -319,7 +324,7 @@ def test_hpo_quadrotor(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, SAMPLER):
 
     fac = ConfigFactory()
     fac.add_argument('--load_study', type=bool, default=False, help='whether to load study from a previous HPO.')
-    fac.add_argument('--sampler', type=str, default='TPESampler', help='which sampler to use in HPO.')
+    fac.add_argument('--sampler', type=str, default='Optuna', help='which sampler to use in HPO.')
     config = fac.merge()
     config.hpo_config.trials = 1
     config.hpo_config.repetitions = 1

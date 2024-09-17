@@ -28,5 +28,6 @@ setup(name='safe_control_gym',
           'mysql-connector-python',
           'pymysql',
           'pandas',
+          'google-vizier[jax]',
       ],
       )
