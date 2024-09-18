@@ -40,9 +40,9 @@ fi
 conda activate safe
 
 # remove the database
-python ./safe_control_gym/hyperparameters/database.py --func drop --tag ${algo}_hpo
+# python ./safe_control_gym/hyperparameters/database.py --func drop --tag ${algo}_hpo
 # create database
-python ./safe_control_gym/hyperparameters/database.py --func create --tag ${algo}_hpo
+# python ./safe_control_gym/hyperparameters/database.py --func create --tag ${algo}_hpo
 
 # echo config path
 echo "task config path: ./benchmarking_sim/${sys_name}/config_overrides/${sys}_${task}.yaml"
@@ -156,6 +156,7 @@ echo "backing up the database"
 mysqldump --no-tablespaces -u optuna ${algo}_hpo > ${algo}_hpo.sql
 mv ${algo}_hpo.sql ./benchmarking_sim/hpo/${algo}/${experiment_name}/${algo}_hpo.sql
 mv ${algo}_hpo.db ./benchmarking_sim/hpo/${algo}/${experiment_name}/${algo}_hpo.db
+mv ${algo}_hpo.db-journal ./benchmarking_sim/hpo/${algo}/${experiment_name}/${algo}_hpo.db-journal
 mv ${algo}_hpo_endpoint.yaml ./benchmarking_sim/hpo/${algo}/${experiment_name}/${algo}_hpo_endpoint.yaml
 # remove the database
 python ./safe_control_gym/hyperparameters/database.py --func drop --tag ${algo}_hpo

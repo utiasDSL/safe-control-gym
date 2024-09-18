@@ -253,7 +253,8 @@ class HPO(object):
     def hyperparameter_optimization(self) -> None:
 
         if self.load_study:
-            self.study = optuna.load_study(study_name=self.study_name, storage='mysql+pymysql://optuna@localhost/{}'.format(self.study_name))
+            # self.study = optuna.load_study(study_name=self.study_name, storage='mysql+pymysql://optuna@localhost/{}'.format(self.study_name))
+            self.study = optuna.load_study(study_name=self.study_name, storage='sqlite:///{}.db'.format(self.study_name))
         elif self.hpo_config.use_database is False:
             # single-objective optimization
             if len(self.hpo_config.direction) == 1:
@@ -274,22 +275,38 @@ class HPO(object):
         else:
             # single-objective optimization
             if len(self.hpo_config.direction) == 1:
+                # self.study = optuna.create_study(
+                #     direction=self.hpo_config.direction[0],
+                #     sampler=self.sampler,
+                #     pruner=optuna.pruners.MedianPruner(n_warmup_steps=10),
+                #     study_name=self.study_name,
+                #     storage='mysql+pymysql://optuna@localhost/{}'.format(self.study_name),
+                #     load_if_exists=self.hpo_config.load_if_exists
+                # )
                 self.study = optuna.create_study(
                     direction=self.hpo_config.direction[0],
                     sampler=self.sampler,
                     pruner=optuna.pruners.MedianPruner(n_warmup_steps=10),
                     study_name=self.study_name,
-                    storage='mysql+pymysql://optuna@localhost/{}'.format(self.study_name),
+                    storage='sqlite:///{}.db'.format(self.study_name),
                     load_if_exists=self.hpo_config.load_if_exists
                 )
             # multi-objective optimization
             else:
+                # self.study = optuna.create_study(
+                #     directions=self.hpo_config.direction,
+                #     sampler=self.sampler,
+                #     pruner=optuna.pruners.MedianPruner(n_warmup_steps=10),
+                #     study_name=self.study_name,
+                #     storage='mysql+pymysql://optuna@localhost/{}'.format(self.study_name),
+                #     load_if_exists=self.hpo_config.load_if_exists
+                # )
                 self.study = optuna.create_study(
                     directions=self.hpo_config.direction,
                     sampler=self.sampler,
                     pruner=optuna.pruners.MedianPruner(n_warmup_steps=10),
                     study_name=self.study_name,
-                    storage='mysql+pymysql://optuna@localhost/{}'.format(self.study_name),
+                    storage='sqlite:///{}.db'.format(self.study_name),
                     load_if_exists=self.hpo_config.load_if_exists
                 )
 
@@ -324,7 +341,8 @@ class HPO(object):
 
         # dashboard
         if self.hpo_config.dashboard and self.hpo_config.use_database:
-            run_server('mysql+pymysql://optuna@localhost/{}'.format(self.study_name))
+            # run_server('mysql+pymysql://optuna@localhost/{}'.format(self.study_name))
+            run_server('sqlite:///{}.db'.format(self.study_name))
 
         # save plot
         try:
