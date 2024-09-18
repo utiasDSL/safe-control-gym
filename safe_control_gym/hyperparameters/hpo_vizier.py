@@ -7,7 +7,8 @@ import os, time
 from copy import deepcopy
 from functools import partial
 import numpy as np
-import yaml
+import yaml, csv
+import matplotlib.pyplot as plt
 
 from safe_control_gym.hyperparameters.hpo_sampler import HYPERPARAMS_DICT
 from safe_control_gym.experiments.base_experiment import BaseExperiment
@@ -259,14 +260,20 @@ class HPO(object):
         # study_config = vz.StudyConfig.from_problem(self.problem)
         # study_client = clients.Study.from_study_config(study_config, owner='owner', study_id=self.study_name)
 
-        existing_trials = len(study_client._client.list_trials())
+        existing_trials = 0
         while existing_trials < self.hpo_config.trials:
-            self.logger.info(f'Hyperparameter optimization trial {existing_trials+1}/{self.hpo_config.trials}')
             # get suggested hyperparameters
             suggestions = study_client.suggest(count=1, client_id=self.client_id)
             # suggestions = study_client.suggest(count=1)
 
             for suggestion in suggestions:
+                if suggestion.id > self.hpo_config.trials:
+                    self.logger.info(f'Trial {suggestion.id} is deleted as it exceeds the maximum number of trials.')
+                    suggestion.delete()
+                    existing_trials = suggestion.id
+                    break
+                self.logger.info(f'Hyperparameter optimization trial {suggestion.id}/{self.hpo_config.trials}')
+                existing_trials = suggestion.id
                 # evaluate the suggested hyperparameters
                 materialized_suggestion = suggestion.materialize()
                 suggested_params = {key: val.value for key, val in materialized_suggestion.parameters._items.items()}
@@ -277,23 +284,95 @@ class HPO(object):
                 final_measurement = vz.Measurement({f'{self.hpo_config.objective[0]}': objective_value})
                 suggestion.complete(final_measurement)
             
-            existing_trials = len(study_client._client.list_trials())
+        # study_client.set_state(vz.StudyState.COMPLETED)
+        
+        if self.load_study == False:
 
-        trial_filter = vz.TrialFilter(status=[vz.TrialStatus.COMPLETED])
-        finished_trials = len(study_client.trials(trial_filter=trial_filter)._client.list_trials())
-        # wait until other clients to finish
-        while finished_trials < self.hpo_config.trials:
-            self.logger.info(f'Waiting for other clients to finish. {finished_trials}/{self.hpo_config.trials}')
-            finished_trials = len(study_client.trials(trial_filter=trial_filter)._client.list_trials())
-            # sleep for 10 seconds
-            time.sleep(10)
-                
-        output_dir = os.path.join(self.output_dir, 'hpo')
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+            completed_trial_filter = vz.TrialFilter(status=[vz.TrialStatus.COMPLETED])
+            finished_trials = len(list(study_client.trials(trial_filter=completed_trial_filter).get()))
+            # wait until other clients to finish
+            while finished_trials != self.hpo_config.trials:
+                self.logger.info(f'Waiting for other clients to finish remaining trials: {self.hpo_config.trials - finished_trials}')
+                finished_trials = len(list(study_client.trials(trial_filter=completed_trial_filter).get()))
+                # sleep for 10 seconds
+                time.sleep(10)
 
-        for optimal_trial in study_client.optimal_trials():
-            optimal_trial = optimal_trial.materialize()
-            params = {key: val.value for key, val in optimal_trial.parameters._items.items()}
-            with open(f'{output_dir}/hyperparameters_{optimal_trial.final_measurement.metrics[self.hpo_config.objective[0]].value:.4f}.yaml', 'w')as f: 
-                yaml.dump(params, f, default_flow_style=False)
+            self.logger.info(f'Have finished trials: {finished_trials}/{self.hpo_config.trials}')
+
+            output_dir = os.path.join(self.output_dir, 'hpo')
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+
+            try:
+                for optimal_trial in study_client.optimal_trials():
+                    optimal_trial = optimal_trial.materialize()
+                    params = {key: val.value for key, val in optimal_trial.parameters._items.items()}
+                    for hp in params:
+                        if hp in self.algo_config:
+                            # cast to int if the value is an integer
+                            if isinstance(self.algo_config[hp], int):
+                                params[hp] = int(params[hp])
+                    with open(f'{output_dir}/hyperparameters_{optimal_trial.final_measurement.metrics[self.hpo_config.objective[0]].value:.4f}.yaml', 'w')as f: 
+                        yaml.dump(params, f, default_flow_style=False)
+
+                all_trials = [tc.materialize() for tc in study_client.trials()]
+
+                # Visualize all trials so-far.
+                trial_i = [t for t in range(len(all_trials))]
+                trial_ys = [t.final_measurement.metrics[self.hpo_config.objective[0]].value for t in all_trials]
+                plt.scatter(trial_i, trial_ys, label='trials', marker='o', color='blue')
+
+                # Mark optimal trial so far.
+                optimal_trial_i = [optimal_trial.id-1]
+                optimal_trial_ys = [optimal_trial.final_measurement.metrics[self.hpo_config.objective[0]].value]
+                plt.scatter(optimal_trial_i, optimal_trial_ys, label='optimal', marker='x', color='green', s = 100)
+
+                # Plot.
+                plt.legend()
+                plt.title(f'Optimization History Plot')
+                plt.xlabel('Trial')
+                plt.ylabel('Objective Value')
+                plt.tight_layout()
+                plt.savefig(output_dir + '/optimization_history.png')
+
+                trial_data = []
+
+                # Collect all the parameter keys across trials for use in the CSV header
+                parameter_keys = set()
+
+                for t in all_trials:
+                    trial_number = t.id - 1 
+                    trial_value = t.final_measurement.metrics[self.hpo_config.objective[0]].value
+                    
+                    # Extract parameters for each trial
+                    trial_params = {key: val.value for key, val in t.parameters._items.items()}
+                    for hp in trial_params:
+                        if hp in self.algo_config:
+                            # cast to int if the value is an integer
+                            if isinstance(self.algo_config[hp], int):
+                                trial_params[hp] = int(trial_params[hp])
+                    parameter_keys.update(trial_params.keys())  # Collect parameter keys dynamically
+                    trial_data.append((trial_number, trial_value, trial_params))
+
+                # Convert set to list for a consistent order in the CSV header
+                parameter_keys = sorted(list(parameter_keys))
+
+                # Save to CSV file
+                csv_file = 'trials.csv'
+                with open(output_dir + '/' + csv_file, mode='w', newline='') as file:
+                    writer = csv.writer(file)
+                    
+                    # Write the header with 'number', 'value', followed by all parameter keys
+                    writer.writerow(['number', 'value'] + parameter_keys)
+                    
+                    # Write the trial data
+                    for trial_number, trial_value, trial_params in trial_data:
+                        # Ensure that parameters are written in the same order as the header
+                        param_values = [trial_params.get(key, '') for key in parameter_keys]
+                        writer.writerow([trial_number, trial_value] + param_values)
+            except Exception as e:
+                print(e)
+                print('Saving failed')
+
+            self.logger.info('Deleting server.')
+            del server
