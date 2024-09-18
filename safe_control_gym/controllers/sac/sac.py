@@ -1,4 +1,4 @@
-'''Soft Actor Critic (SAC)
+"""Soft Actor Critic (SAC)
 
 Adapted from https://github.com/openai/spinningup/blob/master/spinup/algos/pytorch/sac/sac.py
 
@@ -10,7 +10,7 @@ References papers & code:
     * [rlkit - sac](https://github.com/vitchyr/rlkit/tree/7daf34b0ef2277d545a0ee792399a2ae6c3fb6ad/rlkit/torch/sac)
     * [ray rllib - sac](https://github.com/ray-project/ray/tree/master/rllib/agents/sac)
     * [curl - curl_sac](https://github.com/MishaLaskin/curl/blob/master/curl_sac.py)
-'''
+"""
 
 import os
 import time
@@ -32,7 +32,7 @@ from safe_control_gym.utils.utils import get_random_state, is_wrapped, set_rando
 
 
 class SAC(BaseController):
-    '''soft actor critic.'''
+    """soft actor critic."""
 
     def __init__(self,
                  env_func,
@@ -91,7 +91,7 @@ class SAC(BaseController):
         self.logger = ExperimentLogger(output_dir, log_file_out=log_file_out, use_tensorboard=use_tensorboard)
 
     def reset(self):
-        '''Prepares for training or testing.'''
+        """Prepares for training or testing."""
         if self.training:
             # set up stats tracking
             self.env.add_tracker('constraint_violation', 0)
@@ -110,14 +110,14 @@ class SAC(BaseController):
             self.env.add_tracker('mse', 0, mode='queue')
 
     def close(self):
-        '''Shuts down and cleans up lingering resources.'''
+        """Shuts down and cleans up lingering resources."""
         self.env.close()
         if self.training:
             self.eval_env.close()
         self.logger.close()
 
     def save(self, path, save_buffer=False):
-        '''Saves model params and experiment state to checkpoint path.'''
+        """Saves model params and experiment state to checkpoint path."""
         path_dir = os.path.dirname(path)
         os.makedirs(path_dir, exist_ok=True)
 
@@ -141,7 +141,7 @@ class SAC(BaseController):
         torch.save(state_dict, path)
 
     def load(self, path):
-        '''Restores model and experiment given checkpoint path.'''
+        """Restores model and experiment given checkpoint path."""
         state = torch.load(path)
 
         # restore params
@@ -160,7 +160,7 @@ class SAC(BaseController):
             self.logger.load(self.total_steps)
 
     def learn(self, env=None, **kwargs):
-        '''Performs learning (pre-training, training, fine-tuning, etc).'''
+        """Performs learning (pre-training, training, fine-tuning, etc)."""
         if self.num_checkpoints > 0:
             step_interval = np.linspace(0, self.max_env_steps, self.num_checkpoints)
             interval_save = np.zeros_like(step_interval, dtype=bool)
@@ -186,10 +186,11 @@ class SAC(BaseController):
             if self.eval_interval and self.total_steps % self.eval_interval == 0:
                 eval_results = self.run(env=self.eval_env, n_episodes=self.eval_batch_size)
                 results['eval'] = eval_results
-                self.logger.info('Eval | ep_lengths {:.2f} +/- {:.2f} | ep_return {:.3f} +/- {:.3f}'.format(eval_results['ep_lengths'].mean(),
-                                                                                                            eval_results['ep_lengths'].std(),
-                                                                                                            eval_results['ep_returns'].mean(),
-                                                                                                            eval_results['ep_returns'].std()))
+                self.logger.info('Eval | ep_lengths {:.2f} +/- {:.2f} | '
+                                 'ep_return {:.3f} +/- {:.3f}'.format(eval_results['ep_lengths'].mean(),
+                                                                      eval_results['ep_lengths'].std(),
+                                                                      eval_results['ep_returns'].mean(),
+                                                                      eval_results['ep_returns'].std()))
                 # save best model
                 eval_score = eval_results['ep_returns'].mean()
                 eval_best_score = getattr(self, 'eval_best_score', -np.infty)
@@ -202,7 +203,7 @@ class SAC(BaseController):
                 self.log_step(results)
 
     def select_action(self, obs, info=None):
-        '''Determine the action to take at the current timestep.
+        """Determine the action to take at the current timestep.
 
         Args:
             obs (ndarray): The observation at this timestep.
@@ -210,7 +211,7 @@ class SAC(BaseController):
 
         Returns:
             action (ndarray): The action chosen by the controller.
-        '''
+        """
 
         with torch.no_grad():
             obs = torch.FloatTensor(obs).to(self.device)
@@ -218,61 +219,8 @@ class SAC(BaseController):
 
         return action
 
-    def run(self, env=None, render=False, n_episodes=10, verbose=False, **kwargs):
-        '''Runs evaluation with current policy.'''
-        self.agent.eval()
-        self.obs_normalizer.set_read_only()
-        if env is None:
-            env = self.env
-        else:
-            if not is_wrapped(env, RecordEpisodeStatistics):
-                env = RecordEpisodeStatistics(env, n_episodes)
-                # Add episodic stats to be tracked.
-                env.add_tracker('constraint_violation', 0, mode='queue')
-                env.add_tracker('constraint_values', 0, mode='queue')
-                env.add_tracker('mse', 0, mode='queue')
-
-        obs, info = env.reset()
-        obs = self.obs_normalizer(obs)
-        ep_returns, ep_lengths = [], []
-        frames = []
-        mse, ep_rmse = [], []
-        while len(ep_returns) < n_episodes:
-            action = self.select_action(obs=obs, info=info)
-
-            obs, _, done, info = env.step(action)
-            mse.append(info["mse"])
-            if render:
-                env.render()
-                frames.append(env.render('rgb_array'))
-            if verbose:
-                print(f'obs {obs} | act {action}')
-
-            if done:
-                assert 'episode' in info
-                ep_rmse.append((np.array(mse).mean())**0.5)
-                mse = []
-                ep_returns.append(info['episode']['r'])
-                ep_lengths.append(info['episode']['l'])
-                obs, info = env.reset()
-            obs = self.obs_normalizer(obs)
-
-        # collect evaluation results
-        ep_lengths = np.asarray(ep_lengths)
-        ep_returns = np.asarray(ep_returns)
-        eval_results = {'ep_returns': ep_returns, 'ep_lengths': ep_lengths,
-                        'rmse': np.array(ep_rmse).mean(),
-                        'rmse_std': np.array(ep_rmse).mean()}
-        if len(frames) > 0:
-            eval_results['frames'] = frames
-        # Other episodic stats from evaluation env.
-        if len(env.queued_stats) > 0:
-            queued_stats = {k: np.asarray(v) for k, v in env.queued_stats.items()}
-            eval_results.update(queued_stats)
-        return eval_results
-
     def train_step(self, **kwargs):
-        '''Performs a training step.'''
+        """Performs a training step."""
         self.agent.train()
         self.obs_normalizer.unset_read_only()
         obs = self.obs
@@ -342,8 +290,61 @@ class SAC(BaseController):
         results.update({'step': self.total_steps, 'elapsed_time': time.time() - start})
         return results
 
+    def run(self, env=None, render=False, n_episodes=10, verbose=False, **kwargs):
+        """Runs evaluation with current policy."""
+        self.agent.eval()
+        self.obs_normalizer.set_read_only()
+        if env is None:
+            env = self.env
+        else:
+            if not is_wrapped(env, RecordEpisodeStatistics):
+                env = RecordEpisodeStatistics(env, n_episodes)
+                # Add episodic stats to be tracked.
+                env.add_tracker('constraint_violation', 0, mode='queue')
+                env.add_tracker('constraint_values', 0, mode='queue')
+                env.add_tracker('mse', 0, mode='queue')
+
+        obs, info = env.reset()
+        obs = self.obs_normalizer(obs)
+        ep_returns, ep_lengths = [], []
+        frames = []
+        mse, ep_rmse = [], []
+        while len(ep_returns) < n_episodes:
+            action = self.select_action(obs=obs, info=info)
+
+            obs, _, done, info = env.step(action)
+            mse.append(info["mse"])
+            if render:
+                env.render()
+                frames.append(env.render('rgb_array'))
+            if verbose:
+                print(f'obs {obs} | act {action}')
+
+            if done:
+                assert 'episode' in info
+                ep_rmse.append(np.array(mse).mean()**0.5)
+                mse = []
+                ep_returns.append(info['episode']['r'])
+                ep_lengths.append(info['episode']['l'])
+                obs, info = env.reset()
+            obs = self.obs_normalizer(obs)
+
+        # collect evaluation results
+        ep_lengths = np.asarray(ep_lengths)
+        ep_returns = np.asarray(ep_returns)
+        eval_results = {'ep_returns': ep_returns, 'ep_lengths': ep_lengths,
+                        'rmse': np.array(ep_rmse).mean(),
+                        'rmse_std': np.array(ep_rmse).std()}
+        if len(frames) > 0:
+            eval_results['frames'] = frames
+        # Other episodic stats from evaluation env.
+        if len(env.queued_stats) > 0:
+            queued_stats = {k: np.asarray(v) for k, v in env.queued_stats.items()}
+            eval_results.update(queued_stats)
+        return eval_results
+
     def log_step(self, results):
-        '''Does logging after a training step.'''
+        """Does logging after a training step."""
         step = results['step']
         # runner stats
         self.logger.add_scalars(

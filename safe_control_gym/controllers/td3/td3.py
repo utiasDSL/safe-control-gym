@@ -56,7 +56,8 @@ class TD3(BaseController):
                               tau=self.tau,
                               actor_lr=self.actor_lr,
                               critic_lr=self.critic_lr,
-                              activation=self.activation)
+                              activation=self.activation,
+                              device=self.device)
         self.agent.to(self.device)
 
         # pre-/post-processing
@@ -198,54 +199,6 @@ class TD3(BaseController):
 
         return action
 
-    def run(self, env=None, render=False, n_episodes=10, verbose=False, **kwargs):
-        """Runs evaluation with current policy."""
-        self.agent.eval()
-        self.obs_normalizer.set_read_only()
-        if env is None:
-            env = self.env
-        else:
-            if not is_wrapped(env, RecordEpisodeStatistics):
-                env = RecordEpisodeStatistics(env, n_episodes)
-                # Add episodic stats to be tracked.
-                env.add_tracker('constraint_violation', 0, mode='queue')
-                env.add_tracker('constraint_values', 0, mode='queue')
-                env.add_tracker('mse', 0, mode='queue')
-
-        obs, info = env.reset()
-        obs = self.obs_normalizer(obs)
-        ep_returns, ep_lengths = [], []
-        frames = []
-
-        while len(ep_returns) < n_episodes:
-            action = self.select_action(obs=obs, info=info)
-
-            obs, _, done, info = env.step(action)
-            if render:
-                env.render()
-                frames.append(env.render('rgb_array'))
-            if verbose:
-                print(f'obs {obs} | act {action}')
-
-            if done:
-                assert 'episode' in info
-                ep_returns.append(info['episode']['r'])
-                ep_lengths.append(info['episode']['l'])
-                obs, info = env.reset()
-            obs = self.obs_normalizer(obs)
-
-        # collect evaluation results
-        ep_lengths = np.asarray(ep_lengths)
-        ep_returns = np.asarray(ep_returns)
-        eval_results = {'ep_returns': ep_returns, 'ep_lengths': ep_lengths}
-        if len(frames) > 0:
-            eval_results['frames'] = frames
-        # Other episodic stats from evaluation env.
-        if len(env.queued_stats) > 0:
-            queued_stats = {k: np.asarray(v) for k, v in env.queued_stats.items()}
-            eval_results.update(queued_stats)
-        return eval_results
-
     def train_step(self, **kwargs):
         """Performs a training step."""
         self.agent.train()
@@ -314,6 +267,57 @@ class TD3(BaseController):
         results.update({'step': self.total_steps, 'elapsed_time': time.time() - start})
         return results
 
+    def run(self, env=None, render=False, n_episodes=10, verbose=False, **kwargs):
+        """Runs evaluation with current policy."""
+        self.agent.eval()
+        self.obs_normalizer.set_read_only()
+        if env is None:
+            env = self.env
+        else:
+            if not is_wrapped(env, RecordEpisodeStatistics):
+                env = RecordEpisodeStatistics(env, n_episodes)
+                # Add episodic stats to be tracked.
+                env.add_tracker('constraint_violation', 0, mode='queue')
+                env.add_tracker('constraint_values', 0, mode='queue')
+                env.add_tracker('mse', 0, mode='queue')
+
+        obs, info = env.reset()
+        obs = self.obs_normalizer(obs)
+        ep_returns, ep_lengths = [], []
+        frames = []
+        mse, ep_rmse = [], []
+        while len(ep_returns) < n_episodes:
+            action = self.select_action(obs=obs, info=info)
+            obs, _, done, info = env.step(action)
+            mse.append(info["mse"])
+            if render:
+                env.render()
+                frames.append(env.render('rgb_array'))
+            if verbose:
+                print(f'obs {obs} | act {action}')
+            if done:
+                assert 'episode' in info
+                ep_rmse.append(np.array(mse).mean()**0.5)
+                mse = []
+                ep_returns.append(info['episode']['r'])
+                ep_lengths.append(info['episode']['l'])
+                obs, info = env.reset()
+            obs = self.obs_normalizer(obs)
+
+        # collect evaluation results
+        ep_lengths = np.asarray(ep_lengths)
+        ep_returns = np.asarray(ep_returns)
+        eval_results = {'ep_returns': ep_returns, 'ep_lengths': ep_lengths,
+                        'rmse': np.array(ep_rmse).mean(),
+                        'rmse_std': np.array(ep_rmse).std()}
+        if len(frames) > 0:
+            eval_results['frames'] = frames
+        # Other episodic stats from evaluation env.
+        if len(env.queued_stats) > 0:
+            queued_stats = {k: np.asarray(v) for k, v in env.queued_stats.items()}
+            eval_results.update(queued_stats)
+        return eval_results
+
     def log_step(self, results):
         """Does logging after a training step."""
         step = results['step']
@@ -362,7 +366,8 @@ class TD3(BaseController):
             eval_ep_lengths = results['eval']['ep_lengths']
             eval_ep_returns = results['eval']['ep_returns']
             eval_constraint_violation = results['eval']['constraint_violation']
-            eval_mse = results['eval']['mse']
+            eval_rmse = results['eval']['rmse']
+            eval_rmse_std = results['eval']['rmse_std']
             self.logger.add_scalars(
                 {
                     'ep_length': eval_ep_lengths.mean(),
@@ -370,7 +375,8 @@ class TD3(BaseController):
                     'ep_return_std': eval_ep_returns.std(),
                     'ep_reward': (eval_ep_returns / eval_ep_lengths).mean(),
                     'constraint_violation': eval_constraint_violation.mean(),
-                    'mse': eval_mse.mean()
+                    'rmse': eval_rmse,
+                    'rmse_std': eval_rmse_std
                 },
                 step,
                 prefix='stat_eval')
