@@ -9,6 +9,7 @@ from functools import partial
 import numpy as np
 import yaml, csv
 import matplotlib.pyplot as plt
+import wandb
 
 from safe_control_gym.hyperparameters.hpo_sampler import HYPERPARAMS_DICT
 from safe_control_gym.experiments.base_experiment import BaseExperiment
@@ -36,6 +37,8 @@ class HPO(object):
         self.load_study = load_study
         self.task_config = task_config
         self.hpo_config = hpo_config
+        self.state_dim = len(hpo_config.hps_config.state_weight)
+        self.action_dim = len(hpo_config.hps_config.action_weight)
         self.hps_config = hpo_config.hps_config
         self.output_dir = output_dir
         self.algo_config = algo_config
@@ -53,8 +56,14 @@ class HPO(object):
             if cat == 'float':
                 for hp_name, hp_range in hps.items():
                     # if it is learning rate, use log scale
-                    if 'lr' in hp_name or 'learning_rate' in hp_name:
+                    if 'lr' in hp_name or 'learning_rate' in hp_name or 'entropy_coef' in hp_name:
                         self.problem.search_space.root.add_float_param(hp_name, hp_range[0], hp_range[1], scale_type=vz.ScaleType.LOG)
+                    elif 'state_weight' == hp_name:
+                        for i in range(self.state_dim):
+                            self.problem.search_space.root.add_float_param(hp_name + f'_{i}', hp_range[0], hp_range[1])
+                    elif 'action_weight' == hp_name:
+                        for i in range(self.action_dim):
+                            self.problem.search_space.root.add_float_param(hp_name + f'_{i}', hp_range[0], hp_range[1])
                     else:
                         self.problem.search_space.root.add_float_param(hp_name, hp_range[0], hp_range[1])
             elif cat == 'categorical':
@@ -88,6 +97,19 @@ class HPO(object):
 
         sampled_hyperparams = params
 
+        state_weight = [sampled_hyperparams[weight] for weight in sampled_hyperparams.keys() if 'state_weight' in weight]
+        action_weight = [sampled_hyperparams[weight] for weight in sampled_hyperparams.keys() if 'action_weight' in weight]
+        sf_state_weight = [sampled_hyperparams[weight] for weight in sampled_hyperparams.keys() if 'sf_state_weight' in weight]
+        sf_action_weight = [sampled_hyperparams[weight] for weight in sampled_hyperparams.keys() if 'sf_action_weight' in weight]
+        for hp in list(sampled_hyperparams.keys()):  # Create a list of keys to iterate over
+            if 'state_weight' in hp or 'action_weight' in hp or 'sf_state_weight' in hp or 'sf_action_weight' in hp:
+                del sampled_hyperparams[hp]
+        sampled_hyperparams['state_weight'] = state_weight
+        sampled_hyperparams['action_weight'] = action_weight
+        if len(sf_state_weight) > 0:
+            sampled_hyperparams['sf_state_weight'] = sf_state_weight
+        if len(sf_action_weight) > 0:
+            sampled_hyperparams['sf_action_weight'] = sf_action_weight
 
         returns, seeds = [], []
         for i in range(self.hpo_config.repetitions):
@@ -96,39 +118,31 @@ class HPO(object):
             # update the agent config with sample candidate hyperparameters
             # new agent with the new hps
             for hp in sampled_hyperparams:
-                if hp == 'state_weight' or hp == 'state_dot_weight' or hp == 'action_weight':
+                if hp == 'state_weight' or hp == 'action_weight':
                     if self.algo == 'gp_mpc' or self.algo == 'gpmpc_acados':
-                        if self.task == 'cartpole':
-                            self.algo_config['q_mpc'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
-                            self.algo_config['r_mpc'] = [sampled_hyperparams['action_weight']]
-                        elif self.task == 'quadrotor':
-                            self.algo_config['q_mpc'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
-                            self.algo_config['r_mpc'] = [sampled_hyperparams['action_weight'], sampled_hyperparams['action_weight']]
+                        self.algo_config['q_mpc'] = state_weight
+                        self.algo_config['r_mpc'] = action_weight
                     elif self.algo == 'ilqr':
-                        if self.task == 'cartpole':
-                            self.algo_config['q_lqr'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
-                            self.algo_config['r_lqr'] = [sampled_hyperparams['action_weight']]
-                        elif self.task == 'quadrotor':
-                            self.algo_config['q_lqr'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
-                            self.algo_config['r_lqr'] = [sampled_hyperparams['action_weight'], sampled_hyperparams['action_weight']]
+                        self.algo_config['q_lqr'] = state_weight
+                        self.algo_config['r_lqr'] = action_weight
                     else:
-                        if self.task == 'cartpole':
-                            self.task_config['rew_state_weight'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
-                            self.task_config['rew_action_weight'] = [sampled_hyperparams['action_weight']]
-                        elif self.task == 'quadrotor':
-                            self.task_config['rew_state_weight'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
-                            self.task_config['rew_action_weight'] = [sampled_hyperparams['action_weight'], sampled_hyperparams['action_weight']]
+                        self.task_config['rew_state_weight'] = state_weight
+                        self.task_config['rew_action_weight'] = action_weight
                 else:
                     # check key in algo_config
                     if hp in self.algo_config:
                         # cast to int if the value is an integer
                         if isinstance(self.algo_config[hp], int):
                             self.algo_config[hp] = int(sampled_hyperparams[hp])
+                        elif isinstance(self.algo_config[hp], list):
+                            if isinstance(self.algo_config[hp][0], int):
+                                if isinstance(sampled_hyperparams[hp], list) == False:
+                                    self.algo_config[hp] = [int(sampled_hyperparams[hp])] * len(self.algo_config[hp])
                         else:
                             self.algo_config[hp] = sampled_hyperparams[hp]
-                    elif hp in self.sf_config or hp == 'sf_state_weight' or hp == 'sf_state_dot_weight' or hp == 'sf_action_weight':
+                    elif hp in self.sf_config or hp == 'sf_state_weight' or hp == 'sf_action_weight':
                         if self.task == 'cartpole':
-                            if hp == 'sf_state_weight' or hp == 'sf_state_dot_weight' or hp == 'sf_action_weight':
+                            if hp == 'sf_state_weight' or hp == 'sf_action_weight':
                                 self.sf_config['q_lin'] = [sampled_hyperparams['sf_state_weight'], sampled_hyperparams['sf_state_dot_weight'], sampled_hyperparams['sf_state_weight'], sampled_hyperparams['sf_state_dot_weight']]
                                 self.sf_config['r_lin'] = [sampled_hyperparams['sf_action_weight']] 
                             else:
@@ -245,8 +259,8 @@ class HPO(object):
                 endpoint = yaml.safe_load(config_file)['endpoint']
             clients.environment_variables.server_endpoint = endpoint
             study_config = vz.StudyConfig.from_problem(self.problem)
-            study_client = clients.Study.from_study_config(study_config, owner='owner', study_id = self.study_name)
-            study_client = clients.Study.from_resource_name(study_client.resource_name)
+            self.study_client = clients.Study.from_study_config(study_config, owner='owner', study_id = self.study_name)
+            self.study_client = clients.Study.from_resource_name(self.study_client.resource_name)
         else:
             server = servers.DefaultVizierServer(database_url=f'sqlite:///{self.study_name}.db')
             clients.environment_variables.server_endpoint = server.endpoint
@@ -255,16 +269,16 @@ class HPO(object):
                 yaml.dump({'endpoint': endpoint}, config_file, default_flow_style=False)
         
             study_config = vz.StudyConfig.from_problem(self.problem)
-            study_client = clients.Study.from_study_config(study_config, owner='owner', study_id = self.study_name)
+            self.study_client = clients.Study.from_study_config(study_config, owner='owner', study_id = self.study_name)
         
         # study_config = vz.StudyConfig.from_problem(self.problem)
-        # study_client = clients.Study.from_study_config(study_config, owner='owner', study_id=self.study_name)
+        # self.study_client = clients.Study.from_study_config(study_config, owner='owner', study_id=self.study_name)
 
         existing_trials = 0
         while existing_trials < self.hpo_config.trials:
             # get suggested hyperparameters
-            suggestions = study_client.suggest(count=1, client_id=self.client_id)
-            # suggestions = study_client.suggest(count=1)
+            suggestions = self.study_client.suggest(count=1, client_id=self.client_id)
+            # suggestions = self.study_client.suggest(count=1)
 
             for suggestion in suggestions:
                 if suggestion.id > self.hpo_config.trials:
@@ -282,97 +296,122 @@ class HPO(object):
                 if objective_value is None:
                     objective_value = 0.0
                 final_measurement = vz.Measurement({f'{self.hpo_config.objective[0]}': objective_value})
+                self.objective_value = objective_value
+                wandb.log({f'{self.hpo_config.objective[0]}': objective_value})
                 suggestion.complete(final_measurement)
             
-        # study_client.set_state(vz.StudyState.COMPLETED)
+            if existing_trials > 0:
+                self.checkpoint()
+            
+        # self.study_client.set_state(vz.StudyState.COMPLETED)
         
         if self.load_study == False:
 
             completed_trial_filter = vz.TrialFilter(status=[vz.TrialStatus.COMPLETED])
-            finished_trials = len(list(study_client.trials(trial_filter=completed_trial_filter).get()))
+            finished_trials = len(list(self.study_client.trials(trial_filter=completed_trial_filter).get()))
             # wait until other clients to finish
             while finished_trials != self.hpo_config.trials:
                 self.logger.info(f'Waiting for other clients to finish remaining trials: {self.hpo_config.trials - finished_trials}')
-                finished_trials = len(list(study_client.trials(trial_filter=completed_trial_filter).get()))
+                finished_trials = len(list(self.study_client.trials(trial_filter=completed_trial_filter).get()))
                 # sleep for 10 seconds
                 time.sleep(10)
 
             self.logger.info(f'Have finished trials: {finished_trials}/{self.hpo_config.trials}')
 
-            output_dir = os.path.join(self.output_dir, 'hpo')
-            if not os.path.exists(output_dir):
-                os.makedirs(output_dir)
-
-            try:
-                for optimal_trial in study_client.optimal_trials():
-                    optimal_trial = optimal_trial.materialize()
-                    params = {key: val.value for key, val in optimal_trial.parameters._items.items()}
-                    for hp in params:
-                        if hp in self.algo_config:
-                            # cast to int if the value is an integer
-                            if isinstance(self.algo_config[hp], int):
-                                params[hp] = int(params[hp])
-                    with open(f'{output_dir}/hyperparameters_{optimal_trial.final_measurement.metrics[self.hpo_config.objective[0]].value:.4f}.yaml', 'w')as f: 
-                        yaml.dump(params, f, default_flow_style=False)
-
-                all_trials = [tc.materialize() for tc in study_client.trials()]
-
-                # Visualize all trials so-far.
-                trial_i = [t for t in range(len(all_trials))]
-                trial_ys = [t.final_measurement.metrics[self.hpo_config.objective[0]].value for t in all_trials]
-                plt.scatter(trial_i, trial_ys, label='trials', marker='o', color='blue')
-
-                # Mark optimal trial so far.
-                optimal_trial_i = [optimal_trial.id-1]
-                optimal_trial_ys = [optimal_trial.final_measurement.metrics[self.hpo_config.objective[0]].value]
-                plt.scatter(optimal_trial_i, optimal_trial_ys, label='optimal', marker='x', color='green', s = 100)
-
-                # Plot.
-                plt.legend()
-                plt.title(f'Optimization History Plot')
-                plt.xlabel('Trial')
-                plt.ylabel('Objective Value')
-                plt.tight_layout()
-                plt.savefig(output_dir + '/optimization_history.png')
-
-                trial_data = []
-
-                # Collect all the parameter keys across trials for use in the CSV header
-                parameter_keys = set()
-
-                for t in all_trials:
-                    trial_number = t.id - 1 
-                    trial_value = t.final_measurement.metrics[self.hpo_config.objective[0]].value
-                    
-                    # Extract parameters for each trial
-                    trial_params = {key: val.value for key, val in t.parameters._items.items()}
-                    for hp in trial_params:
-                        if hp in self.algo_config:
-                            # cast to int if the value is an integer
-                            if isinstance(self.algo_config[hp], int):
-                                trial_params[hp] = int(trial_params[hp])
-                    parameter_keys.update(trial_params.keys())  # Collect parameter keys dynamically
-                    trial_data.append((trial_number, trial_value, trial_params))
-
-                # Convert set to list for a consistent order in the CSV header
-                parameter_keys = sorted(list(parameter_keys))
-
-                # Save to CSV file
-                csv_file = 'trials.csv'
-                with open(output_dir + '/' + csv_file, mode='w', newline='') as file:
-                    writer = csv.writer(file)
-                    
-                    # Write the header with 'number', 'value', followed by all parameter keys
-                    writer.writerow(['number', 'value'] + parameter_keys)
-                    
-                    # Write the trial data
-                    for trial_number, trial_value, trial_params in trial_data:
-                        # Ensure that parameters are written in the same order as the header
-                        param_values = [trial_params.get(key, '') for key in parameter_keys]
-                        writer.writerow([trial_number, trial_value] + param_values)
-            except Exception as e:
-                print(e)
-                print('Saving failed')
+            self.checkpoint()
 
             self.logger.info('Deleting server.')
             del server
+
+    def checkpoint(self):
+        output_dir = os.path.join(self.output_dir, 'hpo')
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
+        try:
+            for optimal_trial in self.study_client.optimal_trials():
+                optimal_trial = optimal_trial.materialize()
+                params = {key: val.value for key, val in optimal_trial.parameters._items.items()}
+                state_weight = [params[weight] for weight in params.keys() if 'state_weight' in weight]
+                action_weight = [params[weight] for weight in params.keys() if 'action_weight' in weight]
+                for hp in list(params.keys()):  # Create a list of keys to iterate over
+                    if 'state_weight' in hp or 'action_weight' in hp:
+                        del params[hp]
+                params['state_weight'] = state_weight
+                params['action_weight'] = action_weight
+                for hp in params:
+                    if hp in self.algo_config:
+                        # cast to int if the value is an integer
+                        if isinstance(self.algo_config[hp], int):
+                            params[hp] = int(params[hp])
+                        if isinstance(self.algo_config[hp], list):
+                            if isinstance(self.algo_config[hp][0], int):
+                                if isinstance(params[hp], list) == False:
+                                    params[hp] = [int(params[hp])] * len(self.algo_config[hp])
+                with open(f'{output_dir}/hyperparameters_{optimal_trial.final_measurement.metrics[self.hpo_config.objective[0]].value:.4f}.yaml', 'w')as f: 
+                    yaml.dump(params, f, default_flow_style=False)
+        except Exception as e:
+            print(e)
+            print('Saving hyperparameters failed')
+        
+        try:
+            completed_trial_filter = vz.TrialFilter(status=[vz.TrialStatus.COMPLETED])
+            all_trials = [tc.materialize() for tc in self.study_client.trials(trial_filter=completed_trial_filter)]
+
+            # Visualize all trials so-far.
+            trial_i = [t for t in range(len(all_trials))]
+            trial_ys = [t.final_measurement.metrics[self.hpo_config.objective[0]].value for t in all_trials]
+            plt.scatter(trial_i, trial_ys, label='trials', marker='o', color='blue')
+
+            # Mark optimal trial so far.
+            optimal_trial_i = [optimal_trial.id-1]
+            optimal_trial_ys = [optimal_trial.final_measurement.metrics[self.hpo_config.objective[0]].value]
+            plt.scatter(optimal_trial_i, optimal_trial_ys, label='optimal', marker='x', color='green', s = 100)
+
+            # Plot.
+            plt.legend()
+            plt.title(f'Optimization History Plot')
+            plt.xlabel('Trial')
+            plt.ylabel('Objective Value')
+            plt.tight_layout()
+            plt.savefig(output_dir + '/optimization_history.png')
+            plt.close()
+
+            trial_data = []
+
+            # Collect all the parameter keys across trials for use in the CSV header
+            parameter_keys = set()
+
+            for t in all_trials:
+                trial_number = t.id - 1 
+                trial_value = t.final_measurement.metrics[self.hpo_config.objective[0]].value
+                
+                # Extract parameters for each trial
+                trial_params = {key: val.value for key, val in t.parameters._items.items()}
+                for hp in trial_params:
+                    if hp in self.algo_config:
+                        # cast to int if the value is an integer
+                        if isinstance(self.algo_config[hp], int):
+                            trial_params[hp] = int(trial_params[hp])
+                parameter_keys.update(trial_params.keys())  # Collect parameter keys dynamically
+                trial_data.append((trial_number, trial_value, trial_params))
+
+            # Convert set to list for a consistent order in the CSV header
+            parameter_keys = sorted(list(parameter_keys))
+
+            # Save to CSV file
+            csv_file = 'trials.csv'
+            with open(output_dir + '/' + csv_file, mode='w', newline='') as file:
+                writer = csv.writer(file)
+                
+                # Write the header with 'number', 'value', followed by all parameter keys
+                writer.writerow(['number', 'value'] + parameter_keys)
+                
+                # Write the trial data
+                for trial_number, trial_value, trial_params in trial_data:
+                    # Ensure that parameters are written in the same order as the header
+                    param_values = [trial_params.get(key, '') for key in parameter_keys]
+                    writer.writerow([trial_number, trial_value] + param_values)
+        except Exception as e:
+            print(e)
+            print('Saving optimization history failed')

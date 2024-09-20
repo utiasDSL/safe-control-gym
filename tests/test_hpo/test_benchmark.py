@@ -272,10 +272,17 @@ def test_hpo_quadrotor(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, SAMPLER):
     # delete output_dir
     if os.path.exists(output_dir):
         os.system(f'rm -rf {output_dir}')
-    # drop the database if exists
-    drop(munch.Munch({'tag': f'{ALGO}_hpo'}))
-    # create database
-    create(munch.Munch({'tag': f'{ALGO}_hpo'}))
+    # # drop the database if exists
+    # drop(munch.Munch({'tag': f'{ALGO}_hpo'}))
+    # # create database
+    # create(munch.Munch({'tag': f'{ALGO}_hpo'}))
+
+    # delete .db
+    if os.path.exists(f'{ALGO}_hpo.db'):
+        os.system(f'rm -rf {ALGO}_hpo.db')
+    # delete .db-journal
+    if os.path.exists(f'{ALGO}_hpo.db-journal'):
+        os.system(f'rm -rf {ALGO}_hpo.db-journal')
 
     SYS_NAME = 'quadrotor' if SYS == 'quadrotor_2D' or SYS == 'quadrotor_2D_attitude' else SYS
 
@@ -338,4 +345,4 @@ def test_hpo_quadrotor(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, SAMPLER):
         os.system(f'rm -rf {output_dir}')
 
     # drop database
-    drop(munch.Munch({'tag': f'{ALGO}_hpo'}))
+    # drop(munch.Munch({'tag': f'{ALGO}_hpo'}))

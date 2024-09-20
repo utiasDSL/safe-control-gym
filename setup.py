@@ -29,5 +29,6 @@ setup(name='safe_control_gym',
           'pymysql',
           'pandas',
           'google-vizier[jax]',
+          'wandb',
       ],
       )

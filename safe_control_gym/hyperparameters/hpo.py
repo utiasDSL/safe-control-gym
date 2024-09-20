@@ -11,7 +11,7 @@ Reruirement:
 import os
 from copy import deepcopy
 from functools import partial
-
+import wandb
 import matplotlib.pyplot as plt
 import numpy as np
 import optuna
@@ -49,6 +49,8 @@ class HPO(object):
         self.load_study = load_study
         self.task_config = task_config
         self.hpo_config = hpo_config
+        self.state_dim = len(hpo_config.hps_config.state_weight)
+        self.action_dim = len(hpo_config.hps_config.action_weight)
         self.hps_config = hpo_config.hps_config
         self.output_dir = output_dir
         self.algo_config = algo_config
@@ -71,9 +73,9 @@ class HPO(object):
 
         # sample candidate hyperparameters
         if self.algo == 'ilqr' and self.safety_filter == 'linear_mpsc':
-            sampled_hyperparams = HYPERPARAMS_SAMPLER['ilqr_sf'](self.hps_config, trial)
+            sampled_hyperparams = HYPERPARAMS_SAMPLER['ilqr_sf'](self.hps_config, trial, self.state_dim, self.action_dim)
         else:
-            sampled_hyperparams = HYPERPARAMS_SAMPLER[self.algo](self.hps_config, trial)
+            sampled_hyperparams = HYPERPARAMS_SAMPLER[self.algo](self.hps_config, trial, self.state_dim, self.action_dim)
 
         # log trial number
         self.logger.info('Trial number: {}'.format(trial.number))
@@ -94,41 +96,27 @@ class HPO(object):
                 # update the agent config with sample candidate hyperparameters
                 # new agent with the new hps
                 for hp in sampled_hyperparams:
-                    if hp == 'state_weight' or hp == 'state_dot_weight' or hp == 'action_weight':
+                    if hp == 'state_weight' or hp == 'action_weight':
                         if self.algo == 'gp_mpc' or self.algo == 'gpmpc_acados':
-                            if self.task == 'cartpole':
-                                self.algo_config['q_mpc'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
-                                self.algo_config['r_mpc'] = [sampled_hyperparams['action_weight']]
-                            elif self.task == 'quadrotor':
-                                #TODO if implemented for quadrotor, pitch rate penalty should be small.
-                                # raise ValueError('Only cartpole task is supported for gp_mpc.')
-                                self.algo_config['q_mpc'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], 0.001]
-                                self.algo_config['r_mpc'] = [sampled_hyperparams['action_weight'], sampled_hyperparams['action_weight']]
+                            #TODO if implemented for quadrotor, pitch rate penalty may need to be small.
+                            self.algo_config['q_mpc'] = sampled_hyperparams['state_weight']
+                            self.algo_config['r_mpc'] = sampled_hyperparams['action_weight']
                         elif self.algo == 'ilqr':
-                            if self.task == 'cartpole':
-                                self.algo_config['q_lqr'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
-                                self.algo_config['r_lqr'] = [sampled_hyperparams['action_weight']]
-                            elif self.task == 'quadrotor':
-                                #TODO if implemented for quadrotor, pitch rate penalty should be small.
-                                # raise ValueError('Only cartpole task is supported for ilqr.')
-                                self.algo_config['q_lqr'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], 0.001]
-                                self.algo_config['r_lqr'] = [sampled_hyperparams['action_weight'], sampled_hyperparams['action_weight']]
+                            #TODO if implemented for quadrotor, pitch rate penalty may need to be small.
+                            self.algo_config['q_lqr'] = sampled_hyperparams['state_weight']
+                            self.algo_config['r_lqr'] = sampled_hyperparams['action_weight']
                         else:
-                            if self.task == 'cartpole':
-                                self.task_config['rew_state_weight'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight']]
-                                self.task_config['rew_action_weight'] = [sampled_hyperparams['action_weight']]
-                            elif self.task == 'quadrotor':
-                                self.task_config['rew_state_weight'] = [sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], sampled_hyperparams['state_dot_weight'], sampled_hyperparams['state_weight'], 0.001]
-                                self.task_config['rew_action_weight'] = [sampled_hyperparams['action_weight'], sampled_hyperparams['action_weight']]
+                            self.task_config['rew_state_weight'] = sampled_hyperparams['state_weight']
+                            self.task_config['rew_action_weight'] = sampled_hyperparams['action_weight']
                     else:
                         # check key in algo_config
                         if hp in self.algo_config:
                             self.algo_config[hp] = sampled_hyperparams[hp]
-                        elif hp in self.sf_config or hp == 'sf_state_weight' or hp == 'sf_state_dot_weight' or hp == 'sf_action_weight':
+                        elif hp in self.sf_config or hp == 'sf_state_weight' or hp == 'sf_action_weight':
                             if self.task == 'cartpole':
-                                if hp == 'sf_state_weight' or hp == 'sf_state_dot_weight' or hp == 'sf_action_weight':
-                                    self.sf_config['q_lin'] = [sampled_hyperparams['sf_state_weight'], sampled_hyperparams['sf_state_dot_weight'], sampled_hyperparams['sf_state_weight'], sampled_hyperparams['sf_state_dot_weight']]
-                                    self.sf_config['r_lin'] = [sampled_hyperparams['sf_action_weight']] 
+                                if hp == 'sf_state_weight' or hp == 'sf_action_weight':
+                                    self.sf_config['q_lin'] = sampled_hyperparams['sf_state_weight']
+                                    self.sf_config['r_lin'] = sampled_hyperparams['sf_action_weight']
                                 else:
                                     self.sf_config[hp] = sampled_hyperparams[hp]
                             else:
@@ -248,6 +236,11 @@ class HPO(object):
 
         self.logger.info('Returns: {}'.format(Gss))
 
+        if len(self.study.trials) > 0:
+            self.checkpoints()
+
+        self.objective_value = Gss
+        wandb.log({self.hpo_config.objective[0]: Gss})
         return Gss
 
     def hyperparameter_optimization(self) -> None:
@@ -315,29 +308,60 @@ class HPO(object):
                             callbacks=[MaxTrialsCallback(self.hpo_config.trials-1, states=(TrialState.COMPLETE,))],
                             )
 
+        self.checkpoints()
+
+        self.logger.info('Total runs: {}'.format(self.total_runs))
+        self.logger.close()
+
+        return
+    
+    def checkpoints(self):
+
         output_dir = os.path.join(self.output_dir, 'hpo')
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
-        # save meta data
-        self.study.trials_dataframe().to_csv(output_dir + '/trials.csv')
+        try:
+            # save meta data
+            self.study.trials_dataframe().to_csv(output_dir + '/trials.csv')
+        except Exception as e:
+            print(e)
+            print('Saving trials.csv failed.')
 
-        # save top-n best hyperparameters
-        if len(self.hpo_config.direction) == 1:
-            trials = self.study.trials
-            if self.hpo_config.direction[0] == 'minimize':
-                trials.sort(key=self._value_key)
+        try:
+            # save top-n best hyperparameters
+            if len(self.hpo_config.direction) == 1:
+                trials = self.study.get_trials(deepcopy=True, states=(TrialState.COMPLETE,))
+                if self.hpo_config.direction[0] == 'minimize':
+                    trials.sort(key=self._value_key)
+                else:
+                    trials.sort(key=self._value_key, reverse=True)
+                for i in range(min(self.hpo_config.save_n_best_hps, len(self.study.trials))):
+                    params = trials[i].params
+                    state_weight = [params[weight] for weight in params.keys() if 'state_weight' in weight]
+                    action_weight = [params[weight] for weight in params.keys() if 'action_weight' in weight]
+                    for hp in list(params.keys()):  # Create a list of keys to iterate over
+                        if 'state_weight' in hp or 'action_weight' in hp:
+                            del params[hp]
+                    params['state_weight'] = state_weight
+                    params['action_weight'] = action_weight
+                    with open(f'{output_dir}/hyperparameters_{trials[i].value:.4f}.yaml', 'w')as f:
+                        yaml.dump(params, f, default_flow_style=False)
             else:
-                trials.sort(key=self._value_key, reverse=True)
-            for i in range(min(self.hpo_config.save_n_best_hps, len(self.study.trials))):
-                params = trials[i].params
-                with open(f'{output_dir}/hyperparameters_{trials[i].value:.4f}.yaml', 'w')as f:
-                    yaml.dump(params, f, default_flow_style=False)
-        else:
-            best_trials = self.study.best_trials
-            for i in range(len(self.study.best_trials)):
-                params = best_trials[i].params
-                with open(f'{output_dir}/best_hyperparameters_[{best_trials[i].values[0]:.4f},{best_trials[i].values[1]:.4f}].yaml', 'w')as f:
-                    yaml.dump(params, f, default_flow_style=False)
+                best_trials = self.study.best_trials
+                for i in range(len(self.study.best_trials)):
+                    params = best_trials[i].params
+                    state_weight = [params[weight] for weight in params.keys() if 'state_weight' in weight]
+                    action_weight = [params[weight] for weight in params.keys() if 'action_weight' in weight]
+                    for hp in list(params.keys()):  # Create a list of keys to iterate over
+                        if 'state_weight' in hp or 'action_weight' in hp:
+                            del params[hp]
+                    params['state_weight'] = state_weight
+                    params['action_weight'] = action_weight
+                    with open(f'{output_dir}/best_hyperparameters_[{best_trials[i].values[0]:.4f},{best_trials[i].values[1]:.4f}].yaml', 'w')as f:
+                        yaml.dump(params, f, default_flow_style=False)
+        except Exception as e:
+            print(e)
+            print('Saving best hyperparameters failed.')
 
         # dashboard
         if self.hpo_config.dashboard and self.hpo_config.use_database:
@@ -372,11 +396,6 @@ class HPO(object):
         except Exception as e:
             print(e)
             print('Plotting failed.')
-
-        self.logger.info('Total runs: {}'.format(self.total_runs))
-        self.logger.close()
-
-        return
 
     def _value_key(self, trial: FrozenTrial) -> float:
         """ Returns value of trial object for sorting

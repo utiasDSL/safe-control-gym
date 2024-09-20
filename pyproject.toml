@@ -33,6 +33,7 @@ mysql-connector-python = "8.0.33"
 pymysql = "1.0.3"
 pandas = "^1.4.0"
 google-vizier = {extras = ["jax"]}
+wandb = "^0.18.1"
 
 [tool.poetry.dev-dependencies]
 

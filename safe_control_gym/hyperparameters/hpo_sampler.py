@@ -17,19 +17,17 @@ PPO_dict = {
         'gamma': [0.9, 0.95, 0.98, 0.99, 0.995, 0.999, 0.9999],
         'gae_lambda': [0.8, 0.9, 0.92, 0.95, 0.98, 0.99, 1.0],
         'clip_param': [0.1, 0.2, 0.3, 0.4],
-        'opt_epochs': [1, 5, 10, 20],
+        'opt_epochs': [1, 5, 10, 20, 25],
         'mini_batch_size': [32, 64, 128, 256],
-        'rollout_steps': [100, 250, 400, 550], # steps increment by rollout_steps * n_envs
-        'max_env_steps': [30000, 72000, 114000, 156000, 216000],  # to make sure having the checkpoint at these steps [30000, 72000, 216000]
+        'max_env_steps': [30000, 72000, 114000, 156000, 216000, 276000, 336000],
     },
     'float': {  # note that in float type, you must specify the upper and lower bound
         'target_kl': [0.00000001, 0.8],
         'entropy_coef': [0.00000001, 0.1],
         'actor_lr': [1e-5, 1],
         'critic_lr': [1e-5, 1],
-        'state_weight': [0.001, 20],
-        'state_dot_weight': [0.001, 5],
-        'action_weight': [0.001, 5],
+        'state_weight': [0.001, 10],
+        'action_weight': [0.001, 10],
     }
 }
 SAC_dict = {
@@ -39,7 +37,7 @@ SAC_dict = {
         'gamma': [0.9, 0.95, 0.98, 0.99, 0.995, 0.999, 0.9999],
         'train_interval': [10, 100, 1000],  # max_env_steps should be divisible by train_interval
         'train_batch_size': [32, 64, 128, 256, 512, 1024],
-        'max_env_steps': [30000, 72000, 114000, 156000, 216000],  # to make sure having the checkpoint at these steps [30000, 72000, 216000]
+        'max_env_steps': [30000, 72000, 114000, 156000, 216000, 276000, 336000],
         'warm_up_steps': [500, 1000, 2000, 4000],
         'max_buffer_size': [10000, 50000, 100000, 200000], 
     },
@@ -49,9 +47,8 @@ SAC_dict = {
         'actor_lr': [1e-5, 1],
         'critic_lr': [1e-5, 1],
         'entropy_lr': [1e-5, 1],
-        'state_weight': [0.001, 20],
-        'state_dot_weight': [0.001, 5],
-        'action_weight': [0.001, 5],
+        'state_weight': [0.001, 10],
+        'action_weight': [0.001, 10],
     }
 }
 
@@ -66,9 +63,8 @@ GPMPC_dict = {
     },
     'float': {  # note that in float type, you must specify the upper and lower bound
         'learning_rate': [5e-4, 0.5],
-        'state_weight': [0.001, 20],
-        'state_dot_weight': [0.001, 5],
-        'action_weight': [0.001, 5],
+        'state_weight': [0.001, 10],
+        'action_weight': [0.001, 10],
     }
 }
 
@@ -81,9 +77,8 @@ iLQR_dict = {
         'epsilon': [0.01, 0.005, 0.001],
     },
     'float': {  # note that in float type, you must specify the upper and lower bound   
-        'state_weight': [0.001, 20],
-        'state_dot_weight': [0.001, 5],
-        'action_weight': [0.001, 5],
+        'state_weight': [0.001, 10],
+        'action_weight': [0.001, 10],
     }
 }
 
@@ -99,21 +94,19 @@ iLQR_SF_dict = {
         'n_samples': [400, 600, 800, 1000],
     },
     'float': {  # note that in float type, you must specify the upper and lower bound 
-        'state_weight': [0.001, 20],
-        'state_dot_weight': [0.001, 5],
-        'action_weight': [0.001, 5],
+        'state_weight': [0.001, 10],
+        'action_weight': [0.001, 10],
 
         # safety filter hps
         'tau': [0.95, 0.99], 
-        'sf_state_weight': [0.001, 20],
-        'sf_state_dot_weight': [0.001, 5],
-        'sf_action_weight': [0.001, 5],
+        'sf_state_weight': [0.001, 10],
+        'sf_action_weight': [0.001, 10],
     }
 }
 
 
 
-def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]:
+def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, state_dim: int, action_dim: int) -> Dict[str, Any]:
     """Sampler for PPO hyperparameters.
 
     args:
@@ -134,7 +127,7 @@ def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]
     gae_lambda = trial.suggest_categorical('gae_lambda', PPO_dict['categorical']['gae_lambda'])
     clip_param = trial.suggest_categorical('clip_param', PPO_dict['categorical']['clip_param'])
     # Limit the KL divergence between updates
-    target_kl = trial.suggest_float('target_kl', PPO_dict['float']['target_kl'][0], PPO_dict['float']['target_kl'][1], log=True)
+    target_kl = trial.suggest_float('target_kl', PPO_dict['float']['target_kl'][0], PPO_dict['float']['target_kl'][1])
     # Entropy coefficient for the loss calculation
     entropy_coef = trial.suggest_float('entropy_coef', PPO_dict['float']['entropy_coef'][0], PPO_dict['float']['entropy_coef'][1], log=True)
 
@@ -151,7 +144,7 @@ def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]
     # The value is set in this way for the sake of evluation and checkpoint
     # e.g. total_steps will be incremented by 4 *[50, 100, 150, 250] = [200, 400, 600, 1000]
     # then eval_inverval can be set to 6000 if we want to capture learning efficiency and intermediate performance
-    rollout_steps = trial.suggest_categorical('rollout_steps', PPO_dict['categorical']['rollout_steps'])
+    # rollout_steps = trial.suggest_categorical('rollout_steps', PPO_dict['categorical']['rollout_steps'])
     max_env_steps = trial.suggest_categorical('max_env_steps', PPO_dict['categorical']['max_env_steps'])
 
     # Orthogonal initialization
@@ -159,9 +152,14 @@ def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]
     # ortho_init = trial.suggest_categorical('ortho_init', [False, True])
 
     # objective
-    state_weight = trial.suggest_float('state_weight', PPO_dict['float']['state_weight'][0], PPO_dict['float']['state_weight'][1], log=True)
-    state_dot_weight = trial.suggest_float('state_dot_weight', PPO_dict['float']['state_dot_weight'][0], PPO_dict['float']['state_dot_weight'][1], log=True)
-    action_weight = trial.suggest_float('action_weight', PPO_dict['float']['action_weight'][0], PPO_dict['float']['action_weight'][1], log=True)
+    state_weight = [
+        trial.suggest_float(f'state_weight_{i}', PPO_dict['float']['state_weight'][0], PPO_dict['float']['state_weight'][1])
+        for i in range(state_dim)
+    ]
+    action_weight = [
+        trial.suggest_float(f'action_weight_{i}', PPO_dict['float']['action_weight'][0], PPO_dict['float']['action_weight'][1])
+        for i in range(action_dim)
+    ]
 
     hps_suggestion = {
         'hidden_dim': hidden_dim,
@@ -177,9 +175,8 @@ def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]
         'critic_lr': critic_lr,
         # "max_grad_norm": max_grad_norm, (currently not implemented in PPO controller)
         'max_env_steps': max_env_steps,
-        'rollout_steps': rollout_steps,
+        # 'rollout_steps': rollout_steps,
         'state_weight': state_weight,
-        'state_dot_weight': state_dot_weight,
         'action_weight': action_weight,
     }
 
@@ -188,7 +185,7 @@ def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]
     return hps_suggestion
 
 
-def sac_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]:
+def sac_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, state_dim: int, action_dim: int) -> Dict[str, Any]:
     """Sampler for SAC hyperparameters.
 
     args:
@@ -220,9 +217,14 @@ def sac_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]
     max_buffer_size = trial.suggest_categorical('max_buffer_size', SAC_dict['categorical']['max_buffer_size'])
 
     # objective
-    state_weight = trial.suggest_float('state_weight', SAC_dict['float']['state_weight'][0], SAC_dict['float']['state_weight'][1], log=True)
-    state_dot_weight = trial.suggest_float('state_dot_weight', SAC_dict['float']['state_dot_weight'][0], SAC_dict['float']['state_dot_weight'][1], log=True)
-    action_weight = trial.suggest_float('action_weight', SAC_dict['float']['action_weight'][0], SAC_dict['float']['action_weight'][1], log=True)
+    state_weight = [
+        trial.suggest_float(f'state_weight_{i}', SAC_dict['float']['state_weight'][0], SAC_dict['float']['state_weight'][1])
+        for i in range(state_dim)
+    ]
+    action_weight = [
+        trial.suggest_float(f'action_weight_{i}', SAC_dict['float']['action_weight'][0], SAC_dict['float']['action_weight'][1])
+        for i in range(action_dim)
+    ]
 
     hps_suggestion = {
         'hidden_dim': hidden_dim,
@@ -236,7 +238,6 @@ def sac_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]
         'max_env_steps': max_env_steps,
         'warm_up_steps': warm_up_steps,
         'state_weight': state_weight,
-        'state_dot_weight': state_dot_weight,
         'action_weight': action_weight,
     }
 
@@ -245,7 +246,7 @@ def sac_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]
     return hps_suggestion
 
 
-def gpmpc_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]:
+def gpmpc_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, state_dim: int, action_dim: int) -> Dict[str, Any]:
     """Sampler for PPO hyperparameters.
 
     args:
@@ -271,9 +272,14 @@ def gpmpc_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, An
     learning_rate = d * [trial.suggest_float('learning_rate', GPMPC_dict['float']['learning_rate'][0], GPMPC_dict['float']['learning_rate'][1], log=True)]
 
     # objective
-    state_weight = trial.suggest_float('state_weight', GPMPC_dict['float']['state_weight'][0], GPMPC_dict['float']['state_weight'][1], log=True)
-    state_dot_weight = trial.suggest_float('state_dot_weight', GPMPC_dict['float']['state_dot_weight'][0], GPMPC_dict['float']['state_dot_weight'][1], log=True)
-    action_weight = trial.suggest_float('action_weight', GPMPC_dict['float']['action_weight'][0], GPMPC_dict['float']['action_weight'][1], log=True)
+    state_weight = [
+        trial.suggest_float(f'state_weight_{i}', GPMPC_dict['float']['state_weight'][0], GPMPC_dict['float']['state_weight'][1])
+        for i in range(state_dim)
+    ]
+    action_weight = [
+        trial.suggest_float(f'action_weight_{i}', GPMPC_dict['float']['action_weight'][0], GPMPC_dict['float']['action_weight'][1])
+        for i in range(action_dim)
+    ]
     
     hps_suggestion = {
         'horizon': horizon,
@@ -284,7 +290,6 @@ def gpmpc_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, An
         'optimization_iterations': optimization_iterations,
         'learning_rate': learning_rate,
         'state_weight': state_weight,
-        'state_dot_weight': state_dot_weight,
         'action_weight': action_weight,
     }
 
@@ -292,7 +297,7 @@ def gpmpc_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, An
 
     return hps_suggestion
 
-def ilqr_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]:
+def ilqr_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, state_dim: int, action_dim: int) -> Dict[str, Any]:
     """Sampler for iLQR hyperparameters.
 
     args:
@@ -307,9 +312,14 @@ def ilqr_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any
     epsilon = trial.suggest_categorical('epsilon', iLQR_dict['categorical']['epsilon'])
 
     # objective
-    state_weight = trial.suggest_float('state_weight', iLQR_dict['float']['state_weight'][0], iLQR_dict['float']['state_weight'][1], log=True)
-    state_dot_weight = trial.suggest_float('state_dot_weight', iLQR_dict['float']['state_dot_weight'][0], iLQR_dict['float']['state_dot_weight'][1], log=True)
-    action_weight = trial.suggest_float('action_weight', iLQR_dict['float']['action_weight'][0], iLQR_dict['float']['action_weight'][1], log=True)
+    state_weight = [
+        trial.suggest_float(f'state_weight_{i}', iLQR_dict['float']['state_weight'][0], iLQR_dict['float']['state_weight'][1])
+        for i in range(state_dim)
+    ]
+    action_weight = [
+        trial.suggest_float(f'action_weight_{i}', iLQR_dict['float']['action_weight'][0], iLQR_dict['float']['action_weight'][1])
+        for i in range(action_dim)
+    ]
 
     hps_suggestion = {
         'max_iterations': max_iterations,
@@ -317,7 +327,6 @@ def ilqr_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any
         'lamb_max': lamb_max,
         'epsilon': epsilon,
         'state_weight': state_weight,
-        'state_dot_weight': state_dot_weight,
         'action_weight': action_weight,
     }
 
@@ -325,7 +334,7 @@ def ilqr_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any
 
     return hps_suggestion
 
-def ilqr_sf_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, Any]:
+def ilqr_sf_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, state_dim: int, action_dim: int) -> Dict[str, Any]:
     """Sampler for iLQR hyperparameters with safety filter.
 
     args:
@@ -344,16 +353,25 @@ def ilqr_sf_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, 
     n_samples = trial.suggest_categorical('n_samples', iLQR_SF_dict['categorical']['n_samples'])
 
     # objective
-    state_weight = trial.suggest_float('state_weight', iLQR_SF_dict['float']['state_weight'][0], iLQR_SF_dict['float']['state_weight'][1], log=True)
-    state_dot_weight = trial.suggest_float('state_dot_weight', iLQR_SF_dict['float']['state_dot_weight'][0], iLQR_SF_dict['float']['state_dot_weight'][1], log=True)
-    action_weight = trial.suggest_float('action_weight', iLQR_SF_dict['float']['action_weight'][0], iLQR_SF_dict['float']['action_weight'][1], log=True)
+    state_weight = [
+        trial.suggest_float(f'state_weight_{i}', iLQR_SF_dict['float']['state_weight'][0], iLQR_SF_dict['float']['state_weight'][1])
+        for i in range(state_dim)
+    ]
+    action_weight = [
+        trial.suggest_float(f'action_weight_{i}', iLQR_SF_dict['float']['action_weight'][0], iLQR_SF_dict['float']['action_weight'][1])
+        for i in range(action_dim)
+    ]
 
     # safety filter
     tau = trial.suggest_float('tau', iLQR_SF_dict['float']['tau'][0], iLQR_SF_dict['float']['tau'][1], log=False)
-    sf_state_weight = trial.suggest_float('sf_state_weight', iLQR_SF_dict['float']['sf_state_weight'][0], iLQR_SF_dict['float']['sf_state_weight'][1], log=True)
-    sf_state_dot_weight = trial.suggest_float('sf_state_dot_weight', iLQR_SF_dict['float']['sf_state_dot_weight'][0], iLQR_SF_dict['float']['sf_state_dot_weight'][1], log=True)
-    sf_action_weight = trial.suggest_float('sf_action_weight', iLQR_SF_dict['float']['sf_action_weight'][0], iLQR_SF_dict['float']['sf_action_weight'][1], log=True)
-
+    sf_state_weight = [
+        trial.suggest_float(f'sf_state_weight_{i}', iLQR_SF_dict['float']['sf_state_weight'][0], iLQR_SF_dict['float']['sf_state_weight'][1])
+        for i in range(state_dim)
+    ]
+    sf_action_weight = [
+        trial.suggest_float(f'sf_action_weight_{i}', iLQR_SF_dict['float']['sf_action_weight'][0], iLQR_SF_dict['float']['sf_action_weight'][1])
+        for i in range(action_dim)
+    ]
     hps_suggestion = {
         'max_iterations': max_iterations,
         'lamb_factor': lamb_factor,
@@ -362,11 +380,9 @@ def ilqr_sf_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial) -> Dict[str, 
         'horizon': horizon,
         'n_samples': n_samples,
         'state_weight': state_weight,
-        'state_dot_weight': state_dot_weight,
         'action_weight': action_weight,
         'tau': tau,
         'sf_state_weight': sf_state_weight,
-        'sf_state_dot_weight': sf_state_dot_weight,
         'sf_action_weight': sf_action_weight,
     }
 

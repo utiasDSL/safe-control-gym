@@ -5,7 +5,7 @@ import os
 from functools import partial
 
 import yaml
-
+import wandb
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -50,6 +50,8 @@ def hpo(config):
     if 'safety_filter' not in config:
         config.safety_filter = None
         config.sf_config = None
+
+    wandb.init(project='hyperparameter-optimization', config=config, group='HPO')
 
     # HPO
     if config.sampler == 'Optuna':
