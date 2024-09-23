@@ -1,53 +1,75 @@
 import os
 import sys
-import time
 
 import munch
 import pytest
 
 from examples.hpo.hpo_experiment import hpo
-from safe_control_gym.hyperparameters.database import create, drop
 from safe_control_gym.utils.configuration import ConfigFactory
-
 
 @pytest.mark.parametrize('SYS', ['cartpole'])
 @pytest.mark.parametrize('TASK', ['stab'])
-@pytest.mark.parametrize('ALGO', ['ppo', 'sac', 'gp_mpc'])
-@pytest.mark.parametrize('SAMPLER', ['TPESampler', 'RandomSampler'])
-def test_hpo(SYS, TASK, ALGO, SAMPLER):
-    '''Test HPO for one single trial using MySQL database.
+@pytest.mark.parametrize('ALGO', ['ilqr', 'gp_mpc', 'ppo'])
+@pytest.mark.parametrize('PRIOR', [''])
+@pytest.mark.parametrize('SAFETY_FILTER', ['', 'linear_mpsc'])
+@pytest.mark.parametrize('SAMPLER', ['optuna', 'vizier'])
+def test_hpo_cartpole(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, SAMPLER):
+    '''Test HPO for one single trial.
         (create a study from scratch)
     '''
-    pytest.skip('Takes too long.')
 
     # output_dir
-    output_dir = './examples/hpo/results'
+    output_dir = f'./benchmarking_sim/results/{ALGO}'
     # delete output_dir
     if os.path.exists(output_dir):
         os.system(f'rm -rf {output_dir}')
-    # drop the database if exists
-    drop(munch.Munch({'tag': f'{ALGO}_hpo'}))
-    # create database
-    create(munch.Munch({'tag': f'{ALGO}_hpo'}))
+    # delete database
+    if os.path.exists(f'{ALGO}_hpo_{SAMPLER}.db'):
+        os.system(f'rm {ALGO}_hpo_{SAMPLER}.db')
+    if os.path.exists(f'{ALGO}_hpo_{SAMPLER}.db-journal'):
+        os.system(f'rm {ALGO}_hpo_{SAMPLER}.db-journal')
+    if os.path.exists(f'{ALGO}_hpo_endpoint.yaml'):
+        os.system(f'rm {ALGO}_hpo_endpoint.yaml')
 
-    if ALGO == 'gp_mpc':
-        PRIOR = '150'
+    if ALGO == 'ilqr':
+        PRIOR = '100'
+    elif ALGO == 'gp_mpc' or ALGO == 'gpmpc_acados':
+        PRIOR = '200'
+
+    # check if the config file exists
+    TASK_CONFIG_PATH = f'./examples/hpo/{SYS}/config_overrides/{SYS}_{TASK}.yaml'
+    ALGO_CONFIG_PATH = f'./examples/hpo/{SYS}/config_overrides/{ALGO}_{SYS}_{TASK}_{PRIOR}.yaml'
+    HPO_CONFIG_PATH = f'./examples/hpo/{SYS}/config_overrides/{ALGO}_{SYS}_hpo.yaml'
+    assert os.path.exists(TASK_CONFIG_PATH), f'{TASK_CONFIG_PATH} does not exist'
+    assert os.path.exists(ALGO_CONFIG_PATH),  f'{ALGO_CONFIG_PATH} does not exist'
+    assert os.path.exists(HPO_CONFIG_PATH),  f'{HPO_CONFIG_PATH} does not exist'
+
+    if SAFETY_FILTER == 'linear_mpsc':
+        if ALGO != 'ilqr':
+            pytest.skip('SAFETY_FILTER is only supported for ilqr')
+            raise ValueError('SAFETY_FILTER is only supported for ilqr')
+        SAFETY_FILTER_CONFIG_PATH = f'./examples/hpo/{SYS}/config_overrides/{SAFETY_FILTER}_{SYS}_{TASK}_{PRIOR}.yaml'
+        assert os.path.exists(SAFETY_FILTER_CONFIG_PATH), f'{SAFETY_FILTER_CONFIG_PATH} does not exist'
+        MPSC_COST='one_step_cost'
         sys.argv[1:] = ['--algo', ALGO,
                         '--task', SYS,
                         '--overrides',
-                            f'./examples/hpo/gp_mpc/config_overrides/{SYS}/{SYS}_{TASK}.yaml',
-                            f'./examples/hpo/gp_mpc/config_overrides/{SYS}/{ALGO}_{SYS}_{PRIOR}.yaml',
-                            f'./examples/hpo/gp_mpc/config_overrides/{SYS}/{ALGO}_{SYS}_hpo.yaml',
+                            TASK_CONFIG_PATH,
+                            ALGO_CONFIG_PATH,
+                            HPO_CONFIG_PATH,
+                            SAFETY_FILTER_CONFIG_PATH,
+                        '--kv_overrides', f'sf_config.cost_function={MPSC_COST}',
                         '--output_dir', output_dir,
-                        '--seed', '1',
+                        '--seed', '7',
+                        '--use_gpu', 'True'
                         ]
     else:
         sys.argv[1:] = ['--algo', ALGO,
                         '--task', SYS,
                         '--overrides',
-                            f'./examples/hpo/rl/config_overrides/{SYS}/{SYS}_{TASK}.yaml',
-                            f'./examples/hpo/rl/{ALGO}/config_overrides/{SYS}/{ALGO}_{SYS}.yaml',
-                            f'./examples/hpo/rl/{ALGO}/config_overrides/{SYS}/{ALGO}_{SYS}_hpo.yaml',
+                            TASK_CONFIG_PATH,
+                            ALGO_CONFIG_PATH,
+                            HPO_CONFIG_PATH,
                         '--output_dir', output_dir,
                         '--seed', '7',
                         '--use_gpu', 'True'
@@ -55,7 +77,7 @@ def test_hpo(SYS, TASK, ALGO, SAMPLER):
 
     fac = ConfigFactory()
     fac.add_argument('--load_study', type=bool, default=False, help='whether to load study from a previous HPO.')
-    fac.add_argument('--sampler', type=str, default='TPESampler', help='which sampler to use in HPO.')
+    fac.add_argument('--sampler', type=str, default='Optuna', help='which sampler to use in HPO.')
     config = fac.merge()
     config.hpo_config.trials = 1
     config.hpo_config.repetitions = 1
@@ -67,160 +89,10 @@ def test_hpo(SYS, TASK, ALGO, SAMPLER):
     # delete output_dir
     if os.path.exists(output_dir):
         os.system(f'rm -rf {output_dir}')
-
-    # drop database
-    drop(munch.Munch({'tag': f'{ALGO}_hpo'}))
-
-
-@pytest.mark.parametrize('SYS', ['cartpole'])
-@pytest.mark.parametrize('TASK', ['stab'])
-@pytest.mark.parametrize('ALGO', ['ppo', 'sac', 'gp_mpc'])
-@pytest.mark.parametrize('LOAD', [False, True])
-@pytest.mark.parametrize('SAMPLER', ['TPESampler', 'RandomSampler'])
-def test_hpo_parallelism(SYS, TASK, ALGO, LOAD, SAMPLER):
-    '''Test HPO for in parallel.'''
-
-    pytest.skip('Takes too long.')
-
-    # if LOAD is False, create a study from scratch
-    if not LOAD:
-        # drop the database if exists
-        drop(munch.Munch({'tag': f'{ALGO}_hpo'}))
-        # create database
-        create(munch.Munch({'tag': f'{ALGO}_hpo'}))
-        # output_dir
-        output_dir = './examples/hpo/results'
-
-        if ALGO == 'gp_mpc':
-            PRIOR = '150'
-            sys.argv[1:] = ['--algo', ALGO,
-                            '--task', SYS,
-                            '--overrides',
-                                f'./examples/hpo/gp_mpc/config_overrides/{SYS}/{SYS}_{TASK}.yaml',
-                                f'./examples/hpo/gp_mpc/config_overrides/{SYS}/{ALGO}_{SYS}_{PRIOR}.yaml',
-                                f'./examples/hpo/gp_mpc/config_overrides/{SYS}/{ALGO}_{SYS}_hpo.yaml',
-                            '--output_dir', output_dir,
-                            '--seed', '1',
-                            ]
-        else:
-            sys.argv[1:] = ['--algo', ALGO,
-                            '--task', SYS,
-                            '--overrides',
-                                f'./examples/hpo/rl/config_overrides/{SYS}/{SYS}_{TASK}.yaml',
-                                f'./examples/hpo/rl/{ALGO}/config_overrides/{SYS}/{ALGO}_{SYS}.yaml',
-                                f'./examples/hpo/rl/{ALGO}/config_overrides/{SYS}/{ALGO}_{SYS}_hpo.yaml',
-                            '--output_dir', output_dir,
-                            '--seed', '7',
-                            '--use_gpu', 'True'
-                            ]
-
-        fac = ConfigFactory()
-        fac.add_argument('--load_study', type=bool, default=False, help='whether to load study from a previous HPO.')
-        fac.add_argument('--sampler', type=str, default='TPESampler', help='which sampler to use in HPO.')
-        config = fac.merge()
-        config.hpo_config.trials = 1
-        config.hpo_config.repetitions = 1
-        config.hpo_config.use_database = True
-        config.sampler = SAMPLER
-
-        hpo(config)
-    # if LOAD is True, load a study from a previous HPO study
-    else:
-        # first, wait a bit untill the HPO study is created
-        time.sleep(3)
-        # output_dir
-        output_dir = './examples/hpo/results'
-        if ALGO == 'gp_mpc':
-            PRIOR = '150'
-            sys.argv[1:] = ['--algo', ALGO,
-                            '--task', SYS,
-                            '--overrides',
-                                f'./examples/hpo/gp_mpc/config_overrides/{SYS}/{SYS}_{TASK}.yaml',
-                                f'./examples/hpo/gp_mpc/config_overrides/{SYS}/{ALGO}_{SYS}_{PRIOR}.yaml',
-                                f'./examples/hpo/gp_mpc/config_overrides/{SYS}/{ALGO}_{SYS}_hpo.yaml',
-                            '--output_dir', output_dir,
-                            '--seed', '1',
-                            ]
-        else:
-            sys.argv[1:] = ['--algo', ALGO,
-                            '--task', SYS,
-                            '--overrides',
-                                f'./examples/hpo/rl/config_overrides/{SYS}/{SYS}_{TASK}.yaml',
-                                f'./examples/hpo/rl/{ALGO}/config_overrides/{SYS}/{ALGO}_{SYS}.yaml',
-                                f'./examples/hpo/rl/{ALGO}/config_overrides/{SYS}/{ALGO}_{SYS}_hpo.yaml',
-                            '--output_dir', output_dir,
-                            '--seed', '8',
-                            '--use_gpu', 'True'
-                            ]
-
-        fac = ConfigFactory()
-        fac.add_argument('--load_study', type=bool, default=True, help='whether to load study from a previous HPO.')
-        fac.add_argument('--sampler', type=str, default='TPESampler', help='which sampler to use in HPO.')
-        config = fac.merge()
-        config.hpo_config.trials = 1
-        config.hpo_config.repetitions = 1
-        config.sampler = SAMPLER
-
-        hpo(config)
-
-        # delete output_dir
-        if os.path.exists(output_dir):
-            os.system(f'rm -rf {output_dir}')
-
-        # drop database
-        drop(munch.Munch({'tag': f'{ALGO}_hpo'}))
-
-
-@pytest.mark.parametrize('SYS', ['cartpole'])
-@pytest.mark.parametrize('TASK', ['stab'])
-@pytest.mark.parametrize('ALGO', ['ppo', 'sac', 'gp_mpc'])
-@pytest.mark.parametrize('SAMPLER', ['TPESampler', 'RandomSampler'])
-def test_hpo_without_database(SYS, TASK, ALGO, SAMPLER):
-    '''Test HPO for one single trial without using MySQL database.
-        (create a study from scratch)
-    '''
-    pytest.skip('Takes too long.')
-
-    # output_dir
-    output_dir = './examples/hpo/results'
-    # delete output_dir
-    if os.path.exists(output_dir):
-        os.system(f'rm -rf {output_dir}')
-
-    if ALGO == 'gp_mpc':
-        PRIOR = '150'
-        sys.argv[1:] = ['--algo', ALGO,
-                        '--task', SYS,
-                        '--overrides',
-                            f'./examples/hpo/gp_mpc/config_overrides/{SYS}/{SYS}_{TASK}.yaml',
-                            f'./examples/hpo/gp_mpc/config_overrides/{SYS}/{ALGO}_{SYS}_{PRIOR}.yaml',
-                            f'./examples/hpo/gp_mpc/config_overrides/{SYS}/{ALGO}_{SYS}_hpo.yaml',
-                        '--output_dir', output_dir,
-                        '--seed', '1',
-                        ]
-    else:
-        sys.argv[1:] = ['--algo', ALGO,
-                        '--task', SYS,
-                        '--overrides',
-                            f'./examples/hpo/rl/config_overrides/{SYS}/{SYS}_{TASK}.yaml',
-                            f'./examples/hpo/rl/{ALGO}/config_overrides/{SYS}/{ALGO}_{SYS}.yaml',
-                            f'./examples/hpo/rl/{ALGO}/config_overrides/{SYS}/{ALGO}_{SYS}_hpo.yaml',
-                        '--output_dir', output_dir,
-                        '--seed', '7',
-                        '--use_gpu', 'True'
-                        ]
-
-    fac = ConfigFactory()
-    fac.add_argument('--load_study', type=bool, default=False, help='whether to load study from a previous HPO.')
-    fac.add_argument('--sampler', type=str, default='TPESampler', help='which sampler to use in HPO.')
-    config = fac.merge()
-    config.hpo_config.trials = 1
-    config.hpo_config.repetitions = 1
-    config.hpo_config.use_database = False
-    config.sampler = SAMPLER
-
-    hpo(config)
-
-    # delete output_dir
-    if os.path.exists(output_dir):
-        os.system(f'rm -rf {output_dir}')
+    # delete database
+    if os.path.exists(f'{ALGO}_hpo_{SAMPLER}.db'):
+        os.system(f'rm {ALGO}_hpo_{SAMPLER}.db')
+    if os.path.exists(f'{ALGO}_hpo_{SAMPLER}.db-journal'):
+        os.system(f'rm {ALGO}_hpo_{SAMPLER}.db-journal')
+    if os.path.exists(f'{ALGO}_hpo_endpoint.yaml'):
+        os.system(f'rm {ALGO}_hpo_endpoint.yaml')
