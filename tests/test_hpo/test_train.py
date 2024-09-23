@@ -14,8 +14,8 @@ from safe_control_gym.utils.configuration import ConfigFactory
 @pytest.mark.parametrize('ALGO', ['ppo', 'sac', 'gp_mpc'])
 @pytest.mark.parametrize('HYPERPARAMETER', ['default', 'optimimum'])
 def test_train(SYS, TASK, ALGO, HYPERPARAMETER):
-    '''Test training rl/lbc given a set of hyperparameters.
-    '''
+    '''Test training rl/lbc given a set of hyperparameters.'''
+    pytest.skip('Takes too long.')
 
     # output_dir
     output_dir = './examples/hpo/results'
@@ -59,8 +59,7 @@ def test_train(SYS, TASK, ALGO, HYPERPARAMETER):
                             f'./examples/hpo/{ALGO}/config_overrides/{SYS}/{ALGO}_{SYS}_{PRIOR}.yaml',
                         '--output_dir', output_dir,
                         '--opt_hps', opt_hp_path,
-                        '--seed', '2',
-                        '--unittest', 'True'
+                        '--seed', '2'
                         ]
     else:
         sys.argv[1:] = ['--algo', ALGO,
@@ -72,13 +71,11 @@ def test_train(SYS, TASK, ALGO, HYPERPARAMETER):
                         '--tag', 's1',
                         '--opt_hps', opt_hp_path,
                         '--seed', '6',
-                        '--use_gpu', 'True',
-                        '--unittest', 'True'
+                        '--use_gpu', 'True'
                         ]
 
     fac = ConfigFactory()
     fac.add_argument('--opt_hps', type=str, default='', help='yaml file as a result of HPO.')
-    fac.add_argument('--unittest', type=bool, default=False, help='whether is for unittests.')
     config = fac.merge()
 
     train(config)

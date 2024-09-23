@@ -2,7 +2,7 @@ algo: ppo
 algo_config:
   # model args
   hidden_dim: 128
-  activation: "relu"
+  activation: tanh
 
   # loss args
   use_gae: True

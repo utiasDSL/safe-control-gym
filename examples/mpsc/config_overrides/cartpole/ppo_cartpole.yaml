@@ -2,7 +2,7 @@ algo: ppo
 algo_config:
   # model args
   hidden_dim: 64
-  activation: "relu"
+  activation: tanh
   norm_obs: False
   norm_reward: False
   clip_obs: 10.0
