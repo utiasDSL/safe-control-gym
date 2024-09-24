@@ -12,7 +12,6 @@ TASK='track'
 
 #ALGO='lqr'
 ALGO='ilqr'
-#ALGO='ilqr_c'
 
 if [ "$SYS" == 'cartpole' ]; then
     SYS_NAME=$SYS

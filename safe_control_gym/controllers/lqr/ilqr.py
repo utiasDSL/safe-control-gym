@@ -28,6 +28,7 @@ class iLQR(BaseController):
             lamb_factor: float = 10,
             lamb_max: float = 1000,
             epsilon: float = 0.01,
+            prior_info: dict = None,
             **kwargs):
         '''Creates task and controller.
 
@@ -39,7 +40,11 @@ class iLQR(BaseController):
             max_iterations (int): The number of iterations to train iLQR.
             lamb_factor (float): The amount for which to increase lambda when training fails.
             lamb_max (float): The maximum lambda allowed.
-            epsilon (float): The convergence tolerance.
+            epsilon (float): The convergence tolerance of the cost function.
+
+        Note: This implementation has a Hessian regularization term self.lamb
+        to make sure H is well-conditioned for inversion. It is related to
+        lamb_factor and lamb_max. See [1] for more details.
         '''
 
         super().__init__(env_func, **kwargs)
@@ -54,8 +59,9 @@ class iLQR(BaseController):
         self.lamb_factor = lamb_factor
         self.lamb_max = lamb_max
         self.epsilon = epsilon
+        self.prior_info = prior_info
 
-        self.env = env_func(info_in_reset=True, done_on_out_of_bound=True)
+        self.env = env_func(info_in_reset=True, done_on_out_of_bound=True, seed=self.seed)
 
         # Controller params.
         self.model = self.get_prior(self.env)
@@ -98,9 +104,12 @@ class iLQR(BaseController):
         # Initialize previous cost
         self.previous_total_cost = -float('inf')
 
+        # determine the maximum number of steps
+        max_steps = int(self.env.CTRL_FREQ * self.env.EPISODE_LEN_SEC)\
+
         # Loop through iLQR iterations
         while self.ite_counter < self.max_iterations:
-            self.run(env=env, training=True)
+            self.run(env=env, max_steps=max_steps, training=True)
 
             # Save data and update policy if iteration is finished.
             self.state_stack = np.vstack((self.state_stack, self.final_obs))
@@ -269,7 +278,7 @@ class iLQR(BaseController):
             else:
                 self.update_unstable = True
 
-    def select_action(self, obs, info=None, training=False):
+    def select_action(self, obs, info=None, training=False, hardware=False):
         '''Determine the action to take at the current timestep.
 
         Args:
@@ -280,7 +289,10 @@ class iLQR(BaseController):
             action (ndarray): The action chosen by the controller.
         '''
 
-        step = self.extract_step(info)
+        if not hardware:
+            step = self.extract_step(info)
+        else:
+            step = self.traj_step
 
         if training:
             if self.ite_counter == 0:
@@ -298,6 +310,9 @@ class iLQR(BaseController):
             action = self.gains_fb_best[step].dot(obs) + self.input_ff_best[:, step]
         else:
             action, _, _ = self.calculate_lqr_action(obs, step)
+
+        if hardware and self.traj_step < self.num_steps - 1:
+            self.traj_step += 1
 
         return action
 
@@ -372,3 +387,4 @@ class iLQR(BaseController):
         self.final_obs = obs
         self.final_info = info
         self.total_cost = total_cost
+        self.traj_step = 0

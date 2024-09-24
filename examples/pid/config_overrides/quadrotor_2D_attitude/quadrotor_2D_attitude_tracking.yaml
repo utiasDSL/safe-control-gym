@@ -28,6 +28,10 @@ task_config:
       distrib: 'uniform'
       low: -0.2
       high: 0.2
+    init_theta_dot:
+      distrib: 'uniform'
+      low: -0.05
+      high: 0.05
   randomized_init: True
   randomized_inertial_prop: False
 
