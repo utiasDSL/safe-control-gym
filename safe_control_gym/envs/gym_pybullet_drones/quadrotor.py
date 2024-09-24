@@ -731,6 +731,8 @@ class Quadrotor(BaseAviary):
     def _set_action_space(self):
         '''Sets the action space of the environment.'''
         # Define action/input dimension, labels, and units.
+        max_pitch_deg = 25
+        max_pitch_rad = max_pitch_deg * math.pi / 180
         if self.QUAD_TYPE == QuadType.ONE_D:
             action_dim = 1
             self.ACTION_LABELS = ['T']

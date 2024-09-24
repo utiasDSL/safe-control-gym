@@ -1,8 +1,11 @@
 '''Helper functions for the quadrotor environment.'''
 
+from abc import ABC
 from enum import IntEnum
 
 import numpy as np
+import pybullet as p
+from scipy.spatial.transform import Rotation
 
 
 class QuadType(IntEnum):
@@ -11,6 +14,8 @@ class QuadType(IntEnum):
     ONE_D = 1  # One-dimensional (along z) movement.
     TWO_D = 2  # Two-dimensional (in the x-z plane) movement.
     THREE_D = 3  # Three-dimensional movement.
+    TWO_D_ATTITUDE = 4  # Two-dimensional (in the x-z plane) movement with attitude control.
+    TWO_D_ATTITUDE_5S = 5  # Two-dimensional (in the x-z plane) movement with attitude control with 5 states.
 
 
 def cmd2pwm(thrust, pwm2rpm_scale, pwm2rpm_const, ct, pwm_min, pwm_max):
