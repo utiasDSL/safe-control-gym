@@ -241,3 +241,34 @@ def npRotXYZ(phi, theta, psi):
     '''
     R = npRotZ(psi) @ npRotY(theta) @ npRotX(phi)
     return R
+
+def get_angularvelocity_rpy(rpy, rpy_rates):
+    """
+    Convert rpy and rpy_rates to body-frame angular velocity
+    """
+    phi, theta, psi = rpy[0], rpy[1], rpy[2]
+    ang_v = np.array([[1, 0, -np.sin(theta)],
+                      [0, np.cos(phi), np.sin(phi) * np.cos(theta)],
+                      [0, -np.sin(phi), np.cos(phi) * np.cos(theta)]]) @ rpy_rates
+    return ang_v
+
+def get_quaternion_from_euler(rpy):
+    """
+    Convert an Euler angle to a quaternion.
+    roll: The roll (rotation around x-axis) angle in radians.
+    pitch: The pitch (rotation around y-axis) angle in radians.
+    yaw: The yaw (rotation around z-axis) angle in radians.
+
+    Input
+      :param rpy: roll, pitch, yaw
+
+    Output
+      :return qx, qy, qz, qw: The orientation in quaternion [x,y,z,w] format
+    """
+    roll, pitch, yaw = rpy[0], rpy[1], rpy[2]
+    qx = np.sin(roll / 2) * np.cos(pitch / 2) * np.cos(yaw / 2) - np.cos(roll / 2) * np.sin(pitch / 2) * np.sin(yaw / 2)
+    qy = np.cos(roll / 2) * np.sin(pitch / 2) * np.cos(yaw / 2) + np.sin(roll / 2) * np.cos(pitch / 2) * np.sin(yaw / 2)
+    qz = np.cos(roll / 2) * np.cos(pitch / 2) * np.sin(yaw / 2) - np.sin(roll / 2) * np.sin(pitch / 2) * np.cos(yaw / 2)
+    qw = np.cos(roll / 2) * np.cos(pitch / 2) * np.cos(yaw / 2) + np.sin(roll / 2) * np.sin(pitch / 2) * np.sin(yaw / 2)
+
+    return qx, qy, qz, qw

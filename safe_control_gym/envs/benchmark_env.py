@@ -443,11 +443,11 @@ class BenchmarkEnv(gym.Env, ABC):
 
         self.current_raw_action = action
         # Pre-process/clip the action
-        processed_action = self._preprocess_control(action)
-        return processed_action
+        # processed_action = self._preprocess_control(action)
+        return action
 
     def extend_obs(self, obs, next_step):
-        '''Extends an observation with the next self.obs_goal_horizon reference points.
+        """Extends an observation with the next self.obs_goal_horizon reference points.
 
         Args:
             obs (ndarray): The observation to be extended.
