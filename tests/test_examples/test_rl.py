@@ -5,7 +5,7 @@ import pytest
 from examples.rl.rl_experiment import run
 
 
-@pytest.mark.parametrize('SYS',  ['cartpole', 'quadrotor_2D', 'quadrotor_3D'])
+@pytest.mark.parametrize('SYS',  ['cartpole', 'quadrotor_2D', 'quadrotor_2D_attitude', 'quadrotor_3D'])
 @pytest.mark.parametrize('TASK', ['stab', 'track'])
 @pytest.mark.parametrize('ALGO', ['ppo', 'sac', 'safe_explorer_ppo'])
 def test_rl(SYS, TASK, ALGO):

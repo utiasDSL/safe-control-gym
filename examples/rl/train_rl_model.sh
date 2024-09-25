@@ -8,11 +8,11 @@ SYS='quadrotor_2D_attitude'
 # TASK='stab'
 TASK='track'
 
-ALGO='ppo'
+# ALGO='ppo'
 # ALGO='sac'
 # ALGO='ddpg'
 
-# ALGO='safe_explorer_ppo'
+ALGO='safe_explorer_ppo'
 
 if [ "$SYS" == 'cartpole' ]; then
     SYS_NAME=$SYS

@@ -34,7 +34,10 @@ def run(gui=False, plot=True, n_episodes=1, n_steps=None, curr_path='.'):
 
     task = 'stab' if config.task_config.task == Task.STABILIZATION else 'track'
     if config.task == Environment.QUADROTOR:
-        system = f'quadrotor_{str(config.task_config.quad_type)}D'
+        if config.task_config.quad_type == 4:
+            system = f'quadrotor_2D_attitude'
+        else:
+            system = f'quadrotor_{str(config.task_config.quad_type)}D'
     else:
         system = config.task
 

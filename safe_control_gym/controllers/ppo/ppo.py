@@ -175,6 +175,7 @@ class PPO(BaseController):
             # Evaluation.
             if self.eval_interval and self.total_steps % self.eval_interval == 0:
                 eval_results = self.run(env=self.eval_env, n_episodes=self.eval_batch_size)
+                print(eval_results)
                 results['eval'] = eval_results
                 self.logger.info('Eval | ep_lengths {:.2f} +/- {:.2f} | ep_return {:.3f} +/- {:.3f}'.format(eval_results['ep_lengths'].mean(),
                                                                                                             eval_results['ep_lengths'].std(),

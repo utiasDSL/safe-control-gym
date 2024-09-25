@@ -5,7 +5,7 @@ import pytest
 from examples.lqr.lqr_experiment import run
 
 
-@pytest.mark.parametrize('SYS',  ['cartpole', 'quadrotor_2D', 'quadrotor_3D'])
+@pytest.mark.parametrize('SYS',  ['cartpole', 'quadrotor_2D', 'quadrotor_2D_attitude', 'quadrotor_3D'])
 @pytest.mark.parametrize('TASK', ['stabilization', 'tracking'])
 @pytest.mark.parametrize('ALGO', ['lqr', 'ilqr'])
 def test_lqr(SYS, TASK, ALGO):

@@ -7,8 +7,8 @@
 SYS='quadrotor_2D_attitude'
 #SYS='quadrotor_3D'
 
-#TASK='stab'
-TASK='track'
+#TASK='stabilization'
+TASK='tracking'
 
 #ALGO='lqr'
 ALGO='ilqr'
