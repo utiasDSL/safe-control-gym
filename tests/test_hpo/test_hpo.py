@@ -1,7 +1,6 @@
 import os
 import sys
 
-import munch
 import pytest
 
 from examples.hpo.hpo_experiment import hpo
@@ -79,16 +78,16 @@ def test_hpo_cartpole(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, SAMPLER):
     fac.add_argument('--load_study', type=bool, default=False, help='whether to load study from a previous HPO.')
     fac.add_argument('--sampler', type=str, default='Optuna', help='which sampler to use in HPO.')
     config = fac.merge()
-    config.hpo_config.trials = 1
-    config.hpo_config.repetitions = 1
+    config.hpo_config.trials = 2
+    config.hpo_config.repetitions = 2
     config.hpo_config.use_database = True
     config.sampler = SAMPLER
 
     hpo(config)
 
     # delete output_dir
-    if os.path.exists(output_dir):
-        os.system(f'rm -rf {output_dir}')
+    # if os.path.exists(output_dir):
+    #     os.system(f'rm -rf {output_dir}')
     # delete database
     if os.path.exists(f'{ALGO}_hpo_{SAMPLER}.db'):
         os.system(f'rm {ALGO}_hpo_{SAMPLER}.db')
