@@ -329,31 +329,48 @@ class MPC_ACADOS(MPC):
         self.acados_ocp_solver.set(self.T, 'yref', y_ref_e)
 
         # solve the optimization problem
-        if self.use_RTI:
-            # preparation phase
-            self.acados_ocp_solver.options_set('rti_phase', 1)
-            status = self.acados_ocp_solver.solve()
+        try:
+            if self.use_RTI:
+                # preparation phase
+                self.acados_ocp_solver.options_set('rti_phase', 1)
+                status = self.acados_ocp_solver.solve()
 
-            # feedback phase
-            self.acados_ocp_solver.options_set('rti_phase', 2)
-            status = self.acados_ocp_solver.solve()
+                # feedback phase
+                self.acados_ocp_solver.options_set('rti_phase', 2)
+                status = self.acados_ocp_solver.solve()
+            else:
+                status = self.acados_ocp_solver.solve()
 
-            if status not in [0, 2]:
-                self.acados_ocp_solver.print_statistics()
-                raise Exception(f'acados returned status {status}. Exiting.')
-            if status == 2:
-                print(f'acados returned status {status}. ')
+            # get the open-loop solution
+            if self.x_prev is None and self.u_prev is None:
+                self.x_prev = np.zeros((nx, self.T + 1))
+                self.u_prev = np.zeros((nu, self.T))
+            if self.u_prev is not None and nu == 1:
+                self.u_prev = self.u_prev.reshape((1, -1))
+            for i in range(self.T + 1):
+                self.x_prev[:, i] = self.acados_ocp_solver.get(i, 'x')
+            for i in range(self.T):
+                self.u_prev[:, i] = self.acados_ocp_solver.get(i, 'u')
+            if nu == 1:
+                self.u_prev = self.u_prev.flatten()
+        except Exception:
+            print(colored('Infeasible MPC Problem', 'red'))
+            # get the solver status
+            self.acados_ocp_solver.print_statistics()
+            status = self.acados_ocp_solver.get_stats('status')
+            print(f'acados returned status {status}. ')
+            # OPTIONAL: shift the x_prev and u_prev and copy the last state
+            # self.x_prev = np.concatenate((self.x_guess[:, 1:], np.atleast_2d(self.x_guess[:, -1]).T), axis=1)
+            # self.u_prev = np.concatenate((self.u_guess[:, 1:], np.atleast_2d(self.u_guess[:, -1]).T), axis=1)
+        action = self.acados_ocp_solver.get(0, 'u')
 
-            action = self.acados_ocp_solver.get(0, 'u')
+        self.x_guess = self.x_prev
+        self.u_guess = self.u_prev
+        self.results_dict['horizon_states'].append(deepcopy(self.x_prev))
+        self.results_dict['horizon_inputs'].append(deepcopy(self.u_prev))
+        self.results_dict['goal_states'].append(deepcopy(goal_states))
 
-        elif not self.use_RTI:
-            status = self.acados_ocp_solver.solve()
-            if status not in [0, 2]:
-                self.acados_ocp_solver.print_statistics()
-                raise Exception(f'acados returned status {status}. Exiting.')
-            if status == 2:
-                print(f'acados returned status {status}. ')
-            action = self.acados_ocp_solver.get(0, 'u')
+        self.prev_action = action
 
         # get the open-loop solution
         if self.x_prev is None and self.u_prev is None:
