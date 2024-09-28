@@ -7,6 +7,7 @@ examples/mpsc/unsafe_rl_temp_data/
 examples/pid/*data/
 #
 results/
+Results/
 z_docstring.py
 TODOs.md
 
@@ -147,3 +148,5 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+.idea/
