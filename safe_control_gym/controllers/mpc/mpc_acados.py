@@ -9,7 +9,6 @@ from termcolor import colored
 
 from safe_control_gym.controllers.mpc.mpc import MPC
 from safe_control_gym.controllers.mpc.mpc_utils import set_acados_constraint_bound
-from safe_control_gym.envs.benchmark_env import Task
 from safe_control_gym.utils.utils import timing
 
 try:
@@ -44,6 +43,7 @@ class MPC_ACADOS(MPC):
             use_gpu: bool = False,
             seed: int = 0,
             use_RTI: bool = False,
+            use_lqr_gain_and_terminal_cost: bool = False,
             **kwargs
     ):
         '''Creates task and controller.
@@ -62,6 +62,7 @@ class MPC_ACADOS(MPC):
             use_gpu (bool): False (use cpu) True (use cuda).
             seed (int): random seed.
             use_RTI (bool): Real-time iteration for acados.
+            use_lqr_gain_and_terminal_cost (bool): Use LQR ancillary gain and terminal cost for the MPC.
         '''
         for k, v in locals().items():
             if k != 'self' and k != 'kwargs' and '__' not in k:
@@ -78,6 +79,8 @@ class MPC_ACADOS(MPC):
             constraint_tol=constraint_tol,
             output_dir=output_dir,
             additional_constraints=additional_constraints,
+            compute_initial_guess_method='ipopt',  # use ipopt initial guess by default
+            use_lqr_gain_and_terminal_cost=use_lqr_gain_and_terminal_cost,
             use_gpu=use_gpu,
             seed=seed,
             **kwargs
@@ -90,33 +93,20 @@ class MPC_ACADOS(MPC):
 
     @timing
     def reset(self):
-        print(colored('Resetting MPC', 'green'))
         '''Prepares for training or evaluation.'''
-        # Setup reference input.
-        if self.env.TASK == Task.STABILIZATION:
-            self.mode = 'stabilization'
-            self.x_goal = self.env.X_GOAL
-        elif self.env.TASK == Task.TRAJ_TRACKING:
-            self.mode = 'tracking'
-            self.traj = self.env.X_GOAL.T
-            # Step along the reference.
-            self.traj_step = 0
-
+        print(colored('Resetting MPC', 'green'))
+        super().reset()
         self.acados_model = None
         self.ocp = None
         self.acados_ocp_solver = None
         # Dynamics model.
-        self.set_dynamics_func()
         self.setup_acados_model()
         # Acados optimizer.
         self.setup_acados_optimizer()
         self.acados_ocp_solver = AcadosOcpSolver(self.ocp)
-        # Previously solved states & inputs, useful for warm start.
-        self.x_prev = None
-        self.u_prev = None
-        self.setup_results_dict()
 
     def setup_acados_model(self) -> AcadosModel:
+        '''Sets up symbolic model for acados.'''
 
         acados_model = AcadosModel()
         acados_model.x = self.model.x_sym
@@ -146,34 +136,11 @@ class MPC_ACADOS(MPC):
         self.acados_model = acados_model
 
     @timing
-    def compute_initial_guess(self, init_state, goal_states):
+    def compute_initial_guess(self, init_state, goal_states=None):
         '''Use IPOPT to get an initial guess of the solution.'''
-        print(colored('Computing initial guess', 'green'))
-        self.setup_optimizer(solver=self.init_solver)
-        opti_dict = self.opti_dict
-        opti = opti_dict['opti']
-        x_var = opti_dict['x_var']  # optimization variables
-        u_var = opti_dict['u_var']  # optimization variables
-        x_init = opti_dict['x_init']  # initial state
-        x_ref = opti_dict['x_ref']  # reference state/trajectory
-
-        # Assign the initial state.
-        opti.set_value(x_init, init_state)  # initial state should have dim (nx,)
-        # Assign reference trajectory within horizon.
-        goal_states = self.get_references()
-        opti.set_value(x_ref, goal_states)
-        # Solve the optimization problem.
-        try:
-            sol = opti.solve()
-            x_val, u_val = sol.value(x_var), sol.value(u_var)
-        except RuntimeError:
-            print('Warm-starting fails')
-            x_val, u_val = opti.debug.value(x_var), opti.debug.value(u_var)
-
+        x_val, u_val = super().compute_initial_guess(init_state, goal_states)
         self.x_guess = x_val
         self.u_guess = u_val
-        self.u_prev = u_val
-        self.x_prev = x_val
 
     def setup_acados_optimizer(self):
         '''Sets up nonlinear optimization problem.'''
@@ -192,7 +159,7 @@ class MPC_ACADOS(MPC):
         ocp.cost.cost_type = 'LINEAR_LS'
         ocp.cost.cost_type_e = 'LINEAR_LS'
         ocp.cost.W = scipy.linalg.block_diag(self.Q, self.R)
-        ocp.cost.W_e = self.Q
+        ocp.cost.W_e = self.Q if not self.use_lqr_gain_and_terminal_cost else self.P
         ocp.cost.Vx = np.zeros((ny, nx))
         ocp.cost.Vx[:nx, :nx] = np.eye(nx)
         ocp.cost.Vu = np.zeros((ny, nu))
@@ -339,7 +306,7 @@ class MPC_ACADOS(MPC):
         if self.warmstart:
             if self.x_guess is None or self.u_guess is None:
                 # compute initial guess with IPOPT
-                self.compute_initial_guess(obs, self.get_references())
+                self.compute_initial_guess(obs)
             for idx in range(self.T + 1):
                 init_x = self.x_guess[:, idx]
                 self.acados_ocp_solver.set(idx, 'x', init_x)
@@ -408,5 +375,7 @@ class MPC_ACADOS(MPC):
         self.results_dict['goal_states'].append(deepcopy(goal_states))
 
         self.prev_action = action
+        if self.use_lqr_gain_and_terminal_cost:
+            action += self.lqr_gain @ (obs - self.x_prev[:, 0])
 
         return action

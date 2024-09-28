@@ -35,7 +35,8 @@ class MPC(BaseController):
             additional_constraints: list = None,
             use_gpu: bool = False,
             seed: int = 0,
-            compute_ipopt_initial_guess: bool = False,
+            compute_initial_guess_method: str = 'ipopt',
+            use_lqr_gain_and_terminal_cost: bool = False,
             init_solver: str = 'ipopt',
             solver: str = 'ipopt',
             **kwargs
@@ -55,6 +56,10 @@ class MPC(BaseController):
             additional_constraints (list): List of additional constraints
             use_gpu (bool): False (use cpu) True (use cuda).
             seed (int): random seed.
+            compute_initial_guess_method (str): Method to compute the initial guess. Options: None, 'ipopt', 'lqr'.
+            use_lqr_gain_and_terminal_cost (bool): Use the LQR ancillary gain and terminal cost in the MPC.
+            init_solver (str): Solver to use for initial guess computation.
+            solver (str): Solver to use for MPC optimization.
         '''
         super().__init__(env_func=env_func, output_dir=output_dir, use_gpu=use_gpu, seed=seed, **kwargs)
         for k, v in locals().items():
@@ -87,9 +92,10 @@ class MPC(BaseController):
 
         self.X_EQ = self.env.X_GOAL
         self.U_EQ = self.env.U_GOAL
+        self.compute_initial_guess_method = compute_initial_guess_method
+        self.use_lqr_gain_and_terminal_cost = use_lqr_gain_and_terminal_cost
         self.init_solver = init_solver
         self.solver = solver
-        self.compute_ipopt_initial_guess = compute_ipopt_initial_guess
 
     def add_constraints(self,
                         constraints
@@ -121,9 +127,9 @@ class MPC(BaseController):
         self.env.close()
 
     def reset(self):
+        '''Prepares for training or evaluation.'''
         print(colored('Resetting MPC', 'green'))
         # Setup reference input.
-        '''Prepares for training or evaluation.'''
         if self.env.TASK == Task.STABILIZATION:
             self.mode = 'stabilization'
             self.x_goal = self.env.X_GOAL
@@ -144,6 +150,7 @@ class MPC(BaseController):
 
     def set_dynamics_func(self):
         '''Updates symbolic dynamics with actual control frequency.'''
+        # linear dynamics for LQR ancillary gain and terminal cost
         dfdxdfdu = self.model.df_func(x=np.atleast_2d(self.model.X_EQ)[0, :].T,
                                       u=np.atleast_2d(self.model.U_EQ)[0, :].T)
         dfdx = dfdxdfdu['dfdx'].toarray()
@@ -159,60 +166,58 @@ class MPC(BaseController):
                                                 ['xf'])
         self.dfdx = dfdx
         self.dfdu = dfdu
-
+        self.lqr_gain, _, _, self.P = compute_discrete_lqr_gain_from_cont_linear_system(dfdx,
+                                                                                        dfdu,
+                                                                                        self.Q,
+                                                                                        self.R,
+                                                                                        self.dt)
+        # nonlinear dynamics
         self.dynamics_func = rk_discrete(self.model.fc_func,
                                          self.model.nx,
                                          self.model.nu,
                                          self.dt)
 
-    def compute_lqr_initial_guess(self, init_state, goal_states, x_lin, u_lin):
-        '''Use LQR to get an initial guess of the '''
-        dfdxdfdu = self.model.df_func(x=x_lin, u=u_lin)
-        dfdx = dfdxdfdu['dfdx'].toarray()
-        dfdu = dfdxdfdu['dfdu'].toarray()
-        lqr_gain, _, _ = compute_discrete_lqr_gain_from_cont_linear_system(dfdx, dfdu, self.Q, self.R, self.dt)
-
-        # initialize the guess solutions
-        x_guess = np.zeros((self.model.nx, self.T + 1))
-        u_guess = np.zeros((self.model.nu, self.T))
-        x_guess[:, 0] = init_state
-        # add the lqr gain and states to the guess
-        for i in range(self.T):
-            u = lqr_gain @ (x_guess[:, i] - goal_states[:, i]) + u_lin
-            u_guess[:, i] = u
-            x_guess[:, i + 1, None] = self.dynamics_func(x0=x_guess[:, i], p=u)['xf'].toarray()
-
-        return x_guess, u_guess
-
     @timing
-    def compute_initial_guess(self, init_state, goal_states):
-        '''Use IPOPT to get an initial guess of the '''
-        print(colored('Computing initial guess', 'green'))
-        self.setup_optimizer(solver=self.init_solver)
-        opti_dict = self.opti_dict
-        opti = opti_dict['opti']
-        x_var = opti_dict['x_var']  # optimization variables
-        u_var = opti_dict['u_var']  # optimization variables
-        x_init = opti_dict['x_init']  # initial state
-        x_ref = opti_dict['x_ref']  # reference state/trajectory
+    def compute_initial_guess(self, init_state, goal_states=None):
+        '''Compute an initial guess of the solution to the optimization problem.'''
+        if goal_states is None:
+            goal_states = self.get_references()
+        print(colored(f'computing initial guess using {self.compute_initial_guess_method}', 'green'))
+        if self.compute_initial_guess_method == 'ipopt':
+            self.setup_optimizer(solver=self.init_solver)
+            opti_dict = self.opti_dict
+            opti = opti_dict['opti']
+            x_var = opti_dict['x_var']  # optimization variables
+            u_var = opti_dict['u_var']  # optimization variables
+            x_init = opti_dict['x_init']  # initial state
+            x_ref = opti_dict['x_ref']  # reference state/trajectory
 
-        # Assign the initial state.
-        opti.set_value(x_init, init_state)  # initial state should have dim (nx,)
-        # Assign reference trajectory within horizon.
-        goal_states = self.get_references()
-        opti.set_value(x_ref, goal_states)
-        if self.mode == 'tracking':
-            self.traj_step += 1
-        # Solve the optimization problem.
-        try:
-            sol = opti.solve()
-            x_val, u_val = sol.value(x_var), sol.value(u_var)
-        except RuntimeError:
-            print(colored('Warm-starting fails', 'red'))
-            x_val, u_val = opti.debug.value(x_var), opti.debug.value(u_var)
+            # Assign the initial state.
+            opti.set_value(x_init, init_state)  # initial state should have dim (nx,)
+            # Assign reference trajectory within horizon.
+            opti.set_value(x_ref, goal_states)
+            # Solve the optimization problem.
+            try:
+                sol = opti.solve()
+                x_val, u_val = sol.value(x_var), sol.value(u_var)
+            except RuntimeError:
+                print(colored('Warm-starting fails', 'red'))
+                x_val, u_val = opti.debug.value(x_var), opti.debug.value(u_var)
+            x_guess = x_val
+            u_guess = u_val
+        elif self.compute_initial_guess_method == 'lqr':
+            # initialize the guess solutions
+            x_guess = np.zeros((self.model.nx, self.T + 1))
+            u_guess = np.zeros((self.model.nu, self.T))
+            x_guess[:, 0] = init_state
+            # add the lqr gain and states to the guess
+            for i in range(self.T):
+                u = self.lqr_gain @ (x_guess[:, i] - goal_states[:, i]) + np.atleast_2d(self.model.U_EQ)[0, :].T
+                u_guess[:, i] = u
+                x_guess[:, i + 1, None] = self.dynamics_func(x0=x_guess[:, i], p=u)['xf'].toarray()
+        else:
+            raise Exception('Initial guess method not implemented.')
 
-        x_guess = x_val
-        u_guess = u_val
         self.x_prev = x_guess
         self.u_prev = u_guess
 
@@ -256,7 +261,7 @@ class MPC(BaseController):
                           u=np.zeros((nu, 1)),
                           Xr=x_ref[:, -1],
                           Ur=np.zeros((nu, 1)),
-                          Q=self.Q,
+                          Q=self.Q if not self.use_lqr_gain_and_terminal_cost else self.P,
                           R=self.R)['l']
         # Constraints
         for i in range(self.T):
@@ -330,13 +335,9 @@ class MPC(BaseController):
         # Assign reference trajectory within horizon.
         goal_states = self.get_references()
         opti.set_value(x_ref, goal_states)
-        if self.mode == 'tracking':
-            self.traj_step += 1
 
-        if self.compute_ipopt_initial_guess and self.x_prev is None and self.u_prev is None:
-            #    x_guess, u_guess = self.compute_lqr_initial_guess(obs, goal_states, self.X_EQ, self.U_EQ)
-            print(colored(f'computing initial guess with {self.init_solver}', 'green'))
-            x_guess, u_guess = self.compute_initial_guess(obs, goal_states)
+        if self.compute_initial_guess_method is not None and self.x_prev is None and self.u_prev is None:
+            x_guess, u_guess = self.compute_initial_guess(obs)
             opti.set_initial(x_var, x_guess)
             opti.set_initial(u_var, u_guess)  # Initial guess for optimization problem.
         if self.warmstart and self.x_prev is not None and self.u_prev is not None:
@@ -347,30 +348,32 @@ class MPC(BaseController):
             u_guess[:-1] = u_guess[1:]
             opti.set_initial(x_var, x_guess)
             opti.set_initial(u_var, u_guess)
+
+        if self.mode == 'tracking':
+            # increment the trajectory step after update the reference and initial guess
+            self.traj_step += 1
+
         # Solve the optimization problem.
         try:
             sol = opti.solve()
             x_val, u_val = sol.value(x_var), sol.value(u_var)
         except RuntimeError:
             print(colored('Infeasible MPC Problem', 'red'))
+            return_status = opti.return_status()
+            print(colored(f'Optimization failed with status: {return_status}', 'red'))
             if self.solver == 'ipopt':
                 x_val, u_val = opti.debug.value(x_var), opti.debug.value(u_var)
             elif self.solver == 'qrsqp':
-                return_status = opti.return_status()
-                print(f'Optimization failed with status: {return_status}')
                 if return_status == 'unknown':
                     # self.terminate_loop = True
-                    u_val = self.u_prev
-                    x_val = self.x_prev
-                    if u_val is None:
-                        print('[WARN]: MPC Infeasible first step.')
-                        u_val = u_guess
-                        x_val = x_guess
-                elif return_status == 'Maximum_Iterations_Exceeded':
-                    self.terminate_loop = True
-                    u_val = opti.debug.value(u_var)
-                    x_val = opti.debug.value(x_var)
-                elif return_status == 'Search_Direction_Becomes_Too_Small':
+                    if self.u_prev is None:
+                        print(colored('[WARN]: MPC Infeasible first step.', 'yellow'))
+                        u_val = np.zeros((self.model.nu, self.T))
+                        x_val = np.zeros((self.model.nx, self.T + 1))
+                    else:
+                        u_val = self.u_prev
+                        x_val = self.x_prev
+                elif return_status in ['Maximum_Iterations_Exceeded', 'Infeasible_Problem_Detected']:
                     self.terminate_loop = True
                     u_val = opti.debug.value(u_var)
                     x_val = opti.debug.value(x_var)
@@ -386,6 +389,8 @@ class MPC(BaseController):
             action = u_val[:, 0]
         else:
             action = np.array([u_val[0]])
+        if self.use_lqr_gain_and_terminal_cost:
+            action += self.lqr_gain @ (obs - x_val[:, 0])
         self.prev_action = action
         return action
 
@@ -489,8 +494,7 @@ class MPC(BaseController):
             self.results_dict['action'].append(action)
             self.results_dict['state'].append(env.state)
             self.results_dict['state_mse'].append(info['mse'])
-            if self.solver == 'ipopt':
-                self.results_dict['state_error'].append(env.state - env.X_GOAL[i, :])
+            self.results_dict['state_error'].append(env.state - env.X_GOAL[i, :])
             common_metric += info['mse']
             print(i, '-th step.')
             print('action:', action)

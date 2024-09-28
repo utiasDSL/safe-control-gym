@@ -42,7 +42,7 @@ def compute_discrete_lqr_gain_from_cont_linear_system(dfdx, dfdu, Q_lqr, R_lqr, 
     btp = np.dot(B.T, P)
     lqr_gain = -np.dot(np.linalg.inv(R_lqr + np.dot(btp, B)), np.dot(btp, A))
 
-    return lqr_gain, A, B
+    return lqr_gain, A, B, P
 
 
 def rk_discrete(f, n, m, dt):
