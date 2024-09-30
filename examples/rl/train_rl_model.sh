@@ -10,7 +10,6 @@ TASK='track'
 
 ALGO='ppo'
 # ALGO='sac'
-# ALGO='ddpg'
 
 # ALGO='safe_explorer_ppo'
 

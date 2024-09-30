@@ -539,10 +539,6 @@ class Quadrotor(BaseAviary):
         Args:
             prior_prop (dict): specify the prior inertial prop to use in the symbolic model.
         '''
-        # if self.QUAD_TYPE is QuadType.TWO_D_ATTITUDE:
-        #     params_pitch_rate =  prior_prop.get('params_pitch_rate',
-        #     params_acc =
-        # else:
         m = prior_prop.get('M', self.MASS)
         Iyy = prior_prop.get('Iyy', self.J[1, 1])
 
@@ -925,15 +921,7 @@ class Quadrotor(BaseAviary):
         if self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE or self.QUAD_TYPE == QuadType.TWO_D_ATTITUDE_5S:
             collective_thrust, pitch = action
 
-            # rpm = self.attitude_control._dslPIDAttitudeControl(individual_thrust,
-            # self.quat[0], np.array([0, pitch, 0])) # input thrust is pwm
-            # thrust_action = self.KF * rpm**2
-            # thrust_action = self.attitude_control._dslPIDAttitudeControl(self.attitude_control.pwm2thrust(thrust_c/3),
-            # self.quat[0], np.array([0, pitch, 0])) # input thrust is in Newton
-            # print(f"collective_thrust: {collective_thrust}, pitch: {pitch}")
-
             if self.PHYSICS == Physics.DYN_2D:
-                # _, quat = p.getBasePositionAndOrientation(self.DRONE_IDS[0], physicsClientId=self.PYB_CLIENT)
                 quat = get_quaternion_from_euler(self.rpy[0, :])
             else:
                 _, quat = p.getBasePositionAndOrientation(self.DRONE_IDS[0], physicsClientId=self.PYB_CLIENT)

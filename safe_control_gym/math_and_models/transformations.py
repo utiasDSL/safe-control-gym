@@ -135,8 +135,8 @@ def csRotZ(psi):
       R: casadi Rotation matrix
     '''
     R = cs.blockcat([[cs.cos(psi), -cs.sin(psi), 0],
-                     [cs.sin(psi),  cs.cos(psi), 0],
-                     [          0,            0, 1]])
+                     [cs.sin(psi), cs.cos(psi), 0],
+                     [0, 0, 1]])
     return R
 
 
@@ -149,8 +149,8 @@ def csRotY(theta):
     Returns:
       R: casadi Rotation matrix
     '''
-    R = cs.blockcat([[ cs.cos(theta), 0, cs.sin(theta)],
-                     [             0, 1,             0],
+    R = cs.blockcat([[cs.cos(theta), 0, cs.sin(theta)],
+                     [0, 1, 0],
                      [-cs.sin(theta), 0, cs.cos(theta)]])
     return R
 
@@ -164,9 +164,9 @@ def csRotX(phi):
     Returns:
       R: casadi Rotation matrix
     '''
-    R = cs.blockcat([[ 1,           0,            0],
-                     [ 0, cs.cos(phi), -cs.sin(phi)],
-                     [ 0, cs.sin(phi),  cs.cos(phi)]])
+    R = cs.blockcat([[1, 0, 0],
+                     [0, cs.cos(phi), -cs.sin(phi)],
+                     [0, cs.sin(phi), cs.cos(phi)]])
     return R
 
 
@@ -206,24 +206,24 @@ def RotXYZ(phi, theta, psi):
 def npRotZ(psi):
     '''Numpy version of csRotZ.'''
     R = np.array([[np.cos(psi), -np.sin(psi), 0],
-                  [np.sin(psi),  np.cos(psi), 0],
-                  [          0,            0, 1]])
+                  [np.sin(psi), np.cos(psi), 0],
+                  [0, 0, 1]])
     return R
 
 
 def npRotY(theta):
     '''Numpy version of csRotY.'''
-    R = np.array([[ np.cos(theta), 0, np.sin(theta)],
-                  [             0, 1,             0],
+    R = np.array([[np.cos(theta), 0, np.sin(theta)],
+                  [0, 1, 0],
                   [-np.sin(theta), 0, np.cos(theta)]])
     return R
 
 
 def npRotX(phi):
     '''Numpy version of csRotX.'''
-    R = np.array([[ 1,           0,            0],
-                  [ 0, np.cos(phi), -np.sin(phi)],
-                  [ 0, np.sin(phi),  np.cos(phi)]])
+    R = np.array([[1, 0, 0],
+                  [0, np.cos(phi), -np.sin(phi)],
+                  [0, np.sin(phi), np.cos(phi)]])
     return R
 
 
@@ -242,18 +242,27 @@ def npRotXYZ(phi, theta, psi):
     R = npRotZ(psi) @ npRotY(theta) @ npRotX(phi)
     return R
 
-def get_angularvelocity_rpy(rpy, rpy_rates):
-    """
+
+def get_angular_velocity_rpy(rpy, rpy_rates):
+    '''
     Convert rpy and rpy_rates to body-frame angular velocity
-    """
+
+    Input
+      :param rpy: roll, pitch, yaw
+      :param rpy_rates: rates for roll, pitch, yaw
+
+    Output
+      :param ang_v: angular velocity
+    '''
     phi, theta, psi = rpy[0], rpy[1], rpy[2]
     ang_v = np.array([[1, 0, -np.sin(theta)],
                       [0, np.cos(phi), np.sin(phi) * np.cos(theta)],
                       [0, -np.sin(phi), np.cos(phi) * np.cos(theta)]]) @ rpy_rates
     return ang_v
 
+
 def get_quaternion_from_euler(rpy):
-    """
+    '''
     Convert an Euler angle to a quaternion.
     roll: The roll (rotation around x-axis) angle in radians.
     pitch: The pitch (rotation around y-axis) angle in radians.
@@ -264,7 +273,7 @@ def get_quaternion_from_euler(rpy):
 
     Output
       :return qx, qy, qz, qw: The orientation in quaternion [x,y,z,w] format
-    """
+    '''
     roll, pitch, yaw = rpy[0], rpy[1], rpy[2]
     qx = np.sin(roll / 2) * np.cos(pitch / 2) * np.cos(yaw / 2) - np.cos(roll / 2) * np.sin(pitch / 2) * np.sin(yaw / 2)
     qy = np.cos(roll / 2) * np.sin(pitch / 2) * np.cos(yaw / 2) + np.sin(roll / 2) * np.cos(pitch / 2) * np.sin(yaw / 2)

@@ -21,7 +21,7 @@ import casadi as cs
 from termcolor import colored
 
 from safe_control_gym.envs.benchmark_env import BenchmarkEnv
-from safe_control_gym.math_and_models.transformations import csRotXYZ, get_angularvelocity_rpy
+from safe_control_gym.math_and_models.transformations import csRotXYZ, get_angular_velocity_rpy
 
 egl = pkgutil.get_loader('eglRenderer')
 
@@ -42,7 +42,7 @@ class Physics(str, Enum):
     PYB_DW = 'pyb_dw'  # PyBullet physics update with downwash.
     PYB_GND_DRAG_DW = 'pyb_gnd_drag_dw'  # PyBullet physics update with ground effect, drag, and downwash.
     RK4 = 'rk4'  # Update with a Runge-Kutta 4th order integrator.
-    DYN_2D = 'dyn_2d'  # Update with Physics 5 state dynamics model
+    DYN_2D = 'dyn_2d'  # Update with Physics 6 state dynamics model
     DYN_SI = 'dyn_si'  # Update with SysId 6 state dynamics model
 
 
@@ -225,9 +225,6 @@ class BaseAviary(BenchmarkEnv):
         self.vel = np.zeros((self.NUM_DRONES, 3))
         self.ang_v = np.zeros((self.NUM_DRONES, 3))
         self.rpy_rates = np.zeros((self.NUM_DRONES, 3))
-        # if (self.PHYSICS == Physics.DYN or self.PHYSICS == Physics.RK4
-        #         or self.PHYSICS == Physics.DYN_2D or self.PHYSICS == Physics.DYN_SI):
-        #     self.rpy_rates = np.zeros((self.NUM_DRONES, 3))
 
         # Set PyBullet's parameters.
         p.resetSimulation(physicsClientId=self.PYB_CLIENT)
@@ -268,7 +265,6 @@ class BaseAviary(BenchmarkEnv):
             disturbance_force (ndarray, optional): Disturbance force, applied to all drones.
         '''
         time_before_stepping = time.time()
-        # clipped_action = np.reshape(clipped_action, (self.NUM_DRONES, 4))
         clipped_action = np.expand_dims(clipped_action, axis=0)
 
         # Repeat for as many as the aggregate physics steps.
@@ -292,29 +288,24 @@ class BaseAviary(BenchmarkEnv):
                 elif self.PHYSICS == Physics.DYN_SI:
                     self._dynamics_si(clipped_action[i, :], i, disturbance_force)
                 elif self.PHYSICS == Physics.RK4:
-                    self._dynamics_rk4(clipped_action[i, :], i)
+                    self._dynamics_rk4(rpm, i)
                 elif self.PHYSICS == Physics.PYB_GND:
-                    self._physics(clipped_action[i, :], i)
-                    self._ground_effect(clipped_action[i, :], i)
+                    self._physics(rpm, i)
+                    self._ground_effect(rpm, i)
                 elif self.PHYSICS == Physics.PYB_DRAG:
-                    self._physics(clipped_action[i, :], i)
+                    self._physics(rpm, i)
                     self._drag(self.last_clipped_action[i, :], i)
                 elif self.PHYSICS == Physics.PYB_DW:
-                    self._physics(clipped_action[i, :], i)
+                    self._physics(rpm, i)
                     self._downwash(i)
                 elif self.PHYSICS == Physics.PYB_GND_DRAG_DW:
-                    self._physics(clipped_action[i, :], i)
-                    self._ground_effect(clipped_action[i, :], i)
+                    self._physics(rpm, i)
+                    self._ground_effect(rpm, i)
                     self._drag(self.last_clipped_action[i, :], i)
                     self._downwash(i)
                 # Apply disturbance
                 if disturbance_force is not None:
                     pos = self._get_drone_state_vector(i)[:3]
-                    '''
-                    NOTE: applyExternalForce only works when explicitly 
-                    stepping the simulation with p.stepSimulation().
-                    Therefore, 
-                    '''
                     p.applyExternalForce(
                         self.DRONE_IDS[i],
                         linkIndex=4,  # Link attached to the quadrotor's center of mass.
@@ -342,8 +333,7 @@ class BaseAviary(BenchmarkEnv):
         '''
         if self.first_render_call and not self.GUI:
             print(
-                '[WARNING] BaseAviary.render() is implemented as text-only, re-initialize the environment using '
-                'Aviary(gui=True) to use PyBullet\'s graphical interface'
+                '[WARNING] BaseAviary.render() is implemented as text-only, re-initialize the environment using Aviary(gui=True) to use PyBullet\'s graphical interface'
             )
             self.first_render_call = False
         if self.VERBOSE:
@@ -428,7 +418,6 @@ class BaseAviary(BenchmarkEnv):
             self.rpy[nth_drone, :], self.vel[nth_drone, :],
             self.ang_v[nth_drone, :], self.rpy_rates[nth_drone, :], self.last_clipped_action[nth_drone, :]
         ])
-        # state.reshape(20, )
         return state.copy()
 
     def _physics(self, rpm, nth_drone):
@@ -493,7 +482,7 @@ class BaseAviary(BenchmarkEnv):
     def _drag(self, rpm, nth_drone):
         '''PyBullet implementation of a drag model.
 
-        Based on the the system identification in (Forster, 2015).
+        Based on the system identification in (Forster, 2015).
 
         Args:
             rpm (ndarray): (4)-shaped array of ints containing the RPMs values of the 4 motors.
@@ -603,7 +592,6 @@ class BaseAviary(BenchmarkEnv):
         rpy = self.rpy[nth_drone, :]
         vel = self.vel[nth_drone, :]
         rpy_rates = self.rpy_rates[nth_drone, :]
-        # rotation = np.array(p.getMatrixFromQuaternion(quat)).reshape(3, 3)
         # Compute forces and torques.
         forces = np.array(rpm ** 2) * self.KF
         # Update state with discrete time dynamics.
@@ -702,7 +690,6 @@ class BaseAviary(BenchmarkEnv):
         vel = self.vel[nth_drone, :]
         ang_v = self.ang_v[nth_drone, :]
         rpy_rates = self.rpy_rates[nth_drone, :]
-        # rotation = np.array(p.getMatrixFromQuaternion(quat)).reshape(3, 3)
 
         # Compute forces and torques.
         forces = np.array(rpm ** 2) * self.KF
@@ -712,7 +699,6 @@ class BaseAviary(BenchmarkEnv):
         action = np.array([forces[0], forces[1], forces[2], forces[3]])
 
         # update state with RK4
-        # next_state = self.fd_func(x0=state, p=input)['xf'].full()[:, 0]
         X_dot = self.X_dot_fun(state, action).full()[:, 0]
         next_state = state + X_dot*self.PYB_TIMESTEP
 
@@ -723,21 +709,10 @@ class BaseAviary(BenchmarkEnv):
         ang_v = np.array([0, next_state[10], 0])
         ang_v = np.squeeze(ang_v)
 
-        # # Set PyBullet's state.
-        # p.resetBasePositionAndOrientation(self.DRONE_IDS[nth_drone],
-        #                                   pos,
-        #                                   p.getQuaternionFromEuler(rpy),
-        #                                   physicsClientId=self.PYB_CLIENT)
-        # # Note: the base's velocity only stored and not used #
-        # p.resetBaseVelocity(self.DRONE_IDS[nth_drone],
-        #                     vel,
-        #                     ang_v,  # ang_vel not computed by DYN
-        #                     physicsClientId=self.PYB_CLIENT)
         self.pos[nth_drone, :] = pos.copy()
         self.rpy[nth_drone, :] = rpy.copy()
         self.vel[nth_drone, :] = vel.copy()
         self.ang_v[nth_drone, :] = ang_v.copy()
-        # Store the roll, pitch, yaw rates for the next step #
         self.rpy_rates[nth_drone, :] = X_dot[6:9]
 
     def setup_dynamics_2d_expression(self):
@@ -790,7 +765,7 @@ class BaseAviary(BenchmarkEnv):
 
     def _dynamics_si(self, action, nth_drone, disturbance_force=None):
         '''Explicit dynamics implementation from the identified model.
-           NOTE: The dynamcis update is independent of the pybullet simulation.
+           NOTE: The dynamics update is independent of the pybullet simulation.
 
         Args:
             action (ndarray): (2)-shaped array of ints containing the desired collective thrust and pitch.
@@ -834,7 +809,7 @@ class BaseAviary(BenchmarkEnv):
         self.rpy[nth_drone, :] = rpy.copy()
         self.vel[nth_drone, :] = vel.copy()
         self.rpy_rates[nth_drone, :] = rpy_rates.copy()
-        self.ang_v[nth_drone, :] = get_angularvelocity_rpy(self.rpy[nth_drone, :], self.rpy_rates[nth_drone, :])
+        self.ang_v[nth_drone, :] = get_angular_velocity_rpy(self.rpy[nth_drone, :], self.rpy_rates[nth_drone, :])
 
     def setup_dynamics_si_expression(self):
         # Casadi states

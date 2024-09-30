@@ -65,7 +65,7 @@ def pwm2rpm(pwm, pwm2rpm_scale, pwm2rpm_const):
     return rpm
 
 
-class AttitudeControl(ABC):
+class AttitudeControl:
     """AttitudeControl Class."""
 
     def __init__(self,
@@ -153,7 +153,6 @@ class AttitudeControl(ABC):
             (4,1)-shaped array of integers containing the RPMs to apply to each of the 4 motors.
 
         """
-        # control_timestep = self.control_timestep
         sim_timestep = self.sim_timestep
         cur_rotation = np.array(p.getMatrixFromQuaternion(cur_quat)).reshape(3, 3)
         cur_rpy = np.array(p.getEulerFromQuaternion(cur_quat))
@@ -167,21 +166,17 @@ class AttitudeControl(ABC):
         self.integral_rpy_e = self.integral_rpy_e - rot_e * sim_timestep
         self.integral_rpy_e = np.clip(self.integral_rpy_e, -1500., 1500.)
         self.integral_rpy_e[0:2] = np.clip(self.integral_rpy_e[0:2], -1., 1.)
-        #### PID target torques ####################################
+        #### PID target torques ####
         target_torques = - np.multiply(self.P_COEFF_TOR, rot_e) \
             + np.multiply(self.D_COEFF_TOR, rpy_rates_e) \
             + np.multiply(self.I_COEFF_TOR, self.integral_rpy_e)
         target_torques = np.clip(target_torques, -3200, 3200)
-        # pwm = thrust + np.dot(self.MIXER_MATRIX, target_torques)
-        # pwm = np.clip(pwm, self.MIN_PWM, self.MAX_PWM)
-        # return self.PWM2RPM_SCALE * pwm + self.PWM2RPM_CONST
         return thrust + self.pwm2thrust(np.dot(self.MIXER_MATRIX, target_torques))
 
     def pwm2thrust(self, pwm):
         """Convert pwm to thrust using a quadratic function."""
 
         pwm_scaled = pwm / self.MAX_PWM
-        # pwm_scaled = pwm
         # solve quadratic equation using abc formula
         thrust = (-self.b_coeff + np.sqrt(self.b_coeff**2 - 4 * self.a_coeff * (self.c_coeff - pwm_scaled))) / (2 * self.a_coeff)
         return thrust
