@@ -12,6 +12,8 @@ def ppo_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, state_dim: int, a
     args:
         hps_dict: the dict of hyperparameters that will be optimized over
         trial: budget variable
+        state_dim: dimension of the state space
+        action_dim: dimension of the action space
 
     """
 
@@ -75,7 +77,8 @@ def sac_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, state_dim: int, a
     args:
         hps_dict: the dict of hyperparameters that will be optimized over
         trial: budget variable
-
+        state_dim: dimension of the state space
+        action_dim: dimension of the action space
     """
 
     # TODO: conditional hyperparameters
@@ -134,7 +137,8 @@ def gpmpc_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, state_dim: int,
     args:
         hps_dict: the dict of hyperparameters that will be optimized over
         trial: budget variable
-
+        state_dim: dimension of the state space
+        action_dim: dimension of the action space
     """
 
     horizon = trial.suggest_categorical('horizon', GPMPC_dict['horizon'])
@@ -183,7 +187,8 @@ def ilqr_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, state_dim: int, 
     args:
         hps_dict: the dict of hyperparameters that will be optimized over
         trial: budget variable
-
+        state_dim: dimension of the state space
+        action_dim: dimension of the action space
     """
 
     max_iterations = trial.suggest_categorical('max_iterations', iLQR_dict['max_iterations']['values'])
@@ -218,7 +223,8 @@ def ilqr_sf_sampler(hps_dict: Dict[str, Any], trial: optuna.Trial, state_dim: in
     args:
         hps_dict: the dict of hyperparameters that will be optimized over
         trial: budget variable
-
+        state_dim: dimension of the state space
+        action_dim: dimension of the action space
     """
 
     max_iterations = trial.suggest_categorical('max_iterations', iLQR_SF_dict['max_iterations'])

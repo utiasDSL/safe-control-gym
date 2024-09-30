@@ -102,7 +102,6 @@ class BaseHPO(ABC):
     def cast_to_original_type_from_config(self, param_name, param_value):
         """
         Cast the parameter to its original type based on the existing task or algo config.
-        If the parameter doesn't exist in the config, it falls back to the type defined in HYPERPARAMS_DICT.
 
         Args:
             param_name (str): Name of the hyperparameter.
@@ -154,9 +153,8 @@ class BaseHPO(ABC):
                         self.algo_config[base_param][index] = param_value
                     elif base_param in self.task_config:
                         self.task_config[base_param][index] = param_value
-
             # Handle the mapping based on the parameter name
-            if param_name in self.algo_config:
+            elif param_name in self.algo_config:
                 # If the param is related to the algorithm, update the algo_config
                 self.algo_config[param_name] = self.cast_to_original_type_from_config(param_name, param_value)
             elif param_name in self.task_config:

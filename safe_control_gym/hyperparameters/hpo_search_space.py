@@ -1,6 +1,7 @@
+"""Defines the hyperparameter search space for each algorithm."""
+
 from typing import Any, Dict
 
-# define the categorical choice or real interval for each hyperparameter, along with the scale
 PPO_dict = {
     'hidden_dim': {'values': [8, 16, 32, 64, 128, 256, 512], 'scale': 'uniform', 'type': int, 'cat': 'discrete'},
     'gamma': {'values': [0.9, 0.95, 0.98, 0.99, 0.995, 0.999, 0.9999], 'scale': 'uniform', 'type': float, 'cat': 'discrete'},

@@ -404,6 +404,7 @@ class MetricExtractor:
             'average_rmse': np.asarray(self.get_episode_rmse()).mean(),
             'rmse': np.asarray(self.get_episode_rmse()) if len(self.get_episode_rmse()) > 1 else self.get_episode_rmse()[0],
             'rmse_std': np.asarray(self.get_episode_rmse()).std(),
+            'exponentiated_rmse': np.asarray(self.get_episode_exponentiated_rmse()).mean(),
             'worst_case_rmse_at_0.5': compute_cvar(np.asarray(self.get_episode_rmse()), 0.5, lower_range=False),
             'failure_rate': np.asarray(self.get_episode_constraint_violations()).mean(),
             'average_constraint_violation': np.asarray(self.get_episode_constraint_violation_steps()).mean(),
@@ -456,6 +457,11 @@ class MetricExtractor:
             episode_rewards (list): The total reward of each episode.
         '''
         return self.get_episode_data('reward', postprocess_func=sum)
+    
+    def get_episode_exponentiated_rmse(self):
+        '''Total exponentiated rmse of episodes.'''
+
+        return self.get_episode_data('mse', postprocess_func=lambda x: float(np.exp(-np.sqrt(np.mean(x)))))
 
     def get_episode_rmse(self):
         '''Root mean square error of episodes.

@@ -38,7 +38,7 @@ class HPO_Vizier(BaseHPO):
                  sf_config=None,
                  load_study=False):
         """
-        Base class for Hyperparameter Optimization (HPO).
+        Hyperparameter Optimization (HPO) class using package Vizier.
         
         Args:
             hpo_config: Configuration specific to hyperparameter optimization.
@@ -198,15 +198,6 @@ class HPO_Vizier(BaseHPO):
         output_dir = os.path.join(self.output_dir, 'hpo')
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
-        
-        # delete the existing content of the directory
-        for file in os.listdir(output_dir):
-            file_path = os.path.join(output_dir, file)
-            try:
-                if os.path.isfile(file_path):
-                    os.unlink(file_path)
-            except Exception as e:
-                print(e)
 
         try:
             for optimal_trial in self.study_client.optimal_trials():
@@ -253,7 +244,7 @@ class HPO_Vizier(BaseHPO):
                 
                 # Extract parameters for each trial
                 trial_params = {key: val.value for key, val in t.parameters._items.items()}
-                trial_params = self.cast_to_original_type_from_config(trial_params)
+                trial_params = self.post_process_best_hyperparams(trial_params)
                 parameter_keys.update(trial_params.keys())  # Collect parameter keys dynamically
                 trial_data.append((trial_number, trial_value, trial_params))
 

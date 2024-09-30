@@ -64,7 +64,7 @@ def hpo(config):
                          config.load_study,
                          )
     else:
-        raise ValueError('Only Optuna and Vizier are supported for now.')
+        raise ValueError('Only optuna and vizier are supported for now.')
 
 
     hpo.hyperparameter_optimization()

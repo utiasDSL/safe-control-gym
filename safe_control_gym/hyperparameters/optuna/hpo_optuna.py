@@ -35,7 +35,7 @@ class HPO_Optuna(BaseHPO):
                  sf_config=None,
                  load_study=False):
         """
-        Base class for Hyperparameter Optimization (HPO).
+        Hyperparameter Optimization (HPO) class using package Optuna.
         
         Args:
             hpo_config: Configuration specific to hyperparameter optimization.
@@ -113,7 +113,8 @@ class HPO_Optuna(BaseHPO):
 
         self.study.optimize(self.objective,
                             catch=(RuntimeError,),
-                            callbacks=[MaxTrialsCallback(self.hpo_config.trials, states=(TrialState.COMPLETE,))],
+                            callbacks=[MaxTrialsCallback(self.hpo_config.trials, states=(TrialState.COMPLETE,)), 
+                                       self._warn_unused_parameter_callback],
                             )
 
         self.checkpoint()
@@ -140,14 +141,6 @@ class HPO_Optuna(BaseHPO):
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
-        # delete the existing content of the directory
-        for file in os.listdir(output_dir):
-            file_path = os.path.join(output_dir, file)
-            try:
-                if os.path.isfile(file_path):
-                    os.unlink(file_path)
-            except Exception as e:
-                print(e)
         try:
             # save meta data
             self.study.trials_dataframe().to_csv(output_dir + '/trials.csv')
@@ -166,7 +159,7 @@ class HPO_Optuna(BaseHPO):
                 for i in range(min(self.hpo_config.save_n_best_hps, len(self.study.trials))):
                     params = trials[i].params
                     params = self.post_process_best_hyperparams(params)
-                    with open(f'{output_dir}/hyperparameters_{trials[i].value:.4f}.yaml', 'w')as f:
+                    with open(f'{output_dir}/hyperparameters_trial{len(trials)}_{trials[i].value:.4f}.yaml', 'w')as f:
                         yaml.dump(params, f, default_flow_style=False)
             else:
                 best_trials = self.study.best_trials
@@ -237,3 +230,21 @@ class HPO_Optuna(BaseHPO):
             CVaR = sorted_returns[:VaR_idx].mean()
 
         return CVaR
+
+    def _warn_unused_parameter_callback(self, study: "optuna.Study", trial: FrozenTrial) -> None:
+        """User-defined callback to warn unused parameters."""
+        fixed_params = trial.system_attrs.get("fixed_params")
+        if fixed_params is None:
+            return
+
+        for param_name, param_value in fixed_params.items():
+            distribution = trial.distributions.get(param_name)
+            if distribution is None:
+                # Or you can raise a something exception here.
+                self.logger.info(f"Parameter '{param_name}' is not used at trial {trial.number}.")
+                continue
+
+            param_value_internal_repr = distribution.to_internal_repr(param_value)
+            if not distribution._contains(param_value_internal_repr):
+                # Or you can raise a something exception here.
+                self.logger.info(f"Parameter '{param_name}' is not used at trial {trial.number}.")
