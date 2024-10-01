@@ -66,7 +66,7 @@ class HPO_Optuna(BaseHPO):
         """
 
         # sample candidate hyperparameters
-        sampled_hyperparams = HYPERPARAMS_SAMPLER[self.algo](self.hps_config, trial, self.state_dim, self.action_dim)
+        sampled_hyperparams = HYPERPARAMS_SAMPLER[self.search_space_key](trial, self.state_dim, self.action_dim)
 
         # log trial number
         self.logger.info('Trial number: {}'.format(trial.number))
@@ -231,7 +231,7 @@ class HPO_Optuna(BaseHPO):
 
         return CVaR
 
-    def _warn_unused_parameter_callback(self, study: "optuna.Study", trial: FrozenTrial) -> None:
+    def _warn_unused_parameter_callback(self, study: optuna.Study, trial: FrozenTrial) -> None:
         """User-defined callback to warn unused parameters."""
         fixed_params = trial.system_attrs.get("fixed_params")
         if fixed_params is None:

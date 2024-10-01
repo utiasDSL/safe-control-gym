@@ -25,7 +25,7 @@ hpo_config:
     - 3000
     - 3000
     kernel: Matern
-    n_ind_points: 35
+    n_ind_points: 30
     num_epochs: 5
     num_samples: 75
     q_mpc: [1, 1, 1, 1]

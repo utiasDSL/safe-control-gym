@@ -52,7 +52,7 @@ task_config:
 
   # RL Reward
   rew_state_weight: [1, 1, 1, 1]
-  rew_act_weight: 0.1
+  rew_act_weight: [0.1]
   rew_exponential: True
 
   constraints:

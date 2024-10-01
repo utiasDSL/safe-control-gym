@@ -82,6 +82,16 @@ def test_hpo_cartpole(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, SAMPLER):
     config.hpo_config.repetitions = 1
     config.sampler = SAMPLER
 
+    # hyperparameter configurations (to make tests faster)
+    # should belong to the distributions defined in the search space
+    if 'optimization_iterations' in config.hpo_config.hps_config:
+        d = len(config.hpo_config.hps_config.optimization_iterations)
+        config.hpo_config.hps_config.optimization_iterations = [2400] * d
+    if 'num_epochs' in config.hpo_config.hps_config:
+        config.hpo_config.hps_config.num_epochs = 2
+    if 'max_env_steps' in config.hpo_config.hps_config:
+        config.hpo_config.hps_config.max_env_steps = 30000
+
     hpo(config)
 
     # delete output_dir

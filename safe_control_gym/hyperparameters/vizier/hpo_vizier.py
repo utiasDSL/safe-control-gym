@@ -63,7 +63,7 @@ class HPO_Vizier(BaseHPO):
         self.problem = vz.ProblemStatement()
         
         # define the search space
-        self.search_space = HYPERPARAMS_DICT[self.algo]
+        self.search_space = HYPERPARAMS_DICT[self.search_space_key]
         
         for hp_name, hp_info in self.search_space.items():
             hp_values = hp_info['values']
@@ -81,9 +81,9 @@ class HPO_Vizier(BaseHPO):
                 elif scale == 'log':
                     if is_list:
                         for i in range(len(self.hps_config[hp_name])):
-                            self.problem.search_space.root.add_float_param(f'{hp_name}_{i}', hp_values[0], hp_values[1], scale=vz.ScaleType.LOG)
+                            self.problem.search_space.root.add_float_param(f'{hp_name}_{i}', hp_values[0], hp_values[1], scale_type=vz.ScaleType.LOG)
                     else:
-                        self.problem.search_space.root.add_float_param(hp_name, hp_values[0], hp_values[1], scale=vz.ScaleType.LOG)
+                        self.problem.search_space.root.add_float_param(hp_name, hp_values[0], hp_values[1], scale_type=vz.ScaleType.LOG)
                 else:
                     raise ValueError('Invalid scale')
             
@@ -91,15 +91,12 @@ class HPO_Vizier(BaseHPO):
                 if scale == 'uniform':
                     self.problem.search_space.root.add_discrete_param(hp_name, hp_values)
                 elif scale == 'log':
-                    self.problem.search_space.root.add_discrete_param(hp_name, hp_values, scale=vz.ScaleType.LOG)
+                    self.problem.search_space.root.add_discrete_param(hp_name, hp_values, scale_type=vz.ScaleType.LOG)
                 else:
                     raise ValueError('Invalid scale')
             
             elif cat == 'categorical':
-                if isinstance(hp_info[0], str):
-                    self.problem.search_space.root.add_categorical_param(hp_name, hp_info)
-                else:
-                    raise ValueError('Categorical choices must be strings')
+                self.problem.search_space.root.add_categorical_param(hp_name, hp_info)
             else:
                 raise ValueError('Invalid hyperparameter category')
 
