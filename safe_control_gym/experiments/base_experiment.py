@@ -457,7 +457,7 @@ class MetricExtractor:
             episode_rewards (list): The total reward of each episode.
         '''
         return self.get_episode_data('reward', postprocess_func=sum)
-    
+
     def get_episode_exponentiated_rmse(self):
         '''Total exponentiated rmse of episodes.'''
 

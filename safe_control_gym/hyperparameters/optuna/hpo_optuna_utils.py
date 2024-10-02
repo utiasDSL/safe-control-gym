@@ -1,10 +1,12 @@
 """ Utils for Optuna hyperparameter optimization. """
 
-import optuna
-from typing import Dict, Any
+from typing import Any, Dict
 
-from safe_control_gym.hyperparameters.hpo_search_space import PPO_dict, SAC_dict, GPMPC_dict, iLQR_dict, iLQR_SF_dict
-from safe_control_gym.hyperparameters.hpo_search_space import is_log_scale
+import optuna
+
+from safe_control_gym.hyperparameters.hpo_search_space import (GPMPC_dict, PPO_dict, SAC_dict, iLQR_dict,
+                                                               iLQR_SF_dict, is_log_scale)
+
 
 def ppo_sampler(trial: optuna.Trial, state_dim: int, action_dim: int) -> Dict[str, Any]:
     """Sampler for PPO hyperparameters.
@@ -39,7 +41,6 @@ def ppo_sampler(trial: optuna.Trial, state_dim: int, action_dim: int) -> Dict[st
     actor_lr = trial.suggest_float('actor_lr', PPO_dict['actor_lr']['values'][0], PPO_dict['actor_lr']['values'][1], log=is_log_scale(PPO_dict['actor_lr']))
     critic_lr = trial.suggest_float('critic_lr', PPO_dict['critic_lr']['values'][0], PPO_dict['critic_lr']['values'][1], log=is_log_scale(PPO_dict['critic_lr']))
     max_env_steps = trial.suggest_categorical('max_env_steps', PPO_dict['max_env_steps']['values'])
-
 
     # cost parameters
     state_weight = [
@@ -156,7 +157,7 @@ def gpmpc_sampler(trial: optuna.Trial, state_dim: int, action_dim: int) -> Dict[
         trial.suggest_float(f'r_mpc_{i}', GPMPC_dict['r_mpc']['values'][0], GPMPC_dict['r_mpc']['values'][1], log=is_log_scale(GPMPC_dict['r_mpc']))
         for i in range(action_dim)
     ]
-    
+
     hps_suggestion = {
         'horizon': horizon,
         'kernel': kernel,
@@ -170,6 +171,7 @@ def gpmpc_sampler(trial: optuna.Trial, state_dim: int, action_dim: int) -> Dict[
     }
 
     return hps_suggestion
+
 
 def ilqr_sampler(trial: optuna.Trial, state_dim: int, action_dim: int) -> Dict[str, Any]:
     """Sampler for iLQR hyperparameters.
@@ -206,6 +208,7 @@ def ilqr_sampler(trial: optuna.Trial, state_dim: int, action_dim: int) -> Dict[s
     }
 
     return hps_suggestion
+
 
 def ilqr_sf_sampler(trial: optuna.Trial, state_dim: int, action_dim: int) -> Dict[str, Any]:
     """Sampler for iLQR hyperparameters with safety filter.
@@ -261,6 +264,7 @@ def ilqr_sf_sampler(trial: optuna.Trial, state_dim: int, action_dim: int) -> Dic
     }
 
     return hps_suggestion
+
 
 HYPERPARAMS_SAMPLER = {
     'ppo': ppo_sampler,

@@ -6,7 +6,7 @@
 # 2. Remove or backup the database if needed.
 # 3. Create a screen session screen, and detach it Ctrl+a d.
 # 4. Run this script by giving experiment name as the first arg, seed as the second, and number of parallel jobs as the third arg.
-# 5. If you want to kill them, run pkill -f "python ./.py". 
+# 5. If you want to kill them, run pkill -f "python ./.py".
 #####################
 
 cd ~/safe-control-gym

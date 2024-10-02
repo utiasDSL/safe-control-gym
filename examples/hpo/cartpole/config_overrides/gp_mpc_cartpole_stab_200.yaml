@@ -4,7 +4,7 @@ algo_config:
   deque_size: 10
   eval_batch_size: 10
   gp_approx: mean_eq
-  # gp_model_path: ./gp_mpc/results/ 
+  # gp_model_path: ./gp_mpc/results/
   gp_model_path: null
   horizon: 20
   prior_info:
@@ -60,7 +60,7 @@ algo_config:
   rand_data_selection: false
   terminate_train_on_done: True
   terminate_test_on_done: False
-  # parallel: False 
+  # parallel: False
   parallel: True
 
 device: cuda

@@ -27,6 +27,7 @@ class StdoutLogger:
         logger.addHandler(stream_handler)
         self.logger = logger
         self.file_handler = file_handler
+        self.stream_handler = stream_handler
 
     def info(self, msg):
         '''Chain print message to logger.'''
@@ -35,6 +36,11 @@ class StdoutLogger:
     def close(self):
         '''Free log file.'''
         self.file_handler.close()
+        self.stream_handler.close()
+
+        # Remove handlers from logger
+        self.logger.removeHandler(self.file_handler)
+        self.logger.removeHandler(self.stream_handler)
 
 
 class FileLogger:

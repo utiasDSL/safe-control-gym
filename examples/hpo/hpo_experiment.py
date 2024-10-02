@@ -3,7 +3,6 @@
 from safe_control_gym.hyperparameters.optuna.hpo_optuna import HPO_Optuna
 from safe_control_gym.hyperparameters.vizier.hpo_vizier import HPO_Vizier
 from safe_control_gym.utils.configuration import ConfigFactory
-from safe_control_gym.utils.registration import make
 from safe_control_gym.utils.utils import set_device_from_config, set_dir_from_config, set_seed_from_config
 
 
@@ -31,7 +30,7 @@ def hpo(config):
         pass
     else:
         raise ValueError('Only ppo, gp_mpc, gpmpc_acados, and ilqr are supported for now.')
-    
+
     # Experiment setup.
     set_dir_from_config(config)
     set_seed_from_config(config)
@@ -67,7 +66,6 @@ def hpo(config):
                          )
     else:
         raise ValueError('Only optuna and vizier are supported for now.')
-
 
     hpo.hyperparameter_optimization()
     print('Hyperparameter optimization done.')

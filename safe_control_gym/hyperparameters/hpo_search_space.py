@@ -42,9 +42,9 @@ GPMPC_dict = {
     'n_ind_points': {'values': [30, 40, 50], 'scale': 'uniform', 'type': int, 'cat': 'discrete'},
     'num_epochs': {'values': [2, 3, 4, 5, 6, 7, 8], 'scale': 'uniform', 'type': int, 'cat': 'discrete'},
     'num_samples': {'values': [70, 75, 80, 85], 'scale': 'uniform', 'type': int, 'cat': 'discrete'},
-    'optimization_iterations': {'values': [2400, 2600, 2800, 3000, 3200], 'scale': 'uniform', 'type': int, 'cat': 'discrete'}, # type belongs to int due to 1 DoF
+    'optimization_iterations': {'values': [2400, 2600, 2800, 3000, 3200], 'scale': 'uniform', 'type': int, 'cat': 'discrete'},  # type belongs to int due to 1 DoF
     'kernel': {'values': ['Matern', 'RBF'], 'scale': 'uniform', 'type': str, 'cat': 'categorical'},
-    'learning_rate': {'values': [5e-4, 0.5], 'scale': 'log', 'type': float, 'cat': 'float'}, # type belongs to float due to 1 DoF
+    'learning_rate': {'values': [5e-4, 0.5], 'scale': 'log', 'type': float, 'cat': 'float'},  # type belongs to float due to 1 DoF
     'q_mpc': {'values': [0.001, 10], 'scale': 'uniform', 'type': list, 'cat': 'float'},
     'r_mpc': {'values': [0.001, 10], 'scale': 'uniform', 'type': list, 'cat': 'float'},
 }
@@ -82,6 +82,7 @@ HYPERPARAMS_DICT = {
     'ilqr_sf': iLQR_SF_dict,
 }
 
+
 def is_log_scale(param: Dict[str, Any]) -> bool:
     """Check if the hyperparameter log scale.
 
@@ -90,7 +91,7 @@ def is_log_scale(param: Dict[str, Any]) -> bool:
 
     returns:
         bool: True if the hyperparameter is log-scaled, False otherwise
-    
+
     """
-    
+
     return param['scale'] == 'log'

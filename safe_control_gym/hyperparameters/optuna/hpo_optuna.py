@@ -6,6 +6,7 @@ Reference:
 
 """
 import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 import optuna
@@ -14,29 +15,26 @@ from optuna.samplers import TPESampler
 from optuna.study import MaxTrialsCallback
 from optuna.trial import FrozenTrial, TrialState
 from optuna.visualization.matplotlib import plot_optimization_history, plot_param_importances
-from optuna_dashboard import run_server
 
-from safe_control_gym.hyperparameters.optuna.hpo_optuna_utils import HYPERPARAMS_SAMPLER
 from safe_control_gym.hyperparameters.base_hpo import BaseHPO
-from safe_control_gym.utils.registration import make
-from safe_control_gym.utils.utils import mkdirs
+from safe_control_gym.hyperparameters.optuna.hpo_optuna_utils import HYPERPARAMS_SAMPLER
 
 
 class HPO_Optuna(BaseHPO):
-    
+
     def __init__(self,
                  hpo_config,
                  task_config,
                  algo_config,
-                 algo='ilqr', 
+                 algo='ilqr',
                  task='stabilization',
-                 output_dir='./results', 
-                 safety_filter=None, 
+                 output_dir='./results',
+                 safety_filter=None,
                  sf_config=None,
                  load_study=False):
         """
         Hyperparameter Optimization (HPO) class using package Optuna.
-        
+
         Args:
             hpo_config: Configuration specific to hyperparameter optimization.
             task_config: Configuration for the task.
@@ -113,7 +111,7 @@ class HPO_Optuna(BaseHPO):
 
         self.study.optimize(self.objective,
                             catch=(RuntimeError,),
-                            callbacks=[MaxTrialsCallback(self.hpo_config.trials, states=(TrialState.COMPLETE,)), 
+                            callbacks=[MaxTrialsCallback(self.hpo_config.trials, states=(TrialState.COMPLETE,)),
                                        self._warn_unused_parameter_callback],
                             )
 
@@ -126,13 +124,13 @@ class HPO_Optuna(BaseHPO):
     def warm_start(self, params):
         """
         Warm start the study.
-        
+
         Args:
             params (dict): Specified hyperparameters to be evaluated.
         """
         if hasattr(self, 'study'):
             self.study.enqueue_trial(params, skip_if_exists=True)
-    
+
     def checkpoint(self):
         """
         Save checkpoints, results, and logs during optimization.
@@ -207,9 +205,9 @@ class HPO_Optuna(BaseHPO):
         """
         if trial.value is None:
             if self.hpo_config.direction[0] == 'minimize':
-                return float('inf')
+                return self.objective_bounds[0][1]
             else:
-                return float('-inf')
+                return self.objective_bounds[0][0]
         else:
             return trial.value
 
@@ -233,7 +231,7 @@ class HPO_Optuna(BaseHPO):
 
     def _warn_unused_parameter_callback(self, study: optuna.Study, trial: FrozenTrial) -> None:
         """User-defined callback to warn unused parameters."""
-        fixed_params = trial.system_attrs.get("fixed_params")
+        fixed_params = trial.system_attrs.get('fixed_params')
         if fixed_params is None:
             return
 

@@ -6,6 +6,7 @@ import pytest
 from examples.hpo.hpo_experiment import hpo
 from safe_control_gym.utils.configuration import ConfigFactory
 
+
 @pytest.mark.parametrize('SYS', ['cartpole'])
 @pytest.mark.parametrize('TASK', ['stab'])
 @pytest.mark.parametrize('ALGO', ['ilqr', 'gp_mpc', 'ppo'])
@@ -49,7 +50,7 @@ def test_hpo_cartpole(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, SAMPLER):
             raise ValueError('SAFETY_FILTER is only supported for ilqr')
         SAFETY_FILTER_CONFIG_PATH = f'./examples/hpo/{SYS}/config_overrides/{SAFETY_FILTER}_{SYS}_{TASK}_{PRIOR}.yaml'
         assert os.path.exists(SAFETY_FILTER_CONFIG_PATH), f'{SAFETY_FILTER_CONFIG_PATH} does not exist'
-        MPSC_COST='one_step_cost'
+        MPSC_COST = 'one_step_cost'
         sys.argv[1:] = ['--algo', ALGO,
                         '--task', SYS,
                         '--overrides',
@@ -76,7 +77,7 @@ def test_hpo_cartpole(SYS, TASK, ALGO, PRIOR, SAFETY_FILTER, SAMPLER):
 
     fac = ConfigFactory()
     fac.add_argument('--load_study', type=bool, default=False, help='whether to load study from a previous HPO.')
-    fac.add_argument('--sampler', type=str, default='Optuna', help='which sampler to use in HPO.')
+    fac.add_argument('--sampler', type=str, default='optuna', help='which sampler to use in HPO.')
     config = fac.merge()
     config.hpo_config.trials = 1
     config.hpo_config.repetitions = 1
