@@ -92,7 +92,7 @@ class HPO_Vizier(BaseHPO):
                     raise ValueError('Invalid scale')
 
             elif cat == 'categorical':
-                self.problem.search_space.root.add_categorical_param(hp_name, hp_info)
+                self.problem.search_space.root.add_categorical_param(hp_name, hp_values)
             else:
                 raise ValueError('Invalid hyperparameter category')
 
@@ -160,7 +160,7 @@ class HPO_Vizier(BaseHPO):
             completed_trial_filter = vz.TrialFilter(status=[vz.TrialStatus.COMPLETED])
             finished_trials = len(list(self.study_client.trials(trial_filter=completed_trial_filter).get()))
             # wait until other clients to finish
-            while finished_trials != self.hpo_config.trials:
+            while finished_trials < self.hpo_config.trials:
                 self.logger.info(f'Waiting for other clients to finish remaining trials: {self.hpo_config.trials - finished_trials}')
                 finished_trials = len(list(self.study_client.trials(trial_filter=completed_trial_filter).get()))
                 # sleep for 10 seconds
@@ -196,21 +196,21 @@ class HPO_Vizier(BaseHPO):
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
+        completed_trial_filter = vz.TrialFilter(status=[vz.TrialStatus.COMPLETED])
+        all_trials = [tc.materialize() for tc in self.study_client.trials(trial_filter=completed_trial_filter)]
+
         try:
             for optimal_trial in self.study_client.optimal_trials():
                 optimal_trial = optimal_trial.materialize()
                 params = {key: val.value for key, val in optimal_trial.parameters._items.items()}
                 params = self.post_process_best_hyperparams(params)
-                with open(f'{output_dir}/hyperparameters_{optimal_trial.final_measurement.metrics[self.hpo_config.objective[0]].value:.4f}.yaml', 'w')as f:
+                with open(f'{output_dir}/hyperparameters_trial{len(all_trials)}_{optimal_trial.final_measurement.metrics[self.hpo_config.objective[0]].value:.4f}.yaml', 'w')as f:
                     yaml.dump(params, f, default_flow_style=False)
         except Exception as e:
             print(e)
             print('Saving hyperparameters failed')
 
         try:
-            completed_trial_filter = vz.TrialFilter(status=[vz.TrialStatus.COMPLETED])
-            all_trials = [tc.materialize() for tc in self.study_client.trials(trial_filter=completed_trial_filter)]
-
             # Visualize all trials so-far.
             trial_i = [t for t in range(len(all_trials))]
             trial_ys = [t.final_measurement.metrics[self.hpo_config.objective[0]].value for t in all_trials]

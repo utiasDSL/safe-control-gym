@@ -14,7 +14,7 @@ cd ~/safe-control-gym
 experiment_name=$1
 seed1=$2
 parallel_jobs=$3 # Number of parallel jobs
-sampler=$4 # Optuna or Vizier
+sampler=$4 # optuna or vizier
 localOrHost=$5
 sys=$6 # cartpole, or quadrotor_2D_attitude
 sys_name=${sys%%_*} # cartpole, or quadrotor
@@ -147,6 +147,6 @@ done
 
 # back up the database after all jobs finish
 echo "backing up the database"
-mv ${algo}_hpo.db ./examples/hpo/hpo/${algo}/${experiment_name}/${algo}_hpo_${algo}.db
-mv ${algo}_hpo.db-journal ./examples/hpo/hpo/${algo}/${experiment_name}/${algo}_hpo_${algo}.db-journal
+mv ${algo}_hpo_${sampler}.db ./examples/hpo/hpo/${algo}/${experiment_name}/${algo}_hpo_${algo}.db
+mv ${algo}_hpo${sampler}.db-journal ./examples/hpo/hpo/${algo}/${experiment_name}/${algo}_hpo_${algo}.db-journal
 mv ${algo}_hpo_endpoint.yaml ./examples/hpo/hpo/${algo}/${experiment_name}/${algo}_hpo_endpoint.yaml
