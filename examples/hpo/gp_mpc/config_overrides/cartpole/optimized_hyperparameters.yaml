@@ -1,7 +1,0 @@
-horizon: 35
-kernel: 'RBF'
-n_ind_points: 40
-num_epochs: 5
-num_samples: 75
-optimization_iterations: [2800, 2800, 2800, 2800]
-learning_rate: [0.023172075157730145, 0.023172075157730145, 0.023172075157730145, 0.023172075157730145]
