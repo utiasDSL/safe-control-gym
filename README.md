@@ -73,6 +73,13 @@ or
  sudo apt-get install libgmp-dev
  ```
 
+ #### (optional) Additional requirements for MPC
+
+You may need to separately install [`acados`](https://github.com/acados/acados) for fast MPC implementations.
+
+- To build and install acados, see their [installation guide](https://docs.acados.org/installation/index.html).
+- To set up the acados python interface, check out [these installtion steps](https://docs.acados.org/python_interface/index.html).
+
 ## Architecture
 
 Overview of [`safe-control-gym`](https://arxiv.org/abs/2109.06325)'s API:
