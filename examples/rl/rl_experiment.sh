@@ -2,13 +2,15 @@
 
 # SYS='cartpole'
 # SYS='quadrotor_2D'
-SYS='quadrotor_3D'
+SYS='quadrotor_2D_attitude'
+# SYS='quadrotor_3D'
 
-# TASK='stab'
+#TASK='stab'
 TASK='track'
 
 ALGO='ppo'
 # ALGO='sac'
+# ALGO='safe_explorer_ppo'
 # ALGO='safe_explorer_ppo'
 
 if [ "$SYS" == 'cartpole' ]; then

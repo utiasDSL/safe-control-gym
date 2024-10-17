@@ -5,7 +5,7 @@ import pytest
 from examples.pid.pid_experiment import run
 
 
-@pytest.mark.parametrize('SYS',  ['quadrotor_2D', 'quadrotor_3D'])
+@pytest.mark.parametrize('SYS',  ['quadrotor_2D', 'quadrotor_2D_attitude', 'quadrotor_3D'])
 @pytest.mark.parametrize('TASK', ['stabilization', 'tracking'])
 def test_pid(SYS, TASK):
     sys.argv[1:] = ['--algo', 'pid',

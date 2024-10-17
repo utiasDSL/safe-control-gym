@@ -3,7 +3,8 @@
 # PID Experiment.
 
 # SYS='quadrotor_2D'
-SYS='quadrotor_3D'
+SYS='quadrotor_2D_attitude'
+# SYS='quadrotor_3D'
 
 # TASK='stabilization'
 TASK='tracking'

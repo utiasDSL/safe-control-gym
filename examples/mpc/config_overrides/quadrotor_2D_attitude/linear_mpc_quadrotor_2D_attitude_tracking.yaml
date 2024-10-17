@@ -1,0 +1,20 @@
+algo: linear_mpc
+algo_config:
+  horizon: 40
+  r_mpc:
+    - 0.1
+    - 0.1
+  q_mpc:
+    - 1.0
+    - 0.1
+    - 1.0
+    - 0.1
+    - 0.1
+    - 0.1
+  # Prior info
+  prior_info:
+    prior_prop: null
+    randomize_prior_prop: False
+    prior_prop_rand_info: null
+  warmstart: True
+  solver: qrqp
