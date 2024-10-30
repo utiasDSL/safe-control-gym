@@ -39,6 +39,7 @@ class LinearMPC(MPC):
             output_dir='results/temp',
             additional_constraints=None,
             use_lqr_gain_and_terminal_cost: bool = False,
+            compute_initial_guess_method=None,
             **kwargs):
         '''Creates task and controller.
 
@@ -74,7 +75,7 @@ class LinearMPC(MPC):
             output_dir=output_dir,
             additional_constraints=additional_constraints,
             use_lqr_gain_and_terminal_cost=use_lqr_gain_and_terminal_cost,
-            compute_initial_guess_method='lqr',  # use lqr initial guess by default
+            compute_initial_guess_method=compute_initial_guess_method,
             **kwargs
         )
 
@@ -254,7 +255,8 @@ class LinearMPC(MPC):
             self.u_prev = u_val
             self.results_dict['horizon_states'].append(deepcopy(self.x_prev) + self.X_EQ[:, None])
             self.results_dict['horizon_inputs'].append(deepcopy(self.u_prev) + self.U_EQ[:, None])
-        except RuntimeError:
+        except RuntimeError as e:
+            print(e)
             print(colored('Infeasible MPC Problem', 'red'))
             return_status = opti.return_status()
             print(colored(f'Optimization failed with status: {return_status}', 'red'))

@@ -106,7 +106,11 @@ class MPC_ACADOS(MPC):
         self.acados_ocp_solver = AcadosOcpSolver(self.ocp)
 
     def setup_acados_model(self) -> AcadosModel:
-        '''Sets up symbolic model for acados.'''
+        '''Sets up symbolic model for acados.
+
+        Returns:
+            acados_model (AcadosModel): acados model object.
+        '''
 
         acados_model = AcadosModel()
         acados_model.x = self.model.x_sym
@@ -137,7 +141,12 @@ class MPC_ACADOS(MPC):
 
     @timing
     def compute_initial_guess(self, init_state, goal_states=None):
-        '''Use IPOPT to get an initial guess of the solution.'''
+        '''Use IPOPT to get an initial guess of the solution.
+
+        Args:
+            init_state (ndarray): Initial state.
+            goal_states (ndarray): Goal states.
+        '''
         x_val, u_val = super().compute_initial_guess(init_state, goal_states)
         self.x_guess = x_val
         self.u_guess = u_val
