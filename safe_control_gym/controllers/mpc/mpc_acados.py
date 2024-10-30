@@ -79,7 +79,7 @@ class MPC_ACADOS(MPC):
             constraint_tol=constraint_tol,
             output_dir=output_dir,
             additional_constraints=additional_constraints,
-            compute_initial_guess_method='ipopt',  # use ipopt initial guess by default
+            # compute_initial_guess_method='ipopt',  # use ipopt initial guess by default
             use_lqr_gain_and_terminal_cost=use_lqr_gain_and_terminal_cost,
             use_gpu=use_gpu,
             seed=seed,
@@ -331,7 +331,8 @@ class MPC_ACADOS(MPC):
         if self.mode == 'tracking':
             self.traj_step += 1
 
-        y_ref = np.concatenate((goal_states[:, :-1], np.zeros((nu, self.T))))
+        y_ref = np.concatenate((goal_states[:, :-1],
+                                np.repeat(self.U_EQ.reshape(-1, 1), self.T, axis=1)), axis=0)
         for idx in range(self.T):
             self.acados_ocp_solver.set(idx, 'yref', y_ref[:, idx])
         y_ref_e = goal_states[:, -1]

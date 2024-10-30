@@ -150,14 +150,14 @@ class LinearMPC(MPC):
             cost += cost_func(x=x_var[:, i] + self.X_EQ[:, None],
                               u=u_var[:, i] + self.U_EQ[:, None],
                               Xr=x_ref[:, i],
-                              Ur=np.zeros((nu, 1)),
+                              Ur=self.U_EQ,
                               Q=self.Q,
                               R=self.R)['l']
         # Terminal cost.
         cost += cost_func(x=x_var[:, -1] + self.X_EQ[:, None],
                           u=np.zeros((nu, 1)) + self.U_EQ[:, None],
                           Xr=x_ref[:, -1],
-                          Ur=np.zeros((nu, 1)),
+                          Ur=self.U_EQ,
                           Q=self.Q if not self.use_lqr_gain_and_terminal_cost else self.P,
                           R=self.R)['l']
         for i in range(self.T):
