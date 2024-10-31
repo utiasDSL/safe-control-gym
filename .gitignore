@@ -150,6 +150,4 @@ dmypy.json
 
 
 # acados
-ilqr_contraction
-arxiv
 acados_ocp_nlp.json

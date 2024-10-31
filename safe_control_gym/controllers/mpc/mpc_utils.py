@@ -105,6 +105,9 @@ def set_acados_constraint_bound(constraint,
         bound_type (str): Type of bound (lb, ub).
         bound_value (float): Value of the bound.
 
+    Returns:
+        bound (np.array): Constraint bound value.
+
     Note:
         all constraints in safe-control-gym are defined as g(x, u) <= constraint_tol
         However, acados requires the constraints to be defined as lb <= g(x, u) <= ub

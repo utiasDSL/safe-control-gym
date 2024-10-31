@@ -1,4 +1,4 @@
-algo: mpc
+algo: mpc_acados
 algo_config:
   horizon: 20
   r_mpc:

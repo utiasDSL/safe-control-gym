@@ -31,6 +31,7 @@ class LinearMPC(MPC):
             r_mpc=[1],
             warmstart=True,
             soft_constraints=False,
+            soft_penalty: float = 10000,
             terminate_run_on_done=True,
             constraint_tol: float = 1e-8,
             solver: str = 'sqpmethod',
@@ -56,6 +57,7 @@ class LinearMPC(MPC):
             output_dir (str): output directory to write logs and results.
             additional_constraints (list): list of constraints.
             use_lqr_gain_and_terminal_cost (bool): Use LQR ancillary gain and terminal cost in the MPC.
+            compute_initial_guess_method (str): Method to compute the initial guess for the MPC. Options: None, 'ipopt', 'lqr'.
         '''
         # Store all params/args.
         for k, v in locals().items():
@@ -69,6 +71,7 @@ class LinearMPC(MPC):
             r_mpc=r_mpc,
             warmstart=warmstart,
             soft_constraints=soft_constraints,
+            soft_penalty=soft_penalty,
             terminate_run_on_done=terminate_run_on_done,
             constraint_tol=constraint_tol,
             # prior_info=prior_info,
@@ -80,9 +83,6 @@ class LinearMPC(MPC):
         )
 
         # TODO: setup environment equilibrium
-        # self.X_EQ = np.atleast_2d(self.env.X_GOAL)[0,:].T
-        # self.U_EQ = np.atleast_2d(self.env.U_GOAL)[0,:]
-
         self.X_EQ = np.atleast_2d(self.model.X_EQ)[0, :].T
         self.U_EQ = np.atleast_2d(self.model.U_EQ)[0, :].T
         assert solver in ['qpoases', 'qrqp', 'sqpmethod', 'ipopt'], '[Error]. MPC Solver not supported.'
@@ -166,7 +166,7 @@ class LinearMPC(MPC):
             opti.subject_to(x_var[:, i + 1] == next_state)
 
             # State and input constraints
-            soft_con_coeff = 10
+            soft_con_coeff = self.soft_penalty
             for sc_i, state_constraint in enumerate(self.state_constraints_sym):
                 if self.soft_constraints:
                     opti.subject_to(state_constraint(x_var[:, i] + self.X_EQ.T) <= state_slack[sc_i])
@@ -270,7 +270,7 @@ class LinearMPC(MPC):
                     u_val = self.u_prev
                     x_val = self.x_prev
             elif return_status in ['Infeasible_Problem_Detected', 'Infeasible_Problem']:
-                self.terminate_loop = True
+                # self.terminate_loop = True
                 u_val = opti.debug.value(u_var)
 
         # take first one from solved action sequence

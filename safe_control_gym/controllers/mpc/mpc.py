@@ -50,6 +50,7 @@ class MPC(BaseController):
             r_mpc (list): diagonals of input/action cost weight.
             warmstart (bool): if to initialize from previous iteration.
             soft_constraints (bool): Formulate the constraints as soft constraints.
+            soft_penalty (float): Penalty added in the cost function for soft constraints.
             terminate_run_on_done (bool): Terminate the run when the environment returns done or not.
             constraint_tol (float): Tolerance to add the the constraint as sometimes solvers are not exact.
             output_dir (str): output directory to write logs and results.

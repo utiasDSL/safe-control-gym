@@ -55,6 +55,7 @@ class MPC_ACADOS(MPC):
             r_mpc (list): diagonals of input/action cost weight.
             warmstart (bool): if to initialize from previous iteration.
             soft_constraints (bool): Formulate the constraints as soft constraints.
+            soft_penalty (float): Penalty added to acados formulation for soft constraints.
             terminate_run_on_done (bool): Terminate the run when the environment returns done or not.
             constraint_tol (float): Tolerance to add the the constraint as sometimes solvers are not exact.
             output_dir (str): output directory to write logs and results.
@@ -85,9 +86,6 @@ class MPC_ACADOS(MPC):
             seed=seed,
             **kwargs
         )
-
-        self.x_guess = None
-        self.u_guess = None
         # acados settings
         self.use_RTI = use_RTI
 
@@ -95,6 +93,8 @@ class MPC_ACADOS(MPC):
     def reset(self):
         '''Prepares for training or evaluation.'''
         print(colored('Resetting MPC', 'green'))
+        self.x_guess = None
+        self.u_guess = None
         super().reset()
         self.acados_model = None
         self.ocp = None
@@ -110,6 +110,12 @@ class MPC_ACADOS(MPC):
 
         Returns:
             acados_model (AcadosModel): acados model object.
+
+        Other options to set up the model:
+        f_expl = self.model.x_dot (explicit continuous-time dynamics)
+        f_impl = self.model.x_dot_acados - f_expl (implicit continuous-time dynamics)
+        model.f_impl_expr = f_impl
+        model.f_expl_expr = f_expl
         '''
 
         acados_model = AcadosModel()
@@ -125,13 +131,7 @@ class MPC_ACADOS(MPC):
         f_disc = acados_model.x + self.dt / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
 
         acados_model.disc_dyn_expr = f_disc
-        '''
-        Other options to set up the model:
-        f_expl = self.model.x_dot (explicit continuous-time dynamics)
-        f_impl = self.model.x_dot_acados - f_expl (implicit continuous-time dynamics)
-        model.f_impl_expr = f_impl
-        model.f_expl_expr = f_expl
-        '''
+
         # store meta information # NOTE: unit is missing
         acados_model.x_labels = self.env.STATE_LABELS
         acados_model.u_labels = self.env.ACTION_LABELS
@@ -226,8 +226,8 @@ class MPC_ACADOS(MPC):
         ocp.solver_options.integrator_type = 'DISCRETE'
         ocp.solver_options.nlp_solver_type = 'SQP' if not self.use_RTI else 'SQP_RTI'
         ocp.solver_options.nlp_solver_max_iter = 25 if not self.use_RTI else 1
+        ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
         # ocp.solver_options.globalization = 'FUNNEL_L1PEN_LINESEARCH' if not self.use_RTI else 'MERIT_BACKTRACKING'
-        # ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
         ocp.solver_options.tf = self.T * self.dt  # prediction horizon
 
         # c code generation
