@@ -49,3 +49,7 @@ register(idx='rarl',
 register(idx='rap',
          entry_point='safe_control_gym.controllers.rarl.rap:RAP',
          config_entry_point='safe_control_gym.controllers.rarl:rap.yaml')
+
+register(idx='mpcacados',
+         entry_point='safe_control_gym.controllers.mpcacados.mpcacados:MPCAcados',
+         config_entry_point='safe_control_gym.controllers.mpcacados:mpcacados.yaml')

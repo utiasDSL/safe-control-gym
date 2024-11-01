@@ -1,0 +1,13 @@
+# MPC acados args
+horizon: 10
+r_mpc:
+  - 0.1
+q_mpc:
+  - 1.
+warmstart: True
+soft_constraints: False
+constraint_tol: 1.0e-6
+
+# Runner args
+deque_size: 10
+eval_batch_size: 10
