@@ -11,6 +11,7 @@ from safe_control_gym.controllers.mpc.mpc_utils import (compute_discrete_lqr_gai
                                                         reset_constraints, rk_discrete)
 from safe_control_gym.envs.benchmark_env import Task
 from safe_control_gym.envs.constraints import GENERAL_CONSTRAINTS, create_constraint_list
+from acados_template import AcadosOcp, AcadosOcpSolver, AcadosModel
 
 
 class MPCAcados(BaseController):
@@ -72,7 +73,40 @@ class MPCAcados(BaseController):
                 self.env.constraints.constraints)
             self.additional_constraints = []
         # Model parameters
-        self.model = self.get_prior(self.env)
+        gym_model = self.get_prior(self.env)
+        ocp = AcadosOcp()
+        ocp.model.f_expl_expr = gym_model.x_dot
+        ocp.model.x = gym_model.x_sym
+        ocp.model.xdot = cs.MX.sym("xdot", ocp.model.x.shape)
+        ocp.model.f_impl_expr = ocp.model.xdot - ocp.model.f_expl_expr
+        ocp.model.u = gym_model.u_sym
+        ocp.model.name = "quadrotor_3D"
+        ocp.solver_options.N_horizon = horizon
+        ocp.solver_options.tf = gym_model.dt * horizon
+        Q_mat = get_cost_weight_matrix(self.q_mpc, gym_model.nx)
+        R_mat = get_cost_weight_matrix(self.r_mpc, gym_model.nu)
+        # path cost
+        ocp.cost.cost_type = 'NONLINEAR_LS'
+        ocp.model.cost_y_expr = cs.vertcat(ocp.model.x, ocp.model.u)
+        ocp.cost.yref = np.zeros((gym_model.nx+gym_model.nu,))
+        ocp.cost.W = cs.diagcat(Q_mat, R_mat).full()
+        # terminal cost
+        ocp.cost.cost_type_e = 'NONLINEAR_LS'
+        ocp.cost.yref_e = np.zeros((gym_model.nx,))
+        ocp.model.cost_y_expr_e = ocp.model.x
+        ocp.cost.W_e = Q_mat
+        #  set solver options
+        ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'  # FULL_CONDENSING_QPOASES
+        # PARTIAL_CONDENSING_HPIPM, FULL_CONDENSING_QPOASES, FULL_CONDENSING_HPIPM,
+        # PARTIAL_CONDENSING_QPDUNES, PARTIAL_CONDENSING_OSQP, FULL_CONDENSING_DAQP
+        ocp.solver_options.hessian_approx = 'GAUSS_NEWTON'  # 'GAUSS_NEWTON', 'EXACT'
+        ocp.solver_options.integrator_type = 'ERK'
+        # ocp.solver_options.print_level = 1
+        ocp.solver_options.nlp_solver_type = 'SQP'  # SQP_RTI, SQP
+        ocp.solver_options.globalization = 'MERIT_BACKTRACKING'  # turns on globalization
+
+        self.ocp = ocp
+        self.model = gym_model
         self.dt = self.model.dt
         self.T = horizon
         self.Q = get_cost_weight_matrix(self.q_mpc, self.model.nx)
@@ -177,92 +211,31 @@ class MPCAcados(BaseController):
 
     def setup_optimizer(self):
         '''Sets up nonlinear optimization problem.'''
-        nx, nu = self.model.nx, self.model.nu
-        T = self.T
-        # Define optimizer and variables.
-        opti = cs.Opti()
-        # States.
-        x_var = opti.variable(nx, T + 1)
-        # Inputs.
-        u_var = opti.variable(nu, T)
-        # Initial state.
-        x_init = opti.parameter(nx, 1)
-        # Reference (equilibrium point or trajectory, last step for terminal cost).
-        x_ref = opti.parameter(nx, T + 1)
-        # Add slack variables
-        state_slack = opti.variable(len(self.state_constraints_sym))
-        input_slack = opti.variable(len(self.input_constraints_sym))
+        # TODO replace casadi opti with acados, add constraint
 
-        # cost (cumulative)
-        cost = 0
-        cost_func = self.model.loss
-        for i in range(T):
-            # Can ignore the first state cost since fist x_var == x_init.
-            cost += cost_func(x=x_var[:, i],
-                              u=u_var[:, i],
-                              Xr=x_ref[:, i],
-                              Ur=np.zeros((nu, 1)),
-                              Q=self.Q,
-                              R=self.R)['l']
-        # Terminal cost.
-        cost += cost_func(x=x_var[:, -1],
-                          u=np.zeros((nu, 1)),
-                          Xr=x_ref[:, -1],
-                          Ur=np.zeros((nu, 1)),
-                          Q=self.Q,
-                          R=self.R)['l']
-        # Constraints
-        for i in range(self.T):
-            # Dynamics constraints.
-            next_state = self.dynamics_func(
-                x0=x_var[:, i], p=u_var[:, i])['xf']
-            opti.subject_to(x_var[:, i + 1] == next_state)
+        self.ocp.constraints.x0 = np.zeros(self.ocp.model.x.shape)
 
-            for sc_i, state_constraint in enumerate(self.state_constraints_sym):
-                if self.soft_constraints:
-                    opti.subject_to(state_constraint(
-                        x_var[:, i]) <= state_slack[sc_i])
-                    cost += 10000 * state_slack[sc_i]**2
-                    opti.subject_to(state_slack[sc_i] >= 0)
-                else:
-                    opti.subject_to(state_constraint(
-                        x_var[:, i]) < -self.constraint_tol)
-            for ic_i, input_constraint in enumerate(self.input_constraints_sym):
-                if self.soft_constraints:
-                    opti.subject_to(input_constraint(
-                        u_var[:, i]) <= input_slack[ic_i])
-                    cost += 10000 * input_slack[ic_i]**2
-                    opti.subject_to(input_slack[ic_i] >= 0)
-                else:
-                    opti.subject_to(input_constraint(
-                        u_var[:, i]) < -self.constraint_tol)
-
-        # Final state constraints.
         for sc_i, state_constraint in enumerate(self.state_constraints_sym):
-            if self.soft_constraints:
-                opti.subject_to(state_constraint(
-                    x_var[:, -1]) <= state_slack[sc_i])
-                cost += 10000 * state_slack[sc_i] ** 2
-                opti.subject_to(state_slack[sc_i] >= 0)
+            if state_constraint.__qualname__.split('.')[0] == "LinearConstraint":
+                # state_constraint(x_var[:, i]) < -self.constraint_tol
+                # state_constraint(x_var[:, -1]) <= -self.constraint_tol  # remember final state cns
+                pass
+            elif state_constraint.__qualname__.split('.')[0] == "BoundConstraint":
+                pass
             else:
-                opti.subject_to(state_constraint(
-                    x_var[:, -1]) <= -self.constraint_tol)
-        # initial condition constraints
-        opti.subject_to(x_var[:, 0] == x_init)
+                raise NotImplementedError
 
-        opti.minimize(cost)
+        for ic_i, input_constraint in enumerate(self.input_constraints_sym):
+            if input_constraint.__qualname__.split('.')[0] == "LinearConstraint":
+                # input_constraint(u_var[:, i]) < -self.constraint_tol
+                pass
+            elif input_constraint.__qualname__.split('.')[0] == "BoundConstraint":
+                pass
+            else:
+                raise NotImplementedError
+
         # Create solver (IPOPT solver in this version)
-        # opts = {'ipopt.print_level': 0, 'ipopt.sb': 'yes', 'print_time': 0}
-        opts = {'expand': True}
-        opti.solver('ipopt', opts)
-        self.opti_dict = {
-            'opti': opti,
-            'x_var': x_var,
-            'u_var': u_var,
-            'x_init': x_init,
-            'x_ref': x_ref,
-            'cost': cost
-        }
+        self.ocp_solver = AcadosOcpSolver(self.ocp)
 
     def select_action(self,
                       obs,
@@ -277,49 +250,48 @@ class MPCAcados(BaseController):
         Returns:
             action (ndarray): Input/action to the task/env.
         '''
-
-        opti_dict = self.opti_dict
-        opti = opti_dict['opti']
-        x_var = opti_dict['x_var']
-        u_var = opti_dict['u_var']
-        x_init = opti_dict['x_init']
-        x_ref = opti_dict['x_ref']
-
-        # Assign the initial state.
-        opti.set_value(x_init, obs)
-        # Assign reference trajectory within horizon.
+        # set initial state
+        self.ocp_solver.set(0, "lbx", obs)
+        self.ocp_solver.set(0, "ubx", obs)
+        # update yref
         goal_states = self.get_references()
-        opti.set_value(x_ref, goal_states)
+        for i in range(self.T):
+            self.ocp_solver.cost_set(i, "yref", np.concatenate(
+                [goal_states[:, i], np.zeros(self.ocp.model.u.shape[0])]))
+        self.ocp_solver.cost_set(self.T, "yref", goal_states[:, self.T])
         if self.mode == 'tracking':
             self.traj_step += 1
-        # if self.warmstart and self.x_prev is None and self.u_prev is None:
-        #    x_guess, u_guess = self.compute_initial_guess(obs, goal_states, self.X_EQ, self.U_EQ)
-        #    opti.set_initial(x_var, x_guess)
-        #    opti.set_initial(u_var, u_guess) # Initial guess for optimization problem.
-        # elif self.warmstart and self.x_prev is not None and self.u_prev is not None:
-        if self.warmstart and self.x_prev is not None and self.u_prev is not None:
-            # shift previous solutions by 1 step
-            x_guess = deepcopy(self.x_prev)
-            u_guess = deepcopy(self.u_prev)
-            x_guess[:, :-1] = x_guess[:, 1:]
-            u_guess[:-1] = u_guess[1:]
-            opti.set_initial(x_var, x_guess)
-            opti.set_initial(u_var, u_guess)
+
         # Solve the optimization problem.
-        sol = opti.solve()
-        x_val, u_val = sol.value(x_var), sol.value(u_var)
+        status = self.ocp_solver.solve()
+        self.ocp_solver.print_statistics()
+        if status != 0:
+            print(f'acados returned status {status}.')
+            # raise Exception(f'acados returned status {status}.')
+
+        # get solution
+        x_val = np.zeros((self.T+1, self.ocp.model.x.shape[0]))
+        u_val = np.zeros((self.T, self.ocp.model.u.shape[0]))
+        for i in range(self.T):
+            x_val[i, :] = self.ocp_solver.get(i, "x")
+            u_val[i, :] = self.ocp_solver.get(i, "u")
+        x_val[self.T, :] = self.ocp_solver.get(self.T, "x")
+
+        x_val = x_val.T
+        u_val = u_val.T
         self.x_prev = x_val
         self.u_prev = u_val
         self.results_dict['horizon_states'].append(deepcopy(self.x_prev))
         self.results_dict['horizon_inputs'].append(deepcopy(self.u_prev))
         self.results_dict['goal_states'].append(deepcopy(goal_states))
-        self.results_dict['t_wall'].append(opti.stats()['t_wall_total'])
+        self.results_dict['t_wall'].append(
+            self.ocp_solver.get_stats("time_tot"))
         # Take the first action from the solved action sequence.
-        if u_val.ndim > 1:
+        if u_val.shape[0] > 1:
             action = u_val[:, 0]
         else:
             action = np.array([u_val[0]])
-        self.prev_action = action
+            self.prev_action = action
         return action
 
     def get_references(self):
