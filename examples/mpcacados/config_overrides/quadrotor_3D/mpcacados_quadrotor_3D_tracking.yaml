@@ -1,6 +1,6 @@
-algo: mpc
+algo: mpcacados
 algo_config:
-  horizon: 30
+  horizon: 40
   r_mpc:
     - 0.1
     - 0.1

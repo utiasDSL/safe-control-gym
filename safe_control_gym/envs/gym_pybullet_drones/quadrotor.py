@@ -475,15 +475,15 @@ class Quadrotor(BaseAviary):
         g, length = self.GRAVITY_ACC, self.L
         dt = self.CTRL_TIMESTEP
         # Define states.
-        z = cs.MX.sym('z')
-        z_dot = cs.MX.sym('z_dot')
+        z = cs.SX.sym('z')
+        z_dot = cs.SX.sym('z_dot')
         u_eq = m * g
         if self.QUAD_TYPE == QuadType.ONE_D:
             nx, nu = 2, 1
             # Define states.
             X = cs.vertcat(z, z_dot)
             # Define input thrust.
-            T = cs.MX.sym('T')
+            T = cs.SX.sym('T')
             U = cs.vertcat(T)
             # Define dynamics equations.
             X_dot = cs.vertcat(z_dot, T / m - g)
@@ -492,14 +492,14 @@ class Quadrotor(BaseAviary):
         elif self.QUAD_TYPE == QuadType.TWO_D:
             nx, nu = 6, 2
             # Define states.
-            x = cs.MX.sym('x')
-            x_dot = cs.MX.sym('x_dot')
-            theta = cs.MX.sym('theta')
-            theta_dot = cs.MX.sym('theta_dot')
+            x = cs.SX.sym('x')
+            x_dot = cs.SX.sym('x_dot')
+            theta = cs.SX.sym('theta')
+            theta_dot = cs.SX.sym('theta_dot')
             X = cs.vertcat(x, x_dot, z, z_dot, theta, theta_dot)
             # Define input thrusts.
-            T1 = cs.MX.sym('T1')
-            T2 = cs.MX.sym('T2')
+            T1 = cs.SX.sym('T1')
+            T2 = cs.SX.sym('T2')
             U = cs.vertcat(T1, T2)
             # Define dynamics equations.
             X_dot = cs.vertcat(x_dot,
@@ -519,27 +519,29 @@ class Quadrotor(BaseAviary):
                                 [0.0, 1.0 / Iyy, 0.0],
                                 [0.0, 0.0, 1.0 / Izz]])
             gamma = self.KM / self.KF
-            x = cs.MX.sym('x')
-            y = cs.MX.sym('y')
-            phi = cs.MX.sym('phi')  # Roll
-            theta = cs.MX.sym('theta')  # Pitch
-            psi = cs.MX.sym('psi')  # Yaw
-            x_dot = cs.MX.sym('x_dot')
-            y_dot = cs.MX.sym('y_dot')
-            p_body = cs.MX.sym('p')  # Body frame roll rate
-            q_body = cs.MX.sym('q')  # body frame pith rate
-            r_body = cs.MX.sym('r')  # body frame yaw rate
+            x = cs.SX.sym('x')
+            y = cs.SX.sym('y')
+            phi = cs.SX.sym('phi')  # Roll
+            theta = cs.SX.sym('theta')  # Pitch
+            psi = cs.SX.sym('psi')  # Yaw
+            x_dot = cs.SX.sym('x_dot')
+            y_dot = cs.SX.sym('y_dot')
+            p_body = cs.SX.sym('p')  # Body frame roll rate
+            q_body = cs.SX.sym('q')  # body frame pith rate
+            r_body = cs.SX.sym('r')  # body frame yaw rate
             # PyBullet Euler angles use the SDFormat for rotation matrices.
-            Rob = csRotXYZ(phi, theta, psi)  # rotation matrix transforming a vector in the body frame to the world frame.
+            # rotation matrix transforming a vector in the body frame to the world frame.
+            Rob = csRotXYZ(phi, theta, psi)
 
             # Define state variables.
-            X = cs.vertcat(x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p_body, q_body, r_body)
+            X = cs.vertcat(x, x_dot, y, y_dot, z, z_dot, phi,
+                           theta, psi, p_body, q_body, r_body)
 
             # Define inputs.
-            f1 = cs.MX.sym('f1')
-            f2 = cs.MX.sym('f2')
-            f3 = cs.MX.sym('f3')
-            f4 = cs.MX.sym('f4')
+            f1 = cs.SX.sym('f1')
+            f2 = cs.SX.sym('f2')
+            f3 = cs.SX.sym('f3')
+            f4 = cs.SX.sym('f4')
             U = cs.vertcat(f1, f2, f3, f4)
 
             # From Ch. 2 of Luis, Carlos, and Jérôme Le Ny. 'Design of a trajectory tracking controller for a
@@ -565,10 +567,10 @@ class Quadrotor(BaseAviary):
         X_EQ = np.zeros(self.state_dim)
         U_EQ = np.ones(self.action_dim) * u_eq / self.action_dim
         # Define cost (quadratic form).
-        Q = cs.MX.sym('Q', nx, nx)
-        R = cs.MX.sym('R', nu, nu)
-        Xr = cs.MX.sym('Xr', nx, 1)
-        Ur = cs.MX.sym('Ur', nu, 1)
+        Q = cs.SX.sym('Q', nx, nx)
+        R = cs.SX.sym('R', nu, nu)
+        Xr = cs.SX.sym('Xr', nx, 1)
+        Ur = cs.SX.sym('Ur', nu, 1)
         cost_func = 0.5 * (X - Xr).T @ Q @ (X - Xr) + 0.5 * (U - Ur).T @ R @ (U - Ur)
         # Define dynamics and cost dictionaries.
         dynamics = {'dyn_eqn': X_dot, 'obs_eqn': Y, 'vars': {'X': X, 'U': U}}

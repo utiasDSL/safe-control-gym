@@ -8,6 +8,7 @@ from functools import partial
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import FormatStrFormatter
+import pybullet as p
 
 from safe_control_gym.envs.benchmark_env import Task
 from safe_control_gym.experiments.base_experiment import BaseExperiment
@@ -45,26 +46,39 @@ def run(gui=True, n_episodes=1, n_steps=None, save_data=False):
     all_trajs = defaultdict(list)
     n_episodes = 1 if n_episodes is None else n_episodes
 
+    if config.task_config.task == 'traj_tracking' and gui is True:
+        if config.task_config.quad_type == 2:
+            ref_3D = np.hstack([ctrl.env.X_GOAL[:, [0]], np.zeros(
+                ctrl.env.X_GOAL[:, [0]].shape), ctrl.env.X_GOAL[:, [2]]])
+        else:
+            ref_3D = ctrl.env.X_GOAL[:, [0, 2, 4]]
+        # Plot in 3D.
+        # ax = plt.axes(projection='3d')
+        # ax.plot3D(ref_3D[:, 0], ref_3D[:, 1], ref_3D[:, 2])
+        # plt.show()
+
+        for i in range(10, ctrl.env.X_GOAL.shape[0], 10):
+            p.addUserDebugLine(lineFromXYZ=[ref_3D[i - 10, 0], ref_3D[i - 10, 1], ref_3D[i - 10, 2]],
+                               lineToXYZ=[ref_3D[i, 0],
+                                          ref_3D[i, 1], ref_3D[i, 2]],
+                               lineColorRGB=[1, 0, 0],
+                               physicsClientId=ctrl.env.PYB_CLIENT)
+
     # Run the experiment.
     for _ in range(n_episodes):
         # Get initial state and create environments
-        init_state, _ = random_env.reset()
+        # init_state, _ = random_env.reset()
+        init_state = ctrl.env.X_GOAL[0, :] * 0.95 + 0.05
         static_env = env_func(
             gui=gui, randomized_init=False, init_state=init_state)
-        static_train_env = env_func(
-            gui=False, randomized_init=False, init_state=init_state)
 
         # Create experiment, train, and run evaluation
-        experiment = BaseExperiment(
-            env=static_env, ctrl=ctrl, train_env=static_train_env)
-        experiment.launch_training()
+        experiment = BaseExperiment(env=static_env, ctrl=ctrl)
 
         if n_steps is None:
-            trajs_data, _ = experiment.run_evaluation(
-                training=True, n_episodes=1)
+            trajs_data, _ = experiment.run_evaluation(training=False, n_episodes=1)
         else:
-            trajs_data, _ = experiment.run_evaluation(
-                training=True, n_steps=n_steps)
+            trajs_data, _ = experiment.run_evaluation(training=False, n_steps=n_steps)
 
         if gui:
             post_analysis(trajs_data['obs'][0],
@@ -72,7 +86,6 @@ def run(gui=True, n_episodes=1, n_steps=None, save_data=False):
 
         # Close environments
         static_env.close()
-        static_train_env.close()
 
         # Merge in new trajectory data
         for key, value in trajs_data.items():

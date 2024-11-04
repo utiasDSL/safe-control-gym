@@ -87,8 +87,8 @@ class LinearMPC(MPC):
         dfdxdfdu = self.model.df_func(x=self.X_EQ, u=self.U_EQ)
         dfdx = dfdxdfdu['dfdx'].toarray()
         dfdu = dfdxdfdu['dfdu'].toarray()
-        delta_x = cs.MX.sym('delta_x', self.model.nx, 1)
-        delta_u = cs.MX.sym('delta_u', self.model.nu, 1)
+        delta_x = cs.SX.sym('delta_x', self.model.nx, 1)
+        delta_u = cs.SX.sym('delta_u', self.model.nu, 1)
         # x_dot_lin_vec = dfdx @ delta_x + dfdu @ delta_u
         # self.linear_dynamics_func = cs.integrator(
         #    'linear_discrete_dynamics', self.model.integration_algo,

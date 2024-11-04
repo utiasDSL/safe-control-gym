@@ -9,6 +9,8 @@ examples/pid/*data/
 results/
 z_docstring.py
 TODOs.md
+**/c_generated_code
+**/acados_ocp.json
 
 
 

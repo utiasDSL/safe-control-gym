@@ -12,6 +12,7 @@ from safe_control_gym.controllers.mpc.mpc_utils import (compute_discrete_lqr_gai
 from safe_control_gym.envs.benchmark_env import Task
 from safe_control_gym.envs.constraints import GENERAL_CONSTRAINTS, create_constraint_list
 from acados_template import AcadosOcp, AcadosOcpSolver, AcadosModel
+from acados_template.utils import ACADOS_INFTY
 
 
 class MPCAcados(BaseController):
@@ -77,14 +78,14 @@ class MPCAcados(BaseController):
         ocp = AcadosOcp()
         ocp.model.f_expl_expr = gym_model.x_dot
         ocp.model.x = gym_model.x_sym
-        ocp.model.xdot = cs.MX.sym("xdot", ocp.model.x.shape)
+        ocp.model.xdot = cs.SX.sym("xdot", ocp.model.x.shape)
         ocp.model.f_impl_expr = ocp.model.xdot - ocp.model.f_expl_expr
         ocp.model.u = gym_model.u_sym
         ocp.model.name = "quadrotor_3D"
         ocp.solver_options.N_horizon = horizon
         ocp.solver_options.tf = gym_model.dt * horizon
-        Q_mat = get_cost_weight_matrix(self.q_mpc, gym_model.nx)
-        R_mat = get_cost_weight_matrix(self.r_mpc, gym_model.nu)
+        Q_mat = get_cost_weight_matrix(self.q_mpc, gym_model.nx) / gym_model.dt
+        R_mat = get_cost_weight_matrix(self.r_mpc, gym_model.nu) / gym_model.dt
         # path cost
         ocp.cost.cost_type = 'NONLINEAR_LS'
         ocp.model.cost_y_expr = cs.vertcat(ocp.model.x, ocp.model.u)
@@ -215,26 +216,45 @@ class MPCAcados(BaseController):
 
         self.ocp.constraints.x0 = np.zeros(self.ocp.model.x.shape)
 
-        for sc_i, state_constraint in enumerate(self.state_constraints_sym):
-            if state_constraint.__qualname__.split('.')[0] == "LinearConstraint":
-                # state_constraint(x_var[:, i]) < -self.constraint_tol
-                # state_constraint(x_var[:, -1]) <= -self.constraint_tol  # remember final state cns
-                pass
-            elif state_constraint.__qualname__.split('.')[0] == "BoundConstraint":
-                pass
-            else:
-                raise NotImplementedError
+        # for sc_i, state_constraint in enumerate(self.state_constraints_sym):
+        #     if state_constraint.__qualname__.split('.')[0] == "LinearConstraint":
+        #         self.ocp.model.con_h_expr_0 = state_constraint(
+        #             self.ocp.model.x)
+        #         self.ocp.constraints.lh_0 = -ACADOS_INFTY * np.ones((24,))
+        #         self.ocp.constraints.uh_0 = np.zeros((24,))
+        #         self.ocp.model.con_h_expr = state_constraint(self.ocp.model.x)
+        #         self.ocp.constraints.lh = -ACADOS_INFTY * np.ones((24,))
+        #         self.ocp.constraints.uh = np.zeros((24,))
+        #         self.ocp.model.con_h_expr_e = state_constraint(
+        #             self.ocp.model.x)
+        #         self.ocp.constraints.lh_e = -ACADOS_INFTY * np.ones((24,))
+        #         self.ocp.constraints.uh_e = np.zeros((24,))
+        #     elif state_constraint.__qualname__.split('.')[0] == "BoundConstraint":
+        #         pass
+        #     else:
+        #         raise NotImplementedError
 
-        for ic_i, input_constraint in enumerate(self.input_constraints_sym):
-            if input_constraint.__qualname__.split('.')[0] == "LinearConstraint":
-                # input_constraint(u_var[:, i]) < -self.constraint_tol
-                pass
-            elif input_constraint.__qualname__.split('.')[0] == "BoundConstraint":
-                pass
-            else:
-                raise NotImplementedError
+        # for ic_i, input_constraint in enumerate(self.input_constraints_sym):
+        #     if input_constraint.__qualname__.split('.')[0] == "LinearConstraint":
+        #         self.ocp.model.con_h_expr_0 = cs.vertcat(
+        #             *[self.ocp.model.con_h_expr_0, input_constraint(self.ocp.model.u)])
+        #         self.ocp.constraints.lh_0 = np.hstack(
+        #             [self.ocp.constraints.lh_0, -ACADOS_INFTY * np.ones((8,))])
+        #         self.ocp.constraints.uh_0 = np.hstack(
+        #             [self.ocp.constraints.uh_0, np.zeros((8,))])
+        #         self.ocp.model.con_h_expr = cs.vertcat(
+        #             *[self.ocp.model.con_h_expr, input_constraint(self.ocp.model.u)])
+        #         self.ocp.constraints.lh = np.hstack(
+        #             [self.ocp.constraints.lh, -ACADOS_INFTY * np.ones((8,))])
+        #         self.ocp.constraints.uh = np.hstack(
+        #             [self.ocp.constraints.uh, np.zeros((8,))])
+        #     elif input_constraint.__qualname__.split('.')[0] == "BoundConstraint":
+        #         pass
+        #     else:
+        #         raise NotImplementedError
 
         # Create solver (IPOPT solver in this version)
+        self.first_ocp_solve = False
         self.ocp_solver = AcadosOcpSolver(self.ocp)
 
     def select_action(self,
@@ -250,6 +270,18 @@ class MPCAcados(BaseController):
         Returns:
             action (ndarray): Input/action to the task/env.
         '''
+        # warm start: only first OCP solve
+        if not self.first_ocp_solve:
+            goal_states = self.get_references()[:, 0]
+            delta_ref_obs = goal_states - obs
+            delta_steps = np.linspace(
+                np.zeros_like(delta_ref_obs), delta_ref_obs, self.T)
+            for i in range(self.T):
+                self.ocp_solver.set(i, "x", obs+delta_steps[i])
+                self.ocp_solver.set(
+                    i, "u", 0.1*np.ones(self.model.u_sym.shape))
+            self.ocp_solver.set(self.T, "x", goal_states)
+            self.first_ocp_solve = True
         # set initial state
         self.ocp_solver.set(0, "lbx", obs)
         self.ocp_solver.set(0, "ubx", obs)
@@ -345,7 +377,7 @@ class MPCAcados(BaseController):
             logging (bool): if to log on terminal.
 
         Returns:
-            dict: evaluation statisitcs, rendered frames.
+            dict: evaluation statistics, rendered frames.
         '''
         if env is None:
             env = self.env

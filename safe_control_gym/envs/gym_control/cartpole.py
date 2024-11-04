@@ -197,7 +197,8 @@ class CartPole(BenchmarkEnv):
             self.POLE_MASS = inertial_prop.get('pole_mass', POLE_MASS)
             self.CART_MASS = inertial_prop.get('cart_mass', CART_MASS)
         else:
-            raise ValueError('[ERROR] in CartPole.__init__(), inertial_prop incorrect format.')
+            raise ValueError(
+                '[ERROR] in CartPole.__init__(), inertial_prop incorrect format.')
 
         # Create X_GOAL and U_GOAL references for the assigned task.
         self.U_GOAL = np.zeros(1)
@@ -390,12 +391,12 @@ class CartPole(BenchmarkEnv):
         g = self.GRAVITY_ACC
         dt = self.CTRL_TIMESTEP
         # Input variables.
-        x = cs.MX.sym('x')
-        x_dot = cs.MX.sym('x_dot')
-        theta = cs.MX.sym('theta')
-        theta_dot = cs.MX.sym('theta_dot')
+        x = cs.SX.sym('x')
+        x_dot = cs.SX.sym('x_dot')
+        theta = cs.SX.sym('theta')
+        theta_dot = cs.SX.sym('theta_dot')
         X = cs.vertcat(x, x_dot, theta, theta_dot)
-        U = cs.MX.sym('U')
+        U = cs.SX.sym('U')
         nx = 4
         nu = 1
         # Dynamics.
@@ -405,10 +406,10 @@ class CartPole(BenchmarkEnv):
         # Observation.
         Y = cs.vertcat(x, x_dot, theta, theta_dot)
         # Define cost (quadratic form).
-        Q = cs.MX.sym('Q', nx, nx)
-        R = cs.MX.sym('R', nu, nu)
-        Xr = cs.MX.sym('Xr', nx, 1)
-        Ur = cs.MX.sym('Ur', nu, 1)
+        Q = cs.SX.sym('Q', nx, nx)
+        R = cs.SX.sym('R', nu, nu)
+        Xr = cs.SX.sym('Xr', nx, 1)
+        Ur = cs.SX.sym('Ur', nu, 1)
         cost_func = 0.5 * (X - Xr).T @ Q @ (X - Xr) + 0.5 * (U - Ur).T @ R @ (U - Ur)
         # Define dynamics and cost dictionaries.
         dynamics = {'dyn_eqn': X_dot, 'obs_eqn': Y, 'vars': {'X': X, 'U': U}}

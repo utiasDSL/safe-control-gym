@@ -357,7 +357,7 @@ class MPC(BaseController):
             logging (bool): if to log on terminal.
 
         Returns:
-            dict: evaluation statisitcs, rendered frames.
+            dict: evaluation statistics, rendered frames.
         '''
         if env is None:
             env = self.env

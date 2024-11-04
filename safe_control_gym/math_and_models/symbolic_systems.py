@@ -69,7 +69,7 @@ class SymbolicModel():
         # Discrete time dynamics.
         self.fd_func = cs.integrator('fd', self.integration_algo, {'x': self.x_sym,
                                                                    'p': self.u_sym,
-                                                                   'ode': self.x_dot}, {'tf': self.dt}
+                                                                   'ode': self.x_dot}, 0, self.dt
                                      )
         # Observation model.
         self.g_func = cs.Function('g', [self.x_sym, self.u_sym], [self.y_sym], ['x', 'u'], ['g'])
@@ -88,8 +88,8 @@ class SymbolicModel():
                                    [self.dgdx, self.dgdu], ['x', 'u'],
                                    ['dgdx', 'dgdu'])
         # Evaluation point for linearization.
-        self.x_eval = cs.MX.sym('x_eval', self.nx, 1)
-        self.u_eval = cs.MX.sym('u_eval', self.nu, 1)
+        self.x_eval = cs.SX.sym('x_eval', self.nx, 1)
+        self.u_eval = cs.SX.sym('u_eval', self.nu, 1)
         # Linearized dynamics model.
         self.x_dot_linear = self.x_dot + self.dfdx @ (
             self.x_eval - self.x_sym) + self.dfdu @ (self.u_eval - self.u_sym)
@@ -101,7 +101,7 @@ class SymbolicModel():
                 'x': self.x_eval,
                 'p': cs.vertcat(self.u_eval, self.x_sym, self.u_sym),
                 'ode': self.x_dot_linear
-            }, {'tf': self.dt})
+            }, 0, self.dt)
         # Linearized observation model.
         self.y_linear = self.y_sym + self.dgdx @ (
             self.x_eval - self.x_sym) + self.dgdu @ (self.u_eval - self.u_sym)
