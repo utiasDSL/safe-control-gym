@@ -438,12 +438,16 @@ class CartPole(BenchmarkEnv):
 
     def _set_observation_space(self):
         '''Sets the observation space of the environment.'''
-        # Angle at which to fail the episode.
-        self.theta_threshold_radians = 90 * math.pi / 180
         # NOTE: different value in PyBullet gym (0.4) and OpenAI gym (2.4).
         self.x_threshold = 2.4
+        self.x_dot_threshold = 20
+        self.theta_threshold_radians = 90 * math.pi / 180  # Angle at which to fail the episode.
+        self.theta_dot_threshold = 20
         # Limit set to 2x: i.e. a failing observation is still within bounds.
-        obs_bound = np.array([self.x_threshold * 2, np.finfo(np.float32).max, self.theta_threshold_radians * 2, np.finfo(np.float32).max])
+        obs_bound = np.array([self.x_threshold * 2,
+                              self.x_dot_threshold,
+                              self.theta_threshold_radians * 2,
+                              self.theta_dot_threshold])
         self.state_space = spaces.Box(low=-obs_bound, high=obs_bound, dtype=np.float32)
 
         # Concatenate goal info for RL

@@ -11,11 +11,13 @@ from sys import platform
 
 import casadi as cs
 import numpy as np
+from termcolor import colored
 
 from safe_control_gym.controllers.lqr.lqr_utils import discretize_linear_system
 from safe_control_gym.controllers.mpc.mpc import MPC
 from safe_control_gym.controllers.mpc.mpc_utils import compute_discrete_lqr_gain_from_cont_linear_system
 from safe_control_gym.envs.benchmark_env import Task
+from safe_control_gym.utils.utils import timing
 
 
 class LinearMPC(MPC):
@@ -29,6 +31,7 @@ class LinearMPC(MPC):
             r_mpc=[1],
             warmstart=True,
             soft_constraints=False,
+            soft_penalty: float = 10000,
             terminate_run_on_done=True,
             constraint_tol: float = 1e-8,
             solver: str = 'sqpmethod',
@@ -36,6 +39,8 @@ class LinearMPC(MPC):
             # shared/base args
             output_dir='results/temp',
             additional_constraints=None,
+            use_lqr_gain_and_terminal_cost: bool = False,
+            compute_initial_guess_method=None,
             **kwargs):
         '''Creates task and controller.
 
@@ -51,6 +56,8 @@ class LinearMPC(MPC):
             solver (str): Specify which solver you wish to use (qrqp, qpoases, ipopt, sqpmethod)
             output_dir (str): output directory to write logs and results.
             additional_constraints (list): list of constraints.
+            use_lqr_gain_and_terminal_cost (bool): Use LQR ancillary gain and terminal cost in the MPC.
+            compute_initial_guess_method (str): Method to compute the initial guess for the MPC. Options: None, 'ipopt', 'lqr'.
         '''
         # Store all params/args.
         for k, v in locals().items():
@@ -64,18 +71,18 @@ class LinearMPC(MPC):
             r_mpc=r_mpc,
             warmstart=warmstart,
             soft_constraints=soft_constraints,
+            soft_penalty=soft_penalty,
             terminate_run_on_done=terminate_run_on_done,
             constraint_tol=constraint_tol,
             # prior_info=prior_info,
             output_dir=output_dir,
             additional_constraints=additional_constraints,
+            use_lqr_gain_and_terminal_cost=use_lqr_gain_and_terminal_cost,
+            compute_initial_guess_method=compute_initial_guess_method,
             **kwargs
         )
 
         # TODO: setup environment equilibrium
-        # self.X_EQ = np.atleast_2d(self.env.X_GOAL)[0,:].T
-        # self.U_EQ = np.atleast_2d(self.env.U_GOAL)[0,:]
-
         self.X_EQ = np.atleast_2d(self.model.X_EQ)[0, :].T
         self.U_EQ = np.atleast_2d(self.model.U_EQ)[0, :].T
         assert solver in ['qpoases', 'qrqp', 'sqpmethod', 'ipopt'], '[Error]. MPC Solver not supported.'
@@ -105,36 +112,22 @@ class LinearMPC(MPC):
                                                 [x_dot_lin],
                                                 ['x0', 'p'],
                                                 ['xf'])
+        self.lqr_gain, _, _, self.P = compute_discrete_lqr_gain_from_cont_linear_system(dfdx,
+                                                                                        dfdu,
+                                                                                        self.Q,
+                                                                                        self.R,
+                                                                                        self.dt)
         self.dfdx = dfdx
         self.dfdu = dfdu
 
-    def compute_initial_guess(self, init_state, goal_states, x_lin, u_lin):
-        '''Use LQR to get an initial guess of the '''
-        dfdxdfdu = self.model.df_func(x=x_lin, u=u_lin)
-        dfdx = dfdxdfdu['dfdx'].toarray()
-        dfdu = dfdxdfdu['dfdu'].toarray()
-        lqr_gain, _, _ = compute_discrete_lqr_gain_from_cont_linear_system(dfdx, dfdu, self.Q, self.R, self.dt)
-
-        x_guess = np.zeros((self.model.nx, self.T + 1))
-        u_guess = np.zeros((self.model.nu, self.T))
-        x_guess[:, 0] = init_state
-
-        for i in range(self.T):
-            u = lqr_gain @ (x_guess[:, i] - goal_states[:, i]) + u_lin
-            u_guess[:, i] = u
-            x_guess[:, i + 1, None] = self.linear_dynamics_func(x0=x_guess[:, i], p=u)['xf'].toarray()
-
-        return x_guess, u_guess
-
-    def setup_optimizer(self):
+    def setup_optimizer(self, solver='qrqp'):
         '''Sets up convex optimization problem.
-
         Including cost objective, variable bounds and dynamics constraints.
         '''
         nx, nu = self.model.nx, self.model.nu
         T = self.T
         # Define optimizer and variables.
-        if self.solver in ['qrqp', 'qpoases']:
+        if solver in ['qrqp', 'qpoases']:
             opti = cs.Opti('conic')
         else:
             opti = cs.Opti()
@@ -157,15 +150,15 @@ class LinearMPC(MPC):
             cost += cost_func(x=x_var[:, i] + self.X_EQ[:, None],
                               u=u_var[:, i] + self.U_EQ[:, None],
                               Xr=x_ref[:, i],
-                              Ur=np.zeros((nu, 1)),
+                              Ur=self.U_EQ,
                               Q=self.Q,
                               R=self.R)['l']
         # Terminal cost.
         cost += cost_func(x=x_var[:, -1] + self.X_EQ[:, None],
                           u=np.zeros((nu, 1)) + self.U_EQ[:, None],
                           Xr=x_ref[:, -1],
-                          Ur=np.zeros((nu, 1)),
-                          Q=self.Q,
+                          Ur=self.U_EQ,
+                          Q=self.Q if not self.use_lqr_gain_and_terminal_cost else self.P,
                           R=self.R)['l']
         for i in range(self.T):
             # Dynamics constraints.
@@ -173,7 +166,7 @@ class LinearMPC(MPC):
             opti.subject_to(x_var[:, i + 1] == next_state)
 
             # State and input constraints
-            soft_con_coeff = 10
+            soft_con_coeff = self.soft_penalty
             for sc_i, state_constraint in enumerate(self.state_constraints_sym):
                 if self.soft_constraints:
                     opti.subject_to(state_constraint(x_var[:, i] + self.X_EQ.T) <= state_slack[sc_i])
@@ -206,7 +199,7 @@ class LinearMPC(MPC):
         opts = {'expand': True}
         if platform == 'linux':
             opts.update({'print_time': 1, 'print_header': 0})
-            opti.solver(self.solver, opts)
+            opti.solver(solver, opts)
         elif platform == 'darwin':
             opts.update({'ipopt.max_iter': 100})
             opti.solver('ipopt', opts)
@@ -222,6 +215,7 @@ class LinearMPC(MPC):
             'cost': cost
         }
 
+    @timing
     def select_action(self,
                       obs,
                       info=None
@@ -263,18 +257,20 @@ class LinearMPC(MPC):
             self.results_dict['horizon_inputs'].append(deepcopy(self.u_prev) + self.U_EQ[:, None])
         except RuntimeError as e:
             print(e)
+            print(colored('Infeasible MPC Problem', 'red'))
             return_status = opti.return_status()
+            print(colored(f'Optimization failed with status: {return_status}', 'red'))
             if return_status == 'unknown':
-                self.terminate_loop = True
-                u_val = self.u_prev
-                if u_val is None:
-                    print('[WARN]: MPC Infeasible first step.')
-                    u_val = np.zeros((1, self.model.nu))
-            elif return_status == 'Maximum_Iterations_Exceeded':
-                self.terminate_loop = True
-                u_val = opti.debug.value(u_var)
-            elif return_status == 'Search_Direction_Becomes_Too_Small':
-                self.terminate_loop = True
+                # self.terminate_loop = True
+                if self.u_prev is None:
+                    print(colored('[WARN]: MPC Infeasible first step.', 'yellow'))
+                    u_val = np.zeros((self.model.nu, self.T))
+                    x_val = np.zeros((self.model.nx, self.T + 1))
+                else:
+                    u_val = self.u_prev
+                    x_val = self.x_prev
+            elif return_status in ['Infeasible_Problem_Detected', 'Infeasible_Problem']:
+                # self.terminate_loop = True
                 u_val = opti.debug.value(u_var)
 
         # take first one from solved action sequence
@@ -283,5 +279,7 @@ class LinearMPC(MPC):
         else:
             action = np.array([u_val[0]])
         action += self.U_EQ
+        if self.use_lqr_gain_and_terminal_cost:
+            action += self.lqr_gain @ (obs - x_val[:, 0])
         self.prev_action = action
         return action

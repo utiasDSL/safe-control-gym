@@ -147,3 +147,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+
+# acados
+acados_ocp_nlp.json
+*c_generated_code
