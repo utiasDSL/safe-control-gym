@@ -237,13 +237,18 @@ class MPC_ACADOS(MPC):
 
         self.ocp = ocp
 
-    def processing_acados_constraints_expression(self, ocp: AcadosOcp, h0_expr, h_expr, he_expr) -> AcadosOcp:
+    def processing_acados_constraints_expression(self,
+                                                 ocp: AcadosOcp,
+                                                 h0_expr: cs.MX,
+                                                 h_expr: cs.MX,
+                                                 he_expr: cs.MX,
+                                                 ) -> AcadosOcp:
         '''Preprocess the constraints to be compatible with acados.
             Args:
                 ocp (AcadosOcp): acados ocp object
-                h0_expr (casadi expression): initial state constraints
-                h_expr (casadi expression): state and input constraints
-                he_expr (casadi expression): terminal state constraints
+                h0_expr (cs.MX expression): initial state constraints
+                h_expr (cs.MX expression): state and input constraints
+                he_expr (cs.MX expression): terminal state constraints
             Returns:
                 ocp (AcadosOcp): acados ocp object with constraints set.
 
