@@ -634,11 +634,11 @@ class Quadrotor(BaseAviary):
     def _set_observation_space(self):
         '''Sets the observation space of the environment.'''
         self.x_threshold = 2
-        self.x_dot_threshold = 15
+        self.x_dot_threshold = 30
         self.y_threshold = 2
-        self.y_dot_threshold = 15
+        self.y_dot_threshold = 30
         self.z_threshold = 2
-        self.z_dot_threshold = 15
+        self.z_dot_threshold = 30
         self.phi_threshold_radians = 85 * math.pi / 180
         self.theta_threshold_radians = 85 * math.pi / 180
         self.psi_threshold_radians = 180 * math.pi / 180  # Do not bound yaw.
