@@ -48,7 +48,6 @@ class iLQR(BaseController):
         super().__init__(env_func, **kwargs)
 
         # Model parameters
-        self.env = env_func()
         self.q_lqr = q_lqr
         self.r_lqr = r_lqr
         self.discrete_dynamics = discrete_dynamics
@@ -59,7 +58,7 @@ class iLQR(BaseController):
         self.lamb_max = lamb_max
         self.epsilon = epsilon
 
-        self.env = env_func(info_in_reset=True, done_on_out_of_bound=True, seed=self.seed)
+        self.env = env_func(info_in_reset=True, done_on_out_of_bound=True)
 
         # Controller params.
         self.model = self.get_prior(self.env)
