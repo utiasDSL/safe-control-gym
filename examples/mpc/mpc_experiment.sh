@@ -9,8 +9,8 @@ SYS='quadrotor_3D'
 #TASK='stabilization'
 TASK='tracking'
 
-#ALGO='mpc'
-ALGO='linear_mpc'
+ALGO='mpc'
+# ALGO='linear_mpc'
 
 if [ "$SYS" == 'cartpole' ]; then
     SYS_NAME=$SYS

@@ -67,8 +67,7 @@ def run(gui=True, n_episodes=1, n_steps=None, save_data=False):
     # Run the experiment.
     for _ in range(n_episodes):
         # Get initial state and create environments
-        # init_state, _ = random_env.reset()
-        init_state = ctrl.env.X_GOAL[0, :] * 0.95 + 0.05
+        init_state, _ = random_env.reset()
         static_env = env_func(
             gui=gui, randomized_init=False, init_state=init_state)
 
