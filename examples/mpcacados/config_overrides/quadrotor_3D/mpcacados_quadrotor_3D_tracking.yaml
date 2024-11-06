@@ -1,6 +1,6 @@
 algo: mpcacados
 algo_config:
-  horizon: 40
+  horizon: 20
   r_mpc:
     - 0.1
     - 0.1
@@ -25,5 +25,3 @@ algo_config:
     prior_prop: null
     randomize_prior_prop: False
     prior_prop_rand_info: null
-  warmstart: True
-  solver: ipopt
