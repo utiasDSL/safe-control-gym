@@ -20,8 +20,8 @@ To reproduce the results in the article, see [branch `ar`](https://github.com/ut
 ```bibtex
 @article{yuan2021safecontrolgym,
   author={Yuan, Zhaocong and Hall, Adam W. and Zhou, Siqi and Brunke, Lukas and Greeff, Melissa and Panerati, Jacopo and Schoellig, Angela P.},
-  journal={IEEE Robotics and Automation Letters}, 
-  title={Safe-Control-Gym: A Unified Benchmark Suite for Safe Learning-Based Control and Reinforcement Learning in Robotics}, 
+  journal={IEEE Robotics and Automation Letters},
+  title={Safe-Control-Gym: A Unified Benchmark Suite for Safe Learning-Based Control and Reinforcement Learning in Robotics},
   year={2022},
   volume={7},
   number={4},
