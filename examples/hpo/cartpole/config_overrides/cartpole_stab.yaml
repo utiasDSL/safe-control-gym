@@ -1,0 +1,68 @@
+task_config:
+  seed: 42
+  info_in_reset: true
+  ctrl_freq: 15
+  pyb_freq: 750
+  physics: pyb
+
+  init_state_randomization_info:
+    init_x:
+      distrib: uniform
+      high: 1.0
+      low:  1.0
+    init_x_dot:
+      distrib: uniform
+      high: 0.05
+      low: -0.05
+    init_theta:
+      distrib: uniform
+      high: 0.05
+      low:  -0.05
+    init_theta_dot:
+      distrib: uniform
+      high: 0.05
+      low: -0.05
+  # disturbances:
+  #   observation:
+  #     - disturbance_func: white_noise
+  #       std: 0.0001
+  inertial_prop:
+    cart_mass: 1.0
+    pole_length: 0.5
+    pole_mass: 0.1
+  inertial_prop_randomization_info: null
+  randomized_inertial_prop: false
+
+
+  # normalized_rl_action_space: false
+
+  task: stabilization
+  task_info:
+    stabilization_goal: [0.0, 0.0, 0.0, 0.0]
+    # stabilization_goal_tolerance: 0.01
+    stabilization_goal_tolerance: 0.0
+  use_constraint_penalty: false
+
+  episode_len_sec: 5
+  cost: quadratic
+  done_on_violation: false
+  done_on_out_of_bound: false
+
+  obs_goal_horizon: 1
+
+  # RL Reward
+  rew_state_weight: [1, 1, 1, 1]
+  rew_act_weight: [0.1]
+  rew_exponential: True
+
+  constraints:
+    - constraint_form: default_constraint
+      constrained_variable: input
+      upper_bounds: [3.0]
+      lower_bounds: [-3.0]
+    - constraint_form: default_constraint
+      constrained_variable: state
+      # upper_bounds: [1.5, 0.45, 0.1, 0.3]
+      # lower_bounds: [-1.5, -0.45, -0.1, -0.3]
+      upper_bounds: [1.5, 0.45, 0.5, 0.5]
+      lower_bounds: [-1.5, -0.45, -0.5, -0.5]

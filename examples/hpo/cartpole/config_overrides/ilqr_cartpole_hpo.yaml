@@ -1,0 +1,22 @@
+hpo_config:
+
+  load_if_exists: True # this should set to True if hpo is run in parallel
+  objective: [exponentiated_rmse] # [other metrics defined in base_experiment.py]
+  objective_bounds: [[0.0, 1.0]] # [bounds for each objective]. Worse value will be assigned if objective evaluation is None
+  direction: [maximize] # [minimize, maximize]
+  repetitions: 5 # number of samples of performance for each objective query
+  n_episodes: 5 # number of episodes to evaluate each policy
+  use_gpu: True
+  seed: 24
+  save_n_best_hps: 1
+  # budget
+  trials: 40
+
+  # hyperparameters
+  hps_config:
+    max_iterations: 15
+    lamb_factor: 10
+    lamb_max: 1000
+    epsilon: 0.01
+    q_lqr: [1, 1, 1, 1]
+    r_lqr: [0.1]
