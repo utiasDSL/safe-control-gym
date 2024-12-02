@@ -33,6 +33,8 @@ task_config:
 
   episode_len_sec: 6
   cost: quadratic
+  rew_state_weight: [5.0, 0.1, 5.0, 0.1]  # Match MPC weights
+  rew_act_weight: [0.1]
   done_on_out_of_bound: True
 
   constraints:

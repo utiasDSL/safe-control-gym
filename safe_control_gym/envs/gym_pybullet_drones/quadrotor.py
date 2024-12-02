@@ -178,7 +178,9 @@ class Quadrotor(BaseAviary):
         self.norm_act_scale = norm_act_scale
         self.obs_goal_horizon = obs_goal_horizon
         self.rew_state_weight = np.array(rew_state_weight, ndmin=1, dtype=float)
+        self.Q = np.diag(self.rew_state_weight)
         self.rew_act_weight = np.array(rew_act_weight, ndmin=1, dtype=float)
+        self.R = np.diag(self.rew_act_weight)
         self.rew_exponential = rew_exponential
         self.done_on_out_of_bound = done_on_out_of_bound
         if info_mse_metric_state_weight is None:

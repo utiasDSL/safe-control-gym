@@ -71,4 +71,7 @@ task_config:
 
   episode_len_sec: 6
   cost: quadratic
+  # Match LQR weights
+  rew_state_weight: [1, 0.1, 1, 0.1, 1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+  rew_act_weight: [0.1]
   done_on_out_of_bound: True
