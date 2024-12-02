@@ -8,8 +8,8 @@ from termcolor import colored
 from safe_control_gym.controllers.base_controller import BaseController
 from safe_control_gym.controllers.lqr.lqr_utils import discretize_linear_system
 from safe_control_gym.controllers.mpc.mpc_utils import (compute_discrete_lqr_gain_from_cont_linear_system,
-                                                        get_cost_weight_matrix, reset_constraints,
-                                                        rk_discrete)
+                                                        compute_state_rmse, get_cost_weight_matrix,
+                                                        reset_constraints, rk_discrete)
 from safe_control_gym.envs.benchmark_env import Task
 from safe_control_gym.envs.constraints import GENERAL_CONSTRAINTS, create_constraint_list
 from safe_control_gym.utils.utils import timing
