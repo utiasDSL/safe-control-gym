@@ -15,11 +15,12 @@ from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 
 
-def run(gui=True, n_episodes=1, n_steps=None, save_data=False):
+def run(gui=False, plot=True, n_episodes=2, n_steps=None, save_data=False):
     '''The main function running LQR and iLQR experiments.
 
     Args:
-        gui (bool): Whether to display the gui and plot graphs.
+        gui (bool): Whether to display the gui.
+        plot (bool): Whether to plot graphs.
         n_episodes (int): The number of episodes to execute.
         n_steps (int): The total number of steps to execute.
         save_data (bool): Whether to save the collected experiment data.
@@ -61,7 +62,7 @@ def run(gui=True, n_episodes=1, n_steps=None, save_data=False):
         else:
             trajs_data, _ = experiment.run_evaluation(training=True, n_steps=n_steps)
 
-        if gui:
+        if plot:
             post_analysis(trajs_data['obs'][0], trajs_data['action'][0], ctrl.env)
 
         # Close environments
@@ -130,21 +131,6 @@ def post_analysis(state_stack, input_stack, env):
     axs[-1].set(xlabel='time (sec)')
 
     plt.show()
-
-
-def wrap2pi_vec(angle_vec):
-    '''Wraps a vector of angles between -pi and pi.
-
-    Args:
-        angle_vec (ndarray): A vector of angles.
-    '''
-    for k, angle in enumerate(angle_vec):
-        while angle > np.pi:
-            angle -= np.pi
-        while angle <= -np.pi:
-            angle += np.pi
-        angle_vec[k] = angle
-    return angle_vec
 
 
 if __name__ == '__main__':
