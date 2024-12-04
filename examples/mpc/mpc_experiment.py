@@ -14,7 +14,7 @@ from safe_control_gym.utils.configuration import ConfigFactory
 from safe_control_gym.utils.registration import make
 
 
-def run(gui=False, plot=True, n_episodes=2, n_steps=None, save_data=False):
+def run(gui=False, plot=True, n_episodes=1, n_steps=None, save_data=False):
     '''The main function running MPC and Linear MPC experiments.
 
     Args:
