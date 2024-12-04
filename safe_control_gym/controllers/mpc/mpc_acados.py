@@ -447,6 +447,7 @@ class MPC_ACADOS(MPC):
         self.results_dict['horizon_states'].append(deepcopy(self.x_prev))
         self.results_dict['horizon_inputs'].append(deepcopy(self.u_prev))
         self.results_dict['goal_states'].append(deepcopy(goal_states))
+        self.results_dict['t_wall'].append(self.acados_ocp_solver.get_stats("time_tot"))
 
         self.prev_action = action
         if self.use_lqr_gain_and_terminal_cost:
