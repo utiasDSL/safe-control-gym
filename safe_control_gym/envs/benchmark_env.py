@@ -176,10 +176,6 @@ class BenchmarkEnv(gym.Env, ABC):
             self.state_dim = self.state_space.shape[0]
         else:
             self.state_dim = self.obs_dim
-        # Default Q and R matrices for quadratic cost.
-        if self.COST == Cost.QUADRATIC:
-            self.Q = np.eye(self.observation_space.shape[0])
-            self.R = np.eye(self.action_space.shape[0])
         # Set constraint info.
         self.CONSTRAINTS = constraints
         self.DONE_ON_VIOLATION = done_on_violation
@@ -220,25 +216,6 @@ class BenchmarkEnv(gym.Env, ABC):
         for _, disturbs in self.disturbances.items():
             disturbs.seed(self)
         return [seed]
-
-    def set_cost_function_param(self,
-                                Q,
-                                R
-                                ):
-        '''Set the cost function parameters.
-
-        Args:
-            Q (ndarray): State weight matrix (nx by nx).
-            R (ndarray): Input weight matrix (nu by nu).
-        '''
-
-        if not self.initial_reset:
-            self.Q = Q
-            self.R = R
-        else:
-            raise RuntimeError(
-                '[ERROR] env.set_cost_function_param() cannot be called after the first reset of the environment.'
-            )
 
     def set_adversary_control(self, action):
         '''Sets disturbance by an adversary controller, called before (each) step().

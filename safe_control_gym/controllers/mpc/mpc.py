@@ -454,10 +454,7 @@ class MPC(BaseController):
 
         self.x_prev = None
         self.u_prev = None
-        if not env.initial_reset:
-            env.set_cost_function_param(self.Q, self.R)
-        # obs, info = env.reset()
-        obs = env.reset()
+        obs, info = env.reset()
         print('Init State:')
         print(obs)
         ep_returns, ep_lengths = [], []

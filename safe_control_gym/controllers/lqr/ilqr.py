@@ -64,7 +64,6 @@ class iLQR(BaseController):
         self.model = self.get_prior(self.env)
         self.Q = get_cost_weight_matrix(self.q_lqr, self.model.nx)
         self.R = get_cost_weight_matrix(self.r_lqr, self.model.nu)
-        self.env.set_cost_function_param(self.Q, self.R)
 
         self.gain = compute_lqr_gain(self.model, self.model.X_EQ, self.model.U_EQ,
                                      self.Q, self.R, self.discrete_dynamics)

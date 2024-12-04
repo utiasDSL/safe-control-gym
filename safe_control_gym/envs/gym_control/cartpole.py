@@ -150,7 +150,9 @@ class CartPole(BenchmarkEnv):
         self.obs_goal_horizon = obs_goal_horizon
         self.obs_wrap_angle = obs_wrap_angle
         self.rew_state_weight = np.array(rew_state_weight, ndmin=1, dtype=float)
+        self.Q = np.diag(self.rew_state_weight)
         self.rew_act_weight = np.array(rew_act_weight, ndmin=1, dtype=float)
+        self.R = np.diag(self.rew_act_weight)
         self.rew_exponential = rew_exponential
         self.done_on_out_of_bound = done_on_out_of_bound
         # BenchmarkEnv constructor, called after defining the custom args,
