@@ -409,9 +409,15 @@ class MetricExtractor:
             'average_constraint_violation': np.asarray(self.get_episode_constraint_violation_steps()).mean(),
             'constraint_violation_std': np.asarray(self.get_episode_constraint_violation_steps()).std(),
             'constraint_violation': np.asarray(self.get_episode_constraint_violation_steps()) if len(self.get_episode_constraint_violation_steps()) > 1 else self.get_episode_constraint_violation_steps()[0],
+            'mean_t_wall_ms': np.asarray(self.get_t_wall()).mean()*1e3,
+            'median_t_wall_ms': np.median(np.asarray(self.get_t_wall()))*1e3,
+            'max_t_wall_ms': np.max(np.asarray(self.get_t_wall()))*1e3,
             # others ???
         }
         return metrics
+
+    def get_t_wall(self):
+        return self.data['controller_data'][0]['t_wall'][0]
 
     def get_episode_data(self, key, postprocess_func=lambda x: x):
         '''Extract data field from recorded trajectory data, optionally postprocess each episode data (e.g. get sum).
