@@ -64,11 +64,11 @@ def run(gui=False, plot=True, n_episodes=1, n_steps=None, save_data=False):
 
 
 def post_analysis(state_stack, input_stack, env):
-    '''Plots the input and states to determine iLQR's success.
+    '''Plots the input and states to determine MPC's success.
 
     Args:
-        state_stack (ndarray): The list of observations of iLQR in the latest run.
-        input_stack (ndarray): The list of inputs of iLQR in the latest run.
+        state_stack (ndarray): The list of observations of MPC in the latest run.
+        input_stack (ndarray): The list of inputs of MPC in the latest run.
     '''
     model = env.symbolic
     stepsize = model.dt
@@ -81,20 +81,19 @@ def post_analysis(state_stack, input_stack, env):
         reference = np.tile(reference.reshape(1, model.nx), (plot_length, 1))
 
     # Plot states
-    fig, axs = plt.subplots(model.nx, figsize=(6, 9))
+    fig, axs = plt.subplots(model.nx, figsize=(6, 9), sharex=True)
     for k in range(model.nx):
         axs[k].plot(times, np.array(state_stack).transpose()[k, 0:plot_length], label='actual')
         axs[k].plot(times, reference.transpose()[k, 0:plot_length], color='r', label='desired')
         axs[k].set(ylabel=env.STATE_LABELS[k] + f'\n[{env.STATE_UNITS[k]}]')
         axs[k].yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        if k != model.nx - 1:
-            axs[k].set_xticks([])
+        axs[k].set_xlim(times[0], times[-1])
     axs[0].set_title('State Trajectories')
     axs[-1].legend(ncol=3, bbox_transform=fig.transFigure, bbox_to_anchor=(1, 0), loc='lower right')
     axs[-1].set(xlabel='time (sec)')
     fig.tight_layout()
     # Plot inputs
-    fig, axs = plt.subplots(model.nu)
+    fig, axs = plt.subplots(model.nu, sharex=True)
     if model.nu == 1:
         axs = [axs]
     for k in range(model.nu):
@@ -105,6 +104,7 @@ def post_analysis(state_stack, input_stack, env):
         axs[k].set_ylim(0.8*env.physical_action_bounds[0][k], 1.2*env.physical_action_bounds[1][k])
         axs[k].axhline(env.physical_action_bounds[0][k], color="r", alpha=0.5, linestyle="--")
         axs[k].axhline(env.physical_action_bounds[1][k], color="r", alpha=0.5, linestyle="--")
+        axs[k].set_xlim(times[0], times[-1])
     axs[0].set_title('Input Trajectories')
     axs[-1].set(xlabel='time (sec)')
     fig.tight_layout()
