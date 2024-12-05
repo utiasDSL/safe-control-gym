@@ -216,6 +216,9 @@ class MPC(BaseController):
                 u = self.lqr_gain @ (x_guess[:, i] - goal_states[:, i]) + np.atleast_2d(self.model.U_EQ)[0, :].T
                 u_guess[:, i] = u
                 x_guess[:, i + 1, None] = self.dynamics_func(x0=x_guess[:, i], p=u)['xf'].toarray()
+        elif self.compute_initial_guess_method == 'heuristic':
+            x_guess = goal_states
+            u_guess = np.repeat(np.atleast_2d(self.U_EQ), self.T, axis=0).T
         else:
             raise Exception('Initial guess method not implemented.')
 
@@ -223,7 +226,7 @@ class MPC(BaseController):
         self.u_prev = u_guess
 
         # set the solver back
-        self.setup_optimizer(solver=self.solver)
+        self.setup_optimizer(solver=self.solver)  # TODO why? this method is also called from mpc_acados! at least move to line 209!
 
         return x_guess, u_guess
 

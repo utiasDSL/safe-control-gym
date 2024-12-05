@@ -45,6 +45,7 @@ class MPC_ACADOS(MPC):
             seed: int = 0,
             use_RTI: bool = False,
             use_lqr_gain_and_terminal_cost: bool = False,
+            warmstart_type: str = "ipopt",
             **kwargs
     ):
         '''Creates task and controller.
@@ -69,6 +70,7 @@ class MPC_ACADOS(MPC):
         for k, v in locals().items():
             if k != 'self' and k != 'kwargs' and '__' not in k:
                 self.__dict__.update({k: v})
+        assert (warmstart_type == "ipopt" or warmstart_type=="heuristic" or warmstart_type == "lqr")
         super().__init__(
             env_func,
             horizon=horizon,
@@ -81,7 +83,7 @@ class MPC_ACADOS(MPC):
             constraint_tol=constraint_tol,
             output_dir=output_dir,
             additional_constraints=additional_constraints,
-            # compute_initial_guess_method='ipopt',  # use ipopt initial guess by default
+            compute_initial_guess_method=warmstart_type,
             use_lqr_gain_and_terminal_cost=use_lqr_gain_and_terminal_cost,
             use_gpu=use_gpu,
             seed=seed,
@@ -89,6 +91,7 @@ class MPC_ACADOS(MPC):
         )
         # acados settings
         self.use_RTI = use_RTI
+        self.ocp_solver_exist = False
 
     @timing
     def reset(self):
@@ -97,14 +100,16 @@ class MPC_ACADOS(MPC):
         self.x_guess = None
         self.u_guess = None
         super().reset()
-        self.acados_model = None
-        self.ocp = None
-        self.acados_ocp_solver = None
-        # Dynamics model.
-        self.setup_acados_model()
-        # Acados optimizer.
-        self.setup_acados_optimizer()
-        self.acados_ocp_solver = AcadosOcpSolver(self.ocp)
+        if not self.ocp_solver_exist:
+            self.ocp_solver_exist = True
+            self.acados_model = None
+            self.ocp = None
+            self.acados_ocp_solver = None
+            # Dynamics model.
+            self.setup_acados_model()
+            # Acados optimizer.
+            self.setup_acados_optimizer()
+            self.acados_ocp_solver = AcadosOcpSolver(self.ocp)
 
     def setup_acados_model(self) -> AcadosModel:
         '''Sets up symbolic model for acados.
@@ -220,8 +225,9 @@ class MPC_ACADOS(MPC):
         ocp.solver_options.integrator_type = 'ERK'
         ocp.solver_options.nlp_solver_type = 'SQP' if not self.use_RTI else 'SQP_RTI'
         ocp.solver_options.nlp_solver_max_iter = 200
-        ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
-        # ocp.solver_options.globalization = 'FUNNEL_L1PEN_LINESEARCH' if not self.use_RTI else 'MERIT_BACKTRACKING'
+        # toggle globalization only if convergence problems are encountered.
+        # if not self.use_RTI:
+        #     ocp.solver_options.globalization = 'FUNNEL_L1PEN_LINESEARCH'  # 'MERIT_BACKTRACKING'
         ocp.solver_options.tf = self.T * self.dt  # prediction horizon
 
         # c code generation
@@ -395,17 +401,17 @@ class MPC_ACADOS(MPC):
         # has a built-in warm-starting mechanism.
         if self.warmstart:
             if self.x_guess is None or self.u_guess is None:
-                # compute initial guess with IPOPT
+                # compute initial guess with the method specified in 'warmstart_type'
                 self.compute_initial_guess(obs)
-            for idx in range(self.T + 1):
-                init_x = self.x_guess[:, idx]
-                self.acados_ocp_solver.set(idx, 'x', init_x)
-            for idx in range(self.T):
-                if nu == 1:
-                    init_u = np.array([self.u_guess[idx]])
-                else:
-                    init_u = self.u_guess[:, idx]
-                self.acados_ocp_solver.set(idx, 'u', init_u)
+                for idx in range(self.T + 1):
+                    init_x = self.x_guess[:, idx]
+                    self.acados_ocp_solver.set(idx, 'x', init_x)
+                for idx in range(self.T):
+                    if nu == 1:
+                        init_u = np.array([self.u_guess[idx]])
+                    else:
+                        init_u = self.u_guess[:, idx]
+                    self.acados_ocp_solver.set(idx, 'u', init_u)
 
         # set reference for the control horizon
         goal_states = self.get_references()
