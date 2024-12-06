@@ -441,11 +441,11 @@ class MPC(BaseController):
         '''Runs evaluation with current policy.
 
         Args:
-            render (bool): if to do real-time rendering.
-            logging (bool): if to log on terminal.
+            render (bool): If to do real-time rendering.
+            logging (bool): If to log on terminal.
 
         Returns:
-            dict: evaluation statisitcs, rendered frames.
+            dict: evaluation statistics, rendered frames.
         '''
         if env is None:
             env = self.env
