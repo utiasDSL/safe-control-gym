@@ -417,7 +417,10 @@ class MetricExtractor:
         return metrics
 
     def get_t_wall(self):
-        return self.data['controller_data'][0]['t_wall'][0]
+        try:
+            return self.data['controller_data'][0]['t_wall'][0]
+        except:
+            return np.nan
 
     def get_episode_data(self, key, postprocess_func=lambda x: x):
         '''Extract data field from recorded trajectory data, optionally postprocess each episode data (e.g. get sum).
