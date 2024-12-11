@@ -216,7 +216,7 @@ class MPC(BaseController):
                 u = self.lqr_gain @ (x_guess[:, i] - goal_states[:, i]) + np.atleast_2d(self.model.U_EQ)[0, :].T
                 u_guess[:, i] = u
                 x_guess[:, i + 1, None] = self.dynamics_func(x0=x_guess[:, i], p=u)['xf'].toarray()
-        elif self.compute_initial_guess_method == 'heuristic':
+        elif self.compute_initial_guess_method == 'tracking_goal':
             x_guess = goal_states
             u_guess = np.repeat(np.atleast_2d(self.U_EQ), self.T, axis=0).T
         else:

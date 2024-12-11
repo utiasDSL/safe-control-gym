@@ -70,7 +70,7 @@ class MPC_ACADOS(MPC):
         for k, v in locals().items():
             if k != 'self' and k != 'kwargs' and '__' not in k:
                 self.__dict__.update({k: v})
-        assert (warmstart_type == "ipopt" or warmstart_type=="heuristic" or warmstart_type == "lqr")
+        assert (warmstart_type == "ipopt" or warmstart_type=="tracking_goal" or warmstart_type == "lqr")
         super().__init__(
             env_func,
             horizon=horizon,
