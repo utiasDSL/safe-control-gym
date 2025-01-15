@@ -18,4 +18,4 @@ def test_lqr(SYS, TASK, ALGO):
                     '--kv_overrides',
                         'algo_config.max_iterations=2'
                     ]
-    run(gui=False, n_episodes=None, n_steps=10, save_data=False)
+    run(gui=False, plot=False, n_episodes=None, n_steps=10, save_data=False)
