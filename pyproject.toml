@@ -31,6 +31,6 @@ rich = "^12.5.1 "
 [tool.poetry.dev-dependencies]
 
 [build-system]
-requires = ["poetry-core @ git+https://github.com/python-poetry/poetry-core.git@main"]
+requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
