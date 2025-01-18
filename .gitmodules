@@ -1,0 +1,3 @@
+[submodule "pycffirmware"]
+	path = pycffirmware
+	url = https://github.com/utiasDSL/pycffirmware
