@@ -135,27 +135,18 @@ class Controller():
         else:
             waypoints = [(self.initial_obs[0], self.initial_obs[2], self.initial_obs[4])]
 
-        # Example code: hardcode waypoints 
-        waypoints.append((-0.5, -3.0, 2.0))
-        waypoints.append((-0.5, -2.0, 2.0))
-        waypoints.append((-0.5, -1.0, 2.0))
-        waypoints.append((-0.5,  0.0, 2.0))
-        waypoints.append((-0.5,  1.0, 2.0))
-        waypoints.append((-0.5,  2.0, 2.0))
-        waypoints.append([initial_info["x_reference"][0], initial_info["x_reference"][2], initial_info["x_reference"][4]])
-
-        # Polynomial fit.
-        self.waypoints = np.array(waypoints)
-        deg = 6
-        t = np.arange(self.waypoints.shape[0])
-        fx = np.poly1d(np.polyfit(t, self.waypoints[:,0], deg))
-        fy = np.poly1d(np.polyfit(t, self.waypoints[:,1], deg))
-        fz = np.poly1d(np.polyfit(t, self.waypoints[:,2], deg))
-        duration = 15
-        t_scaled = np.linspace(t[0], t[-1], int(duration*self.CTRL_FREQ))
-        self.ref_x = fx(t_scaled)
-        self.ref_y = fy(t_scaled)
-        self.ref_z = fz(t_scaled)
+        radius = 0.6
+        start_point = (waypoints[0][0], waypoints[0][1], waypoints[0][2])
+        num_points = 100
+        
+        # generate a circle
+        self.waypoints = ecu.generateCircle(radius, start_point, num_points)
+        t_scaled = np.linspace(0, 1, len(self.waypoints))
+        
+        self.ref_x = self.waypoints[:, 0]
+        self.ref_y = self.waypoints[:, 1]
+        self.ref_z = self.waypoints[:, 2]
+        
 
         #########################
         # REPLACE THIS (END) ####
