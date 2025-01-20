@@ -15,13 +15,13 @@ The final project includes two phases:
 We recommend Ubuntu 20.04 on a mid-tier laptop and GPU (e.g., a Lenovo P52 with i7-8850H/Quadro P2000)
 
 ```bash
-git clone [https://github.com/Swapnil949/aer1217-safe-control-gym.git](https://github.com/Swapnil949/aer1217-safe-control-gym)
+git clone https://github.com/Swapnil949/aer1217-safe-control-gym
 cd aer1217-safe-control-gym
 git submodule update --init --recursive
 ```
 
 Create and access a Python 3.8 environment using
-[`conda`]([https://docs.anaconda.com/miniconda/install](https://docs.anaconda.com/miniconda/install/))
+[`conda`][https://docs.anaconda.com/miniconda/install](https://docs.anaconda.com/miniconda/install/)
 
 ```bash
 conda create -n aer1217 python=3.8
