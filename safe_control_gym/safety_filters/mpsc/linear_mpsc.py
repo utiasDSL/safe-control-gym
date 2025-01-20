@@ -101,7 +101,7 @@ class LINEAR_MPSC(MPSC):
                     'x': delta_x,
                     'p': delta_u,
                     'ode': x_dot_lin_vec
-                }, {'tf': self.dt}
+                }, 0, self.dt
             )
 
         self.dynamics_func = dynamics_func
