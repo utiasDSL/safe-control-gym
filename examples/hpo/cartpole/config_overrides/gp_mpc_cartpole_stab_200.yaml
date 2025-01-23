@@ -4,6 +4,7 @@ algo_config:
   deque_size: 10
   eval_batch_size: 10
   gp_approx: mean_eq
+  # gp_model_path: ./gp_mpc/results/
   gp_model_path: null
   horizon: 20
   prior_info:
@@ -27,19 +28,19 @@ algo_config:
   - 3000
   - 3000
   overwrite_saved_data: false
-  prior_param_coeff: 1.5
+  prior_param_coeff: 2.0
   prob: 0.95
   q_mpc:
   - 1
+  - 0.1
   - 1
-  - 1
-  - 1
+  - 0.1
   r_mpc:
   - 0.1
   kernel: Matern
-  sparse_gp: True
+  sparse_gp: true
   n_ind_points: 40
-  inducing_point_selection_method: 'kmeans'
+  inducing_point_selection_method: kmeans
   recalc_inducing_points_at_every_step: false
   soft_constraints:
     gp_soft_constraints: false
@@ -49,18 +50,18 @@ algo_config:
   target_mask: null
   train_iterations: null
   test_data_ratio: 0.2
-  use_prev_start: true
   warmstart: true
-  num_epochs: 5
-  num_samples: 75
-  num_test_episodes_per_epoch: 2
-  num_train_episodes_per_epoch: 2
+  num_epochs: 2
+  num_samples: 50
+  num_test_episodes_per_epoch: 1
+  num_train_episodes_per_epoch: 1
   same_test_initial_state: true
   same_train_initial_state: false
   rand_data_selection: false
   terminate_train_on_done: True
   terminate_test_on_done: False
+  # parallel: False
   parallel: True
 
-device: cpu
+device: cuda
 restore: null
