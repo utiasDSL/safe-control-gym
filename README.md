@@ -15,20 +15,20 @@ The final project includes two phases:
 We recommend Ubuntu 20.04 on a mid-tier laptop and GPU (e.g., a Lenovo P52 with i7-8850H/Quadro P2000)
 
 ```bash
-git clone https://github.com/utiasDSL/safe-control-gym.git
-cd safe-control-gym
-git checkout aer1217-course-project
+git clone https://github.com/Swapnil949/aer1217-safe-control-gym
+cd aer1217-safe-control-gym
+git submodule update --init --recursive
 ```
 
 Create and access a Python 3.8 environment using
-[`conda`](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
+[`conda`][https://docs.anaconda.com/miniconda/install](https://docs.anaconda.com/miniconda/install/)
 
 ```bash
-conda create -n aer1217-project python=3.8
-conda activate aer1217-project
+conda create -n aer1217 python=3.8
+conda activate aer1217
 ```
 
-Install the `safe-control-gym` repository
+Install the `aer-safe-control-gym` repository
 
 ```bash
 pip install --upgrade pip
@@ -38,8 +38,6 @@ pip install -e .
 ## Install `pycffirmware`
 
 ```bash
-cd ..
-git clone https://github.com/utiasDSL/pycffirmware.git
 cd pycffirmware/
 git submodule update --init --recursive
 sudo apt update
@@ -48,15 +46,6 @@ sudo apt install build-essential
 cd wrapper/
 chmod +x build_linux.sh
 ./build_linux.sh
-```
-
-## Getting Started
-
-Run the scripts in [`aer-course-project/`](https://github.com/utiasDSL/safe-control-gym/tree/aer1217-course-project/aer-course-project)
-
-```bash
-cd ../../safe-control-gym/aer-course-project/
-python3 final_project.py --overrides ./getting_started.yaml
 ```
 
 **Modify file [`edit_this.py`](https://github.com/utiasDSL/safe-control-gym/blob/beta-iros-competition/competition/edit_this.py) to customize your controller based on [Crazyswarm's Crazyflie interface](https://crazyswarm.readthedocs.io/en/latest/api.html#pycrazyswarm.crazyflie.Crazyflie)**
