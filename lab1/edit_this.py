@@ -135,7 +135,7 @@ class Controller():
         else:
             waypoints = [(self.initial_obs[0], self.initial_obs[2], self.initial_obs[4])]
 
-        radius = 0.6
+        radius = 1.0
         start_point = (waypoints[0][0], waypoints[0][1], waypoints[0][2])
         num_points = 100
         
