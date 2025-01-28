@@ -1,6 +1,5 @@
 task_config:
   seed: 42
-  info_in_reset: True
   ctrl_freq: 15
   pyb_freq: 750
   physics: pyb

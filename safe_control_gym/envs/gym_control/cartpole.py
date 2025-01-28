@@ -32,7 +32,6 @@ class CartPole(BenchmarkEnv):
     multiple cost functions, stabilization and trajectory tracking references.
 
     task_config:
-        info_in_reset: True
         randomized_inertial_prop: True
         inertial_prop_randomization_info:
             pole_length:
@@ -338,10 +337,7 @@ class CartPole(BenchmarkEnv):
         obs, info = self._get_observation(), self._get_reset_info()
         obs, info = super().after_reset(obs, info)
         # Return either an observation and dictionary or just the observation.
-        if self.INFO_IN_RESET:
-            return obs, info
-        else:
-            return obs
+        return obs, info
 
     def render(self, mode='human'):
         '''Retrieves a frame from PyBullet rendering.

@@ -387,10 +387,7 @@ class Quadrotor(BaseAviary):
         obs, info = super().after_reset(obs, info)
 
         # Return either an observation and dictionary or just the observation.
-        if self.INFO_IN_RESET:
-            return obs, info
-        else:
-            return obs
+        return obs, info
 
     def step(self, action):
         '''Advances the environment by one control step.

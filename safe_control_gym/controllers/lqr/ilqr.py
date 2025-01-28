@@ -58,7 +58,7 @@ class iLQR(BaseController):
         self.lamb_max = lamb_max
         self.epsilon = epsilon
 
-        self.env = env_func(info_in_reset=True, done_on_out_of_bound=True)
+        self.env = env_func(done_on_out_of_bound=True)
 
         # Controller params.
         self.model = self.get_prior(self.env)

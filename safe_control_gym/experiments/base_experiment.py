@@ -188,11 +188,8 @@ class BaseExperiment:
             obs (ndarray): The initial observation.
             info (dict): The initial info.
         '''
-        if self.env.INFO_IN_RESET:
-            obs, info = self.env.reset(seed=seed)
-        else:
-            obs = self.env.reset(seed=seed)
-            info = None
+        obs, info = self.env.reset(seed=seed)
+
         if ctrl_data is not None:
             for data_key, data_val in self.ctrl.results_dict.items():
                 ctrl_data[data_key].append(np.array(deepcopy(data_val)))
@@ -325,26 +322,17 @@ class RecordDataWrapper(gym.Wrapper):
     def reset(self, **kwargs):
         '''Wrapper for the gym.env reset function.'''
 
-        if self.env.INFO_IN_RESET:
-            obs, info = self.env.reset(**kwargs)
-            if 'symbolic_model' in info:
-                info.pop('symbolic_model')
-            if 'symbolic_constraints' in info:
-                info.pop('symbolic_constraints')
-            step_data = dict(
-                obs=obs, info=info, state=self.env.state
-            )
-            for key, val in step_data.items():
-                self.episode_data[key].append(val)
-            return obs, info
-        else:
-            obs = self.env.reset(**kwargs)
-            step_data = dict(
-                obs=obs, state=self.env.state
-            )
-            for key, val in step_data.items():
-                self.episode_data[key].append(val)
-            return obs
+        obs, info = self.env.reset(**kwargs)
+        if 'symbolic_model' in info:
+            info.pop('symbolic_model')
+        if 'symbolic_constraints' in info:
+            info.pop('symbolic_constraints')
+        step_data = dict(
+            obs=obs, info=info, state=self.env.state
+        )
+        for key, val in step_data.items():
+            self.episode_data[key].append(val)
+        return obs, info
 
     def step(self, action):
         '''Wrapper for the gym.env step function.'''

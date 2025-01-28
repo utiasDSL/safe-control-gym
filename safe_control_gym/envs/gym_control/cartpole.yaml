@@ -1,5 +1,4 @@
 # Simulation options
-info_in_reset: False
 ctrl_freq: 50
 pyb_freq: 50
 gui: False
