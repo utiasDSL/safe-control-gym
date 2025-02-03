@@ -1,8 +1,8 @@
 '''To standardize training/evaluation interface.'''
 
+import time
 from collections import defaultdict
 from copy import deepcopy
-from time import time
 
 import gymnasium as gym
 import numpy as np
@@ -174,6 +174,12 @@ class BaseExperiment:
             if success:
                 action = self.env.normalize_action(certified_action)
 
+        if self.last_step_timestep is not None and self.env.GUI is True:
+            # Sleep to maintain real-time pacing
+            elapsed = time.time() - self.last_step_timestep
+            time.sleep(max(0, 1.0 / self.env.CTRL_FREQ - elapsed))
+        self.last_step_timestep = time.time()
+
         return action
 
     def _evaluation_reset(self, ctrl_data, sf_data, seed=None):
@@ -251,6 +257,8 @@ class BaseExperiment:
         if self.train_env is not None:
             self.train_env.reset()
             self.train_env.clear_data()
+
+        self.last_step_timestep = None
 
     def close(self):
         '''Closes the environments, controller, and safety filter.'''
@@ -362,7 +370,7 @@ class RecordDataWrapper(gym.Wrapper):
             current_physical_action=self.env.current_physical_action,
             current_noisy_physical_action=self.env.current_noisy_physical_action,
             current_clipped_action=self.env.current_clipped_action,
-            timestamp=time(),
+            timestamp=time.time(),
         )
         for key, val in step_data.items():
             self.episode_data[key].append(val)
