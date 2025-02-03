@@ -48,7 +48,15 @@ class BaseExperiment:
 
         self.reset()
 
-    def run_evaluation(self, training=False, n_episodes=None, n_steps=None, done_on_max_steps=None, log_freq=None, verbose=True, **kwargs):
+    def run_evaluation(self,
+                       training=False,
+                       n_episodes=None,
+                       n_steps=None,
+                       done_on_max_steps=None,
+                       log_freq=None,
+                       verbose=True,
+                       visualization_time_multiplier=1,
+                       **kwargs):
         '''Evaluate a trained controller.
 
         Args:
@@ -56,11 +64,14 @@ class BaseExperiment:
             n_episodes (int): Number of runs to execute.
             n_steps (int): The number of steps to collect in total.
             log_freq (int): The frequency with which to log information.
+            visualization_time_multiplier (float): Changes speed of visualization, where 1x is realtime,
+                2x is twice as fast as real-time, etc. None results in fastest visualization.
 
         Returns:
             trajs_data (dict): The raw data from the executed runs.
             metrics (dict): The metrics calculated from the raw data.
         '''
+        self.visualization_time_multiplier = visualization_time_multiplier
 
         if not training:
             self.reset()
@@ -174,10 +185,12 @@ class BaseExperiment:
             if success:
                 action = self.env.normalize_action(certified_action)
 
-        if self.last_step_timestep is not None and self.env.GUI is True:
+        if self.last_step_timestep is not None and \
+                self.env.GUI is True and \
+                self.visualization_time_multiplier is not None:
             # Sleep to maintain real-time pacing
             elapsed = time.time() - self.last_step_timestep
-            time.sleep(max(0, 1.0 / self.env.CTRL_FREQ - elapsed))
+            time.sleep(max(0, 1.0 / self.env.CTRL_FREQ / self.visualization_time_multiplier - elapsed))
         self.last_step_timestep = time.time()
 
         return action
