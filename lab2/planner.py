@@ -246,3 +246,6 @@ class Controller():
         self.interstep_learning_time = 0
         self.interstep_learning_occurrences = 0
         self.interepisode_learning_time = 0
+        
+    def save_summary(self, filename):
+        self.ctrl.save_log(filename)

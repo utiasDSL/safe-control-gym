@@ -238,6 +238,9 @@ def run(test=False):
     print('\n\n')
     print(tree)
     print('\n\n')
+    print("Saving the summary to 'summary.csv'...")
+    with open('summary.csv', 'w') as f:
+        ctrl.save_summary(f)
 
 if __name__ == "__main__":
     run()

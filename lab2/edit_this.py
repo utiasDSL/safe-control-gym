@@ -14,6 +14,7 @@ class GeoController():
 
     """
 
+
     def __init__(self,
                  g: float = 9.8,
                  m: float = 0.036,
@@ -47,6 +48,7 @@ class GeoController():
         self.MIN_PWM = min_pwm
         self.MAX_PWM = max_pwm
         self.MIXER_MATRIX = np.array([[.5, -.5, 1], [.5, .5, -1], [-.5, .5, 1], [-.5, -.5, -1]])
+        self.log_buffer = []  # Buffer to store logs before saving  
         self.reset()
 
     def reset(self):
@@ -153,6 +155,19 @@ class GeoController():
         x_bdes = np.cross(y_c, z_bdes)/np.linalg.norm(np.cross(y_c, z_bdes))
         y_bdes = np.cross(z_bdes, x_bdes)
         desired_euler = Rotation.from_matrix(np.column_stack((x_bdes, y_bdes, z_bdes))).as_euler('xyz')
+        
+        #---------Task 4: Log the desired and current state--------#
+        cur_rpy = Rotation.from_quat(cur_quat).as_euler('xyz')
+        log_entry = np.hstack((
+            time.time(),          # Timestamp
+            cur_pos, target_pos,       # Position
+            cur_vel, target_vel,       # Velocity
+            cur_rpy, desired_euler,    # Orientation
+            desired_thrust             # Thrust command
+        ))
+
+        self.log_buffer.append(log_entry)
+        
         return desired_thrust, desired_euler, pos_e
 
 
@@ -202,3 +217,12 @@ class GeoController():
         pwm = thrust + np.dot(self.MIXER_MATRIX, target_torques)
         pwm = np.clip(pwm, self.MIN_PWM, self.MAX_PWM)
         return self.PWM2RPM_SCALE * pwm + self.PWM2RPM_CONST
+    
+    def save_log(self, filename):
+        """Save the log buffer to a CSV file.
+
+        Args:
+            filename (str): The name of the file to save the log buffer to.
+
+        """
+        np.savetxt(filename, self.log_buffer, delimiter=',')
