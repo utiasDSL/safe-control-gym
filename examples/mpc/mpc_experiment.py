@@ -44,7 +44,7 @@ def run(gui=False, plot=True, n_episodes=1, n_steps=None, save_data=False):
 
     # Run the experiment.
     experiment = BaseExperiment(env=env, ctrl=ctrl)
-    trajs_data, metrics = experiment.run_evaluation(training=True, n_episodes=n_episodes, n_steps=n_steps)
+    trajs_data, metrics = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
 
     if plot:
         for i in range(len(trajs_data['obs'])):
