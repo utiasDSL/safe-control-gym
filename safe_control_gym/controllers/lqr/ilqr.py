@@ -342,6 +342,10 @@ class iLQR(BaseController):
         self.ite_counter = 0
         self.traj_step = 0
 
+    def reset_before_run(self, obs=None, info=None, env=None):
+        self.traj_step = 0
+        self.setup_results_dict()
+
     def run(self, env=None, max_steps=500, training=True):
         '''Runs evaluation with current policy.
 

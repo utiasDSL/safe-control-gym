@@ -46,8 +46,6 @@ class BaseExperiment:
             self.train_env = RecordDataWrapper(self.train_env)
         self.safety_filter = safety_filter
 
-        self.reset()
-
     def run_evaluation(self,
                        training=False,
                        n_episodes=None,
