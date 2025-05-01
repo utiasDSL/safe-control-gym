@@ -44,7 +44,7 @@ def run(gui=False, plot=True, n_episodes=1, n_steps=None, save_data=False):
 
     # Run the experiment.
     experiment = BaseExperiment(env=env, ctrl=ctrl)
-    trajs_data, metrics = experiment.run_evaluation(training=True, n_episodes=n_episodes, n_steps=n_steps)
+    trajs_data, metrics = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
 
     if plot:
         for i in range(len(trajs_data['obs'])):
@@ -64,11 +64,11 @@ def run(gui=False, plot=True, n_episodes=1, n_steps=None, save_data=False):
 
 
 def post_analysis(state_stack, input_stack, env):
-    '''Plots the input and states to determine iLQR's success.
+    '''Plots the input and states to determine MPC's success.
 
     Args:
-        state_stack (ndarray): The list of observations of iLQR in the latest run.
-        input_stack (ndarray): The list of inputs of iLQR in the latest run.
+        state_stack (ndarray): The list of observations of MPC in the latest run.
+        input_stack (ndarray): The list of inputs of MPC in the latest run.
     '''
     model = env.symbolic
     stepsize = model.dt
