@@ -106,7 +106,7 @@ class Constraint:
             value (ndarray): The evaluation of the constraint.
         '''
         env_value = self.get_env_constraint_var(env)
-        return np.round_(np.atleast_1d(np.squeeze(self.sym_func(np.array(env_value, ndmin=1)))), decimals=self.decimals)
+        return np.round(np.atleast_1d(np.squeeze(self.sym_func(np.array(env_value, ndmin=1)))), decimals=self.decimals)
 
     def is_violated(self,
                     env,
@@ -443,7 +443,7 @@ class SymmetricStateConstraint(BoundedConstraint):
         self.num_constraints = self.bound.shape[0]
 
     def get_value(self, env):
-        c_value = np.round_(np.abs(self.constraint_filter @ env.state) - self.bound, decimals=self.decimals)
+        c_value = np.round(np.abs(self.constraint_filter @ env.state) - self.bound, decimals=self.decimals)
         return c_value
 
     # TODO: temp addition
