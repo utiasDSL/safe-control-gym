@@ -278,7 +278,7 @@ class SafeExplorerPPO(BaseController):
         return eval_results
 
     def pretrain_step(self):
-        '''Performs a pre-trianing step.'''
+        '''Performs a pre-training step.'''
         results = defaultdict(list)
         start = time.time()
         self.safety_layer.train()
@@ -428,7 +428,7 @@ class SafeExplorerPPO(BaseController):
     def collect_constraint_data(self,
                                 num_steps
                                 ):
-        '''Uses random policy to collect data for pre-training constriant models.'''
+        '''Uses random policy to collect data for pre-training constraint models.'''
         step = 0
         obs, info = self.env.reset()
         obs = self.obs_normalizer(obs)

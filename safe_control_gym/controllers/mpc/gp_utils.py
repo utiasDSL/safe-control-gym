@@ -29,10 +29,10 @@ def covSEard(x,
         x (np.array or casadi.MX/SX): First vector.
         z (np.array or casadi.MX/SX): Second vector.
         ell (np.array or casadi.MX/SX): Length scales.
-        sf2 (float or casadi.MX/SX): output scale parameter.
+        sf2 (float or casadi.MX/SX): Output scale parameter.
 
     Returns:
-        SE kernel (casadi.MX/SX): SE kernel.
+        SE kernel (casadi.MX/SX): Squared Exponential kernel.
     '''
     dist = ca.sum1((x - z)**2 / ell**2)
     return sf2 * ca.SX.exp(-.5 * dist)
@@ -49,11 +49,10 @@ def covMatern52ard(x,
         x (np.array or casadi.MX/SX): First vector.
         z (np.array or casadi.MX/SX): Second vector.
         ell (np.array or casadi.MX/SX): Length scales.
-        sf2 (float or casadi.MX/SX): output scale parameter.
+        sf2 (float or casadi.MX/SX): Output scale parameter.
 
     Returns:
-        Matern52 kernel (casadi.MX/SX): Matern52 kernel.
-
+        Matern52 kernel (casadi.MX/SX): Matern 5/2 kernel.
     '''
     dist = ca.sum1((x - z)**2 / ell**2)
     r_over_l = ca.sqrt(dist)
@@ -61,10 +60,8 @@ def covMatern52ard(x,
 
 
 class ZeroMeanIndependentMultitaskGPModel(gpytorch.models.ExactGP):
-    '''Multidimensional Gaussian Process model with zero mean function.
-
-    Or constant mean and radial basis function kernel (SE).
-
+    '''Multidimensional Gaussian Process model with zero mean function,
+       or constant mean and radial basis function kernel (SE).
     '''
 
     def __init__(self,
@@ -77,10 +74,10 @@ class ZeroMeanIndependentMultitaskGPModel(gpytorch.models.ExactGP):
         '''Initialize a multidimensional Gaussian Process model with zero mean function.
 
         Args:
-            train_x (torch.Tensor): input training data (input_dim X N samples).
-            train_y (torch.Tensor): output training data (output dim x N samples).
+            train_x (torch.Tensor): Input training data (input_dim X N samples).
+            train_y (torch.Tensor): Output training data (output dim x N samples).
             likelihood (gpytorch.likelihood): Likelihood function (gpytorch.likelihoods.MultitaskGaussianLikelihood).
-            nx (int): dimension of the target output (output dim)
+            nx (int): Dimension of the target output (output dim).
         '''
         super().__init__(train_x, train_y, likelihood)
         self.n = nx
@@ -108,6 +105,14 @@ class ZeroMeanIndependentMultitaskGPModel(gpytorch.models.ExactGP):
     def forward(self,
                 x
                 ):
+        '''Forward pass for the GP model.
+
+        Args:
+            x (torch.Tensor): Input data.
+
+        Returns:
+            gpytorch.distributions.MultitaskMultivariateNormal: Multitask GP output.
+        '''
         mean_x = self.mean_module(x)
         covar_x = self.covar_module(x)
         return gpytorch.distributions.MultitaskMultivariateNormal.from_batch_mvn(
@@ -116,9 +121,8 @@ class ZeroMeanIndependentMultitaskGPModel(gpytorch.models.ExactGP):
 
 
 class ZeroMeanIndependentGPModel(gpytorch.models.ExactGP):
-    '''Single dimensional output Gaussian Process model with zero mean function.
-
-    Or constant mean and radial basis function kernel (SE).
+    '''Single dimensional output Gaussian Process model with zero mean function,
+       or constant mean and radial basis function kernel (SE).
     '''
 
     def __init__(self,
@@ -130,9 +134,10 @@ class ZeroMeanIndependentGPModel(gpytorch.models.ExactGP):
         '''Initialize a single dimensional Gaussian Process model with zero mean function.
 
         Args:
-            train_x (torch.Tensor): input training data (input_dim X N samples).
-            train_y (torch.Tensor): output training data (output dim x N samples).
+            train_x (torch.Tensor): Input training data (input_dim X N samples).
+            train_y (torch.Tensor): Output training data (output dim x N samples).
             likelihood (gpytorch.likelihood): Likelihood function (gpytorch.likelihoods.GaussianLikelihood).
+            kernel (str): Kernel type, 'RBF' or 'Matern'.
         '''
         super().__init__(train_x, train_y, likelihood)
         # For Zero mean function.
@@ -152,6 +157,14 @@ class ZeroMeanIndependentGPModel(gpytorch.models.ExactGP):
     def forward(self,
                 x
                 ):
+        '''Forward pass for the GP model.
+
+        Args:
+            x (torch.Tensor): Input data.
+
+        Returns:
+            gpytorch.distributions.MultivariateNormal: GP output.
+        '''
         mean_x = self.mean_module(x)
         covar_x = self.covar_module(x)
         return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
@@ -161,13 +174,19 @@ class BatchIndependentMultitaskGPModel(gpytorch.models.ExactGP):
     '''Multidimensional Gaussian Process model with zero mean function.
     '''
 
-    def __init__(self, train_x, train_y, likelihood, kernel='RBF'):
+    def __init__(self,
+                 train_x,
+                 train_y,
+                 likelihood,
+                 kernel='RBF'
+                 ):
         '''Initialize a multidimensional Gaussian Process model with zero mean function.
 
         Args:
-            train_x (torch.Tensor): input training data (input_dim X N samples).
-            train_y (torch.Tensor): output training data (output dim x N samples).
+            train_x (torch.Tensor): Input training data (input_dim X N samples).
+            train_y (torch.Tensor): Output training data (output dim x N samples).
             likelihood (gpytorch.likelihood): Likelihood function (gpytorch.likelihoods.GaussianLikelihood with batch).
+            kernel (str): Kernel type, 'RBF' or 'Matern'.
         '''
         super().__init__(train_x, train_y, likelihood)
         self.mean_module = gpytorch.means.ZeroMean(batch_shape=torch.Size([train_y.shape[0]]))
@@ -183,13 +202,21 @@ class BatchIndependentMultitaskGPModel(gpytorch.models.ExactGP):
             )
 
     def forward(self, x):
+        '''Forward pass for the batch multitask GP model.
+
+        Args:
+            x (torch.Tensor): Input data.
+
+        Returns:
+            gpytorch.distributions.MultivariateNormal: GP output.
+        '''
         mean_x = self.mean_module(x)
         covar_x = self.covar_module(x)
         return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
 
 
 class GaussianProcessCollection:
-    '''Collection of GaussianProcesses for multioutput GPs.'''
+    '''Collection of Gaussian Processes for multi-output GPs.'''
 
     def __init__(self, model_type,
                  likelihood,
@@ -241,7 +268,8 @@ class GaussianProcessCollection:
         '''Initialize useful properties.
 
         Args:
-            train_inputs, train_targets (torch.tensors): Input and target training data.
+            train_inputs (torch.Tensor): Input training data.
+            train_targets (torch.Tensor): Target training data.
         '''
         target_dimension = train_targets.shape[1]
         self.input_dimension = train_inputs.shape[1]
@@ -256,7 +284,8 @@ class GaussianProcessCollection:
         '''Load hyperparameters from a state_dict.
 
         Args:
-            train_inputs, train_targets (torch.tensors): Input and target training data.
+            train_inputs (torch.Tensor): Input training data.
+            train_targets (torch.Tensor): Target training data.
             path_to_statedicts (str): Path to where the state dicts are saved.
         '''
         assert self.parallel is False, ValueError('Parallel GP not supported yet.')
@@ -285,7 +314,17 @@ class GaussianProcessCollection:
     def get_hyperparameters(self,
                             as_numpy=False
                             ):
-        '''Get the outputscale and lengthscale from the kernel matrices of the GPs.'''
+        '''Get the output scale and length scale from the kernel matrices of the GPs.
+
+        Args:
+            as_numpy (bool): If True, return as numpy arrays.
+
+        Returns:
+            lengthscale (torch.Tensor): Length scale of the GPs.
+            outputscale (torch.Tensor): Output scale of the GPs.
+            noise (torch.Tensor): Noise of the GPs.
+            K_plus_noise (torch.Tensor): Kernel matrix of the GPs.
+        '''
         lengthscale_list = []
         output_scale_list = []
         noise_list = []
@@ -317,11 +356,17 @@ class GaussianProcessCollection:
               gpu=False,
               output_dir='results'
               ):
-        '''Train the GP using Train_x and Train_y.
+        '''Train the GP using train_x and train_y.
 
         Args:
-            train_x: Torch tensor (N samples [rows] by input dim [cols])
-            train_y: Torch tensor (N samples [rows] by target dim [cols])
+            train_x_raw (torch.Tensor): Training input data.
+            train_y_raw (torch.Tensor): Training target data.
+            test_x_raw (torch.Tensor): Test input data.
+            test_y_raw (torch.Tensor): Test target data.
+            n_train (list): Number of training iterations for each GP.
+            learning_rate (list): Learning rate for each GP.
+            gpu (bool): If True, use GPU.
+            output_dir (str): Directory to save models.
         '''
         self._init_properties(train_x_raw, train_y_raw)
         self.model_paths = []
@@ -378,15 +423,17 @@ class GaussianProcessCollection:
                 requires_grad=False,
                 return_pred=True
                 ):
-        '''
-        Args:
-            x : torch.Tensor (N_samples x input DIM).
+        '''Predict using the GP.
 
-        Return
-            Predictions
-                mean : torch.tensor (nx X N_samples).
-                lower : torch.tensor (nx X N_samples).
-                upper : torch.tensor (nx X N_samples).
+        Args:
+            x (torch.Tensor): Input data (N_samples x input_dim).
+            requires_grad (bool): If True, compute gradients.
+            return_pred (bool): If True, return prediction object.
+
+        Returns:
+            means (torch.Tensor): Mean of the GP.
+            cov (torch.Tensor): Covariance of the GP.
+            pred_list (list): List of predictions.
         '''
         if self.parallel is False:
             means_list = []
@@ -410,8 +457,11 @@ class GaussianProcessCollection:
             return self.gps.predict(x, requires_grad=requires_grad, return_pred=return_pred)
 
     def make_casadi_predict_func(self):
-        '''
-        Assume train_inputs and train_tergets are already
+        '''Create a CasADi function for GP prediction.
+        Assumes train_inputs and train_targets are already masked.
+
+        Returns:
+            casadi_predict (casadi.Function): CasADi prediction function.
         '''
 
         Nz = len(self.input_mask)
@@ -436,7 +486,14 @@ class GaussianProcessCollection:
     def prediction_jacobian(self,
                             query
                             ):
-        '''Return Jacobian.'''
+        '''Return the Jacobian of the GP prediction.
+
+        Args:
+            query (torch.Tensor): Query input.
+
+        Returns:
+            jacobian (torch.Tensor): Jacobian of the mean prediction.
+        '''
         raise NotImplementedError
 
     def plot_trained_gp(self,
@@ -444,7 +501,13 @@ class GaussianProcessCollection:
                         targets,
                         fig_count=0
                         ):
-        '''Plot the trained GP given the input and target data.'''
+        '''Plot the trained GP given the input and target data.
+
+        Args:
+            inputs (np.array): Input data.
+            targets (np.array): Target data.
+            fig_count (int): Figure count for plotting.
+        '''
         assert self.parallel is False, ValueError('Parallel GP not supported yet.')
         for gp_ind, gp in enumerate(self.gp_list):
             fig_count = gp.plot_trained_gp(inputs,
@@ -464,7 +527,7 @@ class GaussianProcessCollection:
             x2 (torch.Tensor): Second vector.
 
         Returns:
-            list of LazyTensor Kernels.
+            k_list (list): List of LazyTensor kernels.
         '''
         if x2 is None:
             x2 = x1
@@ -492,7 +555,7 @@ class GaussianProcessCollection:
             x2 (torch.Tensor): Second vector.
 
         Returns:
-            Torch tensor of the non-lazy kernel matrices.
+            non_lazy_tensors (torch.Tensor): Non-lazy kernel matrices.
         '''
         k_list = self._kernel_list(x1, x2)
         non_lazy_tensors = [k.evaluate() for k in k_list]
@@ -511,7 +574,7 @@ class GaussianProcessCollection:
             x2 (torch.Tensor): Second vector.
 
         Returns:
-            Torch tensor of the non-lazy inverse kernel matrices.
+            non_lazy_tensors (torch.Tensor): Non-lazy inverse kernel matrices.
         '''
         if x2 is None:
             x2 = x1
@@ -524,9 +587,7 @@ class GaussianProcessCollection:
 
 
 class BatchGPModel:
-    '''Gaussian Processes decorator for batch GP in gpytorch.
-
-    '''
+    '''Gaussian Processes decorator for batch GP in gpytorch.'''
 
     def __init__(self,
                  model_type,
@@ -542,7 +603,6 @@ class BatchGPModel:
             model_type (gpytorch model class): Model class for the GP (BatchIndependentMultitaskGPModel).
             likelihood (gpytorch.likelihoods.MultitaskGaussianLikelihood): likelihood function.
             normalize (bool): If True, scale all data between -1 and 1. (prototype and not fully operational).
-
         '''
         self.model_type = model_type
         self.likelihood = likelihood
@@ -558,8 +618,11 @@ class BatchGPModel:
                     train_inputs,
                     train_targets
                     ):
-        '''Init GP model from train inputs and train_targets.
+        '''Initialize GP model from train inputs and train_targets.
 
+        Args:
+            train_inputs (torch.Tensor): Input training data.
+            train_targets (torch.Tensor): Target training data.
         '''
         if train_targets.ndim > 1:
             target_dimension = train_targets.shape[1]
@@ -579,9 +642,10 @@ class BatchGPModel:
                                 ):
         '''Compute K(X,X) + sigma*I and its inverse.
 
+        Args:
+            train_x (torch.Tensor): Training input data.
         '''
         # Pre-compute inverse covariance plus noise to speed-up computation.
-
         K_lazy = self.model.covar_module(train_x)
         K_lazy_plus_noise = K_lazy.add_diag(self.model.likelihood.noise)
         n_samples = train_x.shape[0]
@@ -595,6 +659,10 @@ class BatchGPModel:
                              ):
         '''Load hyperparameters from a state_dict.
 
+        Args:
+            train_inputs (torch.Tensor): Input training data.
+            train_targets (torch.Tensor): Target training data.
+            path_to_statedict (str): Path to the state dict.
         '''
 
         if self.input_mask is not None:
@@ -620,12 +688,17 @@ class BatchGPModel:
               gpu=False,
               fname='best_model.pth',
               ):
-        '''Train the GP using Train_x and Train_y.
+        '''Train the GP using train_x and train_y.
 
         Args:
-            train_x: Torch tensor (N samples [rows] by input dim [cols])
-            train_y: Torch tensor (N samples [rows] by target dim [cols])
-
+            train_input_data (torch.Tensor): Training input data.
+            train_target_data (torch.Tensor): Training target data.
+            test_input_data (torch.Tensor): Test input data.
+            test_target_data (torch.Tensor): Test target data.
+            n_train (int): Number of training iterations.
+            learning_rate (float): Learning rate.
+            gpu (bool): If True, use GPU.
+            fname (str): File name to save the model.
         '''
         train_x_raw = train_input_data
         train_y_raw = train_target_data
@@ -674,7 +747,7 @@ class BatchGPModel:
             loss = -mll(output, train_y.T).sum()
             loss.backward()
             if i % 100 == 0:
-                print('Iter %d/%d - MLL trian Loss: %.3f, Posterior Test Loss: %0.3f' % (i + 1, n_train, loss.item(), test_loss.item()))
+                print('Iter %d/%d - MLL train Loss: %.3f, Posterior Test Loss: %0.3f' % (i + 1, n_train, loss.item(), test_loss.item()))
 
             self.optimizer.step()
 
@@ -703,21 +776,21 @@ class BatchGPModel:
                 requires_grad=False,
                 return_pred=True
                 ):
-        '''
+        '''Predict using the GP.
 
         Args:
-            x : torch.Tensor (N_samples x input DIM).
+            x (torch.Tensor or np.ndarray): Input data (N_samples x input_dim).
+            requires_grad (bool): If True, compute gradients.
+            return_pred (bool): If True, return prediction object.
 
         Returns:
-            Predictions
-                mean : torch.tensor (nx X N_samples).
-                lower : torch.tensor (nx X N_samples).
-                upper : torch.tensor (nx X N_samples).
-
+            means (torch.Tensor): Mean of the GP.
+            cov (torch.Tensor): Covariance of the GP.
+            predictions (torch.Tensor): Predictions of the GP.
         '''
         self.model.eval()
         self.likelihood.eval()
-        if type(x) is np.ndarray:
+        if isinstance(x, np.ndarray):
             x = torch.from_numpy(x).double()
         if self.input_mask is not None:
             x = x[:, self.input_mask]
@@ -742,13 +815,29 @@ class BatchGPModel:
     def prediction_jacobian(self,
                             query
                             ):
+        '''Return the Jacobian of the GP prediction.
+
+        Args:
+            query (torch.Tensor): Query input.
+
+        Returns:
+            mean_der (torch.Tensor): Jacobian of the mean prediction.
+        '''
         mean_der, cov_der = torch.autograd.functional.jacobian(
             lambda x: self.predict(x, requires_grad=True, return_pred=False),
             query.double())
         return mean_der.detach().squeeze()
 
     def make_casadi_prediction_func(self, train_inputs, train_targets):
+        '''Create a CasADi function for GP prediction.
 
+        Args:
+            train_inputs (torch.Tensor): Training input data.
+            train_targets (torch.Tensor): Training target data.
+
+        Returns:
+            y (list): List of CasADi prediction functions.
+        '''
         Nx = len(self.input_mask)
         Ny = len(self.target_mask)
         z = ca.SX.sym('z', Nx)
@@ -761,7 +850,6 @@ class BatchGPModel:
         output_scales = self.model.covar_module.outputscale.detach().numpy()
 
         for i in range(Ny):
-
             lengthscale = lengthscales[i]
             output_scale = output_scales[i]
             z = ca.SX.sym('z', Nx)
@@ -791,6 +879,17 @@ class BatchGPModel:
                         output_label,
                         fig_count=0
                         ):
+        '''Plot the trained GP for a given output label.
+
+        Args:
+            inputs (np.array): Input data.
+            targets (np.array): Target data.
+            output_label (int): Output label index.
+            fig_count (int): Figure count for plotting.
+
+        Returns:
+            fig_count (int): Updated figure count.
+        '''
         raise NotImplementedError
 
 
@@ -810,7 +909,10 @@ class GaussianProcess:
         Args:
             model_type (gpytorch model class): Model class for the GP (ZeroMeanIndependentMultitaskGPModel).
             likelihood (gpytorch.likelihood): likelihood function.
+            input_mask (list): List of input mask indices.
+            target_mask (list): List of target mask indices.
             normalize (bool): If True, scale all data between -1 and 1. (prototype and not fully operational).
+            kernel (str): Kernel type, 'RBF' or 'Matern'.
         '''
         self.model_type = model_type
         self.likelihood = likelihood
@@ -825,7 +927,12 @@ class GaussianProcess:
                     train_inputs,
                     train_targets
                     ):
-        '''Init GP model from train inputs and train_targets.'''
+        '''Initialize GP model from train inputs and train_targets.
+
+        Args:
+            train_inputs (torch.Tensor): Input training data.
+            train_targets (torch.Tensor): Target training data.
+        '''
         if train_targets.ndim > 1:
             target_dimension = train_targets.shape[1]
         else:
@@ -849,7 +956,11 @@ class GaussianProcess:
     def _compute_GP_covariances(self,
                                 train_x
                                 ):
-        '''Compute K(X,X) + sigma*I and its inverse.'''
+        '''Compute K(X,X) + sigma*I and its inverse.
+
+        Args:
+            train_x (torch.Tensor): Training input data.
+        '''
         # Pre-compute inverse covariance plus noise to speed-up computation.
         K_lazy = self.model.covar_module(train_x.double())
         K_lazy_plus_noise = K_lazy.add_diag(self.model.likelihood.noise)
@@ -863,7 +974,13 @@ class GaussianProcess:
                              train_targets,
                              path_to_statedict
                              ):
-        '''Load hyperparameters from a state_dict.'''
+        '''Load hyperparameters from a state_dict.
+
+        Args:
+            train_inputs (torch.Tensor): Input training data.
+            train_targets (torch.Tensor): Target training data.
+            path_to_statedict (str): Path to the state dict.
+        '''
         if self.input_mask is not None:
             train_inputs = train_inputs[:, self.input_mask]
         if self.target_mask is not None:
@@ -888,11 +1005,17 @@ class GaussianProcess:
               gpu=False,
               fname='best_model.pth',
               ):
-        '''Train the GP using Train_x and Train_y.
+        '''Train the GP using train_x and train_y.
 
         Args:
-            train_x: Torch tensor (N samples [rows] by input dim [cols])
-            train_y: Torch tensor (N samples [rows] by target dim [cols])
+            train_input_data (torch.Tensor): Training input data.
+            train_target_data (torch.Tensor): Training target data.
+            test_input_data (torch.Tensor): Test input data.
+            test_target_data (torch.Tensor): Test target data.
+            n_train (int): Number of training iterations.
+            learning_rate (float): Learning rate.
+            gpu (bool): If True, use GPU.
+            fname (str): File name to save the model.
         '''
         train_x_raw = train_input_data
         train_y_raw = train_target_data
@@ -945,14 +1068,9 @@ class GaussianProcess:
             loss = -mll(output, train_y)
             loss.backward()
             if i % 100 == 0:
-                print('Iter %d/%d - MLL trian Loss: %.3f, Posterior Test Loss: %0.3f' % (i + 1, n_train, loss.item(), test_loss.item()))
+                print('Iter %d/%d - MLL train Loss: %.3f, Posterior Test Loss: %0.3f' % (i + 1, n_train, loss.item(), test_loss.item()))
 
             self.optimizer.step()
-            # if test_loss < best_loss:
-            #    best_loss = test_loss
-            #    state_dict = self.model.state_dict()
-            #    torch.save(state_dict, fname)
-            #    best_epoch = i
             if test_loss < best_loss:
                 best_loss = test_loss
                 state_dict = self.model.state_dict()
@@ -976,15 +1094,17 @@ class GaussianProcess:
                 requires_grad=False,
                 return_pred=True
                 ):
-        '''
+        '''Predict using the GP.
+
         Args:
-            x : torch.Tensor (N_samples x input DIM).
+            x (torch.Tensor or np.ndarray): Input data (N_samples x input_dim).
+            requires_grad (bool): If True, compute gradients.
+            return_pred (bool): If True, return prediction object.
 
         Returns:
-            Predictions
-                mean : torch.tensor (nx X N_samples).
-                lower : torch.tensor (nx X N_samples).
-                upper : torch.tensor (nx X N_samples).
+            mean (torch.Tensor): Mean of the GP.
+            cov (torch.Tensor): Covariance of the GP.
+            predictions (torch.Tensor): Predictions of the GP.
         '''
         self.model.eval()
         self.likelihood.eval()
@@ -1011,13 +1131,30 @@ class GaussianProcess:
     def prediction_jacobian(self,
                             query
                             ):
+        '''Return the Jacobian of the GP prediction.
+
+        Args:
+            query (torch.Tensor): Query input.
+
+        Returns:
+            mean_der (torch.Tensor): Jacobian of the mean prediction.
+        '''
         mean_der, _ = torch.autograd.functional.jacobian(
             lambda x: self.predict(x, requires_grad=True, return_pred=False),
             query.double())
         return mean_der.detach().squeeze()
 
     def make_casadi_prediction_func(self, train_inputs, train_targets):
-        '''Assumes train_inputs and train_targets are already masked.'''
+        '''Create a CasADi function for GP prediction.
+           Assumes train_inputs and train_targets are already masked.
+
+        Args:
+            train_inputs (torch.Tensor): Training input data.
+            train_targets (torch.Tensor): Training target data.
+
+        Returns:
+            predict (casadi.Function): CasADi prediction function.
+        '''
         train_inputs = train_inputs.numpy()
         train_targets = train_targets.numpy()
         lengthscale = self.model.covar_module.base_kernel.lengthscale.detach().numpy()
@@ -1049,6 +1186,17 @@ class GaussianProcess:
                         output_label,
                         fig_count=0
                         ):
+        '''Plot the trained GP for a given output label.
+
+        Args:
+            inputs (np.array): Input data.
+            targets (np.array): Target data.
+            output_label (int): Output label index.
+            fig_count (int): Figure count for plotting.
+
+        Returns:
+            fig_count (int): Updated figure count.
+        '''
         if self.target_mask is not None:
             targets = targets[:, self.target_mask]
         means, _, preds = self.predict(inputs)
@@ -1074,14 +1222,15 @@ class GaussianProcess:
 
 
 def kmeans_centriods(n_cent, data, rand_state=0):
-    '''kmeans clustering. Useful for finding reasonable inducing points.
+    '''KMeans clustering. Useful for finding reasonable inducing points.
 
     Args:
-        n_cent (int): Number of centriods.
-        data (np.array): Data to find the centroids of n_samples X n_features.
+        n_cent (int): Number of centroids.
+        data (np.array): Data to find the centroids of (n_samples X n_features).
+        rand_state (int): Random state for reproducibility.
 
-    Return:
-        centriods (np.array): Array of centriods (n_cent X n_features).
+    Returns:
+        centroids (np.array): Array of centroids (n_cent X n_features).
     '''
     kmeans = KMeans(n_clusters=n_cent, random_state=rand_state).fit(data)
     return kmeans.cluster_centers_

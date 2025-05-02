@@ -8,11 +8,11 @@ Implementation details:
     1. The previous time step MPC solution is used to compute the set constraints and GP dynamics rollout.
        Here, the dynamics are rolled out using the Mean Equivelence method, the fastest, but least accurate.
     2. The GP is approximated using the Fully Independent Training Conditional (FITC) outlined in
-        * J. Quinonero-Candela, C. E. Rasmussen, and R. Herbrich, “A unifying view of sparse approximate Gaussian process regression,”
-          Journal of Machine Learning Research, vol. 6, pp. 1935–1959, 2005.
+        * J. Quinonero-Candela, C. E. Rasmussen, and R. Herbrich, 'A unifying view of sparse approximate Gaussian process regression,'
+          Journal of Machine Learning Research, vol. 6, pp. 1935-1959, 2005.
           https://www.jmlr.org/papers/volume6/quinonero-candela05a/quinonero-candela05a.pdf
-        * E. Snelson and Z. Ghahramani, “Sparse gaussian processes using pseudo-inputs,” in Advances in Neural Information Processing
-          Systems, Y. Weiss, B. Scholkopf, and J. C. Platt, Eds., 2006, pp. 1257–1264.
+        * E. Snelson and Z. Ghahramani, 'Sparse gaussian processes using pseudo-inputs,' in Advances in Neural Information Processing
+          Systems, Y. Weiss, B. Scholkopf, and J. C. Platt, Eds., 2006, pp. 1257-1264.
        and the inducing points are the previous MPC solution.
     3. Each dimension of the learned error dynamics is an independent Zero Mean SE Kernel GP.
 '''
@@ -71,7 +71,6 @@ class GPMPC(MPC):
             recalc_inducing_points_at_every_step: bool = False,
             online_learning: bool = False,
             prior_info: dict = None,
-            # inertial_prop: list = [1.0],
             prior_param_coeff: float = 1.0,
             terminate_run_on_done: bool = True,
             output_dir: str = 'results/temp',
@@ -80,34 +79,34 @@ class GPMPC(MPC):
         '''Initialize GP-MPC.
 
         Args:
-            env_func (gym.Env): functionalized initialization of the environment.
-            seed (int): random seed.
+            env_func (gym.Env): Functionalized initialization of the environment.
+            seed (int): Random seed.
             horizon (int): MPC planning horizon.
-            Q, R (np.array): cost weight matrix.
-            constraint_tol (float): Tolerance to add the the constraint as sometimes solvers are not exact.
-            use_prev_start (bool): Warmstart mpc with the previous solution.
-            train_iterations (int): the number of training examples to use for each dimension of the GP.
+            Q, R (np.array): Cost weight matrix.
+            constraint_tol (float): Tolerance to add to the constraint as sometimes solvers are not exact.
+            use_prev_start (bool): Warmstart MPC with the previous solution.
+            train_iterations (int): The number of training examples to use for each dimension of the GP.
             overwrite_saved_data (bool): Overwrite the input and target data to the already saved data if it exists.
-            optimization_iterations (list): the number of optimization iterations for each dimension of the GP.
-            learning_rate (list): the learning rate for training each dimension of the GP.
+            optimization_iterations (list): The number of optimization iterations for each dimension of the GP.
+            learning_rate (list): The learning rate for training each dimension of the GP.
             normalize_training_data (bool): Normalize the training data.
-            use_gpu (bool): use GPU while training the gp.
-            gp_model_path (str): path to a pretrained GP model. If None, will train a new one.
+            use_gpu (bool): Use GPU while training the GP.
+            gp_model_path (str): Path to a pretrained GP model. If None, will train a new one.
             kernel (str): 'Matern' or 'RBF' kernel.
-            output_dir (str): directory to store model and results.
-            prob (float): desired probabilistic safety level.
-            initial_rollout_std (float): the initial std (across all states) for the mean_eq rollout.
-            prior_info (dict): Dictionary specifiy the algorithms prior model parameters.
-            prior_param_coeff (float): constant multiplying factor to adjust the prior model intertial properties.
-            input_mask (list): list of which input dimensions to use in GP model. If None, all are used.
-            target_mask (list): list of which output dimensions to use in the GP model. If None, all are used.
+            output_dir (str): Directory to store model and results.
+            prob (float): Desired probabilistic safety level.
+            initial_rollout_std (float): The initial std (across all states) for the mean_eq rollout.
+            prior_info (dict): Dictionary specify the algorithms prior model parameters.
+            prior_param_coeff (float): Constant multiplying factor to adjust the prior model inertial properties.
+            input_mask (list): List of which input dimensions to use in GP model. If None, all are used.
+            target_mask (list): List of which output dimensions to use in the GP model. If None, all are used.
             gp_approx (str): 'mean_eq' used mean equivalence rollout for the GP dynamics. Only one that works currently.
             sparse_gp (bool): True to use sparse GP approximations, otherwise no spare approximation is used.
-            n_ind_points (int): Number of inducing points to use got the FTIC gp approximation.
-            inducing_point_selection_method (str): kmeans for kmeans clustering, 'random' for random.
-            recalc_inducing_points_at_every_step (bool): True to recompute the gp approx at every time step.
-            online_learning (bool): if true, GP kernel values will be updated using past trajectory values.
-            additional_constraints (list): list of Constraint objects defining additional constraints to be used.
+            n_ind_points (int): Number of inducing points to use got the FTIC GP approximation.
+            inducing_point_selection_method (str): Kmeans for kmeans clustering, 'random' for random.
+            recalc_inducing_points_at_every_step (bool): True to recompute the GP approx at every time step.
+            online_learning (bool): If true, GP kernel values will be updated using past trajectory values.
+            additional_constraints (list): List of Constraint objects defining additional constraints to be used.
         '''
 
         if prior_info is None or prior_info == {}:
@@ -202,7 +201,7 @@ class GPMPC(MPC):
         self.gp_soft_constraints_coeff = self.soft_constraints_params['gp_soft_constraints_coeff']
 
     def setup_prior_dynamics(self):
-        '''Computes the LQR gain used for propograting GP uncertainty from the prior model dynamics.'''
+        '''Computes the LQR gain used for propagating GP uncertainty from the prior model dynamics.'''
         # Determine the LQR gain K to propogate the input uncertainty (doing this at each timestep will increase complexity).
         A, B = discretize_linear_system(self.prior_ctrl.dfdx, self.prior_ctrl.dfdu, self.dt)
         Q_lqr = self.Q
@@ -217,6 +216,9 @@ class GPMPC(MPC):
         '''Updates symbolic dynamics.
 
         With actual control frequency, initialize GP model and add to the combined dynamics.
+
+        Args:
+            n_ind_points (int): Number of inducing points for sparse GP approximation.
         '''
         self.setup_prior_dynamics()
         # Compute the probabilistic constraint inverse CDF according to section III.D.b in Hewing 2019.
@@ -224,7 +226,11 @@ class GPMPC(MPC):
         self.create_sparse_GP_machinery(n_ind_points)
 
     def create_sparse_GP_machinery(self, n_ind_points):
-        '''This setups the gaussian process approximations for FITC formulation.'''
+        '''Sets up the Gaussian process approximations for FITC formulation.
+
+        Args:
+            n_ind_points (int): Number of inducing points for sparse GP approximation.
+        '''
         lengthscales, signal_var, noise_var, gp_K_plus_noise = self.gaussian_process.get_hyperparameters(as_numpy=True)
         self.length_scales = lengthscales.squeeze()
         self.signal_var = signal_var.squeeze()
@@ -265,16 +271,16 @@ class GPMPC(MPC):
                                  u_seq,
                                  x_next_seq
                                  ):
-        '''Converts trajectory data for GP trianing.
+        '''Converts trajectory data for GP training.
 
         Args:
-            x_seq (list): state sequence of np.array (nx,).
-            u_seq (list): action sequence of np.array (nu,).
-            x_next_seq (list): next state sequence of np.array (nx,).
+            x_seq (list): State sequence of np.array (nx,).
+            u_seq (list): Action sequence of np.array (nu,).
+            x_next_seq (list): Next state sequence of np.array (nx,).
 
         Returns:
-            np.array: inputs for GP training, (N, nx+nu).
-            np.array: targets for GP training, (N, nx).
+            np.array: Inputs for GP training, (N, nx+nu).
+            np.array: Targets for GP training, (N, nx).
         '''
         # Get the predicted dynamics. This is a linear prior, thus we need to account for the fact that
         # it is linearized about an eq using self.X_GOAL and self.U_GOAL.
@@ -287,10 +293,14 @@ class GPMPC(MPC):
     def precompute_probabilistic_limits(self,
                                         print_sets=False
                                         ):
-        '''This updates the constraint value limits to account for the uncertainty in the dynamics rollout.
+        '''Updates the constraint value limits to account for the uncertainty in the dynamics rollout.
 
         Args:
             print_sets (bool): True to print out the sets for debugging purposes.
+
+        Returns:
+            state_constraint_set (tuple): List of tightened state constraints, (num_constraints, T + 1).
+            input_constraint_set (tuple): List of tightened input constraints, (num_constraints, T).
         '''
         nx, nu = self.model.nx, self.model.nu
         T = self.T
@@ -340,7 +350,7 @@ class GPMPC(MPC):
                         self.Bd @ cov_d @ self.Bd.T
                 else:
                     raise NotImplementedError('gp_approx method is incorrect or not implemented')
-            # Udate Final covariance.
+            # Update final covariance.
             for si, state_constraint in enumerate(self.constraints.state_constraints):
                 state_constraint_set[si][:, -1] = -1 * self.inverse_cdf * \
                     np.absolute(state_constraint.A) @ np.sqrt(np.diag(cov_x))
@@ -358,7 +368,11 @@ class GPMPC(MPC):
 
     def precompute_mean_post_factor_all_data(self):
         '''If the number of data points is less than the number of inducing points, use all the data
-        as kernel points.
+           as kernel points.
+
+        Returns:
+            mean_post_factor (np.array): Posterior mean factor, (dim_gp_outputs, n_training_samples).
+            inputs (np.array): Training inputs, (n_training_samples, nx + nu).
         '''
         dim_gp_outputs = len(self.target_mask)
         n_training_samples = self.train_data['train_targets'].shape[0]
@@ -372,10 +386,16 @@ class GPMPC(MPC):
         return mean_post_factor, inputs[:, self.input_mask]
 
     def precompute_sparse_gp_values(self, n_ind_points):
-        '''Uses the last MPC solution to precomupte values associated with the FITC GP approximation.
+        '''Uses the last MPC solution to precompute values associated with the FITC GP approximation.
 
         Args:
             n_ind_points (int): Number of inducing points.
+
+        Returns:
+            mean_post_factor (np.array): Posterior mean factor, (dim_gp_outputs, n_ind_points).
+            Sigma_inv (np.array): Inverse of the covariance matrix, (dim_gp_outputs, n_ind_points, n_ind_points).
+            K_zind_zind_inv (np.array): Inverse of the covariance matrix of the inducing points, (n_ind_points, n_ind_points).
+            z_ind (np.array): Inducing points, (n_ind_points, nx + nu).
         '''
         n_data_points = self.gaussian_process.n_training_samples
         dim_gp_outputs = len(self.target_mask)
@@ -409,16 +429,12 @@ class GPMPC(MPC):
         Q_X_X = K_x_zind @ torch.linalg.solve(K_zind_zind, K_x_zind.transpose(1, 2))
         Gamma = torch.diagonal(self.gaussian_process.K_plus_noise - Q_X_X, 0, 1, 2)
         Gamma_inv = torch.diag_embed(1 / Gamma)
-        # TODO: Should inverse be used here instead? pinverse was more stable previsouly.
         Sigma_inv = K_zind_zind + K_x_zind.transpose(1, 2) @ Gamma_inv @ K_x_zind
-        # Sigma = torch.pinverse(K_zind_zind + K_x_zind.transpose(1, 2) @ Gamma_inv @ K_x_zind)  # For debugging
         mean_post_factor = torch.zeros((dim_gp_outputs, n_ind_points))
         for i in range(dim_gp_outputs):
             mean_post_factor[i] = torch.linalg.solve(Sigma_inv[i], K_x_zind[i].T @ Gamma_inv[i] @
                                                      torch.from_numpy(targets[:, self.target_mask[i]]).double())
-            # mean_post_factor[i] = Sigma[i] @ K_x_zind[i].T @ Gamma_inv[i] @ torch.from_numpy(targets[:, self.target_mask[i]]).double()
         return mean_post_factor.detach().numpy(), Sigma_inv.detach().numpy(), K_zind_zind_inv.detach().numpy(), z_ind
-        # return mean_post_factor.detach().numpy(), Sigma.detach().numpy(), K_zind_zind_inv.detach().numpy(), z_ind
 
     def setup_gp_optimizer(self, n_ind_points):
         '''Sets up nonlinear optimization problem including cost objective, variable bounds and dynamics constraints.
@@ -561,7 +577,6 @@ class GPMPC(MPC):
             'n_ind_points': n_ind_points
         }
 
-        # if False and n_ind_points < self.n_ind_points:
         if not self.sparse_gp:
             mean_post_factor_val, z_ind_val = self.precompute_mean_post_factor_all_data()
             self.mean_post_factor_val = mean_post_factor_val
@@ -576,12 +591,12 @@ class GPMPC(MPC):
                               ):
         '''Solves nonlinear MPC problem to get next action.
 
-         Args:
-             obs (np.array): current state/observation.
+        Args:
+            obs (np.array): Current state/observation.
 
-         Returns:
-             np.array: input/action to the task/env.
-         '''
+        Returns:
+            action (np.array): Input/action to the task/env.
+        '''
         opti_dict = self.opti_dict
         opti = opti_dict['opti']
         x_var = opti_dict['x_var']
@@ -673,8 +688,9 @@ class GPMPC(MPC):
         '''Performs GP training.
 
         Args:
-            input_data, target_data (optiona, np.array): data to use for training
-            gp_model (str): if not None, this is the path to pretrained models to use instead of training new ones.
+            input_data (np.array): Data to use for training.
+            target_data (np.array): Data to use for training.
+            gp_model (str): If not None, this is the path to pretrained models to use instead of training new ones.
             overwrite_saved_data (bool): Overwrite the input and target data to the already saved data if it exists.
 
         Returns:
@@ -700,8 +716,6 @@ class GPMPC(MPC):
             ############
             # Use Latin Hypercube Sampling to generate states withing environment bounds.
             lhs_sampler = Lhs(lhs_type='classic', criterion='maximin')
-            # limits = [(self.env.INIT_STATE_RAND_INFO[key].low, self.env.INIT_STATE_RAND_INFO[key].high) for key in
-            #          self.env.INIT_STATE_RAND_INFO]
             limits = [(self.env.INIT_STATE_RAND_INFO['init_' + key]['low'], self.env.INIT_STATE_RAND_INFO['init_' + key]['high']) for key in self.env.STATE_LABELS]
             # TODO: parameterize this if we actually want it.
             num_eq_samples = 0
@@ -715,7 +729,6 @@ class GPMPC(MPC):
                 delta_neg = np.array([0.1, 0.1, 0.1, 0.1, 0.03, 0.3])
                 eq_limits = [(self.prior_ctrl.env.X_GOAL[eq] - delta_neg[eq], self.prior_ctrl.env.X_GOAL[eq] + delta_plus[eq]) for eq in range(self.model.nx)]
                 eq_samples = lhs_sampler.generate(eq_limits, num_eq_samples, random_state=self.seed)
-                # samples = samples.append(eq_samples)
                 init_state_samples = np.array(samples + eq_samples)
             else:
                 init_state_samples = np.array(samples)
@@ -817,12 +830,6 @@ class GPMPC(MPC):
                                         output_dir=self.output_dir)
 
         self.reset()
-        # if self.train_data['train_targets'].shape[0] <= self.n_ind_points:
-        #    n_ind_points = self.train_data['train_targets'].shape[0]
-        # else:
-        #    n_ind_points = self.n_ind_points
-        # self.set_gp_dynamics_func(n_ind_points)
-        # self.setup_gp_optimizer(n_ind_points)
         self.prior_ctrl.add_constraints(self.prior_ctrl.additional_constraints)
         self.prior_ctrl.reset()
         # Collect training results.
@@ -836,7 +843,14 @@ class GPMPC(MPC):
         return training_results
 
     def learn(self, env=None):
-        '''Performs multiple epochs learning.
+        '''Performs multiple epochs of learning.
+
+        Args:
+            env (gym.Env): Environment to use.
+
+        Returns:
+            train_runs (dict): Dictionary of training runs.
+            test_runs (dict): Dictionary of test runs.
         '''
 
         train_runs = {0: {}}
@@ -851,7 +865,7 @@ class GPMPC(MPC):
             train_env = self.env_func(randomized_init=True, seed=self.seed)
             train_env.action_space.seed(self.seed)
             train_envs = [train_env] * self.num_epochs
-        # init_test_states = get_random_init_states(env_func, num_test_episodes_per_epoch)
+
         test_envs = []
         if self.same_test_initial_state:
             for epoch in range(self.num_epochs):
@@ -874,7 +888,7 @@ class GPMPC(MPC):
         self.reset()
 
         for epoch in range(1, self.num_epochs):
-            # only take data from the last episode from the last epoch
+            # Only take data from the last episode from the last epoch
             if self.rand_data_selection:
                 x_seq, actions, x_next_seq = self.gather_training_samples(train_runs, epoch - 1, self.num_samples, train_envs[epoch - 1].np_random)
             else:
@@ -891,7 +905,7 @@ class GPMPC(MPC):
                 run_results = self.run(env=test_envs[epoch],
                                        terminate_run_on_done=self.terminate_test_on_done)
                 test_runs[epoch].update({test_ep: munch.munchify(run_results)})
-            # gather training data
+            # Gather training data
             train_runs[epoch] = {}
             for episode in range(self.num_train_episodes_per_epoch):
                 self.reset()
@@ -903,7 +917,7 @@ class GPMPC(MPC):
 
             lengthscale, outputscale, noise, kern = self.gaussian_process.get_hyperparameters(as_numpy=True)
 
-        # close environments
+        # Close environments
         for env in train_envs:
             env.close()
         for env in test_envs:
@@ -915,6 +929,19 @@ class GPMPC(MPC):
         return train_runs, test_runs
 
     def gather_training_samples(self, all_runs, epoch_i, num_samples, rand_generator=None):
+        '''Gather training samples from previous runs.
+
+        Args:
+            all_runs (dict): All run results.
+            epoch_i (int): Epoch index.
+            num_samples (int): Number of samples to gather.
+            rand_generator (np.random.Generator): Random generator for sampling.
+
+        Returns:
+            x_seq_int (np.array): Training inputs, (n_training_samples, nx).
+            actions_int (np.array): Training outputs, (n_training_samples, nu).
+            x_next_seq_int (np.array): Next state sequence, (n_training_samples, nx).
+        '''
         n_episodes = len(all_runs[epoch_i].keys())
         num_samples_per_episode = int(num_samples / n_episodes)
         x_seq_int = []
