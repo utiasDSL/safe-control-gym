@@ -35,9 +35,6 @@ class LinearMPC(MPC):
             terminate_run_on_done=True,
             constraint_tol: float = 1e-8,
             solver: str = 'sqpmethod',
-            # runner args
-            # shared/base args
-            output_dir='results/temp',
             additional_constraints=None,
             use_lqr_gain_and_terminal_cost: bool = False,
             compute_initial_guess_method=None,
@@ -54,7 +51,6 @@ class LinearMPC(MPC):
             terminate_run_on_done (bool): Terminate the run when the environment returns done or not.
             constraint_tol (float): Tolerance to add the the constraint as sometimes solvers are not exact.
             solver (str): Specify which solver you wish to use (qrqp, qpoases, ipopt, sqpmethod)
-            output_dir (str): Output directory to write logs and results.
             additional_constraints (list): List of constraints.
             use_lqr_gain_and_terminal_cost (bool): Use LQR ancillary gain and terminal cost in the MPC.
             compute_initial_guess_method (str): Method to compute the initial guess for the MPC. Options: None, 'ipopt', 'lqr'.
@@ -74,8 +70,6 @@ class LinearMPC(MPC):
             soft_penalty=soft_penalty,
             terminate_run_on_done=terminate_run_on_done,
             constraint_tol=constraint_tol,
-            # prior_info=prior_info,
-            output_dir=output_dir,
             additional_constraints=additional_constraints,
             use_lqr_gain_and_terminal_cost=use_lqr_gain_and_terminal_cost,
             compute_initial_guess_method=compute_initial_guess_method,

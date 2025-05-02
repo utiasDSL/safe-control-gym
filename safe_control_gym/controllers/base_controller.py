@@ -33,14 +33,16 @@ class BaseController(ABC):
         self.training = training
         self.checkpoint_path = checkpoint_path
         self.output_dir = output_dir
-        self.use_gpu = use_gpu and torch.cuda.is_available()
-        self.device = 'cpu' if self.use_gpu is False else 'cuda'
+        self.use_gpu = use_gpu
         self.seed = seed
         self.prior_info = {}
 
         # Algorithm specific args.
         for key, value in kwargs.items():
             self.__dict__[key] = value
+
+        self.use_gpu = self.use_gpu and torch.cuda.is_available()
+        self.device = 'cpu' if self.use_gpu is False else 'cuda'
 
         self.setup_results_dict()
 

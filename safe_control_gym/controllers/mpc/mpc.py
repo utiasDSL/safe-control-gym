@@ -33,12 +33,7 @@ class MPC(BaseController):
             use_lqr_gain_and_terminal_cost: bool = False,
             init_solver: str = 'ipopt',
             solver: str = 'ipopt',
-            # runner args
-            # shared/base args
-            output_dir: str = 'results/temp',
             additional_constraints: list = None,
-            use_gpu: bool = False,
-            seed: int = 0,
             **kwargs
     ):
         '''Creates task and controller.
@@ -53,16 +48,13 @@ class MPC(BaseController):
             soft_penalty (float): Penalty added in the cost function for soft constraints.
             terminate_run_on_done (bool): Terminate the run when the environment returns done or not.
             constraint_tol (float): Tolerance to add to the constraint as sometimes solvers are not exact.
-            output_dir (str): Output directory to write logs and results.
             additional_constraints (list): List of additional constraints.
-            use_gpu (bool): False (use CPU) True (use CUDA).
-            seed (int): Random seed.
             compute_initial_guess_method (str): Method to compute the initial guess. Options: None, 'ipopt', 'lqr'.
             use_lqr_gain_and_terminal_cost (bool): Use the LQR ancillary gain and terminal cost in the MPC.
             init_solver (str): Solver to use for initial guess computation.
             solver (str): Solver to use for MPC optimization.
         '''
-        super().__init__(env_func=env_func, output_dir=output_dir, use_gpu=use_gpu, seed=seed, **kwargs)
+        super().__init__(env_func=env_func, **kwargs)
         for k, v in locals().items():
             if k != 'self' and k != 'kwargs' and '__' not in k:
                 self.__dict__.update({k: v})

@@ -57,7 +57,6 @@ class GPMPC(MPC):
             optimization_iterations: list = None,
             learning_rate: list = None,
             normalize_training_data: bool = False,
-            use_gpu: bool = False,
             gp_model_path: str = None,
             kernel: str = 'Matern',
             prob: float = 0.955,
@@ -73,7 +72,6 @@ class GPMPC(MPC):
             prior_info: dict = None,
             prior_param_coeff: float = 1.0,
             terminate_run_on_done: bool = True,
-            output_dir: str = 'results/temp',
             **kwargs
     ):
         '''Initialize GP-MPC.
@@ -82,22 +80,22 @@ class GPMPC(MPC):
             env_func (gym.Env): Functionalized initialization of the environment.
             seed (int): Random seed.
             horizon (int): MPC planning horizon.
-            Q, R (np.array): Cost weight matrix.
+            q_mpc (list): Diagonals of state cost weight.
+            r_mpc (list): Diagonals of input/action cost weight.
             constraint_tol (float): Tolerance to add to the constraint as sometimes solvers are not exact.
-            use_prev_start (bool): Warmstart MPC with the previous solution.
+            additional_constraints (list): List of Constraint objects defining additional constraints to be used.
+            soft_constraints (dict): Dictionary specifying soft constraints for the MPC.
+            warmstart (bool): Warmstart MPC with the previous solution.
             train_iterations (int): The number of training examples to use for each dimension of the GP.
+            test_data_ratio (float): The ratio of test data to use for validation.
             overwrite_saved_data (bool): Overwrite the input and target data to the already saved data if it exists.
             optimization_iterations (list): The number of optimization iterations for each dimension of the GP.
             learning_rate (list): The learning rate for training each dimension of the GP.
             normalize_training_data (bool): Normalize the training data.
-            use_gpu (bool): Use GPU while training the GP.
             gp_model_path (str): Path to a pretrained GP model. If None, will train a new one.
             kernel (str): 'Matern' or 'RBF' kernel.
-            output_dir (str): Directory to store model and results.
             prob (float): Desired probabilistic safety level.
             initial_rollout_std (float): The initial std (across all states) for the mean_eq rollout.
-            prior_info (dict): Dictionary specify the algorithms prior model parameters.
-            prior_param_coeff (float): Constant multiplying factor to adjust the prior model inertial properties.
             input_mask (list): List of which input dimensions to use in GP model. If None, all are used.
             target_mask (list): List of which output dimensions to use in the GP model. If None, all are used.
             gp_approx (str): 'mean_eq' used mean equivalence rollout for the GP dynamics. Only one that works currently.
@@ -106,7 +104,9 @@ class GPMPC(MPC):
             inducing_point_selection_method (str): Kmeans for kmeans clustering, 'random' for random.
             recalc_inducing_points_at_every_step (bool): True to recompute the GP approx at every time step.
             online_learning (bool): If true, GP kernel values will be updated using past trajectory values.
-            additional_constraints (list): List of Constraint objects defining additional constraints to be used.
+            prior_info (dict): Dictionary specifying prior information for the GP model.
+            prior_param_coeff (float): Coefficient to scale the prior information.
+            terminate_run_on_done (bool): If true, the run will terminate when the environment returns done.
         '''
 
         if prior_info is None or prior_info == {}:
@@ -131,10 +131,8 @@ class GPMPC(MPC):
             soft_constraints=self.soft_constraints_params['prior_soft_constraints'],
             terminate_run_on_done=terminate_run_on_done,
             prior_info=prior_info,
-            # runner args
-            # shared/base args
-            output_dir=output_dir,
             additional_constraints=additional_constraints,
+            **kwargs
         )
         self.prior_ctrl.reset()
         self.sparse_gp = sparse_gp
@@ -148,11 +146,7 @@ class GPMPC(MPC):
             terminate_run_on_done=terminate_run_on_done,
             constraint_tol=constraint_tol,
             prior_info=prior_info,
-            # runner args
-            # shared/base args
-            output_dir=output_dir,
             additional_constraints=additional_constraints,
-            use_gpu=use_gpu,
             seed=seed,
             **kwargs)
         # Setup environments.
