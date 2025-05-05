@@ -34,7 +34,7 @@ class MPC(BaseController):
             init_solver: str = 'ipopt',
             solver: str = 'ipopt',
             additional_constraints: list = None,
-            **kwargs
+            **kwargs  # Additional args from base_controller.py
     ):
         '''Creates task and controller.
 

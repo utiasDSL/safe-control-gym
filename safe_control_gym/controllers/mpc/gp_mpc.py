@@ -72,7 +72,7 @@ class GPMPC(MPC):
             prior_info: dict = None,
             prior_param_coeff: float = 1.0,
             terminate_run_on_done: bool = True,
-            **kwargs
+            **kwargs  # Additional args from base_controller.py
     ):
         '''Initialize GP-MPC.
 

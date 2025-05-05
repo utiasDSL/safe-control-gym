@@ -38,7 +38,8 @@ class LinearMPC(MPC):
             additional_constraints=None,
             use_lqr_gain_and_terminal_cost: bool = False,
             compute_initial_guess_method=None,
-            **kwargs):
+            **kwargs  # Additional args from base_controller.py
+    ):
         '''Creates task and controller.
 
         Args:
