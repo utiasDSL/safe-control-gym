@@ -28,7 +28,6 @@ class MPC(BaseController):
             soft_penalty: float = 10000,
             constraint_tol: float = 1e-6,
             use_lqr_gain_and_terminal_cost: bool = False,
-            init_solver: str = 'ipopt',
             solver: str = 'ipopt',
             additional_constraints: list = None,
             **kwargs  # Additional args from base_controller.py
@@ -46,7 +45,6 @@ class MPC(BaseController):
             constraint_tol (float): Tolerance to add to the constraint as sometimes solvers are not exact.
             additional_constraints (list): List of additional constraints.
             use_lqr_gain_and_terminal_cost (bool): Use the LQR ancillary gain and terminal cost in the MPC.
-            init_solver (str): Solver to use for initial guess computation.
             solver (str): Solver to use for MPC optimization.
         '''
         super().__init__(env_func=env_func, **kwargs)
@@ -80,8 +78,16 @@ class MPC(BaseController):
 
         self.X_EQ = self.model.X_EQ
         self.U_EQ = self.model.U_EQ
+
+        # Setup reference input.
+        if self.env.TASK == Task.STABILIZATION:
+            self.mode = 'stabilization'
+            self.x_goal = self.env.X_GOAL
+        elif self.env.TASK == Task.TRAJ_TRACKING:
+            self.mode = 'tracking'
+            self.traj = self.env.X_GOAL.T
+
         self.use_lqr_gain_and_terminal_cost = use_lqr_gain_and_terminal_cost
-        self.init_solver = init_solver
         self.solver = solver
 
     def add_constraints(self,
@@ -121,22 +127,16 @@ class MPC(BaseController):
             info (dict): The first info of the new run.
             env (BenchmarkEnv): The environment to be used for the new run.
         '''
+        # Initialize previous state and action.
         self.x_prev = None
         self.u_prev = None
+        # Step along the reference.
+        self.traj_step = 0
         super().reset_before_run(obs, info, env)
 
     def reset(self):
         '''Prepares for training or evaluation.'''
         print(colored('Resetting MPC', 'green'))
-        # Setup reference input.
-        if self.env.TASK == Task.STABILIZATION:
-            self.mode = 'stabilization'
-            self.x_goal = self.env.X_GOAL
-        elif self.env.TASK == Task.TRAJ_TRACKING:
-            self.mode = 'tracking'
-            self.traj = self.env.X_GOAL.T
-            # Step along the reference.
-            self.traj_step = 0
         # Dynamics model.
         self.set_dynamics_func()
         # CasADi optimizer.
