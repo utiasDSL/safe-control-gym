@@ -92,7 +92,7 @@ class SafetyLayer:
 
         gs = [model(obs) for model in self.constraint_models]
 
-        # Each is (N,1,A) x (N,A,1) -> (N,), so [(N,)]_{n_constriants}
+        # Each is (N,1,A) x (N,A,1) -> (N,), so [(N,)]_{n_constraints}
         c_next_pred = [
             c[:, i] + torch.bmm(g.view(g.shape[0], 1, -1),
                                 act.view(act.shape[0], -1, 1)).view(-1)
@@ -125,7 +125,7 @@ class SafetyLayer:
         '''Does action projection with the trained safety layer.
 
         According to Dalal 2018, this simple projection works when only 1 constraint at a time
-        is active; for multiple active constriants, either resort to in-graph QP solver such as
+        is active; for multiple active constraints, either resort to in-graph QP solver such as
         OptLayer or see cvxpylayers (https://github.com/cvxgrp/cvxpylayers).
 
         Args:

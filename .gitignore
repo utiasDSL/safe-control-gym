@@ -150,5 +150,5 @@ dmypy.json
 
 
 # acados
-acados_ocp_nlp.json
+acados_ocp*.json
 *c_generated_code
