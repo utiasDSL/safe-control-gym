@@ -1,9 +1,9 @@
 # MPC args
 horizon: 10
 r_mpc:
-  - 1.
+  - 1
 q_mpc:
-  - 1.
+  - 1
 use_prev_start: True
 additional_constraints: null
 
@@ -23,7 +23,7 @@ online_learning: False
 
 # Prior Model args
 prior_info: {}
-prior_param_coeff: 1.
+prior_param_coeff: 1
 
 # Runner args
 deque_size: 10

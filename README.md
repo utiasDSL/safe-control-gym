@@ -15,7 +15,7 @@ These environments include (and evaluate) symbolic safety constraints and implem
          url = {https://arxiv.org/abs/2108.06266}}
 ```
 
-To reproduce the results in the article, see [branch `ar`](https://github.com/utiasDSL/safe-control-gym/tree/ar).
+To reproduce the results in the article, see [branch `ar`](https://github.com/utiasDSL/safe-control-gym/releases/tag/v0.5.0).
 
 ```bibtex
 @article{yuan2021safecontrolgym,
@@ -29,7 +29,7 @@ To reproduce the results in the article, see [branch `ar`](https://github.com/ut
   doi={10.1109/LRA.2022.3196132}}
 ```
 
-To reproduce the results in the article, see [branch `submission`](https://github.com/utiasDSL/safe-control-gym/tree/submission).
+To reproduce the results in the article, see [branch `submission`](https://github.com/utiasDSL/safe-control-gym/releases/tag/v0.6.0).
 
 <!-- ![baselines](./figures/baselines.png) -->
 

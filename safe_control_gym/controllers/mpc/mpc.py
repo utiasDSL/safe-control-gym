@@ -29,45 +29,37 @@ class MPC(BaseController):
             soft_penalty: float = 10000,
             terminate_run_on_done: bool = True,
             constraint_tol: float = 1e-6,
-            # runner args
-            # shared/base args
-            output_dir: str = 'results/temp',
-            additional_constraints: list = None,
-            use_gpu: bool = False,
-            seed: int = 0,
             compute_initial_guess_method: str = 'ipopt',
             use_lqr_gain_and_terminal_cost: bool = False,
             init_solver: str = 'ipopt',
             solver: str = 'ipopt',
-            **kwargs
+            additional_constraints: list = None,
+            **kwargs  # Additional args from base_controller.py
     ):
         '''Creates task and controller.
 
         Args:
-            env_func (Callable): function to instantiate task/environment.
-            horizon (int): mpc planning horizon.
-            q_mpc (list): diagonals of state cost weight.
-            r_mpc (list): diagonals of input/action cost weight.
-            warmstart (bool): if to initialize from previous iteration.
+            env_func (Callable): Function to instantiate task/environment.
+            horizon (int): MPC planning horizon.
+            q_mpc (list): Diagonals of state cost weight.
+            r_mpc (list): Diagonals of input/action cost weight.
+            warmstart (bool): If to initialize from previous iteration.
             soft_constraints (bool): Formulate the constraints as soft constraints.
             soft_penalty (float): Penalty added in the cost function for soft constraints.
             terminate_run_on_done (bool): Terminate the run when the environment returns done or not.
-            constraint_tol (float): Tolerance to add the the constraint as sometimes solvers are not exact.
-            output_dir (str): output directory to write logs and results.
-            additional_constraints (list): List of additional constraints
-            use_gpu (bool): False (use cpu) True (use cuda).
-            seed (int): random seed.
+            constraint_tol (float): Tolerance to add to the constraint as sometimes solvers are not exact.
+            additional_constraints (list): List of additional constraints.
             compute_initial_guess_method (str): Method to compute the initial guess. Options: None, 'ipopt', 'lqr'.
             use_lqr_gain_and_terminal_cost (bool): Use the LQR ancillary gain and terminal cost in the MPC.
             init_solver (str): Solver to use for initial guess computation.
             solver (str): Solver to use for MPC optimization.
         '''
-        super().__init__(env_func=env_func, output_dir=output_dir, use_gpu=use_gpu, seed=seed, **kwargs)
+        super().__init__(env_func=env_func, **kwargs)
         for k, v in locals().items():
             if k != 'self' and k != 'kwargs' and '__' not in k:
                 self.__dict__.update({k: v})
 
-        # Task.
+        # Task
         self.env = env_func()
         if additional_constraints is not None:
             additional_ConstraintsList = create_constraint_list(additional_constraints,
@@ -78,6 +70,7 @@ class MPC(BaseController):
         else:
             self.constraints, self.state_constraints_sym, self.input_constraints_sym = reset_constraints(self.env.constraints.constraints)
             self.additional_constraints = []
+
         # Model parameters
         self.model = self.get_prior(self.env)
         self.dt = self.model.dt
@@ -151,7 +144,7 @@ class MPC(BaseController):
 
     def set_dynamics_func(self):
         '''Updates symbolic dynamics with actual control frequency.'''
-        # linear dynamics for LQR ancillary gain and terminal cost
+        # Linear dynamics for LQR ancillary gain and terminal cost
         dfdxdfdu = self.model.df_func(x=np.atleast_2d(self.model.X_EQ)[0, :].T,
                                       u=np.atleast_2d(self.model.U_EQ)[0, :].T)
         dfdx = dfdxdfdu['dfdx'].toarray()
@@ -228,7 +221,11 @@ class MPC(BaseController):
         return x_guess, u_guess
 
     def setup_optimizer(self, solver='qrsqp'):
-        '''Sets up nonlinear optimization problem.'''
+        '''Sets up nonlinear optimization problem.
+
+        Args:
+            solver (str): Solver to use for optimization. Options are 'qrqp', 'qpoases', 'sqpmethod', or 'ipopt'.
+        '''
         print(colored(f'Setting up optimizer with {solver}', 'green'))
         nx, nu = self.model.nx, self.model.nu
         T = self.T
@@ -246,7 +243,7 @@ class MPC(BaseController):
         state_slack = opti.variable(len(self.state_constraints_sym))
         input_slack = opti.variable(len(self.input_constraints_sym))
 
-        # cost (cumulative)
+        # Cost (cumulative)
         cost = 0
         cost_func = self.model.loss
         for i in range(T):
@@ -293,7 +290,7 @@ class MPC(BaseController):
                 opti.subject_to(state_slack[sc_i] >= 0)
             else:
                 opti.subject_to(state_constraint(x_var[:, -1]) <= -self.constraint_tol)
-        # initial condition constraints
+        # Initial condition constraints
         opti.subject_to(x_var[:, 0] == x_init)
 
         opti.minimize(cost)
@@ -342,7 +339,7 @@ class MPC(BaseController):
             opti.set_initial(x_var, x_guess)
             opti.set_initial(u_var, u_guess)  # Initial guess for optimization problem.
         if self.warmstart and self.x_prev is not None and self.u_prev is not None:
-            # shift previous solutions by 1 step
+            # Shift previous solutions by 1 step
             x_guess = deepcopy(self.x_prev)
             u_guess = deepcopy(self.u_prev)
             x_guess[:, :-1] = x_guess[:, 1:]
@@ -351,7 +348,7 @@ class MPC(BaseController):
             opti.set_initial(u_var, u_guess)
 
         if self.mode == 'tracking':
-            # increment the trajectory step after update the reference and initial guess
+            # Increment the trajectory step after update the reference and initial guess
             self.traj_step += 1
 
         # Solve the optimization problem.
@@ -366,7 +363,6 @@ class MPC(BaseController):
                 x_val, u_val = opti.debug.value(x_var), opti.debug.value(u_var)
             elif self.solver == 'qrsqp':
                 if return_status == 'unknown':
-                    # self.terminate_loop = True
                     if self.u_prev is None:
                         print(colored('[WARN]: MPC Infeasible first step.', 'yellow'))
                         u_val = np.zeros((self.model.nu, self.T))
@@ -396,7 +392,7 @@ class MPC(BaseController):
         return action
 
     def get_references(self):
-        '''Constructs reference states along mpc horizon.(nx, T+1).'''
+        '''Constructs reference states along mpc horizon, (nx, T+1).'''
         if self.env.TASK == Task.STABILIZATION:
             # Repeat goal state for horizon steps.
             goal_states = np.tile(self.env.X_GOAL.reshape(-1, 1), (1, self.T + 1))

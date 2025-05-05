@@ -14,7 +14,15 @@ from safe_control_gym.envs.constraints import ConstraintList
 def get_cost_weight_matrix(weights,
                            dim
                            ):
-    '''Gets weight matrix from input args.'''
+    '''Get weight matrix from input arguments.
+
+    Args:
+        weights (list): List of weights.
+        dim (int): Dimension of the matrix.
+
+    Returns:
+        W (np.array): Weight matrix.
+    '''
     if len(weights) == dim:
         W = np.diag(weights)
     elif len(weights) == 1:
@@ -24,17 +32,26 @@ def get_cost_weight_matrix(weights,
     return W
 
 
-def compute_discrete_lqr_gain_from_cont_linear_system(dfdx, dfdu, Q_lqr, R_lqr, dt):
-    '''Computes the LQR gain used for propograting GP uncertainty from the prior model dynamics.
+def compute_discrete_lqr_gain_from_cont_linear_system(dfdx,
+                                                      dfdu,
+                                                      Q_lqr,
+                                                      R_lqr,
+                                                      dt
+                                                      ):
+    '''Compute the LQR gain used for propagating GP uncertainty from the prior model dynamics.
 
     Args:
-        dfdx (np.array): CT A matrix
-        dfdu (np.array): CT B matrix
-        Q, R (np.array): Gain matrices
-        dt (float): Time discretization
+        dfdx (np.array): Continuous-time A matrix.
+        dfdu (np.array): Continuous-time B matrix.
+        Q_lqr (np.array): State cost matrix.
+        R_lqr (np.array): Input cost matrix.
+        dt (float): Time discretization.
 
-    Retrun:
-        lqr_gain (np.array): LQR optimal gain, such that (A+BK) is hurwitz
+    Returns:
+        lqr_gain (np.array): LQR optimal gain, such that (A+BK) is Hurwitz.
+        A (np.array): Discretized A matrix.
+        B (np.array): Discretized B matrix.
+        P (np.array): Solution to the discrete-time Riccati equation.
     '''
     # Determine the LQR gain K to propogate the input uncertainty (doing this at each timestep will increase complexity).
     A, B = discretize_linear_system(dfdx, dfdu, dt)
@@ -46,16 +63,16 @@ def compute_discrete_lqr_gain_from_cont_linear_system(dfdx, dfdu, Q_lqr, R_lqr, 
 
 
 def rk_discrete(f, n, m, dt):
-    '''Runge Kutta discretization for the function.
+    '''Runge-Kutta discretization for the function.
 
     Args:
-        f (casadi function): Function to discretize.
-        n (int): state dimensions.
-        m (int): input dimension.
-        dt (float): discretization time.
+        f (casadi.Function): Function to discretize.
+        n (int): State dimension.
+        m (int): Input dimension.
+        dt (float): Discretization time.
 
-    Return:
-        x_next (casadi function?):
+    Returns:
+        rk_dyn (casadi.Function): Discretized function.
     '''
     X = cs.SX.sym('X', n)
     U = cs.SX.sym('U', m)
@@ -71,7 +88,15 @@ def rk_discrete(f, n, m, dt):
 
 
 def compute_state_rmse(state_error):
-    '''Compute root-mean-square error.'''
+    '''Compute root-mean-square error.
+
+    Args:
+        state_error (np.array): State error array.
+
+    Returns:
+        state_rmse (np.array): Root-mean-square error of the state.
+        state_rmse_scalar (float): Total RMSE across all states.
+    '''
     mse = np.mean(state_error ** 2, axis=0)
     state_rmse = np.sqrt(mse)
     state_rmse_scalar = np.sqrt(np.sum(mse))
@@ -80,10 +105,15 @@ def compute_state_rmse(state_error):
 
 
 def reset_constraints(constraints):
-    '''Setup the constraints list.
+    '''Set up the constraints list.
 
     Args:
-        constraints (list): List of constraints controller is subject too.
+        constraints (list): List of constraints the controller is subject to.
+
+    Returns:
+        constraints_list (ConstraintList): List of constraints.
+        state_constraints_sym (list): Symbolic state constraints.
+        input_constraints_sym (list): Symbolic input constraints.
     '''
 
     constraints_list = ConstraintList(constraints)
@@ -101,16 +131,16 @@ def set_acados_constraint_bound(constraint,
     '''Set the acados constraint bound.
 
     Args:
-        constraint (casadi expression): Constraint expression.
-        bound_type (str): Type of bound (lb, ub).
-        bound_value (float): Value of the bound.
+        constraint (casadi.MX or casadi.SX): Constraint expression.
+        bound_type (str): Type of bound ('lb' or 'ub').
+        bound_value (float, optional): Value of the bound.
 
     Returns:
         bound (np.array): Constraint bound value.
 
     Note:
-        all constraints in safe-control-gym are defined as g(x, u) <= constraint_tol
-        However, acados requires the constraints to be defined as lb <= g(x, u) <= ub
+        All constraints in safe-control-gym are defined as g(x, u) <= constraint_tol.
+        However, acados requires the constraints to be defined as lb <= g(x, u) <= ub.
         Thus, a large negative number (-1e8) is used as the lower bound.
         See: https://github.com/acados/acados/issues/650
     '''
@@ -124,7 +154,7 @@ def set_acados_constraint_bound(constraint,
 
 
 def plot_open_loop_sol(ctrl):
-    ''' Plot the open loop prediction of the MPC controller.
+    '''Plot the open loop prediction of the MPC controller.
 
     Args:
         ctrl (MPC): MPC controller object.
