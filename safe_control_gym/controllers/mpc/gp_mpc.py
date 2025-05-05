@@ -34,6 +34,7 @@ from safe_control_gym.controllers.lqr.lqr_utils import discretize_linear_system
 from safe_control_gym.controllers.mpc.gp_utils import (GaussianProcessCollection, ZeroMeanIndependentGPModel,
                                                        covMatern52ard, covSEard, kmeans_centriods)
 from safe_control_gym.controllers.mpc.linear_mpc import MPC, LinearMPC
+from safe_control_gym.controllers.mpc.mpc_utils import compute_state_rmse
 from safe_control_gym.envs.benchmark_env import Task
 
 
@@ -627,13 +628,8 @@ class GPMPC(MPC):
         opti.set_value(mean_post_factor, mean_post_factor_val)
         opti.set_value(z_ind, z_ind_val)
         # Initial guess for the optimization problem.
-        if self.warmstart and self.x_prev is None and self.u_prev is None:
-            x_guess, u_guess = self.prior_ctrl.compute_initial_guess(obs, goal_states, self.X_EQ, self.U_EQ)
-            opti.set_initial(x_var, x_guess)
-            u_guess = np.clip(u_guess, 0.06, 0.26)
-            opti.set_initial(u_var, u_guess)  # Initial guess for optimization problem.
-        elif self.warmstart and self.x_prev is not None and self.u_prev is not None:
-            # shift previous solutions by 1 step
+        if self.warmstart and self.x_prev is not None and self.u_prev is not None:
+            # Shift previous solutions by 1 step
             x_guess = deepcopy(self.x_prev)
             u_guess = deepcopy(self.u_prev)
             x_guess[:, :-1] = x_guess[:, 1:]
@@ -909,8 +905,6 @@ class GPMPC(MPC):
                                        terminate_run_on_done=self.terminate_train_on_done)
                 train_runs[epoch].update({episode: munch.munchify(run_results)})
 
-            lengthscale, outputscale, noise, kern = self.gaussian_process.get_hyperparameters(as_numpy=True)
-
         # Close environments
         for env in train_envs:
             env.close()
@@ -1029,7 +1023,104 @@ class GPMPC(MPC):
             self.set_gp_dynamics_func(n_ind_points)
             self.setup_gp_optimizer(n_ind_points)
         self.prior_ctrl.reset()
-        self.setup_results_dict()
-        # Previously solved states & inputs, useful for warm start.
+        self.reset_before_run()
+
+    def run(self,
+            env=None,
+            render=False,
+            logging=False,
+            max_steps=None,
+            terminate_run_on_done=None
+            ):
+        '''Runs evaluation with current policy.
+
+        Args:
+            env (gym.Env): Environment to use.
+            render (bool): If to do real-time rendering.
+            logging (bool): If to log on terminal.
+            max_steps (int): Maximum number of steps.
+            terminate_run_on_done (bool): Whether to terminate run when done.
+
+        Returns:
+            results_dict (dict): Evaluation statistics, rendered frames.
+        '''
+        if env is None:
+            env = self.env
+        if terminate_run_on_done is None:
+            terminate_run_on_done = self.terminate_run_on_done
+
         self.x_prev = None
         self.u_prev = None
+        obs, info = env.reset()
+        print('Init State:')
+        print(obs)
+        ep_returns, ep_lengths = [], []
+        frames = []
+        self.setup_results_dict()
+        self.results_dict['obs'].append(obs)
+        self.results_dict['state'].append(env.state)
+        i = 0
+        if env.TASK == Task.STABILIZATION:
+            if max_steps is None:
+                MAX_STEPS = int(env.CTRL_FREQ * env.EPISODE_LEN_SEC)
+            else:
+                MAX_STEPS = max_steps
+        elif env.TASK == Task.TRAJ_TRACKING:
+            if max_steps is None:
+                MAX_STEPS = self.traj.shape[1]
+            else:
+                MAX_STEPS = max_steps
+        else:
+            raise Exception('Undefined Task')
+        self.terminate_loop = False
+        done = False
+        common_metric = 0
+        while not (done and terminate_run_on_done) and i < MAX_STEPS and not (self.terminate_loop):
+            action = self.select_action(obs)
+            if self.terminate_loop:
+                print('Infeasible MPC Problem')
+                break
+            # Repeat input for more efficient control.
+            obs, reward, done, info = env.step(action)
+            self.results_dict['obs'].append(obs)
+            self.results_dict['reward'].append(reward)
+            self.results_dict['done'].append(done)
+            self.results_dict['info'].append(info)
+            self.results_dict['action'].append(action)
+            self.results_dict['state'].append(env.state)
+            self.results_dict['state_mse'].append(info['mse'])
+            self.results_dict['state_error'].append(env.state - env.X_GOAL[i, :])
+            common_metric += info['mse']
+            print(i, '-th step.')
+            print('action:', action)
+            print('obs', obs)
+            print('reward', reward)
+            print('done', done)
+            print(info)
+            print()
+            if render:
+                env.render()
+                frames.append(env.render('rgb_array'))
+            i += 1
+        # Collect evaluation results.
+        ep_lengths = np.asarray(ep_lengths)
+        ep_returns = np.asarray(ep_returns)
+        if logging:
+            msg = '****** Evaluation ******\n'
+            msg += 'eval_ep_length {:.2f} +/- {:.2f} | eval_ep_return {:.3f} +/- {:.3f}\n'.format(
+                ep_lengths.mean(), ep_lengths.std(), ep_returns.mean(),
+                ep_returns.std())
+        if len(frames) != 0:
+            self.results_dict['frames'] = frames
+        self.results_dict['obs'] = np.vstack(self.results_dict['obs'])
+        self.results_dict['state'] = np.vstack(self.results_dict['state'])
+        try:
+            self.results_dict['reward'] = np.vstack(self.results_dict['reward'])
+            self.results_dict['action'] = np.vstack(self.results_dict['action'])
+            self.results_dict['full_traj_common_cost'] = common_metric
+            self.results_dict['total_rmse_state_error'] = compute_state_rmse(self.results_dict['state'])
+            self.results_dict['total_rmse_obs_error'] = compute_state_rmse(self.results_dict['obs'])
+        except ValueError:
+            raise Exception('[ERROR] mpc.run().py: MPC could not find a solution for the first step given the initial conditions. '
+                            'Check to make sure initial conditions are feasible.')
+        return deepcopy(self.results_dict)
