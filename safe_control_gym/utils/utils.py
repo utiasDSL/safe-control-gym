@@ -7,8 +7,6 @@ import os
 import random
 import subprocess
 import sys
-import time
-from functools import wraps
 
 import gymnasium as gym
 import imageio
@@ -16,7 +14,6 @@ import munch
 import numpy as np
 import torch
 import yaml
-from termcolor import colored
 
 
 def mkdirs(*paths):
@@ -196,18 +193,3 @@ def unwrap_wrapper(env, wrapper_class):
 def is_wrapped(env, wrapper_class):
     '''Check if a given environment has been wrapped with a given wrapper.'''
     return unwrap_wrapper(env, wrapper_class) is not None
-
-
-def timing(f):
-    '''Decorator for measuring the time of a function.
-       The elapsed time is stored in the function object.
-    '''
-    @wraps(f)
-    def wrap(*args, **kw):
-        ts = time.time()
-        result = f(*args, **kw)
-        te = time.time()
-        wrap.elapsed_time = te - ts
-        print(colored(f'func:{f.__name__} took: {wrap.elapsed_time:.3f} sec', 'blue'))
-        return result
-    return wrap

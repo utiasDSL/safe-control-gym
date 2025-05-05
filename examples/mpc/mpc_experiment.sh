@@ -6,7 +6,7 @@
 # SYS='quadrotor_2D'
 SYS='quadrotor_3D'
 
-#TASK='stabilization'
+# TASK='stabilization'
 TASK='tracking'
 
 # ALGO='mpc'

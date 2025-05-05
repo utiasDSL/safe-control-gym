@@ -17,7 +17,6 @@ from safe_control_gym.controllers.lqr.lqr_utils import discretize_linear_system
 from safe_control_gym.controllers.mpc.mpc import MPC
 from safe_control_gym.controllers.mpc.mpc_utils import compute_discrete_lqr_gain_from_cont_linear_system
 from safe_control_gym.envs.benchmark_env import Task
-from safe_control_gym.utils.utils import timing
 
 
 class LinearMPC(MPC):
@@ -32,12 +31,10 @@ class LinearMPC(MPC):
             warmstart=True,
             soft_constraints=False,
             soft_penalty: float = 10000,
-            terminate_run_on_done=True,
             constraint_tol: float = 1e-8,
             solver: str = 'sqpmethod',
             additional_constraints=None,
             use_lqr_gain_and_terminal_cost: bool = False,
-            compute_initial_guess_method=None,
             **kwargs  # Additional args from base_controller.py
     ):
         '''Creates task and controller.
@@ -49,18 +46,11 @@ class LinearMPC(MPC):
             r_mpc (list): Diagonals of input/action cost weight.
             warmstart (bool): If to initialize from previous iteration.
             soft_constraints (bool): Formulate the constraints as soft constraints.
-            terminate_run_on_done (bool): Terminate the run when the environment returns done or not.
             constraint_tol (float): Tolerance to add the the constraint as sometimes solvers are not exact.
             solver (str): Specify which solver you wish to use (qrqp, qpoases, ipopt, sqpmethod)
             additional_constraints (list): List of constraints.
             use_lqr_gain_and_terminal_cost (bool): Use LQR ancillary gain and terminal cost in the MPC.
-            compute_initial_guess_method (str): Method to compute the initial guess for the MPC. Options: None, 'ipopt', 'lqr'.
         '''
-        # Store all params/args.
-        for k, v in locals().items():
-            if k != 'self' and k != 'kwargs' and '__' not in k:
-                self.__dict__[k] = v
-
         super().__init__(
             env_func,
             horizon=horizon,
@@ -69,17 +59,13 @@ class LinearMPC(MPC):
             warmstart=warmstart,
             soft_constraints=soft_constraints,
             soft_penalty=soft_penalty,
-            terminate_run_on_done=terminate_run_on_done,
             constraint_tol=constraint_tol,
             additional_constraints=additional_constraints,
             use_lqr_gain_and_terminal_cost=use_lqr_gain_and_terminal_cost,
-            compute_initial_guess_method=compute_initial_guess_method,
             **kwargs
         )
 
         # TODO: Setup environment equilibrium
-        self.X_EQ = np.atleast_2d(self.model.X_EQ)[0, :].T
-        self.U_EQ = np.atleast_2d(self.model.U_EQ)[0, :].T
         assert solver in ['qpoases', 'qrqp', 'sqpmethod', 'ipopt'], '[Error]. MPC Solver not supported.'
         self.solver = solver
 
@@ -205,7 +191,6 @@ class LinearMPC(MPC):
             'cost': cost
         }
 
-    @timing
     def select_action(self,
                       obs,
                       info=None
