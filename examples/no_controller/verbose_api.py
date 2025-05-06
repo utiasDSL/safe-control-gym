@@ -41,7 +41,7 @@ def run():
     if config.task == 'cartpole':
         print('\t' + str(p.getDynamicsInfo(bodyUniqueId=env.CARTPOLE_ID, linkIndex=-1, physicsClientId=env.PYB_CLIENT)))
     elif config.task == 'quadrotor':
-        print('\t' + str(p.getDynamicsInfo(bodyUniqueId=env.DRONE_IDS[0], linkIndex=-1, physicsClientId=env.PYB_CLIENT)))
+        print('\t' + str(p.getDynamicsInfo(bodyUniqueId=env.DRONE_ID, linkIndex=-1, physicsClientId=env.PYB_CLIENT)))
     print('\n\n')
     print_str_with_style('Initial reset.\n', 7)
     print_str_with_style('Open AI gym API:', 2)
