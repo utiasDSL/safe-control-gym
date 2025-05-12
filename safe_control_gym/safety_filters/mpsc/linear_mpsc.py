@@ -18,7 +18,7 @@ from pytope import Polytope
 from safe_control_gym.controllers.lqr.lqr_utils import discretize_linear_system
 from safe_control_gym.controllers.mpc.mpc_utils import rk_discrete
 from safe_control_gym.envs.benchmark_env import Environment, Task
-from safe_control_gym.envs.constraints import ConstrainedVariableType, LinearConstraint, QuadraticContstraint
+from safe_control_gym.envs.constraints import ConstrainedVariableType, LinearConstraint, QuadraticConstraint
 from safe_control_gym.safety_filters.mpsc.mpsc import MPSC
 from safe_control_gym.safety_filters.mpsc.mpsc_utils import (Cost_Function, compute_RPI_set,
                                                              ellipse_bounding_box, pontryagin_difference_AABB)
@@ -133,7 +133,7 @@ class LINEAR_MPSC(MPSC):
         self.P = compute_RPI_set(A_cl, w, self.tau)
         self.omega_AABB_verts = ellipse_bounding_box(self.P)
         self.tighten_state_and_input_constraints()
-        self.omega_constraint = QuadraticContstraint(self.env,
+        self.omega_constraint = QuadraticConstraint(self.env,
                                                      self.P,
                                                      1.0,
                                                      constrained_variable=ConstrainedVariableType.STATE)
@@ -192,7 +192,7 @@ class LINEAR_MPSC(MPSC):
         self.P = parameters['P']
         self.omega_AABB_verts = ellipse_bounding_box(self.P)
         self.tighten_state_and_input_constraints()
-        self.omega_constraint = QuadraticContstraint(self.env,
+        self.omega_constraint = QuadraticConstraint(self.env,
                                                      self.P,
                                                      1.0,
                                                      constrained_variable=ConstrainedVariableType.STATE)
@@ -261,7 +261,7 @@ class LINEAR_MPSC(MPSC):
         self.tightened_state_constraint = tightened_state_constraint_func(env=self.env,
                                                                           constrained_variable=ConstrainedVariableType.STATE)
 
-        self.simple_terminal_set = QuadraticContstraint(env=self.env,
+        self.simple_terminal_set = QuadraticConstraint(env=self.env,
                                                         P=np.eye(self.model.nx),
                                                         b=self.env.TASK_INFO['stabilization_goal_tolerance'],
                                                         constrained_variable=ConstrainedVariableType.STATE)

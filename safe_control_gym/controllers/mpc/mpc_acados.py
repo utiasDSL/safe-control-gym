@@ -119,42 +119,51 @@ class MPC_ACADOS(MPC):
 
         # Constraints
         # General constraint expressions
-        state_constraint_expr_list = []
-        input_constraint_expr_list = []
         for state_constraint in self.state_constraints_sym:
-            state_constraint_expr_list.append(state_constraint(ocp.model.x))
+            grad_cns_x = cs.Function("grad_cns_x", [ocp.model.x], [cs.jacobian(state_constraint(ocp.model.x), ocp.model.x)])
+            if np.all(grad_cns_x(np.ones(nx)).full() == np.vstack([-np.eye(nx), np.eye(nx)])):
+                cns_x = cs.Function("cns_x", [ocp.model.x], [state_constraint(ocp.model.x)])
+                bounds = cns_x(np.zeros(nx))
+                ocp.constraints.lbx = bounds[:nx].full()
+                ocp.constraints.ubx = -bounds[nx:].full()
+                ocp.constraints.idxbx = np.array([i for i in range(nx)])
+                ocp.constraints.lbx_e = bounds[:nx].full()
+                ocp.constraints.ubx_e = -bounds[nx:].full()
+                ocp.constraints.idxbx_e = np.array([i for i in range(nx)])
+            else:
+                raise ValueError("Constraint type not supported. Support only for bounded constraints expressed as A * x - b <= 0. Check constraints.py.")
         for input_constraint in self.input_constraints_sym:
-            input_constraint_expr_list.append(input_constraint(ocp.model.u))
-
-        h_expr_list = state_constraint_expr_list + input_constraint_expr_list
-        h_expr = cs.vertcat(*h_expr_list)
-        h0_expr = cs.vertcat(*h_expr_list)
-        he_expr = cs.vertcat(*state_constraint_expr_list)  # Terminal constraints are only state constraints
-
-        # Pass the constraints to the ocp object
-        ocp = self.processing_acados_constraints_expression(ocp, h0_expr, h_expr, he_expr)
+            grad_cns_u = cs.Function("grad_cns_u", [ocp.model.u], [cs.jacobian(input_constraint(ocp.model.u), ocp.model.u)])
+            if np.all(grad_cns_u(np.ones(nu)).full() == np.vstack([-np.eye(nu), np.eye(nu)])):
+                cns_u = cs.Function("cns_u", [ocp.model.u], [input_constraint(ocp.model.u)])
+                bounds = cns_u(np.zeros(nu))
+                ocp.constraints.lbu = bounds[:nu].full()
+                ocp.constraints.ubu = -bounds[nu:].full()
+                ocp.constraints.idxbu = np.array([i for i in range(nu)])
+            else:
+                raise ValueError("Constraint type not supported. Support only for bounded constraints expressed as A * x - b <= 0. Check constraints.py.")
 
         # Slack costs for nonlinear constraints
         if self.soft_constraints:
             # Slack variables for all constraints
-            ocp.constraints.Jsh_0 = np.eye(h0_expr.shape[0])
-            ocp.constraints.Jsh = np.eye(h_expr.shape[0])
-            ocp.constraints.Jsh_e = np.eye(he_expr.shape[0])
+            ocp.constraints.Jsbu = np.eye(nu)
+            ocp.constraints.Jsbx= np.eye(nu)
+            ocp.constraints.Jsbx_e = np.eye(nx)
             # Slack penalty
             L2_pen = self.soft_penalty
             L1_pen = self.soft_penalty
-            ocp.cost.Zl_0 = L2_pen * np.ones(h0_expr.shape[0])
-            ocp.cost.Zu_0 = L2_pen * np.ones(h0_expr.shape[0])
-            ocp.cost.zl_0 = L1_pen * np.ones(h0_expr.shape[0])
-            ocp.cost.zu_0 = L1_pen * np.ones(h0_expr.shape[0])
-            ocp.cost.Zu = L2_pen * np.ones(h_expr.shape[0])
-            ocp.cost.Zl = L2_pen * np.ones(h_expr.shape[0])
-            ocp.cost.zl = L1_pen * np.ones(h_expr.shape[0])
-            ocp.cost.zu = L1_pen * np.ones(h_expr.shape[0])
-            ocp.cost.Zl_e = L2_pen * np.ones(he_expr.shape[0])
-            ocp.cost.Zu_e = L2_pen * np.ones(he_expr.shape[0])
-            ocp.cost.zl_e = L1_pen * np.ones(he_expr.shape[0])
-            ocp.cost.zu_e = L1_pen * np.ones(he_expr.shape[0])
+            ocp.cost.Zl_0 = L2_pen * np.ones(nx)
+            ocp.cost.Zu_0 = L2_pen * np.ones(nx)
+            ocp.cost.zl_0 = L1_pen * np.ones(nx)
+            ocp.cost.zu_0 = L1_pen * np.ones(nx)
+            ocp.cost.Zu = L2_pen * np.ones(nx + nu)
+            ocp.cost.Zl = L2_pen * np.ones(nx + nu)
+            ocp.cost.zl = L1_pen * np.ones(nx + nu)
+            ocp.cost.zu = L1_pen * np.ones(nx + nu)
+            ocp.cost.Zl_e = L2_pen * np.ones(nx)
+            ocp.cost.Zu_e = L2_pen * np.ones(nx)
+            ocp.cost.zl_e = L1_pen * np.ones(nx)
+            ocp.cost.zu_e = L1_pen * np.ones(nx)
 
         # Placeholder initial state constraint
         x_init = np.zeros((nx))
