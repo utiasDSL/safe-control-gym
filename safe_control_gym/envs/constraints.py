@@ -178,7 +178,7 @@ class Constraint:
             raise ValueError('[ERROR] the tolerance dimension does not match the number of constraints.')
 
 
-class QuadraticContstraint(Constraint):
+class QuadraticConstraint(Constraint):
     '''Constraint class for constraints of the form x.T @ P @ x <= b.'''
 
     def __init__(self,
@@ -300,7 +300,7 @@ class BoundedConstraint(LinearConstraint):
         Args:
             env (BenchmarkEnv): The environment to constraint.
             lower_bounds (ndarray or list): Lower bound of constraint.
-            upper_bounds (ndarray or list): Uppbound of constraint.
+            upper_bounds (ndarray or list): Upper bound of constraint.
             constrained_variable (ConstrainedVariableType): Type of constraint.
             strict (optional, bool): Whether the constraint is violated also when equal to its threshold.
             active_dims (list or int): List specifying which dimensions the constraint is active for. Note that
@@ -639,7 +639,7 @@ class ConstraintList:
 
 GENERAL_CONSTRAINTS = {
     'linear_constraint': LinearConstraint,
-    'quadratic_constraint': QuadraticContstraint,
+    'quadratic_constraint': QuadraticConstraint,
     'bounded_constraint': BoundedConstraint,
     'default_constraint': DefaultConstraint
 }
