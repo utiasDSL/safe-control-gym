@@ -118,7 +118,6 @@ class MPC_ACADOS(MPC):
         ocp.cost.yref_e = np.zeros((ny_e, ))
 
         # Constraints
-        # General constraint expressions
         for state_constraint in self.state_constraints_sym:
             grad_cns_x = cs.Function("grad_cns_x", [ocp.model.x], [cs.jacobian(state_constraint(ocp.model.x), ocp.model.x)])
             if np.all(grad_cns_x(np.ones(nx)).full() == np.vstack([-np.eye(nx), np.eye(nx)])):
