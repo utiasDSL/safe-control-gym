@@ -42,7 +42,7 @@ class Quadrotor(BaseAviary):
         }
     }
 
-    INERTIAL_PROP_RAND_INFO = {
+    BASE_INERTIAL_PROP_RAND_INFO = {
         'M': {  # Nominal: 0.027
             'distrib': 'uniform',
             'low': 0.022,
@@ -65,7 +65,7 @@ class Quadrotor(BaseAviary):
         }
     }
 
-    INIT_STATE_RAND_INFO = {
+    BASE_INIT_STATE_RAND_INFO = {
         'init_x': {
             'distrib': 'uniform',
             'low': -0.5,
@@ -205,6 +205,7 @@ class Quadrotor(BaseAviary):
         super().__init__(init_state=init_state, inertial_prop=inertial_prop, **kwargs)
 
         # Store initial state info.
+        self.INIT_STATE_RAND_INFO = deepcopy(self.BASE_INIT_STATE_RAND_INFO)
         self.INIT_STATE_LABELS = {
             QuadType.ONE_D: ['init_x', 'init_x_dot'],
             QuadType.TWO_D: ['init_x', 'init_x_dot', 'init_z', 'init_z_dot', 'init_theta', 'init_theta_dot'],
@@ -229,6 +230,7 @@ class Quadrotor(BaseAviary):
             if init_name not in self.INIT_STATE_LABELS[self.QUAD_TYPE]:
                 self.INIT_STATE_RAND_INFO.pop(init_name, None)
         # Remove randomization info of inertial components inconsistent with quad type.
+        self.INERTIAL_PROP_RAND_INFO = deepcopy(self.BASE_INERTIAL_PROP_RAND_INFO)
         if self.QUAD_TYPE == QuadType.ONE_D:
             # Do NOT randomize J for the 1D quadrotor.
             self.INERTIAL_PROP_RAND_INFO.pop('Ixx', None)
