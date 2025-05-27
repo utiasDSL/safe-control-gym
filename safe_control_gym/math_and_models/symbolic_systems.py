@@ -69,7 +69,7 @@ class SymbolicModel():
         # Discrete time dynamics.
         self.fd_func = cs.integrator('fd', self.integration_algo, {'x': self.x_sym,
                                                                    'p': self.u_sym,
-                                                                   'ode': self.x_dot}, {'tf': self.dt}
+                                                                   'ode': self.x_dot}, 0, self.dt
                                      )
         # Observation model.
         self.g_func = cs.Function('g', [self.x_sym, self.u_sym], [self.y_sym], ['x', 'u'], ['g'])
@@ -101,7 +101,7 @@ class SymbolicModel():
                 'x': self.x_eval,
                 'p': cs.vertcat(self.u_eval, self.x_sym, self.u_sym),
                 'ode': self.x_dot_linear
-            }, {'tf': self.dt})
+            }, 0, self.dt)
         # Linearized observation model.
         self.y_linear = self.y_sym + self.dgdx @ (
             self.x_eval - self.x_sym) + self.dgdu @ (self.u_eval - self.u_sym)

@@ -2,13 +2,12 @@
 
 from copy import deepcopy
 
-import casadi as cs
 import numpy as np
 import scipy
 from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
 
 from safe_control_gym.controllers.mpc.mpc import MPC
-from safe_control_gym.controllers.mpc.mpc_utils import set_acados_constraint_bound
+from safe_control_gym.envs.constraints import BoundedConstraint
 
 
 class MPC_ACADOS(MPC):
@@ -100,12 +99,12 @@ class MPC_ACADOS(MPC):
         ocp.model = self.setup_acados_model()
 
         # Set dimensions
-        ocp.dims.N = self.T  # Prediction horizon
+        ocp.solver_options.N_horizon = self.T  # Prediction horizon
 
         # Set cost (NOTE: safe-control-gym uses quadratic cost)
         ocp.cost.cost_type = 'LINEAR_LS'
         ocp.cost.cost_type_e = 'LINEAR_LS'
-        ocp.cost.W = scipy.linalg.block_diag(self.Q/self.dt, self.R/self.dt)
+        ocp.cost.W = scipy.linalg.block_diag(self.Q / self.dt, self.R / self.dt)
         ocp.cost.W_e = self.Q if not self.use_lqr_gain_and_terminal_cost else self.P
         ocp.cost.Vx = np.zeros((ny, nx))
         ocp.cost.Vx[:nx, :nx] = np.eye(nx)
@@ -118,35 +117,29 @@ class MPC_ACADOS(MPC):
         ocp.cost.yref_e = np.zeros((ny_e, ))
 
         # Constraints
-        for state_constraint in self.state_constraints_sym:
-            grad_cns_x = cs.Function("grad_cns_x", [ocp.model.x], [cs.jacobian(state_constraint(ocp.model.x), ocp.model.x)])
-            if np.all(grad_cns_x(np.ones(nx)).full() == np.vstack([-np.eye(nx), np.eye(nx)])):
-                cns_x = cs.Function("cns_x", [ocp.model.x], [state_constraint(ocp.model.x)])
-                bounds = cns_x(np.zeros(nx))
-                ocp.constraints.lbx = bounds[:nx].full()
-                ocp.constraints.ubx = -bounds[nx:].full()
-                ocp.constraints.idxbx = np.array([i for i in range(nx)])
-                ocp.constraints.lbx_e = bounds[:nx].full()
-                ocp.constraints.ubx_e = -bounds[nx:].full()
-                ocp.constraints.idxbx_e = np.array([i for i in range(nx)])
+        for state_constraint in self.constraints.state_constraints:
+            if isinstance(state_constraint, BoundedConstraint):
+                ocp.constraints.lbx = state_constraint.lower_bounds
+                ocp.constraints.ubx = state_constraint.upper_bounds
+                ocp.constraints.idxbx = np.arange(nx)
+                ocp.constraints.lbx_e = state_constraint.lower_bounds
+                ocp.constraints.ubx_e = state_constraint.upper_bounds
+                ocp.constraints.idxbx_e = np.arange(nx)
             else:
-                raise ValueError("Constraint type not supported. Support only for bounded constraints expressed as A * x - b <= 0. Check constraints.py.")
-        for input_constraint in self.input_constraints_sym:
-            grad_cns_u = cs.Function("grad_cns_u", [ocp.model.u], [cs.jacobian(input_constraint(ocp.model.u), ocp.model.u)])
-            if np.all(grad_cns_u(np.ones(nu)).full() == np.vstack([-np.eye(nu), np.eye(nu)])):
-                cns_u = cs.Function("cns_u", [ocp.model.u], [input_constraint(ocp.model.u)])
-                bounds = cns_u(np.zeros(nu))
-                ocp.constraints.lbu = bounds[:nu].full()
-                ocp.constraints.ubu = -bounds[nu:].full()
-                ocp.constraints.idxbu = np.array([i for i in range(nu)])
+                raise ValueError('Constraint type not supported. Support only for BoundedConstraint and descendants. Check constraints.py.')
+        for input_constraint in self.constraints.input_constraints:
+            if isinstance(input_constraint, BoundedConstraint):
+                ocp.constraints.lbu = input_constraint.lower_bounds
+                ocp.constraints.ubu = input_constraint.upper_bounds
+                ocp.constraints.idxbu = np.arange(nu)
             else:
-                raise ValueError("Constraint type not supported. Support only for bounded constraints expressed as A * x - b <= 0. Check constraints.py.")
+                raise ValueError('Constraint type not supported. Support only for BoundedConstraint and descendants. Check constraints.py.')
 
         # Slack costs for nonlinear constraints
         if self.soft_constraints:
             # Slack variables for all constraints
             ocp.constraints.Jsbu = np.eye(nu)
-            ocp.constraints.Jsbx= np.eye(nu)
+            ocp.constraints.Jsbx = np.eye(nu)
             ocp.constraints.Jsbx_e = np.eye(nx)
             # Slack penalty
             L2_pen = self.soft_penalty
@@ -180,59 +173,6 @@ class MPC_ACADOS(MPC):
         ocp.code_export_directory = self.output_dir + '/mpc_c_generated_code'
 
         self.acados_ocp_solver = AcadosOcpSolver(ocp)
-
-    def processing_acados_constraints_expression(self,
-                                                 ocp: AcadosOcp,
-                                                 h0_expr: cs.MX,
-                                                 h_expr: cs.MX,
-                                                 he_expr: cs.MX,
-                                                 ) -> AcadosOcp:
-        '''Preprocess the constraints to be compatible with acados.
-
-        Args:
-            ocp (AcadosOcp): acados ocp object
-            h0_expr (cs.MX expression): initial state constraints
-            h_expr (cs.MX expression): state and input constraints
-            he_expr (cs.MX expression): terminal state constraints
-
-        Returns:
-            ocp (AcadosOcp): acados ocp object with constraints set.
-        '''
-
-        ub = {'h': set_acados_constraint_bound(h_expr, 'ub', self.constraint_tol),
-              'h0': set_acados_constraint_bound(h0_expr, 'ub', self.constraint_tol),
-              'he': set_acados_constraint_bound(he_expr, 'ub', self.constraint_tol), }
-
-        lb = {'h': set_acados_constraint_bound(h_expr, 'lb'),
-              'h0': set_acados_constraint_bound(h0_expr, 'lb'),
-              'he': set_acados_constraint_bound(he_expr, 'lb'), }
-
-        # Make sure all the ub and lb are 1D numpy arrays
-        # (see: https://discourse.acados.org/t/infeasible-qps-when-using-nonlinear-casadi-constraint-expressions/1595/5?u=mxche)
-        for key in ub.keys():
-            ub[key] = ub[key].flatten() if ub[key].ndim != 1 else ub[key]
-            lb[key] = lb[key].flatten() if lb[key].ndim != 1 else lb[key]
-
-        # Check ub and lb dimensions
-        for key in ub.keys():
-            assert ub[key].ndim == 1, f'ub[{key}] is not 1D numpy array'
-            assert lb[key].ndim == 1, f'lb[{key}] is not 1D numpy array'
-        assert ub['h'].shape == lb['h'].shape, 'h_ub and h_lb have different shapes'
-
-        # Pass the constraints to the ocp object
-        ocp.model.con_h_expr_0, ocp.model.con_h_expr, ocp.model.con_h_expr_e = \
-            h0_expr, h_expr, he_expr
-        ocp.dims.nh_0, ocp.dims.nh, ocp.dims.nh_e = \
-            h0_expr.shape[0], h_expr.shape[0], he_expr.shape[0]
-        # Assign constraints upper and lower bounds
-        ocp.constraints.uh_0 = ub['h0']
-        ocp.constraints.lh_0 = lb['h0']
-        ocp.constraints.uh = ub['h']
-        ocp.constraints.lh = lb['h']
-        ocp.constraints.uh_e = ub['he']
-        ocp.constraints.lh_e = lb['he']
-
-        return ocp
 
     def select_action(self,
                       obs,

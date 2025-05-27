@@ -101,7 +101,7 @@ class LINEAR_MPSC(MPSC):
                     'x': delta_x,
                     'p': delta_u,
                     'ode': x_dot_lin_vec
-                }, {'tf': self.dt}
+                }, 0, self.dt
             )
 
         self.dynamics_func = dynamics_func
@@ -134,9 +134,9 @@ class LINEAR_MPSC(MPSC):
         self.omega_AABB_verts = ellipse_bounding_box(self.P)
         self.tighten_state_and_input_constraints()
         self.omega_constraint = QuadraticConstraint(self.env,
-                                                     self.P,
-                                                     1.0,
-                                                     constrained_variable=ConstrainedVariableType.STATE)
+                                                    self.P,
+                                                    1.0,
+                                                    constrained_variable=ConstrainedVariableType.STATE)
         # Now that constraints are defined, setup the optimizer.
         self.setup_optimizer()
 
@@ -193,9 +193,9 @@ class LINEAR_MPSC(MPSC):
         self.omega_AABB_verts = ellipse_bounding_box(self.P)
         self.tighten_state_and_input_constraints()
         self.omega_constraint = QuadraticConstraint(self.env,
-                                                     self.P,
-                                                     1.0,
-                                                     constrained_variable=ConstrainedVariableType.STATE)
+                                                    self.P,
+                                                    1.0,
+                                                    constrained_variable=ConstrainedVariableType.STATE)
 
         if self.learn_terminal_set and 'terminal_set' in parameters:
             self.terminal_set_verts = parameters['terminal_set']
@@ -262,9 +262,9 @@ class LINEAR_MPSC(MPSC):
                                                                           constrained_variable=ConstrainedVariableType.STATE)
 
         self.simple_terminal_set = QuadraticConstraint(env=self.env,
-                                                        P=np.eye(self.model.nx),
-                                                        b=self.env.TASK_INFO['stabilization_goal_tolerance'],
-                                                        constrained_variable=ConstrainedVariableType.STATE)
+                                                       P=np.eye(self.model.nx),
+                                                       b=self.env.TASK_INFO['stabilization_goal_tolerance'],
+                                                       constrained_variable=ConstrainedVariableType.STATE)
 
     def setup_optimizer(self):
         '''Setup the certifying MPC problem.'''
