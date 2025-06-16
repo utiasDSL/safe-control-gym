@@ -359,7 +359,7 @@ class Quadrotor(BaseAviary):
 
         # Override inertial properties.
         p.changeDynamics(
-            self.DRONE_IDS[0],
+            self.DRONE_ID,
             linkIndex=-1,  # Base link.
             mass=self.OVERRIDDEN_QUAD_MASS,
             localInertiaDiagonal=self.OVERRIDDEN_QUAD_INERTIA,
@@ -377,10 +377,10 @@ class Quadrotor(BaseAviary):
             INIT_ANG_VEL = [0, init_values.get('init_theta_dot', 0.), 0]
         else:
             INIT_ANG_VEL = [init_values.get('init_' + k, 0.) for k in ['p', 'q', 'r']]  # TODO: transform from body rates.
-        p.resetBasePositionAndOrientation(self.DRONE_IDS[0], INIT_XYZ,
+        p.resetBasePositionAndOrientation(self.DRONE_ID, INIT_XYZ,
                                           p.getQuaternionFromEuler(INIT_RPY),
                                           physicsClientId=self.PYB_CLIENT)
-        p.resetBaseVelocity(self.DRONE_IDS[0], INIT_VEL, INIT_ANG_VEL,
+        p.resetBaseVelocity(self.DRONE_ID, INIT_VEL, INIT_ANG_VEL,
                             physicsClientId=self.PYB_CLIENT)
 
         # Update BaseAviary internal variables before calling self._get_observation().
@@ -776,7 +776,7 @@ class Quadrotor(BaseAviary):
             obs (ndarray): The state of the quadrotor, of size 2 or 6 depending on QUAD_TYPE.
         '''
 
-        full_state = self._get_drone_state_vector(0)
+        full_state = self._get_drone_state_vector()
         pos, _, rpy, vel, ang_v, _ = np.split(full_state, [3, 7, 10, 13, 16])
         if self.QUAD_TYPE == QuadType.ONE_D:
             # {z, z_dot}.
@@ -787,7 +787,7 @@ class Quadrotor(BaseAviary):
                 [pos[0], vel[0], pos[2], vel[2], rpy[1], ang_v[1]]
             ).reshape((6,))
         elif self.QUAD_TYPE == QuadType.THREE_D:
-            Rob = np.array(p.getMatrixFromQuaternion(self.quat[0])).reshape((3, 3))
+            Rob = np.array(p.getMatrixFromQuaternion(self.quat)).reshape((3, 3))
             Rbo = Rob.T
             ang_v_body_frame = Rbo @ ang_v
             # {x, x_dot, y, y_dot, z, z_dot, phi, theta, psi, p_body, q_body, r_body}.
@@ -795,12 +795,6 @@ class Quadrotor(BaseAviary):
                 # [pos[0], vel[0], pos[1], vel[1], pos[2], vel[2], rpy, ang_v]  # Note: world ang_v != body frame pqr
                 [pos[0], vel[0], pos[1], vel[1], pos[2], vel[2], rpy, ang_v_body_frame]
             ).reshape((12,))
-        # if not np.array_equal(self.state,
-        #                       np.clip(self.state, self.observation_space.low, self.observation_space.high)):
-        #     if self.GUI and self.VERBOSE:
-        #         print(
-        #             '[WARNING]: observation was clipped in Quadrotor._get_observation().'
-        #         )
 
         # Apply observation disturbance.
         obs = deepcopy(self.state)
