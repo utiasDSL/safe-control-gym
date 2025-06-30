@@ -16,7 +16,6 @@ from termcolor import colored
 from safe_control_gym.controllers.lqr.lqr_utils import discretize_linear_system
 from safe_control_gym.controllers.mpc.mpc import MPC
 from safe_control_gym.controllers.mpc.mpc_utils import compute_discrete_lqr_gain_from_cont_linear_system
-from safe_control_gym.envs.benchmark_env import Task
 
 
 class LinearMPC(MPC):
@@ -214,14 +213,16 @@ class LinearMPC(MPC):
 
         # Assign the initial state.
         opti.set_value(x_init, obs - self.X_EQ)
+
         # Assign reference trajectory within horizon.
-        goal_states = self.get_references()
+        step = self.extract_step(info)
+        goal_states = self.get_references(step)
         opti.set_value(x_ref, goal_states)
-        if self.env.TASK == Task.TRAJ_TRACKING:
-            self.traj_step += 1
+
         if self.warmstart and self.u_prev is not None and self.x_prev is not None:
             opti.set_initial(x_var, self.x_prev)
             opti.set_initial(u_var, self.u_prev)
+
         # Solve the optimization problem.
         try:
             sol = opti.solve()

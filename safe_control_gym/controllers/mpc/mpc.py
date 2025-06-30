@@ -130,8 +130,6 @@ class MPC(BaseController):
         # Initialize previous state and action.
         self.x_prev = None
         self.u_prev = None
-        # Step along the reference.
-        self.traj_step = 0
         super().reset_before_run(obs, info, env)
 
     def reset(self):
@@ -274,15 +272,17 @@ class MPC(BaseController):
         '''
         opti_dict = self.opti_dict
         opti = opti_dict['opti']
-        x_var = opti_dict['x_var']  # optimization variables
-        u_var = opti_dict['u_var']  # optimization variables
-        x_init = opti_dict['x_init']  # initial state
-        x_ref = opti_dict['x_ref']  # reference state/trajectory
+        x_var = opti_dict['x_var']  # Optimization variables
+        u_var = opti_dict['u_var']  # Optimization variables
+        x_init = opti_dict['x_init']  # Initial state
+        x_ref = opti_dict['x_ref']  # Reference state/trajectory
 
         # Assign the initial state.
         opti.set_value(x_init, obs)
+
         # Assign reference trajectory within horizon.
-        goal_states = self.get_references()
+        step = self.extract_step(info)
+        goal_states = self.get_references(step)
         opti.set_value(x_ref, goal_states)
 
         if self.warmstart and self.x_prev is not None and self.u_prev is not None:
@@ -293,10 +293,6 @@ class MPC(BaseController):
             u_guess[:-1] = u_guess[1:]
             opti.set_initial(x_var, x_guess)
             opti.set_initial(u_var, u_guess)
-
-        if self.mode == 'tracking':
-            # Increment the trajectory step after update the reference and initial guess
-            self.traj_step += 1
 
         # Solve the optimization problem.
         try:
@@ -338,15 +334,22 @@ class MPC(BaseController):
         self.prev_action = action
         return action
 
-    def get_references(self):
-        '''Constructs reference states along mpc horizon, (nx, T+1).'''
+    def get_references(self, step):
+        '''Constructs reference states along mpc horizon, (nx, T+1).
+
+        Args:
+            step (int): The current step/iteration of the environment.
+
+        Returns:
+            goal_states (ndarray): Reference states along MPC horizon, shape (nx, T+1).
+        '''
         if self.env.TASK == Task.STABILIZATION:
             # Repeat goal state for horizon steps.
             goal_states = np.tile(self.env.X_GOAL.reshape(-1, 1), (1, self.T + 1))
         elif self.env.TASK == Task.TRAJ_TRACKING:
             # Slice trajectory for horizon steps, if not long enough, repeat last state.
-            start = min(self.traj_step, self.traj.shape[-1])
-            end = min(self.traj_step + self.T + 1, self.traj.shape[-1])
+            start = min(step, self.traj.shape[-1])
+            end = min(step + self.T + 1, self.traj.shape[-1])
             remain = max(0, self.T + 1 - (end - start))
             goal_states = np.concatenate([
                 self.traj[:, start:end],
