@@ -88,7 +88,12 @@ def get_cost_weight_matrix(weights, dim):
     if len(weights) == dim:
         W = np.diag(weights)
     elif len(weights) == 1:
-        W = np.diag(weights * dim)
+        if isinstance(weights, list):
+            W = np.diag(weights * dim)
+        elif isinstance(weights, np.ndarray):
+            W = np.diag(weights.item() * np.ones(dim))
+        else:
+            raise Exception('Wrong type for cost weights.')
     else:
         raise Exception('Wrong dimension for cost weights.')
     return W
