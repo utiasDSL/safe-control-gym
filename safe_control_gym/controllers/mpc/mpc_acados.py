@@ -192,9 +192,8 @@ class MPC_ACADOS(MPC):
         self.acados_ocp_solver.set(0, 'ubx', obs)
 
         # Set reference for the control horizon
-        goal_states = self.get_references()
-        if self.mode == 'tracking':
-            self.traj_step += 1
+        step = self.extract_step(info)
+        goal_states = self.get_references(step)
 
         y_ref = np.concatenate((goal_states[:, :-1],
                                 np.repeat(self.U_EQ.reshape(-1, 1), self.T, axis=1)), axis=0)

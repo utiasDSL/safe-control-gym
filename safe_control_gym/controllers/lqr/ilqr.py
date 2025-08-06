@@ -317,7 +317,7 @@ class iLQR(BaseController):
 
         Args:
             obs (ndarray): The observation at this timestep.
-            step (int): The timestep.
+            step (int): The current step/iteration of the environment.
 
         Returns:
             action (ndarray): The calculated action.
