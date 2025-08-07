@@ -446,7 +446,6 @@ class SymmetricStateConstraint(BoundedConstraint):
         c_value = np.round(np.abs(self.constraint_filter @ env.state) - self.bound, decimals=self.decimals)
         return c_value
 
-    # TODO: temp addition
     def check_tolerance_shape(self):
         '''Note we compare tolerance shape to bound shape (instead of num_constraints), since
         num_constraints will be set as 2x due to subclassing BoundedConstraint,

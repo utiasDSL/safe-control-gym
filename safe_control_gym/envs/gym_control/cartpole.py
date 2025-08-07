@@ -132,6 +132,7 @@ class CartPole(BenchmarkEnv):
                  rew_act_weight=0.0001,
                  rew_exponential=True,
                  done_on_out_of_bound=True,
+                 info_mse_metric_state_weight=None,
                  **kwargs
                  ):
         '''Initialize a cartpole environment.
@@ -146,6 +147,7 @@ class CartPole(BenchmarkEnv):
             rew_act_weight (list/ndarray): Quadratic weights for action in rl reward.
             rew_exponential (bool): If to exponentiate negative quadratic cost to positive, bounded [0,1] reward.
             done_on_out_of_bound (bool): If to termiante when state is out of bound.
+            info_mse_metric_state_weight (list/ndarray): Quadratic weights for state in mse calculation for info dict.
         '''
         self.obs_goal_horizon = obs_goal_horizon
         self.obs_wrap_angle = obs_wrap_angle
@@ -155,6 +157,15 @@ class CartPole(BenchmarkEnv):
         self.R = get_cost_weight_matrix(self.rew_act_weight, 1)
         self.rew_exponential = rew_exponential
         self.done_on_out_of_bound = done_on_out_of_bound
+
+        if info_mse_metric_state_weight is None:
+            self.info_mse_metric_state_weight = np.array([1, 0, 1, 0], ndmin=1, dtype=float)
+        else:
+            if len(info_mse_metric_state_weight) == 4:
+                self.info_mse_metric_state_weight = np.array(info_mse_metric_state_weight, ndmin=1, dtype=float)
+            else:
+                raise ValueError('[ERROR] in CartPole.__init__(), wrong info_mse_metric_state_weight argument size.')
+
         # BenchmarkEnv constructor, called after defining the custom args,
         # since some BenchmarkEnv init setup can be task(custom args)-dependent.
         super().__init__(init_state=init_state, inertial_prop=inertial_prop, **kwargs)
@@ -673,7 +684,15 @@ class CartPole(BenchmarkEnv):
             info['out_of_bounds'] = self.out_of_bounds
         # Add MSE.
         state = deepcopy(self.state)
-        info['mse'] = np.sum(state ** 2)
+        if self.TASK == Task.STABILIZATION:
+            state_error = state - self.X_GOAL
+        elif self.TASK == Task.TRAJ_TRACKING:
+            state[2] = normalize_angle(state[2])
+            wp_idx = min(self.ctrl_step_counter + 1, self.X_GOAL.shape[0] - 1)  # +1 so that state is being compared with proper reference state.
+            state_error = state - self.X_GOAL[wp_idx]
+        # Filter only relevant dimensions.
+        state_error = state_error * self.info_mse_metric_state_weight
+        info['mse'] = np.sum(state_error ** 2)
         return info
 
     def _get_reset_info(self):
