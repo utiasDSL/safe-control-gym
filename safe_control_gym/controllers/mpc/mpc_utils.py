@@ -9,27 +9,6 @@ from safe_control_gym.controllers.lqr.lqr_utils import discretize_linear_system
 from safe_control_gym.envs.constraints import ConstraintList
 
 
-def get_cost_weight_matrix(weights,
-                           dim
-                           ):
-    '''Get weight matrix from input arguments.
-
-    Args:
-        weights (list): List of weights.
-        dim (int): Dimension of the matrix.
-
-    Returns:
-        W (np.array): Weight matrix.
-    '''
-    if len(weights) == dim:
-        W = np.diag(weights)
-    elif len(weights) == 1:
-        W = np.diag(weights * dim)
-    else:
-        raise Exception('Wrong dimension for cost weights.')
-    return W
-
-
 def compute_discrete_lqr_gain_from_cont_linear_system(dfdx,
                                                       dfdu,
                                                       Q_lqr,
