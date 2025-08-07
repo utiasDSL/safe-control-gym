@@ -225,17 +225,17 @@ class MLPActorCritic(nn.Module):
              obs
              ):
         dist, _ = self.actor(obs)
-        a = dist.sample()
-        logp_a = dist.log_prob(a)
+        action = dist.sample()
+        logp_a = dist.log_prob(action)
         v = self.critic(obs)
-        return a.cpu().numpy(), v.cpu().numpy(), logp_a.cpu().numpy()
+        return action.cpu().numpy(), v.cpu().numpy(), logp_a.cpu().numpy()
 
     def act(self,
             obs
             ):
         dist, _ = self.actor(obs)
-        a = dist.mode()
-        return a.cpu().numpy()
+        action = dist.mode()
+        return action.cpu().numpy()
 
 
 class PPOBuffer(object):

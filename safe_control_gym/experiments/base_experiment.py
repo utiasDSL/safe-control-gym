@@ -159,9 +159,9 @@ class BaseExperiment:
                         break
 
         trajs_data = self.env.data
-        trajs_data['controller_data'].append(munchify(dict(ctrl_data)))
+        trajs_data['controller_data'] = munchify(dict(ctrl_data))
         if self.safety_filter is not None:
-            trajs_data['safety_filter_data'].append(munchify(dict(sf_data)))
+            trajs_data['safety_filter_data'] = munchify(dict(sf_data))
         return munchify(trajs_data)
 
     def _select_action(self, obs, info):

@@ -71,7 +71,7 @@ def run(plot=True, training=True, n_episodes=1, n_steps=None, curr_path='.', sav
     experiment = BaseExperiment(env, ctrl, safety_filter=safety_filter)
     certified_results, _ = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
     ctrl.close()
-    cbf_results = certified_results['safety_filter_data'][0]
+    cbf_results = certified_results['safety_filter_data']
     safety_filter.close()
 
     corrections = cbf_results['correction'][0] > 1e-6

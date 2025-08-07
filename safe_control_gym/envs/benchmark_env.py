@@ -77,7 +77,7 @@ class BenchmarkEnv(gym.Env, ABC):
                  constraints=None,
                  done_on_violation: bool = False,
                  use_constraint_penalty=False,
-                 constraint_penalty=-1,
+                 constraint_penalty=1.0,
                  # Disturbance.
                  disturbances=None,
                  adversary_disturbance=None,
@@ -477,6 +477,8 @@ class BenchmarkEnv(gym.Env, ABC):
                 info['constraint_violation'] = 1
                 if self.DONE_ON_VIOLATION:
                     done = True
+                    if self.COST == Cost.RL_REWARD and self.use_constraint_penalty:
+                        rew = 0
             else:
                 info['constraint_violation'] = 0
         else:
@@ -487,10 +489,10 @@ class BenchmarkEnv(gym.Env, ABC):
             if self.constraints is not None and self.use_constraint_penalty and self.constraints.is_violated(self, c_value=c_value):
                 if self.rew_exponential:
                     rew = np.log(rew)
-                    rew += self.constraint_penalty
+                    rew -= self.constraint_penalty
                     rew = np.exp(rew)
                 else:
-                    rew += self.constraint_penalty
+                    rew -= self.constraint_penalty
 
         # Terminate when reaching time limit,
         # but distinguish between done due to true termination or time limit reached
