@@ -8,6 +8,25 @@ acados_*
 
 # Python
 __pycache__/
+*.py[cod]
+
+# Virtual environments (venv, virtualenv, etc.)
+venv/
+env/
+.venv/
+.env/
+ENV/
+env.bak/
+venv.bak/
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
 
 # Testing
 .pytest_cache/
