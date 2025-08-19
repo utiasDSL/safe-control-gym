@@ -94,7 +94,7 @@ def run(plot=True, training=False, n_episodes=1, n_steps=None, curr_path='.'):
     experiment = BaseExperiment(env, ctrl, safety_filter=safety_filter)
     cert_results, cert_metrics = experiment.run_evaluation(n_episodes=n_episodes, n_steps=n_steps)
     ctrl.close()
-    mpsc_results = cert_results['safety_filter_data'][0]
+    mpsc_results = cert_results['safety_filter_data']
     safety_filter.close()
 
     elapsed_time_cert = cert_results['timestamp'][0][-1] - cert_results['timestamp'][0][0]
