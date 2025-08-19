@@ -17,6 +17,7 @@ from safe_control_gym.envs.benchmark_env import Cost, Task
 from safe_control_gym.envs.constraints import GENERAL_CONSTRAINTS
 from safe_control_gym.envs.gym_pybullet_drones.base_aviary import BaseAviary
 from safe_control_gym.envs.gym_pybullet_drones.quadrotor_utils import QuadType, cmd2pwm, pwm2rpm
+from safe_control_gym.math_and_models.normalization import normalize_angle
 from safe_control_gym.math_and_models.symbolic_systems import SymbolicModel
 from safe_control_gym.math_and_models.transformations import csRotXYZ, transform_trajectory
 
@@ -908,16 +909,17 @@ class Quadrotor(BaseAviary):
         if self.TASK == Task.STABILIZATION:
             state_error = state - self.X_GOAL
         elif self.TASK == Task.TRAJ_TRACKING:
-            # TODO: should use angle wrapping
-            # state[4] = normalize_angle(state[4])
+            if self.QUAD_TYPE == QuadType.TWO_D:
+                state[4] = normalize_angle(state[4])
+            elif self.QUAD_TYPE == QuadType.THREE_D:
+                state[6] = normalize_angle(state[6])
+                state[7] = normalize_angle(state[7])
+                state[8] = normalize_angle(state[8])
             wp_idx = min(self.ctrl_step_counter + 1, self.X_GOAL.shape[0] - 1)  # +1 so that state is being compared with proper reference state.
             state_error = state - self.X_GOAL[wp_idx]
         # Filter only relevant dimensions.
         state_error = state_error * self.info_mse_metric_state_weight
         info['mse'] = np.sum(state_error ** 2)
-        # if self.constraints is not None:
-        #     info['constraint_values'] = self.constraints.get_values(self)
-        #     info['constraint_violations'] = self.constraints.get_violations(self)
         return info
 
     def _get_reset_info(self):
