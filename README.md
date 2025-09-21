@@ -80,7 +80,7 @@ or
 You may need to separately install [`acados`](https://github.com/acados/acados) for fast MPC implementations.
 
 - To build and install acados, see their [installation guide](https://docs.acados.org/installation/index.html).
-- To set up the acados python interface, check out [these installtion steps](https://docs.acados.org/python_interface/index.html).
+- To set up the acados python interface, check out [these installation steps](https://docs.acados.org/python_interface/index.html).
 
 ## Architecture
 
