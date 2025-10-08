@@ -42,7 +42,7 @@ class BaseController(ABC):
             self.__dict__[key] = value
 
         self.use_gpu = self.use_gpu and torch.cuda.is_available()
-        self.device = 'cpu' if self.use_gpu is False else 'cuda'
+        self.device = torch.device('cuda' if self.use_gpu and torch.cuda.is_available() else 'cpu')
 
         self.setup_results_dict()
 

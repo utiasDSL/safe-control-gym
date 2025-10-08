@@ -97,7 +97,7 @@ class SafeExplorerPPO(BaseController):
                 assert self.pretrained, 'Must provide a pre-trained model for adaptation.'
                 if os.path.isdir(self.pretrained):
                     self.pretrained = os.path.join(self.pretrained, 'model_latest.pt')
-                state = torch.load(self.pretrained)
+                state = torch.load(self.pretrained, weights_only=False)  # Safe since we're loading our own models
                 self.safety_layer.load_state_dict(state['safety_layer'])
                 # Set up stats tracking.
                 self.env.add_tracker('constraint_violation', 0)
@@ -151,7 +151,7 @@ class SafeExplorerPPO(BaseController):
              path
              ):
         '''Restores model and experiment given checkpoint path.'''
-        state = torch.load(path)
+        state = torch.load(path, weights_only=False)  # Safe since we're loading our own models
         # Restore policy.
         self.agent.load_state_dict(state['agent'])
         self.safety_layer.load_state_dict(state['safety_layer'])
@@ -223,7 +223,7 @@ class SafeExplorerPPO(BaseController):
             action (ndarray): The action chosen by the controller.
         '''
         c = info['constraint_values']
-        with torch.no_grad():
+        with torch.inference_mode():
             obs = torch.FloatTensor(obs).to(self.device)
             c = torch.FloatTensor(c).to(self.device)
             action = self.agent.ac.act(obs, c=c)
@@ -309,7 +309,7 @@ class SafeExplorerPPO(BaseController):
         c = self.c
         start = time.time()
         for _ in range(self.rollout_steps):
-            with torch.no_grad():
+            with torch.inference_mode():
                 act, v, logp = self.agent.ac.step(torch.FloatTensor(obs).to(self.device), c=torch.FloatTensor(c).to(self.device))
             next_obs, rew, done, info = self.env.step(act)
             next_obs = self.obs_normalizer(next_obs)

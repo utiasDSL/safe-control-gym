@@ -670,11 +670,11 @@ class BatchGPModel:
         if self.target_mask is not None:
             train_targets = train_targets[:, self.target_mask]
         device = torch.device('cpu')
-        state_dict = torch.load(path_to_statedict, map_location=device)
+        state_dict = torch.load(path_to_statedict, map_location=device, _use_new_zipfile_serialization=True)
         self._init_model(train_inputs, train_targets)
 
         self.model.load_state_dict(state_dict)
-        self.model.double()  # needed otherwise loads state_dict as float32
+        self.model = self.model.to(dtype=torch.float64)  # needed otherwise loads state_dict as float32
         self._compute_GP_covariances(train_inputs)
         self.casadi_predict = self.make_casadi_prediction_func(train_inputs, train_targets)
 
@@ -724,8 +724,8 @@ class BatchGPModel:
             test_y = test_y.cuda()
             self.model = self.model.cuda()
             self.likelihood = self.likelihood.cuda()
-        self.model.double()
-        self.likelihood.double()
+        self.model = self.model.to(dtype=torch.float64)
+        self.likelihood = self.likelihood.to(dtype=torch.float64)
         self.model.train()
         self.likelihood.train()
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
@@ -735,7 +735,7 @@ class BatchGPModel:
         loss = torch.tensor(0)
         i = 0
         while i < n_train and torch.abs(loss - last_loss) > 1e-2:
-            with torch.no_grad():
+            with torch.inference_mode():
                 self.model.eval()
                 self.likelihood.eval()
                 test_output = self.model(test_x.unsqueeze(0).repeat(self.output_dimension, 1, 1))
@@ -754,7 +754,7 @@ class BatchGPModel:
             if test_loss < best_loss:
                 best_loss = test_loss
                 state_dict = self.model.state_dict()
-                torch.save(state_dict, fname)
+                torch.save(state_dict, fname, _use_new_zipfile_serialization=True)
                 best_epoch = i
 
             i += 1
@@ -765,7 +765,7 @@ class BatchGPModel:
         self.likelihood = self.likelihood.cpu()
         train_x = train_x.cpu()
         train_y = train_y.cpu()
-        self.model.load_state_dict(torch.load(fname))
+        self.model.load_state_dict(torch.load(fname, weights_only=False))
         self._compute_GP_covariances(train_x)
         self.casadi_predict = self.make_casadi_prediction_func(train_x, train_y)
 
@@ -791,7 +791,7 @@ class BatchGPModel:
         self.model.eval()
         self.likelihood.eval()
         if isinstance(x, np.ndarray):
-            x = torch.from_numpy(x).double()
+            x = torch.tensor(x, dtype=torch.float64)
         if self.input_mask is not None:
             x = x[:, self.input_mask]
         if requires_grad:
@@ -986,12 +986,12 @@ class GaussianProcess:
         if self.target_mask is not None:
             train_targets = train_targets[:, self.target_mask]
         device = torch.device('cpu')
-        state_dict = torch.load(path_to_statedict, map_location=device)
+        state_dict = torch.load(path_to_statedict, map_location=device, _use_new_zipfile_serialization=True)
         self._init_model(train_inputs, train_targets)
         if self.NORMALIZE:
             train_inputs = torch.from_numpy(self.scaler.transform(train_inputs.numpy()))
         self.model.load_state_dict(state_dict)
-        self.model.double()  # needed otherwise loads state_dict as float32
+        self.model = self.model.to(dtype=torch.float64)  # needed otherwise loads state_dict as float32
         self._compute_GP_covariances(train_inputs)
         self.casadi_predict = self.make_casadi_prediction_func(train_inputs, train_targets)
 
@@ -1045,8 +1045,8 @@ class GaussianProcess:
             test_y = test_y.cuda()
             self.model = self.model.cuda()
             self.likelihood = self.likelihood.cuda()
-        self.model.double()
-        self.likelihood.double()
+        self.model = self.model.to(dtype=torch.float64)
+        self.likelihood = self.likelihood.to(dtype=torch.float64)
         self.model.train()
         self.likelihood.train()
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
@@ -1056,7 +1056,7 @@ class GaussianProcess:
         loss = torch.tensor(0)
         i = 0
         while i < n_train and torch.abs(loss - last_loss) > 1e-2:
-            with torch.no_grad():
+            with torch.inference_mode():
                 self.model.eval()
                 self.likelihood.eval()
                 test_output = self.model(test_x)
@@ -1074,7 +1074,7 @@ class GaussianProcess:
             if test_loss < best_loss:
                 best_loss = test_loss
                 state_dict = self.model.state_dict()
-                torch.save(state_dict, fname)
+                torch.save(state_dict, fname, _use_new_zipfile_serialization=True)
                 best_epoch = i
 
             i += 1
@@ -1085,7 +1085,7 @@ class GaussianProcess:
         self.likelihood = self.likelihood.cpu()
         train_x = train_x.cpu()
         train_y = train_y.cpu()
-        self.model.load_state_dict(torch.load(fname))
+        self.model.load_state_dict(torch.load(fname, weights_only=False))
         self._compute_GP_covariances(train_x)
         self.casadi_predict = self.make_casadi_prediction_func(train_x, train_y)
 
@@ -1109,7 +1109,7 @@ class GaussianProcess:
         self.model.eval()
         self.likelihood.eval()
         if isinstance(x, np.ndarray):
-            x = torch.from_numpy(x).double()
+            x = torch.tensor(x, dtype=torch.float64)
         if self.input_mask is not None:
             x = x[:, self.input_mask]
         if self.NORMALIZE:

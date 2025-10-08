@@ -143,7 +143,7 @@ class RAP(BaseController):
 
     def load(self, path):
         '''Restores model and experiment given checkpoint path.'''
-        state = torch.load(path)
+        state = torch.load(path, weights_only=False)  # Safe since we're loading our own models
 
         # restore pllicy
         self.agent.load_state_dict(state['agent'])
@@ -215,14 +215,14 @@ class RAP(BaseController):
         frames = []
 
         while len(ep_returns) < n_episodes:
-            with torch.no_grad():
+            with torch.inference_mode():
                 obs = torch.FloatTensor(obs).to(self.device)
                 action = self.agent.ac.act(obs)
 
             # no disturbance during testing
             if use_adv:
                 adv_idx = np.random.choice(self.num_adversaries)
-                with torch.no_grad():
+                with torch.inference_mode():
                     action_adv = self.adversaries[adv_idx].ac.act(obs)
             else:
                 action_adv = np.zeros(self.adv_act_space.shape[0])
@@ -362,7 +362,7 @@ class RAP(BaseController):
 
         for _ in range(self.rollout_steps):
             # get actions
-            with torch.no_grad():
+            with torch.inference_mode():
                 act, v, logp = self.agent.ac.step(torch.FloatTensor(obs).to(self.device))
 
                 # adversary actions

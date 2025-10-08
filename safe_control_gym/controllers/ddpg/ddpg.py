@@ -142,7 +142,7 @@ class DDPG(BaseController):
 
     def load(self, path):
         '''Restores model and experiment given checkpoint path.'''
-        state = torch.load(path)
+        state = torch.load(path, weights_only=False)  # Safe since we're loading our own models
 
         # restore params
         self.agent.load_state_dict(state['agent'])
@@ -214,7 +214,7 @@ class DDPG(BaseController):
             action (ndarray): The action chosen by the controller.
         '''
 
-        with torch.no_grad():
+        with torch.inference_mode():
             obs = torch.FloatTensor(obs).to(self.device)
             action = self.agent.ac.act(obs)
 
@@ -278,7 +278,7 @@ class DDPG(BaseController):
         if self.total_steps < self.warm_up_steps:
             act = np.stack([self.env.action_space.sample() for _ in range(self.rollout_batch_size)])
         else:
-            with torch.no_grad():
+            with torch.inference_mode():
                 act = self.agent.ac.act(torch.FloatTensor(obs).to(self.device))
                 # apply action noise if specified in training config
                 if self.noise_process:

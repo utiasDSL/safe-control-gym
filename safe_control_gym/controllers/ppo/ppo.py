@@ -134,7 +134,7 @@ class PPO(BaseController):
              path
              ):
         '''Restores model and experiment given checkpoint path.'''
-        state = torch.load(path)
+        state = torch.load(path, weights_only=False)  # Safe since we're loading our own models
         # Restore policy.
         self.agent.load_state_dict(state['agent'])
         self.obs_normalizer.load_state_dict(state['obs_normalizer'])
@@ -201,7 +201,7 @@ class PPO(BaseController):
             action (ndarray): The action chosen by the controller.
         '''
 
-        with torch.no_grad():
+        with torch.inference_mode():
             obs = torch.FloatTensor(obs).to(self.device)
             action = self.agent.ac.act(obs)
 
@@ -264,7 +264,7 @@ class PPO(BaseController):
         obs = self.obs
         start = time.time()
         for _ in range(self.rollout_steps):
-            with torch.no_grad():
+            with torch.inference_mode():
                 act, v, logp = self.agent.ac.step(torch.FloatTensor(obs).to(self.device))
             next_obs, rew, done, info = self.env.step(act)
             next_obs = self.obs_normalizer(next_obs)
