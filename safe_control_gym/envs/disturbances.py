@@ -15,7 +15,7 @@ class Disturbance:
         self.dim = dim
         self.mask = mask
         if mask is not None:
-            self.mask = np.asarray(mask)
+            self.mask = np.asarray(mask, dtype=np.float32)
             assert self.dim == len(self.mask)
 
     def reset(self,

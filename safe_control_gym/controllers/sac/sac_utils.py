@@ -290,7 +290,7 @@ class MLPActorCritic(nn.Module):
 
     def act(self, obs, deterministic=False):
         a, _ = self.actor(obs, deterministic, False)
-        return a.cpu().numpy()
+        return a.cpu().numpy().astype(np.float32)
 
 
 # -----------------------------------------------------------------------------------
@@ -348,7 +348,7 @@ class SACBuffer(object):
             vshape = info['vshape']
             dtype = info.get('dtype', np.float32)
             init = info.get('init', np.zeros)
-            self.__dict__[k] = init(vshape, dtype=dtype)
+            self.__dict__[k] = init(vshape).astype(dtype)
 
         self.pos = 0
         self.buffer_size = 0

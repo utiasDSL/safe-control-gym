@@ -370,13 +370,13 @@ class Quadrotor(BaseAviary):
                        for init_name in self.INIT_STATE_LABELS[self.QUAD_TYPE]}
         if self.RANDOMIZED_INIT:
             init_values = self._randomize_values_by_info(init_values, self.INIT_STATE_RAND_INFO)
-        INIT_XYZ = [init_values.get('init_' + k, 0.) for k in ['x', 'y', 'z']]
-        INIT_VEL = [init_values.get('init_' + k + '_dot', 0.) for k in ['x', 'y', 'z']]
-        INIT_RPY = [init_values.get('init_' + k, 0.) for k in ['phi', 'theta', 'psi']]
+        INIT_XYZ = np.array([init_values.get('init_' + k, 0.) for k in ['x', 'y', 'z']])
+        INIT_VEL = np.array([init_values.get('init_' + k + '_dot', 0.) for k in ['x', 'y', 'z']])
+        INIT_RPY = np.array([init_values.get('init_' + k, 0.) for k in ['phi', 'theta', 'psi']])
         if self.QUAD_TYPE == QuadType.TWO_D:
-            INIT_ANG_VEL = [0, init_values.get('init_theta_dot', 0.), 0]
+            INIT_ANG_VEL = np.array([0, init_values.get('init_theta_dot', 0.), 0])
         else:
-            INIT_ANG_VEL = [init_values.get('init_' + k, 0.) for k in ['p', 'q', 'r']]  # TODO: transform from body rates.
+            INIT_ANG_VEL = np.array([init_values.get('init_' + k, 0.) for k in ['p', 'q', 'r']])  # TODO: transform from body rates.
         p.resetBasePositionAndOrientation(self.DRONE_ID, INIT_XYZ,
                                           p.getQuaternionFromEuler(INIT_RPY),
                                           physicsClientId=self.PYB_CLIENT)

@@ -264,8 +264,8 @@ class LinearConstraint(Constraint):
                          active_dims=active_dims,
                          tolerance=tolerance,
                          decimals=decimals)
-        A = np.array(A, ndmin=1)
-        b = np.array(b, ndmin=1)
+        A = np.asarray(A, dtype=np.float32).reshape(-1, self.dim)
+        b = np.asarray(b, dtype=np.float32).reshape(-1)
         assert A.shape[1] == self.dim, '[ERROR] A has the wrong dimension!'
         self.A = A
         assert b.shape[0] == A.shape[0], '[ERROR] Dimension 0 of b does not match A!'
