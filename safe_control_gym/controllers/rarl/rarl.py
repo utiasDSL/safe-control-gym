@@ -142,7 +142,7 @@ class RARL(BaseController):
 
     def load(self, path):
         '''Restores model and experiment given checkpoint path.'''
-        state = torch.load(path)
+        state = torch.load(path, weights_only=False)  # Safe since we're loading our own models
 
         # restore pllicy
         self.agent.load_state_dict(state['agent'])
@@ -183,7 +183,7 @@ class RARL(BaseController):
                                                                                                             eval_results['ep_returns'].std()))
                 # save best model
                 eval_score = eval_results['ep_returns'].mean()
-                eval_best_score = getattr(self, 'eval_best_score', -np.infty)
+                eval_best_score = getattr(self, 'eval_best_score', -np.inf)
                 if self.eval_save_best and eval_best_score < eval_score:
                     self.eval_best_score = eval_score
                     self.save(os.path.join(self.output_dir, 'model_best.pt'))
@@ -203,7 +203,7 @@ class RARL(BaseController):
             action (ndarray): The action chosen by the controller.
         '''
 
-        with torch.no_grad():
+        with torch.inference_mode():
             obs = torch.FloatTensor(obs).to(self.device)
             action = self.agent.ac.act(obs)
 
@@ -233,7 +233,7 @@ class RARL(BaseController):
 
             # no disturbance during testing
             if use_adv:
-                with torch.no_grad():
+                with torch.inference_mode():
                     action_adv = self.adversary.ac.act(obs)
             else:
                 action_adv = np.zeros(self.adv_act_space.shape[0])
@@ -356,7 +356,7 @@ class RARL(BaseController):
 
         # get rollouts/trajectories
         for _ in range(self.rollout_steps):
-            with torch.no_grad():
+            with torch.inference_mode():
                 # protagnist action
                 act, v, logp = self.agent.ac.step(torch.FloatTensor(obs).to(self.device))
                 # adversary action

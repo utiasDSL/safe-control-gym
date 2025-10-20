@@ -172,7 +172,7 @@ class MLPActorCritic(nn.Module):
 
     def act(self, obs, **kwargs):
         a = self.actor(obs)
-        return a.cpu().numpy()
+        return a.cpu().numpy().astype(np.float32)
 
 
 # -----------------------------------------------------------------------------------

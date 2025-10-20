@@ -3,8 +3,6 @@
 Based on github.com/bulletphysics/bullet3/blob/master/examples/pybullet/gym/pybullet_envs/deep_mimic/mocap/transformation.py
 '''
 
-import math
-
 import casadi as cs
 import numpy as np
 
@@ -34,13 +32,15 @@ def unit_vector(data, axis=None, out=None):
       [1.0]
     '''
     if out is None:
-        data = np.array(data, dtype=np.float64, copy=True)
+        data = np.asarray(data, dtype=np.float64)
         if data.ndim == 1:
-            data /= math.sqrt(np.dot(data, data))
+            norm = np.sqrt(np.dot(data, data))
+            if norm != 0:
+                data = data / norm
             return data
     else:
         if out is not data:
-            out[:] = np.array(data, copy=False)
+            out[:] = np.asarray(data)
         data = out
     length = np.atleast_1d(np.sum(data * data, axis))
     np.sqrt(length, length)
@@ -79,11 +79,11 @@ def projection_matrix(point, normal, direction=None, perspective=None, pseudo=Fa
       True
     '''
     M = np.identity(4)
-    point = np.array(point[:3], dtype=np.float64, copy=False)
+    point = np.asarray(point[:3], dtype=np.float64)
     normal = unit_vector(normal[:3])
     if perspective is not None:
         # perspective projection
-        perspective = np.array(perspective[:3], dtype=np.float64, copy=False)
+        perspective = np.asarray(perspective[:3], dtype=np.float64)
         M[0, 0] = M[1, 1] = M[2, 2] = np.dot(perspective - point, normal)
         M[:3, :3] -= np.outer(perspective, normal)
         if pseudo:
@@ -96,7 +96,7 @@ def projection_matrix(point, normal, direction=None, perspective=None, pseudo=Fa
         M[3, 3] = np.dot(perspective, normal)
     elif direction is not None:
         # parallel projection
-        direction = np.array(direction[:3], dtype=np.float64, copy=False)
+        direction = np.array(direction[:3], dtype=np.float64)
         scale = np.dot(direction, normal)
         M[:3, :3] -= np.outer(direction, normal) / scale
         M[:3, 3] = direction * (np.dot(point, normal) / scale)
