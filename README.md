@@ -104,7 +104,7 @@ python3 pid/pid_experiment.py \
     --algo pid \
     --task quadrotor \
     --overrides \
-        ./pid/config_overrides/quadrotor_3D/quadrotor_3D_tracking.yaml
+        ./pid/config_overrides/quadrotor_3D/quadrotor_3D_track.yaml
 ```
 
 <img src="figures/systems.png" alt="systems" width="450"> <img src="figures/figure8.gif" alt="trajectory" width="350">
@@ -117,8 +117,8 @@ python3 lqr/lqr_experiment.py \
     --algo lqr \
     --task cartpole \
     --overrides \
-        ./lqr/config_overrides/cartpole/cartpole_stabilization.yaml \
-        ./lqr/config_overrides/cartpole/lqr_cartpole_stabilization.yaml
+        ./lqr/config_overrides/cartpole/cartpole_stab.yaml \
+        ./lqr/config_overrides/cartpole/lqr_cartpole_stab.yaml
 ```
 
 ### 2D Quadrotor Trajectory Tracking with PPO

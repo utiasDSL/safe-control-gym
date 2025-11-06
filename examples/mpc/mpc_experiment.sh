@@ -6,8 +6,8 @@
 # SYS='quadrotor_2D'
 SYS='quadrotor_3D'
 
-# TASK='stabilization'
-TASK='tracking'
+# TASK='stab'
+TASK='track'
 
 # ALGO='mpc'
 # ALGO='mpc_acados'

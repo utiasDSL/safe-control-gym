@@ -1012,10 +1012,8 @@ class GPMPC(MPC):
         '''Reset the controller before running.'''
         # Setup reference input.
         if self.env.TASK == Task.STABILIZATION:
-            self.mode = 'stabilization'
             self.x_goal = self.env.X_GOAL
         elif self.env.TASK == Task.TRAJ_TRACKING:
-            self.mode = 'tracking'
             self.traj = self.env.X_GOAL.T
 
         # Dynamics model.

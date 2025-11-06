@@ -6,7 +6,7 @@ from examples.pid.pid_experiment import run
 
 
 @pytest.mark.parametrize('SYS',  ['quadrotor_2D', 'quadrotor_3D'])
-@pytest.mark.parametrize('TASK', ['stabilization', 'tracking'])
+@pytest.mark.parametrize('TASK', ['stab', 'track'])
 def test_pid(SYS, TASK):
     sys.argv[1:] = ['--algo', 'pid',
                     '--task', 'quadrotor',
@@ -20,7 +20,7 @@ def test_3D_pid_custom_trajectory_tracking():
     sys.argv[1:] = ['--algo', 'pid',
                     '--task', 'quadrotor',
                     '--overrides',
-                        './examples/pid/config_overrides/quadrotor_3D/quadrotor_3D_tracking.yaml',
+                        './examples/pid/config_overrides/quadrotor_3D/quadrotor_3D_track.yaml',
                     '--kv_overrides',
                         'task_config.task_info.trajectory_type=custom'
                     ]

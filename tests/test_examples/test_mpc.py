@@ -6,7 +6,7 @@ from examples.mpc.mpc_experiment import run
 
 
 @pytest.mark.parametrize('SYS',  ['cartpole', 'quadrotor_2D', 'quadrotor_3D'])
-@pytest.mark.parametrize('TASK', ['stabilization', 'tracking'])
+@pytest.mark.parametrize('TASK', ['stab', 'track'])
 @pytest.mark.parametrize('ALGO', ['mpc', 'linear_mpc'])
 def test_lqr(SYS, TASK, ALGO):
     SYS_NAME = 'quadrotor' if 'quadrotor' in SYS else SYS

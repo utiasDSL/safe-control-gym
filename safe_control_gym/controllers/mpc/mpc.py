@@ -80,10 +80,8 @@ class MPC(BaseController):
 
         # Setup reference input.
         if self.env.TASK == Task.STABILIZATION:
-            self.mode = 'stabilization'
             self.x_goal = self.env.X_GOAL
         elif self.env.TASK == Task.TRAJ_TRACKING:
-            self.mode = 'tracking'
             self.traj = self.env.X_GOAL.T
 
         self.use_lqr_gain_and_terminal_cost = use_lqr_gain_and_terminal_cost
