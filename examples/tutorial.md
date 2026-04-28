@@ -108,7 +108,7 @@ Here is one way of setting up your overrides file. Open up `safe-control-gym/exa
 
 | Approach | id | Location |
 | -------- | --- | ----------- |
-|  PID Controller    | 'pid' |   [PID](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/pid/pid.py)   |
+|  PID Controller    | 'pid' |   [PID](https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/controllers/pid/pid.py)   |
 |  Linear Quadratic Regulator    | 'lqr' |   coming soon   |
 |  Iterative Linear Quadratic Regulator   | 'ilqr' |   coming soon  |
 
@@ -116,32 +116,32 @@ Here is one way of setting up your overrides file. Open up `safe-control-gym/exa
 
 | Approach | id | Location |
 | -------- | --- | ----------- |
-|  Proximal Policy Optimization | 'ppo' | [PPO](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/ppo/ppo.py) |
-|  Soft-Actor Critic  | 'sac' | [SAC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/sac/sac.py) |
+|  Proximal Policy Optimization | 'ppo' | [PPO](https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/controllers/ppo/ppo.py) |
+|  Soft-Actor Critic  | 'sac' | [SAC](https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/controllers/sac/sac.py) |
 
 ### Safe Learning-based Control
 | Approach | id | Location |
 | -------- | --- | ----------- |
-|  Model Predictive Control w/ a Gaussian Process Model | 'gp_mpc' | [GP-MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/gp_mpc.py)  |
-|  Linear Model Predictive Control | 'linear_mpc' | [Linear MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/linear_mpc.py) |
+|  Model Predictive Control w/ a Gaussian Process Model | 'gp_mpc' | [GP-MPC](https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/gp_mpc.py)  |
+|  Linear Model Predictive Control | 'linear_mpc' | [Linear MPC](https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/linear_mpc.py) |
 
 ### Safe and Robust Reinforcement Learning
 | Approach | id | Location |
 | -------- | --- | ----------- |
-|  Robust Adversarial Reinforcement Learning | 'rarl' | [RARL](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/rarl/rarl.py) |
-|  Robust Adversarial Reinforcement Learning using Adversarial Populations | 'rap'  | [RAP](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/rarl/rap.py) |
+|  Robust Adversarial Reinforcement Learning | 'rarl' | [RARL](https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/controllers/rarl/rarl.py) |
+|  Robust Adversarial Reinforcement Learning using Adversarial Populations | 'rap'  | [RAP](https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/controllers/rarl/rap.py) |
 
 ### Safety Filters
 | Approach | id | Location |
 | -------- | --- | ----------- |
-|  Model Predictive Safety Certification | 'linear_mpsc' | [MPSC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/safety_filters/mpsc/mpsc.py) |
-|  Control Barrier Functions  | 'cbf'  |  [CBF](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/safety_filter/cbf/cbf.py) |
-|  Neural Network Control Barrier Functions  | 'cbf_nn'  |  [CBF](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/safety_filter/cbf/cbf_nn.py) |
+|  Model Predictive Safety Certification | 'linear_mpsc' | [MPSC](https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/safety_filters/mpsc/mpsc.py) |
+|  Control Barrier Functions  | 'cbf'  |  [CBF](https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/safety_filter/cbf/cbf.py) |
+|  Neural Network Control Barrier Functions  | 'cbf_nn'  |  [CBF](https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/safety_filter/cbf/cbf_nn.py) |
 
 #### Safe Exploration
 | Approach | id | Location |
 | -------- | --- | ----------- |
-|  Safety Layer | 'safe_explorer_ppo' |  [Safety Layer](https://github.com/utiasDSL/safe-control-gym/tree/main/safe_control_gym/controllers/safe_explorer)  |
+|  Safety Layer | 'safe_explorer_ppo' |  [Safety Layer](https://github.com/learnsyslab/safe-control-gym/tree/main/safe_control_gym/controllers/safe_explorer)  |
 
 ## Adding a New Controller
 - Create a new folder in `safe-control-gym/controllers` with the name of your controller

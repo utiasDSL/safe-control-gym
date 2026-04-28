@@ -15,7 +15,7 @@ These environments include (and evaluate) symbolic safety constraints and implem
          url = {https://arxiv.org/abs/2108.06266}}
 ```
 
-To reproduce the results in the article, see [branch `ar`](https://github.com/utiasDSL/safe-control-gym/releases/tag/v0.5.0).
+To reproduce the results in the article, see [branch `ar`](https://github.com/learnsyslab/safe-control-gym/releases/tag/v0.5.0).
 
 ```bibtex
 @article{yuan2021safecontrolgym,
@@ -29,7 +29,7 @@ To reproduce the results in the article, see [branch `ar`](https://github.com/ut
   doi={10.1109/LRA.2022.3196132}}
 ```
 
-To reproduce the results in the article, see [branch `submission`](https://github.com/utiasDSL/safe-control-gym/releases/tag/v0.6.0).
+To reproduce the results in the article, see [branch `submission`](https://github.com/learnsyslab/safe-control-gym/releases/tag/v0.6.0).
 
 <!-- ![baselines](./figures/baselines.png) -->
 
@@ -38,7 +38,7 @@ To reproduce the results in the article, see [branch `submission`](https://githu
 ### Clone repo
 
 ```bash
-git clone https://github.com/utiasDSL/safe-control-gym.git
+git clone https://github.com/learnsyslab/safe-control-gym.git
 cd safe-control-gym
 ```
 
@@ -94,7 +94,7 @@ Overview of [`safe-control-gym`](https://arxiv.org/abs/2109.06325)'s API:
 
 ## Getting Started
 
-Familiarize with APIs and environments with the scripts in [`examples/`](https://github.com/utiasDSL/safe-control-gym/tree/main/examples)
+Familiarize with APIs and environments with the scripts in [`examples/`](https://github.com/learnsyslab/safe-control-gym/tree/main/examples)
 
 ### 3D Quadrotor Lemniscate Trajectory Tracking with PID
 
@@ -148,23 +148,23 @@ python3 no_controller/verbose_api.py \
 
 ## List of Implemented Controllers
 
-- [PID](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/pid/pid.py)
-- [LQR](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/lqr/lqr.py)
-- [iLQR](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/lqr/ilqr.py)
-- [Linear MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/linear_mpc.py)
-- [GP-MPC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/gp_mpc.py)
-- [SAC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/sac/sac.py)
-- [PPO](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/ppo/ppo.py)
-- [DDPG](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/ddpg/ddpg.py)
-- [Safety Layer](https://github.com/utiasDSL/safe-control-gym/tree/main/safe_control_gym/controllers/safe_explorer)
-- [RARL](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/rarl/rarl.py)
-- [RAP](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/controllers/rarl/rap.py)
+- [PID](https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/controllers/pid/pid.py)
+- [LQR](https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/controllers/lqr/lqr.py)
+- [iLQR](https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/controllers/lqr/ilqr.py)
+- [Linear MPC](https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/linear_mpc.py)
+- [GP-MPC](https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/controllers/mpc/gp_mpc.py)
+- [SAC](https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/controllers/sac/sac.py)
+- [PPO](https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/controllers/ppo/ppo.py)
+- [DDPG](https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/controllers/ddpg/ddpg.py)
+- [Safety Layer](https://github.com/learnsyslab/safe-control-gym/tree/main/safe_control_gym/controllers/safe_explorer)
+- [RARL](https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/controllers/rarl/rarl.py)
+- [RAP](https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/controllers/rarl/rap.py)
 
 ## List of Implemented Safety Filters
 
-- [MPSC](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/safety_filters/mpsc/linear_mpsc.py)
-- [CBF](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/safety_filters/cbf/cbf.py)
-- [Neural Network CBF](https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/safety_filters/cbf/cbf_nn.py)
+- [MPSC](https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/safety_filters/mpsc/linear_mpsc.py)
+- [CBF](https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/safety_filters/cbf/cbf.py)
+- [Neural Network CBF](https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/safety_filters/cbf/cbf_nn.py)
 
 ## Performance
 
@@ -194,10 +194,10 @@ Note that the Bullet engine frequency reported for `safe-control-gym` is typical
 
 [001]: https://github.com/openai/gym/blob/master/gym/envs/classic_control/cartpole.py
 [002]: https://github.com/benelot/pybullet-gym/blob/master/pybulletgym/envs/mujoco/envs/pendulum/inverted_pendulum_env.py
-[003]: https://github.com/utiasDSL/gym-pybullet-drones
+[003]: https://github.com/learnsyslab/gym-pybullet-drones
 
-[004]: https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/envs/gym_control/cartpole.py
-[005]: https://github.com/utiasDSL/safe-control-gym/blob/main/safe_control_gym/envs/gym_pybullet_drones/quadrotor.py
+[004]: https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/envs/gym_control/cartpole.py
+[005]: https://github.com/learnsyslab/safe-control-gym/blob/main/safe_control_gym/envs/gym_pybullet_drones/quadrotor.py
 
 ## Run Tests and Linting
 Tests can be run locally by executing:
@@ -219,7 +219,7 @@ pre-commit run --all  # Run the hooks on all files
 
 ## Related Open-source Projects
 
-- [`gym-pybullet-drones`](https://github.com/utiasDSL/gym-pybullet-drones): single and multi-quadrotor environments
+- [`gym-pybullet-drones`](https://github.com/learnsyslab/gym-pybullet-drones): single and multi-quadrotor environments
 - [`stable-baselines3`](https://github.com/DLR-RM/stable-baselines3): PyTorch reinforcement learning algorithms
 - [`bullet3`](https://github.com/bulletphysics/bullet3): multi-physics simulation engine
 - [`gym`](https://github.com/openai/gym): OpenAI reinforcement learning toolkit
@@ -229,4 +229,4 @@ pre-commit run --all  # Run the hooks on all files
 - [`gym-marl-reconnaissance`](https://github.com/JacopoPan/gym-marl-reconnaissance): multi-agent heterogeneous (UAV/UGV) environments
 
 -----
-> University of Toronto's [Dynamic Systems Lab](https://github.com/utiasDSL) / [Vector Institute for Artificial Intelligence](https://github.com/VectorInstitute)
+> University of Toronto's [Dynamic Systems Lab](https://github.com/learnsyslab) / [Vector Institute for Artificial Intelligence](https://github.com/VectorInstitute)

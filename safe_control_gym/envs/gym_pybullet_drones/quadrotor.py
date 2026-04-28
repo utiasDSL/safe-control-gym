@@ -1,7 +1,7 @@
 '''1D, 2D, and 3D quadrotor environment using PyBullet physics.
 
 Based on UTIAS Dynamic Systems Lab's gym-pybullet-drones:
-    * https://github.com/utiasDSL/gym-pybullet-drones
+    * https://github.com/learnsyslab/gym-pybullet-drones
 '''
 
 import math
