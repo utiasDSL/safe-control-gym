@@ -25,7 +25,7 @@ def compute_RPI_set(Acl,
     '''Compute a Robust positively invariant set (RPI).
 
     This follows the method in sec IV A from [1] to compute the robust positively invartiant set through a convex
-    optimzation problem (LMI?) (equation 8a and 8b).
+    optimization problem (LMI?) (equation 8a and 8b).
 
     [1] K.P. Wabsersich and M.N. Zeilinger 'Linear model predictive safety certification for learning-based control'
         2019. https://arxiv.org/pdf/1803.08552.pdf
